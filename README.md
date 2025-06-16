@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # React + TypeScript + Vite
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
@@ -52,3 +53,6 @@ export default tseslint.config({
   },
 })
 ```
+=======
+# Selfiegram-Photostudios-Smart-booking-and-management-system
+>>>>>>> 8050cfc2ddfe461a8c286f543bb1325cb1a4951e
