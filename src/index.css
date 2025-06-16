@@ -1,1 +1,10 @@
 @import "tailwindcss";
+
+@font-face {
+  font-family: "SF Pro Display";
+  src: url("./assets/fonts/SF-Pro-Display-Regular.ttf") format("truetype");
+}
+
+body {
+  font-family: "SF Pro Display", sans-serif;
+}
