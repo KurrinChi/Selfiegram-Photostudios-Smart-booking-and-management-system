@@ -1,38 +1,94 @@
 import React from "react";
+import { motion } from "framer-motion";
 import ImageCard from "./ImageCard";
 
 interface AuthLayoutProps {
   children: React.ReactNode;
+  reverse?: boolean;
+  images?: {
+    src: string;
+    label: string;
+    className: string;
+  }[];
 }
 
-const AuthLayout = ({ children }: AuthLayoutProps) => {
+const AuthLayout = ({ children, reverse = false, images = [] }: AuthLayoutProps) => {
   return (
-    <div className="min-h-screen bg-white flex items-center justify-center font-sf">
-      <div className="w-full h-full max-w-full grid grid-cols-1 md:grid-cols-2 bg-white shadow-2xl overflow-hidden">
+    <div className="min-h-screen bg-white flex items-center justify-center font-sf overflow-hidden">
+      <div
+        className={`w-full max-w-full flex flex-col md:flex-row ${
+          reverse ? "md:flex-row-reverse" : ""
+        } bg-white`}
+      >
+        {/* Animated Image Panel */}
+        <motion.div
+          initial={{ x: reverse ? 300 : -300, opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          exit={{ x: reverse ? -300 : 300, opacity: 0 }}
+          transition={{ type: "spring", duration: 0.6 }}
+          className="w-full md:w-1/2 flex items-center justify-center bg-white p-3 sm:p-6 rounded-2xl overflow-hidden"
+        >
+          {/* Inner gray padded panel */}
+          <div className="w-full h-full bg-[#212121] rounded-xl p-2 sm:p-4 flex items-center justify-center">
 
-        {/* Left - Image Cards */}
-        <div className="relative flex items-center justify-center bg-[#212121] p-10 rounded-2xl left-2 right-2">
-          <div className="relative w-full max-w-[500px] h-[600px]">
-            <ImageCard
-              src="/slfg-placeholder.png"
-              label="Seize"
-              className="absolute bottom-[50%] right-[50%] rotate-[-10deg] z-10 w-[60%]"
-            />
-            <ImageCard
-              src="/slfg-placeholder.png"
-              label="Great"
-              className="absolute top-[20%] left-[50%] rotate-[5deg] z-20 w-[60%]"
-            />
-            <ImageCard
-              src="/slfg-placeholder.png"
-              label="Moment"
-              className="absolute top-[50%] left-[0%] rotate-[10deg] z-30 w-[60%]"
-            />
+            <div className="relative w-full max-w-[500px] h-[600px] mx-auto hidden sm:block">
+              {images.map((image, index) => (
+                <motion.div
+                  key={index}
+                  initial={{ y: 40, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  transition={{
+                    delay: 0.2 + index * 0.15,
+                    duration: 0.6,
+                    ease: "easeOut",
+                  }}
+                  className={`absolute ${image.className} max-w-[60%] sm:max-w-[50%] md:max-w-[40%] lg:max-w-[35%] xl:max-w-[30%]`}
+                  style={{ transformOrigin: "center" }}
+                >
+                  <ImageCard
+                    src={image.src}
+                    label={image.label}
+                    className="w-full h-auto object-contain"
+                  />
+                </motion.div>
+              ))}
+            </div>
+
+            {/* Mobile version */}
+            <div className="sm:hidden flex flex-col items-center justify-center gap-4">
+              {images.map((image, index) => (
+                <motion.div
+                  key={index}
+                  initial={{ y: 20, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  transition={{
+                    delay: 0.2 + index * 0.15,
+                    duration: 0.6,
+                    ease: "easeOut",
+                  }}
+                  className="w-[70%] max-w-xs"
+                >
+                  <ImageCard
+                    src={image.src}
+                    label={image.label}
+                    className="w-full h-auto object-contain"
+                  />
+                </motion.div>
+              ))}
+            </div>
           </div>
-        </div>
+        </motion.div>
 
-        {/* Right - Form or Page */}
-        <div className="p-20 flex flex-col justify-center">{children}</div>
+        {/* Animated Form Panel */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.4 }}
+          className="w-full md:w-1/2 p-10 md:p-20 flex flex-col justify-center"
+        >
+          {children}
+        </motion.div>
       </div>
     </div>
   );
