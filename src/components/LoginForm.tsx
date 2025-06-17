@@ -1,7 +1,9 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 const LoginForm = () => {
+  const navigate = useNavigate();
+
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -13,8 +15,12 @@ const LoginForm = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
     // validate and submit
     console.log(formData);
+
+    // 🔁 Redirect after login
+    navigate("/admin/dashboard");
   };
 
   return (
@@ -57,7 +63,7 @@ const LoginForm = () => {
       </form>
 
       <p className="text-sm mt-6 text-center text-gray-600">
-        Don’t have an account?{' '}
+        Don’t have an account?{" "}
         <Link
           to="/register"
           className="text-[#111] font-semibold underline hover:text-[#333]"
