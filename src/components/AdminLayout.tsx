@@ -1,4 +1,5 @@
-import React from "react";
+// components/AdminLayout.tsx
+import React, { useState } from "react";
 import AdminSidebar from "./AdminSideBar";
 
 interface AdminLayoutProps {
@@ -6,13 +7,20 @@ interface AdminLayoutProps {
 }
 
 const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
-  return (
-    <div className="min-h-screen flex font-sf">
-      {/* Sidebar */}
-      <AdminSidebar username="hi" />
+  const [collapsed, setCollapsed] = useState(false);
+  const toggleSidebar = () => setCollapsed((prev) => !prev);
 
-      {/* Main Content Area */}
-      <main className="flex-1 p-6 bg-gray-100 overflow-auto">
+  return (
+    <div className="min-h-screen font-sf">
+      {/* Sidebar */}
+      <AdminSidebar username="hi" collapsed={collapsed} toggle={toggleSidebar} />
+
+      {/* Main Content */}
+      <main
+        className={`min-h-screen overflow-auto p-6 bg-gray-100
+                    transition-all duration-300 ease-in-out
+                    ${collapsed ? "ml-16" : "ml-48"}`}
+      >
         {children}
       </main>
     </div>
