@@ -60,7 +60,7 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ username, collapsed, toggle
           >
             {/* Sliding indicator */}
             <span
-              className={`absolute left-0 top-0 h-full w-1 bg-yellow-300 rounded-tr-md rounded-br-md
+              className={`absolute left-0 top-0 h-full w-1 bg-[#ffffff] rounded-tr-md rounded-br-md
                           transition-all duration-300 ease-in-out
                           group-[.active]:opacity-100 opacity-0 group-hover:opacity-30`}
             />

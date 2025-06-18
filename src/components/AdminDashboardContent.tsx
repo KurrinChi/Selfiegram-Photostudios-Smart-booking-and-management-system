@@ -22,7 +22,9 @@ import {
   faArrowUp,
   faArrowDown,
   faSearch,
+  faStar as fasStar,
 } from "@fortawesome/free-solid-svg-icons";
+import { faStar as farStar } from "@fortawesome/free-regular-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { DateRange } from "react-date-range";
 import { format, startOfWeek, subWeeks } from "date-fns";
@@ -83,21 +85,18 @@ const TrendArrow: React.FC<{ up: boolean }> = ({ up }) => (
   <FontAwesomeIcon icon={up ? faArrowUp : faArrowDown} className={up ? "text-green-500" : "text-red-500"} />
 );
 
-const StarRating: React.FC<{ value: number }> = ({ value }) => {
-  const [rating, setRating] = useState(value);
-  return (
-    <div className="flex gap-1 cursor-pointer select-none">
-      {Array.from({ length: 5 }).map((_, idx) => (
-        <FontAwesomeIcon
-          key={idx}
-          icon={idx < rating ? ["fas", "star"] : ["far", "star"]}
-          className="text-amber-400 text-xs"
-          onClick={() => setRating(idx + 1)}
-        />
-      ))}
-    </div>
-  );
-};
+// ⭐ Read‑only star rating (no click interaction)
+const StarRating: React.FC<{ value: number }> = ({ value }) => (
+  <div className="flex gap-1">
+    {Array.from({ length: 5 }).map((_, idx) => (
+      <FontAwesomeIcon
+        key={idx}
+        icon={idx < value ? fasStar : farStar}
+        className="text-amber-400 text-xs"
+      />
+    ))}
+  </div>
+);
 
 // -----------------------------------------------------------------------------
 // Main Component
@@ -191,7 +190,7 @@ const AdminDashboardContents: React.FC = () => {
               <XAxis dataKey="week" className="text-[10px]" angle={-45} textAnchor="end" height={60} interval={1} />
               <YAxis tickFormatter={v => `${v / 1000}K`} className="text-xs" />
               <Tooltip formatter={(v: number) => `₱ ${v.toLocaleString()}`} />
-              <Bar dataKey="income" fill="#1f2937" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="income" fill="#1f2937" radius={[4, 4, 0, 0]} barSize={28} />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -206,34 +205,35 @@ const AdminDashboardContents: React.FC = () => {
               type="text"
               value={search}
               onChange={e => setSearch(e.target.value)}
-              placeholder="Search"
-              className="pl-8 pr-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-gray-300"
+              placeholder="Search packages..."
+              className="border pl-8 pr-2 py-1 rounded-md focus:outline-none focus:ring-1 focus:ring-black"
             />
-            <FontAwesomeIcon icon={faSearch} className="absolute left-2 top-1/2 -translate-y-1/2" />
+            <FontAwesomeIcon icon={faSearch} className="absolute left-2 top-1.5 text-gray-400 text-xs" />
           </div>
         </div>
 
-        <table className="min-w-[700px] w-full text-left">
+        <table className="min-w-full text-left text-xs">
           <thead>
-            <tr className="border-b text-xs text-gray-500">
-              <th className={tableCell}>Package Name</th>
+            <tr className="text-gray-500">
+              <th className={tableCell}>Package</th>
               <th className={tableCell}>Total Booking</th>
-              <th className={tableCell}>Revenue Generated</th>
+              <th className={tableCell}>Revenue</th>
               <th className={tableCell}>Booking %</th>
-              <th className={tableCell}>Average Client Rating</th>
-              <th className={tableCell}>Trend Over Time</th>
+              <th className={tableCell}>Avg Client Rating</th>
+              <th className={tableCell}>Trend</th>
             </tr>
           </thead>
           <tbody>
-            {filteredRows.map(row => (
-              <tr key={row.name} className="border-b last:border-none hover:bg-gray-50">
+            {filteredRows.map((row, i) => (
+              <tr key={i} className="border-t">
                 <td className={tableCell}>{row.name}</td>
                 <td className={tableCell}>{row.totalBooking}</td>
                 <td className={tableCell}>{row.revenue}</td>
                 <td className={tableCell}>{row.bookingPct}</td>
                 <td className={tableCell}><StarRating value={row.rating} /></td>
                 <td className={tableCell}>
-                  <span className={`text-xs ${row.trendPositive ? "text-green-500" : "text-red-500"}`}>
+                  <span className={`inline-flex items-center gap-1 ${row.trendPositive ? "text-green-500" : "text-red-500"}`}>
+                    <FontAwesomeIcon icon={row.trendPositive ? faArrowUp : faArrowDown} />
                     {row.trend}
                   </span>
                 </td>
