@@ -119,7 +119,7 @@ const AdminDashboardContents: React.FC = () => {
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 p-5">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 relative">
         <h1 className="text-2xl font-semibold">Dashboard</h1>
