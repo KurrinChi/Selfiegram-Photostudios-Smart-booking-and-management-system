@@ -319,18 +319,22 @@ const AdminPackageContent: React.FC = () => {
               </div>
             )}
           </div>
-          <button className="bg-black text-white px-4 py-2 rounded-md text-sm hover:opacity-80 transition">
+          <button
+            onClick={() => navigate("add")}
+            className="bg-black text-white px-4 py-2 rounded-md text-sm hover:opacity-80 transition"
+          >
             Add New Package
           </button>
         </div>
       </div>
 
-      {/* Grid or No Results */}
+      {/* Grid */}
       {filtered.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {filtered.map((pkg, idx) => {
             const currentImgIdx = imageIndexMap[idx] ?? 0;
             const isFading = fadingImages[idx];
+            const encodedTitle = encodeURIComponent(pkg.title);
 
             return (
               <div
@@ -338,9 +342,7 @@ const AdminPackageContent: React.FC = () => {
                 className="relative bg-white rounded-xl shadow-sm transition-all duration-300 transform hover:-translate-y-2 hover:scale-105 hover:shadow-xl p-2 overflow-hidden group"
               >
                 <button
-                  onClick={() =>
-                    navigate(`/edit-package/${encodeURIComponent(pkg.title)}`)
-                  }
+                  onClick={() => navigate(`edit/${encodedTitle}`)}
                   className="absolute top-5 right-5 px-3 py-1 text-xs z-30 rounded-md text-black font-bold backdrop-blur-md bg-white/10 border border-white/20 shadow-md hover:bg-white/20 transition"
                 >
                   EDIT
@@ -386,11 +388,7 @@ const AdminPackageContent: React.FC = () => {
                     ))}
                   </div>
                   <button
-                    onClick={() =>
-                      navigate(
-                        `/select-package/${encodeURIComponent(pkg.title)}`
-                      )
-                    }
+                    onClick={() => navigate(`select/${encodedTitle}`)}
                     className="mt-2 w-full py-2 text-xs bg-gray-100 rounded-md hover:bg-gray-200 transition"
                   >
                     SELECT
