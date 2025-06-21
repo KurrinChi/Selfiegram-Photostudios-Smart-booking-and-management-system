@@ -1,0 +1,249 @@
+[
+  {
+    "id": "pkg-001",
+    "title": "Selfie for ONE",
+    "price": 379,
+    "tags": ["Self Shoot"],
+    "duration": "10 mins",
+    "description": "Good for 1 person. Unlimited self shoot. 1 backdrop of your choice. 6 digital copies. 1 printed copy (4R).",
+    "images": [
+      "/slfg-placeholder 1.png",
+      "/slfg-placeholder 2.png",
+      "/slfg-placeholder 3.png"
+    ]
+  },
+  {
+    "id": "pkg-002",
+    "title": "Selfie for TWO",
+    "price": 479,
+    "tags": ["Self Shoot"],
+    "duration": "10 mins",
+    "description": "Good for 2 persons. Unlimited self shoot. 1 backdrop of your choice. 7 digital copies. 2 printed copies (4R).",
+    "images": [
+      "/slfg-placeholder 1.png",
+      "/slfg-placeholder 2.png",
+      "/slfg-placeholder 3.png"
+    ]
+  },
+  {
+    "id": "pkg-003",
+    "title": "Squad Groupie",
+    "price": 699,
+    "tags": ["Self Shoot"],
+    "duration": "20 mins",
+    "description": "Good for 4 persons. Unlimited self shoot. 1 backdrop of your choice. 8 digital copies. 2 printed copies (4R).",
+    "images": [
+      "/slfg-placeholder 1.png",
+      "/slfg-placeholder 2.png",
+      "/slfg-placeholder 3.png"
+    ]
+  },
+  {
+    "id": "pkg-004",
+    "title": "Barkada Groupie",
+    "price": 899,
+    "tags": ["Self Shoot"],
+    "duration": "20 mins",
+    "description": "Good for 8 persons. Unlimited self shoot. 1 backdrop of your choice. 10 digital copies. 2 printed copies (4R).",
+    "images": [
+      "/slfg-placeholder 1.png",
+      "/slfg-placeholder 2.png",
+      "/slfg-placeholder 3.png"
+    ]
+  },
+  {
+    "id": "pkg-005",
+    "title": "Concept Studio",
+    "price": 749,
+    "tags": ["Self Shoot", "Studio"],
+    "duration": "20 mins",
+    "description": "Good for 2 persons. Unlimited self shoot with 1 plain and 1 concept backdrop (Bohemian Dream, Chingu Pink). Free for babies 0–12 months.",
+    "images": [
+      "/slfg-placeholder 1.png",
+      "/slfg-placeholder 2.png",
+      "/slfg-placeholder 3.png"
+    ]
+  },
+  {
+    "id": "pkg-006",
+    "title": "Graduation PREMIUM",
+    "price": 1199,
+    "tags": ["Graduation", "Photoshoot"],
+    "duration": "15 mins",
+    "description": "Toga only. Photoshoot with photographer. Graduation backdrop. 4 enhanced photos. Includes A4 photo, A4 frame, 5R photo, 4 wallet-sized photos.",
+    "images": [
+      "/slfg-placeholder 1.png",
+      "/slfg-placeholder 2.png",
+      "/slfg-placeholder 3.png"
+    ]
+  },
+  {
+    "id": "pkg-007",
+    "title": "Graduation ELITE",
+    "price": 1499,
+    "tags": ["Graduation", "Photoshoot"],
+    "duration": "30 mins",
+    "description": "Toga and formal. 1 graduation + 1 plain backdrop. 8 enhanced photos. Includes A4 photo, frame, 5R, 4 wallet-sized toga and 4 formal photos.",
+    "images": [
+      "/slfg-placeholder 1.png",
+      "/slfg-placeholder 2.png",
+      "/slfg-placeholder 3.png"
+    ]
+  },
+  {
+    "id": "pkg-008",
+    "title": "Studio Rental",
+    "price": 1499,
+    "tags": ["Studio"],
+    "duration": "1 hour",
+    "description": "For 1–4 pax. Unlimited self shoot. Use of all plain backdrops and 1 concept. Includes all digital copies and free use of equipment.",
+    "images": [
+      "/slfg-placeholder 1.png",
+      "/slfg-placeholder 2.png",
+      "/slfg-placeholder 3.png"
+    ]
+  },
+  {
+    "id": "pkg-009",
+    "title": "Vogue Photoshoot",
+    "price": 2999,
+    "tags": ["Photoshoot"],
+    "duration": "1 hour",
+    "description": "Good for 1 model. Shoot with senior photographer. Access to 4 plain and 3 concept backdrops. All enhanced digital copies. 2 printed copies (4R).",
+    "images": [
+      "/slfg-placeholder 1.png",
+      "/slfg-placeholder 2.png",
+      "/slfg-placeholder 3.png"
+    ]
+  },
+  {
+    "id": "pkg-010",
+    "title": "Kiddie Photoshoot",
+    "price": 2499,
+    "tags": ["Photoshoot"],
+    "duration": "30 mins",
+    "description": "Celebrant + 2 parents & 1 sibling. 1 theme + 1 plain backdrop. 10 digital copies. Includes props, costume, 2 prints, raw files, and cake smash allowed.",
+    "images": [
+      "/slfg-placeholder 1.png",
+      "/slfg-placeholder 2.png",
+      "/slfg-placeholder 3.png"
+    ]
+  },
+  {
+    "id": "pkg-011",
+    "title": "Maternity Photoshoot",
+    "price": 3999,
+    "tags": ["Photoshoot"],
+    "duration": "1 hour",
+    "description": "Includes all plain and concept backdrops. Family shoot included. All enhanced digital copies. Free maternity costumes, props, and printed copy.",
+    "images": [
+      "/slfg-placeholder 1.png",
+      "/slfg-placeholder 2.png",
+      "/slfg-placeholder 3.png"
+    ]
+  },
+  {
+    "id": "pkg-012",
+    "title": "Newborn Baby Photoshoot",
+    "price": 3999,
+    "tags": ["Photoshoot"],
+    "duration": "1 hour",
+    "description": "For 1 newborn + 2 family members. 2 homey sets. All enhanced digital copies. Props and costumes included. Family shoot and print included.",
+    "images": [
+      "/slfg-placeholder 1.png",
+      "/slfg-placeholder 2.png",
+      "/slfg-placeholder 3.png"
+    ]
+  },
+  {
+    "id": "pkg-013",
+    "title": "Intimate Gender Reveal",
+    "price": 4999,
+    "tags": ["Photoshoot"],
+    "duration": "1 hour",
+    "description": "Creative shoot with photographer. Includes props, static video, 1-minute edited video, enhanced digital copies, and a printed copy.",
+    "images": [
+      "/slfg-placeholder 1.png",
+      "/slfg-placeholder 2.png",
+      "/slfg-placeholder 3.png"
+    ]
+  },
+  {
+    "id": "pkg-014",
+    "title": "Birthday",
+    "price": 749,
+    "tags": ["Self Shoot", "Studio"],
+    "duration": "25 mins",
+    "description": "20 mins self shoot + 5 mins with photographer. 1 plain + 1 concept backdrop. 7 digital copies. 2 prints. Birthday sash, headband, and balloons included.",
+    "images": [
+      "/slfg-placeholder 1.png",
+      "/slfg-placeholder 2.png",
+      "/slfg-placeholder 3.png"
+    ]
+  },
+  {
+    "id": "pkg-015",
+    "title": "Family Photoshoot",
+    "price": 2999,
+    "tags": ["Photoshoot"],
+    "duration": "1 hour",
+    "description": "Good for 5 members. Additional allowed. 1 chosen concept + all plain backdrops. All enhanced digital copies. Props and prints included.",
+    "images": [
+      "/slfg-placeholder 1.png",
+      "/slfg-placeholder 2.png",
+      "/slfg-placeholder 3.png"
+    ]
+  },
+  {
+    "id": "pkg-016",
+    "title": "Pre Nup Photoshoot",
+    "price": 2999,
+    "tags": ["Photoshoot"],
+    "duration": "1 hour",
+    "description": "Good for 1 couple. Family members may join. 1 chosen concept + all plain backdrops. All enhanced digital copies. Printed copies included.",
+    "images": [
+      "/slfg-placeholder 1.png",
+      "/slfg-placeholder 2.png",
+      "/slfg-placeholder 3.png"
+    ]
+  },
+  {
+    "id": "pkg-017",
+    "title": "Student Groupie",
+    "price": 1499,
+    "tags": ["Self Shoot"],
+    "duration": "50 mins",
+    "description": "Good for 10 students. 1 chosen backdrop. 10 digital copies. 4 printed (3 portrait + 1 band). Valid school ID required for all students.",
+    "images": [
+      "/slfg-placeholder 1.png",
+      "/slfg-placeholder 2.png",
+      "/slfg-placeholder 3.png"
+    ]
+  },
+  {
+    "id": "pkg-018",
+    "title": "Solo Graduation Package",
+    "price": 1749,
+    "tags": ["Graduation"],
+    "duration": "20 mins",
+    "description": "Good for 1 pax. Unlimited self shoot on Graduation and 1 plain backdrop. Use of Toga/Barong. 7 digital copies. 2 printed copies included.",
+    "images": [
+      "/slfg-placeholder 1.png",
+      "/slfg-placeholder 2.png",
+      "/slfg-placeholder 3.png"
+    ]
+  },
+  {
+    "id": "pkg-019",
+    "title": "Barkada Graduation Package",
+    "price": 1999,
+    "tags": ["Graduation", "Self Shoot"],
+    "duration": "30 mins",
+    "description": "Good for 4 pax. Unlimited self shoot on Graduation + 1 plain backdrop. Toga/Barong included. 7 digital copies. 4 printed copies included.",
+    "images": [
+      "/slfg-placeholder 1.png",
+      "/slfg-placeholder 2.png",
+      "/slfg-placeholder 3.png"
+    ]
+  }
+]
