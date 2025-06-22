@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, Link } from "react-router-dom"; // 👈 Link imported here
 import mockPackages from "../../data/mockPackages.json";
 import { DayPicker } from "react-day-picker";
 import "react-day-picker/dist/style.css";
+import { isToday, isSameDay } from "date-fns";
 
 interface Package {
   id: string;
@@ -35,174 +36,183 @@ const SelectPackagePage = () => {
   if (!pkg)
     return <div className="p-4 text-sm text-gray-500">Package not found.</div>;
 
-  const timeSlots = [
-    "9:00 AM",
-    "10:30 AM",
-    "12:00 PM",
-    "1:30 PM",
-    "3:00 PM",
-    "4:30 PM",
-  ];
-  const deposit = 200;
-  const remaining = pkg.price - deposit;
+  const timeSlots = Array.from({ length: 23 }, (_, i) => {
+    const hour = 9 + Math.floor(i / 2);
+    const min = i % 2 === 0 ? "00" : "30";
+    const meridian = hour < 12 ? "AM" : "PM";
+    const formatted =
+      (hour > 12 ? hour - 12 : hour).toString().padStart(2, "0") +
+      ":" +
+      min +
+      " " +
+      meridian;
+    return formatted;
+  });
 
   return (
-    <div className="max-w-5xl mx-auto p-6 space-y-6">
-      {/* Header */}
-      <h1 className="text-xl font-bold text-gray-800">Select Package</h1>
+    <div className="max-w-6xl mx-auto px-6 py-8 space-y-10 drop-shadow-xl">
+      {/* 👉 Breadcrumb embedded here */}
+      <nav className="text-sm text-black mb-6">
+        <Link to="/admin/packages" className="hover:underline text-gray-400">
+          Packages
+        </Link>{" "}
+        / Book {pkg.title}
+      </nav>
 
-      {/* Layout */}
-      <div className="grid lg:grid-cols-3 gap-6">
-        {/* Left - Image */}
-        <div className="col-span-1">
+      {/* Top Section */}
+      <div className="bg-white rounded-xl shadow p-6 flex flex-col md:flex-row gap-8">
+        <div className="md:w-1/3 flex-shrink-0">
           <img
             src={pkg.images[0]}
             alt="Cover"
-            className="rounded-lg w-full h-auto object-cover"
+            className="rounded-xl object-cover w-full aspect-square"
           />
-          <div className="grid grid-cols-3 gap-2 mt-2">
-            {pkg.images.map((img, idx) => (
-              <img
-                key={idx}
-                src={img}
-                className="rounded border border-gray-200 object-cover h-20 w-full"
-                alt={`thumb-${idx}`}
-              />
-            ))}
-          </div>
         </div>
 
-        {/* Right - Details */}
-        <div className="col-span-2 space-y-6">
-          {/* Package Info */}
-          <div className="bg-white p-4 rounded shadow">
-            <div className="text-xs text-gray-500 mb-1">{pkg.tags[0]}</div>
-            <h2 className="text-2xl font-semibold text-gray-800">
-              {pkg.title}
-            </h2>
-            <p className="text-gray-500 text-sm">₱{pkg.price.toFixed(2)}</p>
+        <div className="md:w-2/3 space-y-3">
+          <span className="uppercase tracking-wide text-xs text-gray-400">
+            {pkg.tags[0]}
+          </span>
+          <h2 className="text-3xl font-semibold text-gray-800">{pkg.title}</h2>
+          <p className="text-lg text-gray-600 font-medium">PHP {pkg.price}</p>
+          <ul className="list-disc list-inside text-sm text-gray-700 mt-3 space-y-1">
+            {pkg.description.split("\n").map((line, i) => (
+              <li key={i}>{line}</li>
+            ))}
+          </ul>
+        </div>
+      </div>
 
-            <ul className="list-disc list-inside text-sm mt-3 space-y-1">
-              {pkg.description.split("\n").map((line, i) => (
-                <li key={i}>{line}</li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Calendar + Timeslots */}
-          <div className="bg-white p-4 rounded shadow">
-            <h3 className="text-sm font-medium mb-2">Select Date & Time</h3>
-            <DayPicker
-              mode="single"
-              selected={selectedDate}
-              onSelect={setSelectedDate}
-              className="border rounded-md p-2"
-            />
-            {selectedDate && (
-              <div className="mt-4">
-                <h4 className="text-xs text-gray-600 mb-1">
-                  Available Time Slots
-                </h4>
-                <div className="flex flex-wrap gap-2">
-                  {timeSlots.map((slot) => (
-                    <button
-                      key={slot}
-                      onClick={() => setSelectedTime(slot)}
-                      className={`px-3 py-1 text-xs rounded-md border transition ${
-                        selectedTime === slot
-                          ? "bg-black text-white"
-                          : "bg-gray-100 hover:bg-gray-200"
-                      }`}
-                    >
-                      {slot}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Personal Details Form */}
-          <div className="bg-white p-4 rounded shadow space-y-3">
-            <h3 className="text-sm font-medium">Personal Details</h3>
-            <input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Name"
-              className="w-full px-3 py-2 border rounded text-sm"
-              required
-            />
-            <input
-              value={contact}
-              onChange={(e) => setContact(e.target.value)}
-              placeholder="Contact No."
-              className="w-full px-3 py-2 border rounded text-sm"
-              required
-            />
-            <input
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="Email"
-              className="w-full px-3 py-2 border rounded text-sm"
-              required
-            />
-            <input
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
-              placeholder="Address"
-              className="w-full px-3 py-2 border rounded text-sm"
-              required
-            />
-            <select
-              value={paymentMode}
-              onChange={(e) => setPaymentMode(e.target.value)}
-              className="w-full px-3 py-2 border rounded text-sm"
-              required
+      {/* Date & Time Section */}
+      <div className="bg-white rounded-xl shadow p-6 space-y-6">
+        <div className="flex flex-col lg:flex-row justify-center ml-20 mr-20">
+          <div className="lg:w-1/2">
+            <div
+              className="hidden md:block bg-white p-4 rounded-xl"
+              style={{ filter: "grayscale(100%)" }}
             >
-              <option value="">Select Mode of Payment</option>
-              <option value="GCash">GCash</option>
-              <option value="Cash">Cash</option>
-            </select>
-            <label className="flex items-center text-sm gap-2">
-              <input
-                type="checkbox"
-                checked={agreed}
-                onChange={(e) => setAgreed(e.target.checked)}
+              <DayPicker
+                mode="single"
+                selected={selectedDate}
+                onSelect={(date) => date && setSelectedDate(date)}
+                captionLayout="label"
+                modifiers={{
+                  selected: (d) =>
+                    !!selectedDate && isSameDay(d, selectedDate!),
+                  today: (d) => isToday(d),
+                }}
+                modifiersClassNames={{
+                  selected: "bg-gray-800 text-white",
+                  today: "font-bold text-black bg-gray-100 rounded-xl",
+                }}
+                classNames={{
+                  caption: "text-sm text-black",
+                  dropdown: "text-black z-30",
+                  day: "text-sm",
+                  nav_button: "text-black hover:bg-gray-100 p-1 rounded",
+                  nav_icon: "stroke-black fill-black w-4 h-4",
+                }}
               />
-              I agree to the Terms and Conditions
-            </label>
+            </div>
           </div>
 
-          {/* Payment Summary and Action */}
-          <div className="bg-white p-4 rounded shadow text-sm">
-            <div className="flex justify-between mb-2">
-              <span>Deposit</span>
-              <span className="font-medium">₱{deposit.toFixed(2)}</span>
+          {/* Timeslots */}
+          <div className="lg:w-1/2">
+            <h4 className="text-sm text-gray-700 mb-2 font-medium">
+              Available Time Slots
+            </h4>
+            <div className="grid grid-cols-3 gap-2">
+              {timeSlots.map((slot) => (
+                <button
+                  key={slot}
+                  onClick={() => setSelectedTime(slot)}
+                  className={`py-2 px-3 text-sm rounded-md transition text-center ${
+                    selectedTime === slot
+                      ? "bg-black text-white"
+                      : "bg-gray-100 hover:bg-gray-200"
+                  }`}
+                >
+                  {slot}
+                </button>
+              ))}
             </div>
-            <div className="flex justify-between mb-4">
-              <span>Remaining Balance</span>
-              <span className="font-medium">₱{remaining.toFixed(2)}</span>
-            </div>
-            <div className="flex gap-3">
-              <button
-                className="w-full bg-black text-white py-2 rounded-md disabled:opacity-50"
-                disabled={!agreed}
-                onClick={() => {
-                  /* navigate('/success') */
-                }}
-              >
-                Confirm with Deposit
-              </button>
-              <button
-                className="w-full bg-gray-200 text-black py-2 rounded-md disabled:opacity-50"
-                disabled={!agreed}
-                onClick={() => {
-                  /* navigate('/success') */
-                }}
-              >
-                Full Payment
-              </button>
-            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Personal Details Section */}
+      <div className="bg-neutral-900 text-white rounded-xl shadow p-6 space-y-6">
+        <h3 className="text-lg font-semibold">Personal Details</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Name"
+            className="w-full px-4 py-3 rounded bg-neutral-800 border border-neutral-700 text-sm placeholder-gray-400"
+          />
+          <input
+            value={contact}
+            onChange={(e) => setContact(e.target.value)}
+            placeholder="Contact No."
+            className="w-full px-4 py-3 rounded bg-neutral-800 border border-neutral-700 text-sm placeholder-gray-400"
+          />
+          <input
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="Email"
+            className="w-full px-4 py-3 rounded bg-neutral-800 border border-neutral-700 text-sm placeholder-gray-400"
+          />
+          <input
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
+            placeholder="Address"
+            className="w-full px-4 py-3 rounded bg-neutral-800 border border-neutral-700 text-sm placeholder-gray-400"
+          />
+          <select
+            value={paymentMode}
+            onChange={(e) => setPaymentMode(e.target.value)}
+            className="col-span-1 md:col-span-2 w-full px-4 py-3 rounded bg-neutral-800 border border-neutral-700 text-sm text-white"
+          >
+            <option value="">Select Mode of Payment</option>
+            <option value="GCash">GCash</option>
+            <option value="Cash">Cash</option>
+          </select>
+        </div>
+
+        <div className="text-sm space-y-4">
+          <label className="flex items-start gap-2">
+            <input
+              type="checkbox"
+              checked={agreed}
+              onChange={(e) => setAgreed(e.target.checked)}
+              className="mt-1"
+            />
+            <span>
+              <strong>I agree</strong> to pay PHP 200 down payment to confirm
+              booking. The remaining balance is due on the day of the photoshoot
+              or service.
+            </span>
+          </label>
+
+          <div className="flex flex-col sm:flex-row gap-3">
+            <button
+              className="w-full bg-black text-white py-3 rounded-md disabled:opacity-50"
+              disabled={!agreed}
+              onClick={() => {
+                if (agreed) console.log("Confirmed with deposit");
+              }}
+            >
+              Confirm with Deposit
+            </button>
+            <button
+              className="w-full bg-white text-black py-3 rounded-md disabled:opacity-50"
+              disabled={!agreed}
+              onClick={() => {
+                if (agreed) console.log("Full payment");
+              }}
+            >
+              Full Payment
+            </button>
           </div>
         </div>
       </div>
