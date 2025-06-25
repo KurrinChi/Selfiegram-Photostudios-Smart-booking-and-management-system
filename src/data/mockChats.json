@@ -1,0 +1,3622 @@
+[
+  {
+    "name": "Alex Monroe",
+    "message": "Do we have enough light modifiers for today's shoot?",
+    "time": "2025-06-16 09:05 AM",
+    "unread": true,
+    "messages": [
+      {
+        "text": "Do you want me to greet the client?",
+        "time": "2025-06-15 08:26 AM",
+        "fromMe": true
+      },
+      {
+        "text": "I'll finalize edits by 2 PM.",
+        "time": "2025-06-15 10:52 AM",
+        "fromMe": false
+      },
+      {
+        "text": "Do you want me to greet the client?",
+        "time": "2025-06-15 01:32 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Coffee is ready and the waiting area is prepped.",
+        "time": "2025-06-15 02:53 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Set the aperture to f/2.8 for a sharper image.",
+        "time": "2025-06-15 10:54 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Coffee is ready and the waiting area is prepped.",
+        "time": "2025-06-15 08:46 PM",
+        "fromMe": false
+      },
+      {
+        "text": "We need to match the brand's blue palette.",
+        "time": "2025-06-15 07:44 PM",
+        "fromMe": false
+      },
+      {
+        "text": "The Godox trigger batteries are low.",
+        "time": "2025-06-16 03:20 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Live preview is up on the external monitor.",
+        "time": "2025-06-15 01:14 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Coffee is ready and the waiting area is prepped.",
+        "time": "2025-06-16 09:47 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Yes, I brought the softboxes and reflectors.",
+        "time": "2025-06-16 03:56 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Make sure to bring the 85mm and 50mm primes.",
+        "time": "2025-06-16 04:14 AM",
+        "fromMe": false
+      },
+      {
+        "text": "Make sure to bring the 85mm and 50mm primes.",
+        "time": "2025-06-15 10:50 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Soft jazz for background music, right?",
+        "time": "2025-06-15 09:39 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Do we have enough light modifiers for today's shoot?",
+        "time": "2025-06-16 08:00 AM",
+        "fromMe": false
+      },
+      {
+        "text": "Soft jazz for background music, right?",
+        "time": "2025-06-16 10:41 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Backdrop is wrinkled. Should I steam it?",
+        "time": "2025-06-16 08:42 PM",
+        "fromMe": true
+      },
+      {
+        "text": "We're going with strobe lighting for better contrast.",
+        "time": "2025-06-17 10:18 AM",
+        "fromMe": false
+      },
+      {
+        "text": "Soft jazz for background music, right?",
+        "time": "2025-06-15 08:44 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Yes, I brought the softboxes and reflectors.",
+        "time": "2025-06-16 11:40 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Coffee is ready and the waiting area is prepped.",
+        "time": "2025-06-16 11:06 AM",
+        "fromMe": false
+      },
+      {
+        "text": "We need to match the brand's blue palette.",
+        "time": "2025-06-17 03:02 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Do we have vertical crops for Instagram stories?",
+        "time": "2025-06-18 01:42 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Do you want me to greet the client?",
+        "time": "2025-06-16 01:11 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Do we have enough light modifiers for today's shoot?",
+        "time": "2025-06-18 01:14 AM",
+        "fromMe": false
+      },
+      {
+        "text": "The reflector should go camera-left and feathered.",
+        "time": "2025-06-18 09:46 AM",
+        "fromMe": true
+      },
+      {
+        "text": "I'll finalize edits by 2 PM.",
+        "time": "2025-06-17 09:24 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Do we have vertical crops for Instagram stories?",
+        "time": "2025-06-16 12:20 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Soft jazz for background music, right?",
+        "time": "2025-06-17 03:30 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Do we have enough light modifiers for today's shoot?",
+        "time": "2025-06-16 09:05 AM",
+        "fromMe": false
+      },
+      {
+        "text": "https://storage.photostudio.com/images/session1.jpg",
+        "time": "2025-06-22T10:42:38",
+        "fromMe": false
+      }
+    ],
+    "links": [
+      "https://drive.google.com/drive/u/0/folders/sharedfolder123",
+      "https://storage.photostudio.com/files/sample-invoice.pdf"
+    ],
+    "media": [
+      "https://storage.photostudio.com/images/final-edits.jpeg",
+      "https://storage.photostudio.com/images/behind-scenes.png"
+    ],
+    "appointments": [
+      {
+        "package": "Outdoor Editorial",
+        "client": "Alex Monroe"
+      },
+      {
+        "package": "Event Coverage",
+        "client": "Alex Monroe"
+      }
+    ]
+  },
+  {
+    "name": "Brenda Li",
+    "message": "Yes, I brought the softboxes and reflectors.",
+    "time": "2025-06-15 12:14 AM",
+    "unread": true,
+    "messages": [
+      {
+        "text": "Client wants a clean, high-key look today.",
+        "time": "2025-06-12 08:26 AM",
+        "fromMe": false
+      },
+      {
+        "text": "Coffee is ready and the waiting area is prepped.",
+        "time": "2025-06-12 09:31 AM",
+        "fromMe": false
+      },
+      {
+        "text": "Do we have enough light modifiers for today's shoot?",
+        "time": "2025-06-12 01:46 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Coffee is ready and the waiting area is prepped.",
+        "time": "2025-06-12 10:53 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Yes, I brought the softboxes and reflectors.",
+        "time": "2025-06-12 06:02 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Do you want me to greet the client?",
+        "time": "2025-06-12 12:31 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Do we have vertical crops for Instagram stories?",
+        "time": "2025-06-12 05:14 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Kill the overhead lights \u2014 we only want strobes.",
+        "time": "2025-06-13 01:07 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Yes, I brought the softboxes and reflectors.",
+        "time": "2025-06-13 08:26 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Coffee is ready and the waiting area is prepped.",
+        "time": "2025-06-13 08:35 AM",
+        "fromMe": false
+      },
+      {
+        "text": "Kill the overhead lights \u2014 we only want strobes.",
+        "time": "2025-06-13 11:46 AM",
+        "fromMe": true
+      },
+      {
+        "text": "We're going with strobe lighting for better contrast.",
+        "time": "2025-06-13 04:53 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Live preview is up on the external monitor.",
+        "time": "2025-06-13 04:50 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Soft jazz for background music, right?",
+        "time": "2025-06-13 05:40 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Backdrop is wrinkled. Should I steam it?",
+        "time": "2025-06-12 10:54 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Coffee is ready and the waiting area is prepped.",
+        "time": "2025-06-12 09:56 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Do we have vertical crops for Instagram stories?",
+        "time": "2025-06-13 12:10 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Kill the overhead lights \u2014 we only want strobes.",
+        "time": "2025-06-14 03:47 AM",
+        "fromMe": true
+      },
+      {
+        "text": "We need to match the brand's blue palette.",
+        "time": "2025-06-13 04:50 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Client wants a clean, high-key look today.",
+        "time": "2025-06-14 02:52 AM",
+        "fromMe": false
+      },
+      {
+        "text": "Client wants a clean, high-key look today.",
+        "time": "2025-06-13 12:26 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Make sure to bring the 85mm and 50mm primes.",
+        "time": "2025-06-13 02:38 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Coffee is ready and the waiting area is prepped.",
+        "time": "2025-06-13 02:02 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Backdrop is wrinkled. Should I steam it?",
+        "time": "2025-06-14 05:56 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Kill the overhead lights \u2014 we only want strobes.",
+        "time": "2025-06-14 02:26 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Do we have vertical crops for Instagram stories?",
+        "time": "2025-06-13 08:16 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Coffee is ready and the waiting area is prepped.",
+        "time": "2025-06-13 01:02 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Do we have vertical crops for Instagram stories?",
+        "time": "2025-06-13 11:53 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Do we have enough light modifiers for today's shoot?",
+        "time": "2025-06-13 10:14 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Yes, I brought the softboxes and reflectors.",
+        "time": "2025-06-15 12:14 AM",
+        "fromMe": false
+      },
+      {
+        "text": "https://storage.photostudio.com/images/behind-scenes.png",
+        "time": "2025-06-24T10:42:38",
+        "fromMe": false
+      }
+    ],
+    "links": [
+      "https://storage.photostudio.com/files/sample-invoice.pdf",
+      "https://drive.google.com/drive/u/0/folders/sharedfolder123"
+    ],
+    "media": [
+      "https://storage.photostudio.com/images/session1.jpg",
+      "https://storage.photostudio.com/images/final-edits.jpeg"
+    ],
+    "appointments": [
+      {
+        "package": "Outdoor Editorial",
+        "client": "Brenda Li"
+      },
+      {
+        "package": "Graduation Special",
+        "client": "Brenda Li"
+      }
+    ]
+  },
+  {
+    "name": "Carlos Vega",
+    "message": "Client wants a clean, high-key look today.",
+    "time": "2025-06-22 02:58 AM",
+    "unread": false,
+    "messages": [
+      {
+        "text": "Is the Capture One tether working properly?",
+        "time": "2025-06-20 08:26 AM",
+        "fromMe": false
+      },
+      {
+        "text": "We're going with strobe lighting for better contrast.",
+        "time": "2025-06-20 11:14 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Soft jazz for background music, right?",
+        "time": "2025-06-20 12:16 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Backdrop is wrinkled. Should I steam it?",
+        "time": "2025-06-20 11:59 AM",
+        "fromMe": true
+      },
+      {
+        "text": "We need to match the brand's blue palette.",
+        "time": "2025-06-20 06:18 PM",
+        "fromMe": false
+      },
+      {
+        "text": "We're going with strobe lighting for better contrast.",
+        "time": "2025-06-20 06:16 PM",
+        "fromMe": true
+      },
+      {
+        "text": "We're going with strobe lighting for better contrast.",
+        "time": "2025-06-20 07:56 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Coffee is ready and the waiting area is prepped.",
+        "time": "2025-06-20 12:59 PM",
+        "fromMe": true
+      },
+      {
+        "text": "We need to match the brand's blue palette.",
+        "time": "2025-06-21 04:42 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Is the Capture One tether working properly?",
+        "time": "2025-06-20 05:26 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Live preview is up on the external monitor.",
+        "time": "2025-06-20 06:16 PM",
+        "fromMe": false
+      },
+      {
+        "text": "We're going with strobe lighting for better contrast.",
+        "time": "2025-06-20 05:14 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Soft jazz for background music, right?",
+        "time": "2025-06-21 03:26 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Do you want me to greet the client?",
+        "time": "2025-06-20 05:06 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Client wants a clean, high-key look today.",
+        "time": "2025-06-21 11:58 AM",
+        "fromMe": false
+      },
+      {
+        "text": "Live preview is up on the external monitor.",
+        "time": "2025-06-22 01:26 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Soft jazz for background music, right?",
+        "time": "2025-06-20 06:34 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Do we have enough light modifiers for today's shoot?",
+        "time": "2025-06-21 09:39 AM",
+        "fromMe": false
+      },
+      {
+        "text": "We need to match the brand's blue palette.",
+        "time": "2025-06-21 06:38 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Check if the flash sync is firing consistently.",
+        "time": "2025-06-21 11:02 AM",
+        "fromMe": false
+      },
+      {
+        "text": "Set the aperture to f/2.8 for a sharper image.",
+        "time": "2025-06-21 09:46 PM",
+        "fromMe": false
+      },
+      {
+        "text": "I'll finalize edits by 2 PM.",
+        "time": "2025-06-22 03:44 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Do we have enough light modifiers for today's shoot?",
+        "time": "2025-06-21 10:34 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Yes, I brought the softboxes and reflectors.",
+        "time": "2025-06-20 11:46 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Do we have enough light modifiers for today's shoot?",
+        "time": "2025-06-23 04:26 AM",
+        "fromMe": true
+      },
+      {
+        "text": "I'll finalize edits by 2 PM.",
+        "time": "2025-06-20 11:01 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Is the Capture One tether working properly?",
+        "time": "2025-06-21 01:02 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Check if the flash sync is firing consistently.",
+        "time": "2025-06-22 02:17 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Do we have vertical crops for Instagram stories?",
+        "time": "2025-06-21 02:18 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Client wants a clean, high-key look today.",
+        "time": "2025-06-22 02:58 AM",
+        "fromMe": true
+      },
+      {
+        "text": "https://storage.photostudio.com/images/session1.jpg",
+        "time": "2025-06-22T10:42:38",
+        "fromMe": false
+      }
+    ],
+    "links": [
+      "https://photostudio.com/booking-details",
+      "https://drive.google.com/drive/u/0/folders/sharedfolder123"
+    ],
+    "media": [
+      "https://storage.photostudio.com/images/session1.jpg",
+      "https://storage.photostudio.com/images/final-edits.jpeg"
+    ],
+    "appointments": [
+      {
+        "package": "Wedding Package",
+        "client": "Carlos Vega"
+      },
+      {
+        "package": "Graduation Special",
+        "client": "Carlos Vega"
+      }
+    ]
+  },
+  {
+    "name": "Diana Fox",
+    "message": "I'll finalize edits by 2 PM.",
+    "time": "2025-06-16 06:31 AM",
+    "unread": false,
+    "messages": [
+      {
+        "text": "Soft jazz for background music, right?",
+        "time": "2025-06-13 08:26 AM",
+        "fromMe": false
+      },
+      {
+        "text": "The Godox trigger batteries are low.",
+        "time": "2025-06-13 08:59 AM",
+        "fromMe": false
+      },
+      {
+        "text": "Is the Capture One tether working properly?",
+        "time": "2025-06-13 01:40 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Live preview is up on the external monitor.",
+        "time": "2025-06-13 04:23 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Is the Capture One tether working properly?",
+        "time": "2025-06-13 07:50 PM",
+        "fromMe": false
+      },
+      {
+        "text": "We need to match the brand's blue palette.",
+        "time": "2025-06-13 10:26 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Set the aperture to f/2.8 for a sharper image.",
+        "time": "2025-06-13 06:08 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Is the Capture One tether working properly?",
+        "time": "2025-06-13 01:13 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Live preview is up on the external monitor.",
+        "time": "2025-06-13 10:02 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Live preview is up on the external monitor.",
+        "time": "2025-06-14 08:17 AM",
+        "fromMe": false
+      },
+      {
+        "text": "We're going with strobe lighting for better contrast.",
+        "time": "2025-06-13 05:46 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Check if the flash sync is firing consistently.",
+        "time": "2025-06-14 09:22 AM",
+        "fromMe": false
+      },
+      {
+        "text": "Check if the flash sync is firing consistently.",
+        "time": "2025-06-13 06:50 PM",
+        "fromMe": true
+      },
+      {
+        "text": "I'll finalize edits by 2 PM.",
+        "time": "2025-06-14 03:04 AM",
+        "fromMe": false
+      },
+      {
+        "text": "I'll finalize edits by 2 PM.",
+        "time": "2025-06-14 03:42 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Set the aperture to f/2.8 for a sharper image.",
+        "time": "2025-06-14 12:56 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Check if the flash sync is firing consistently.",
+        "time": "2025-06-13 04:58 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Do we have enough light modifiers for today's shoot?",
+        "time": "2025-06-15 02:22 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Live preview is up on the external monitor.",
+        "time": "2025-06-15 05:44 AM",
+        "fromMe": false
+      },
+      {
+        "text": "Do you want me to greet the client?",
+        "time": "2025-06-14 01:32 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Check if the flash sync is firing consistently.",
+        "time": "2025-06-14 07:26 AM",
+        "fromMe": false
+      },
+      {
+        "text": "The Godox trigger batteries are low.",
+        "time": "2025-06-13 09:44 PM",
+        "fromMe": true
+      },
+      {
+        "text": "We're going with strobe lighting for better contrast.",
+        "time": "2025-06-15 09:56 AM",
+        "fromMe": false
+      },
+      {
+        "text": "Do you want me to greet the client?",
+        "time": "2025-06-15 05:17 AM",
+        "fromMe": false
+      },
+      {
+        "text": "Color grading for the maternity shoot is in progress.",
+        "time": "2025-06-16 06:02 AM",
+        "fromMe": true
+      },
+      {
+        "text": "We need to match the brand's blue palette.",
+        "time": "2025-06-15 09:11 AM",
+        "fromMe": false
+      },
+      {
+        "text": "Color grading for the maternity shoot is in progress.",
+        "time": "2025-06-15 02:54 AM",
+        "fromMe": true
+      },
+      {
+        "text": "The reflector should go camera-left and feathered.",
+        "time": "2025-06-14 03:02 PM",
+        "fromMe": false
+      },
+      {
+        "text": "We need to match the brand's blue palette.",
+        "time": "2025-06-14 12:26 PM",
+        "fromMe": false
+      },
+      {
+        "text": "I'll finalize edits by 2 PM.",
+        "time": "2025-06-16 06:31 AM",
+        "fromMe": true
+      },
+      {
+        "text": "https://storage.photostudio.com/images/final-edits.jpeg",
+        "time": "2025-06-25T10:42:38",
+        "fromMe": false
+      }
+    ],
+    "links": [
+      "https://drive.google.com/drive/u/0/folders/sharedfolder123",
+      "https://photostudio.com/booking-details"
+    ],
+    "media": [
+      "https://storage.photostudio.com/images/behind-scenes.png",
+      "https://storage.photostudio.com/images/final-edits.jpeg"
+    ],
+    "appointments": [
+      {
+        "package": "Studio Portrait",
+        "client": "Diana Fox"
+      },
+      {
+        "package": "Fashion Catalog",
+        "client": "Diana Fox"
+      }
+    ]
+  },
+  {
+    "name": "Ethan Cole",
+    "message": "Do we have vertical crops for Instagram stories?",
+    "time": "2025-06-20 01:41 AM",
+    "unread": false,
+    "messages": [
+      {
+        "text": "The reflector should go camera-left and feathered.",
+        "time": "2025-06-17 08:26 AM",
+        "fromMe": false
+      },
+      {
+        "text": "Coffee is ready and the waiting area is prepped.",
+        "time": "2025-06-17 09:29 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Do we have vertical crops for Instagram stories?",
+        "time": "2025-06-17 01:06 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Make sure to bring the 85mm and 50mm primes.",
+        "time": "2025-06-17 01:53 PM",
+        "fromMe": true
+      },
+      {
+        "text": "The reflector should go camera-left and feathered.",
+        "time": "2025-06-17 12:06 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Color grading for the maternity shoot is in progress.",
+        "time": "2025-06-17 03:21 PM",
+        "fromMe": false
+      },
+      {
+        "text": "We're going with strobe lighting for better contrast.",
+        "time": "2025-06-17 09:56 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Do we have enough light modifiers for today's shoot?",
+        "time": "2025-06-17 05:04 PM",
+        "fromMe": false
+      },
+      {
+        "text": "We need to match the brand's blue palette.",
+        "time": "2025-06-17 04:26 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Color grading for the maternity shoot is in progress.",
+        "time": "2025-06-17 03:38 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Yes, I brought the softboxes and reflectors.",
+        "time": "2025-06-17 10:16 PM",
+        "fromMe": true
+      },
+      {
+        "text": "We need to match the brand's blue palette.",
+        "time": "2025-06-18 10:06 AM",
+        "fromMe": false
+      },
+      {
+        "text": "We're going with strobe lighting for better contrast.",
+        "time": "2025-06-18 03:02 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Backdrop is wrinkled. Should I steam it?",
+        "time": "2025-06-18 09:47 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Do you want me to greet the client?",
+        "time": "2025-06-18 08:08 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Color grading for the maternity shoot is in progress.",
+        "time": "2025-06-18 02:41 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Do you want me to greet the client?",
+        "time": "2025-06-18 06:34 AM",
+        "fromMe": false
+      },
+      {
+        "text": "I'll finalize edits by 2 PM.",
+        "time": "2025-06-18 12:35 AM",
+        "fromMe": false
+      },
+      {
+        "text": "Check if the flash sync is firing consistently.",
+        "time": "2025-06-19 02:08 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Is the Capture One tether working properly?",
+        "time": "2025-06-17 08:47 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Color grading for the maternity shoot is in progress.",
+        "time": "2025-06-18 09:26 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Is the Capture One tether working properly?",
+        "time": "2025-06-19 03:29 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Do we have enough light modifiers for today's shoot?",
+        "time": "2025-06-18 09:28 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Soft jazz for background music, right?",
+        "time": "2025-06-17 10:14 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Client wants a clean, high-key look today.",
+        "time": "2025-06-18 07:38 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Check if the flash sync is firing consistently.",
+        "time": "2025-06-18 10:16 AM",
+        "fromMe": false
+      },
+      {
+        "text": "The reflector should go camera-left and feathered.",
+        "time": "2025-06-18 07:50 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Soft jazz for background music, right?",
+        "time": "2025-06-20 03:56 AM",
+        "fromMe": false
+      },
+      {
+        "text": "I'll finalize edits by 2 PM.",
+        "time": "2025-06-20 09:14 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Do we have vertical crops for Instagram stories?",
+        "time": "2025-06-20 01:41 AM",
+        "fromMe": false
+      },
+      {
+        "text": "https://storage.photostudio.com/images/behind-scenes.png",
+        "time": "2025-06-23T10:42:38",
+        "fromMe": false
+      }
+    ],
+    "links": [
+      "https://drive.google.com/drive/u/0/folders/sharedfolder123",
+      "https://photostudio.com/booking-details"
+    ],
+    "media": [
+      "https://storage.photostudio.com/images/session1.jpg",
+      "https://storage.photostudio.com/images/behind-scenes.png"
+    ],
+    "appointments": [
+      {
+        "package": "Outdoor Editorial",
+        "client": "Ethan Cole"
+      },
+      {
+        "package": "Event Coverage",
+        "client": "Ethan Cole"
+      }
+    ]
+  },
+  {
+    "name": "Fiona Zhang",
+    "message": "Do we have vertical crops for Instagram stories?",
+    "time": "2025-06-19 11:25 PM",
+    "unread": false,
+    "messages": [
+      {
+        "text": "We need to match the brand's blue palette.",
+        "time": "2025-06-19 08:26 AM",
+        "fromMe": true
+      },
+      {
+        "text": "I'll finalize edits by 2 PM.",
+        "time": "2025-06-19 09:15 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Check if the flash sync is firing consistently.",
+        "time": "2025-06-19 12:10 PM",
+        "fromMe": false
+      },
+      {
+        "text": "The Godox trigger batteries are low.",
+        "time": "2025-06-19 10:11 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Set the aperture to f/2.8 for a sharper image.",
+        "time": "2025-06-19 06:26 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Check if the flash sync is firing consistently.",
+        "time": "2025-06-19 04:41 PM",
+        "fromMe": true
+      },
+      {
+        "text": "I'll finalize edits by 2 PM.",
+        "time": "2025-06-19 11:26 PM",
+        "fromMe": true
+      },
+      {
+        "text": "The reflector should go camera-left and feathered.",
+        "time": "2025-06-19 09:16 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Do we have enough light modifiers for today's shoot?",
+        "time": "2025-06-19 11:54 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Check if the flash sync is firing consistently.",
+        "time": "2025-06-19 07:14 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Coffee is ready and the waiting area is prepped.",
+        "time": "2025-06-20 09:56 AM",
+        "fromMe": false
+      },
+      {
+        "text": "Do we have enough light modifiers for today's shoot?",
+        "time": "2025-06-20 09:11 AM",
+        "fromMe": false
+      },
+      {
+        "text": "I'll finalize edits by 2 PM.",
+        "time": "2025-06-20 08:50 AM",
+        "fromMe": false
+      },
+      {
+        "text": "Color grading for the maternity shoot is in progress.",
+        "time": "2025-06-20 10:08 PM",
+        "fromMe": false
+      },
+      {
+        "text": "I'll finalize edits by 2 PM.",
+        "time": "2025-06-20 02:10 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Coffee is ready and the waiting area is prepped.",
+        "time": "2025-06-19 08:56 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Backdrop is wrinkled. Should I steam it?",
+        "time": "2025-06-21 01:30 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Kill the overhead lights \u2014 we only want strobes.",
+        "time": "2025-06-20 08:59 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Coffee is ready and the waiting area is prepped.",
+        "time": "2025-06-21 01:32 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Kill the overhead lights \u2014 we only want strobes.",
+        "time": "2025-06-20 06:36 AM",
+        "fromMe": false
+      },
+      {
+        "text": "Live preview is up on the external monitor.",
+        "time": "2025-06-19 07:26 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Do you want me to greet the client?",
+        "time": "2025-06-19 10:05 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Do we have vertical crops for Instagram stories?",
+        "time": "2025-06-20 02:02 AM",
+        "fromMe": true
+      },
+      {
+        "text": "The Godox trigger batteries are low.",
+        "time": "2025-06-21 01:20 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Soft jazz for background music, right?",
+        "time": "2025-06-20 04:50 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Yes, I brought the softboxes and reflectors.",
+        "time": "2025-06-20 01:36 PM",
+        "fromMe": true
+      },
+      {
+        "text": "I'll finalize edits by 2 PM.",
+        "time": "2025-06-21 08:14 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Soft jazz for background music, right?",
+        "time": "2025-06-21 11:44 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Make sure to bring the 85mm and 50mm primes.",
+        "time": "2025-06-20 05:06 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Do we have vertical crops for Instagram stories?",
+        "time": "2025-06-19 11:25 PM",
+        "fromMe": false
+      },
+      {
+        "text": "https://storage.photostudio.com/images/behind-scenes.png",
+        "time": "2025-06-22T10:42:38",
+        "fromMe": false
+      }
+    ],
+    "links": [
+      "https://drive.google.com/drive/u/0/folders/sharedfolder123",
+      "https://storage.photostudio.com/files/sample-invoice.pdf"
+    ],
+    "media": [
+      "https://storage.photostudio.com/images/session1.jpg",
+      "https://storage.photostudio.com/images/final-edits.jpeg"
+    ],
+    "appointments": [
+      {
+        "package": "Outdoor Editorial",
+        "client": "Fiona Zhang"
+      },
+      {
+        "package": "Fashion Catalog",
+        "client": "Fiona Zhang"
+      }
+    ]
+  },
+  {
+    "name": "Gavin Cruz",
+    "message": "Coffee is ready and the waiting area is prepped.",
+    "time": "2025-06-22 02:44 PM",
+    "unread": false,
+    "messages": [
+      {
+        "text": "Backdrop is wrinkled. Should I steam it?",
+        "time": "2025-06-19 08:26 AM",
+        "fromMe": false
+      },
+      {
+        "text": "Do you want me to greet the client?",
+        "time": "2025-06-19 11:12 AM",
+        "fromMe": false
+      },
+      {
+        "text": "Coffee is ready and the waiting area is prepped.",
+        "time": "2025-06-19 12:38 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Set the aperture to f/2.8 for a sharper image.",
+        "time": "2025-06-19 04:35 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Client wants a clean, high-key look today.",
+        "time": "2025-06-19 08:14 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Do we have vertical crops for Instagram stories?",
+        "time": "2025-06-19 08:11 PM",
+        "fromMe": false
+      },
+      {
+        "text": "The Godox trigger batteries are low.",
+        "time": "2025-06-19 12:08 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Soft jazz for background music, right?",
+        "time": "2025-06-19 06:00 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Coffee is ready and the waiting area is prepped.",
+        "time": "2025-06-19 09:14 PM",
+        "fromMe": false
+      },
+      {
+        "text": "The reflector should go camera-left and feathered.",
+        "time": "2025-06-20 09:02 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Check if the flash sync is firing consistently.",
+        "time": "2025-06-19 02:06 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Is the Capture One tether working properly?",
+        "time": "2025-06-19 07:48 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Set the aperture to f/2.8 for a sharper image.",
+        "time": "2025-06-19 08:26 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Client wants a clean, high-key look today.",
+        "time": "2025-06-20 02:12 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Do we have vertical crops for Instagram stories?",
+        "time": "2025-06-20 06:36 AM",
+        "fromMe": false
+      },
+      {
+        "text": "We're going with strobe lighting for better contrast.",
+        "time": "2025-06-20 11:56 PM",
+        "fromMe": false
+      },
+      {
+        "text": "We need to match the brand's blue palette.",
+        "time": "2025-06-20 08:42 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Do we have vertical crops for Instagram stories?",
+        "time": "2025-06-20 03:42 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Live preview is up on the external monitor.",
+        "time": "2025-06-21 10:50 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Backdrop is wrinkled. Should I steam it?",
+        "time": "2025-06-20 08:49 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Do we have enough light modifiers for today's shoot?",
+        "time": "2025-06-20 10:26 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Soft jazz for background music, right?",
+        "time": "2025-06-21 01:23 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Color grading for the maternity shoot is in progress.",
+        "time": "2025-06-21 08:28 AM",
+        "fromMe": false
+      },
+      {
+        "text": "The Godox trigger batteries are low.",
+        "time": "2025-06-21 04:01 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Do we have vertical crops for Instagram stories?",
+        "time": "2025-06-20 05:38 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Backdrop is wrinkled. Should I steam it?",
+        "time": "2025-06-20 12:41 AM",
+        "fromMe": false
+      },
+      {
+        "text": "The Godox trigger batteries are low.",
+        "time": "2025-06-21 03:02 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Soft jazz for background music, right?",
+        "time": "2025-06-20 11:53 AM",
+        "fromMe": false
+      },
+      {
+        "text": "Coffee is ready and the waiting area is prepped.",
+        "time": "2025-06-22 05:38 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Coffee is ready and the waiting area is prepped.",
+        "time": "2025-06-22 02:44 PM",
+        "fromMe": false
+      },
+      {
+        "text": "https://storage.photostudio.com/images/behind-scenes.png",
+        "time": "2025-06-23T10:42:38",
+        "fromMe": false
+      }
+    ],
+    "links": [
+      "https://storage.photostudio.com/files/sample-invoice.pdf",
+      "https://photostudio.com/booking-details"
+    ],
+    "media": [
+      "https://storage.photostudio.com/images/session1.jpg",
+      "https://storage.photostudio.com/images/behind-scenes.png"
+    ],
+    "appointments": [
+      {
+        "package": "Wedding Package",
+        "client": "Gavin Cruz"
+      },
+      {
+        "package": "Fashion Catalog",
+        "client": "Gavin Cruz"
+      }
+    ]
+  },
+  {
+    "name": "Hannah Lee",
+    "message": "We're going with strobe lighting for better contrast.",
+    "time": "2025-06-19 08:32 PM",
+    "unread": false,
+    "messages": [
+      {
+        "text": "Color grading for the maternity shoot is in progress.",
+        "time": "2025-06-16 08:26 AM",
+        "fromMe": false
+      },
+      {
+        "text": "Check if the flash sync is firing consistently.",
+        "time": "2025-06-16 09:34 AM",
+        "fromMe": true
+      },
+      {
+        "text": "The Godox trigger batteries are low.",
+        "time": "2025-06-16 01:30 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Coffee is ready and the waiting area is prepped.",
+        "time": "2025-06-16 02:05 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Do you want me to greet the client?",
+        "time": "2025-06-16 07:58 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Color grading for the maternity shoot is in progress.",
+        "time": "2025-06-16 03:06 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Make sure to bring the 85mm and 50mm primes.",
+        "time": "2025-06-16 02:26 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Yes, I brought the softboxes and reflectors.",
+        "time": "2025-06-17 12:32 AM",
+        "fromMe": false
+      },
+      {
+        "text": "Set the aperture to f/2.8 for a sharper image.",
+        "time": "2025-06-16 08:02 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Do we have vertical crops for Instagram stories?",
+        "time": "2025-06-17 08:44 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Soft jazz for background music, right?",
+        "time": "2025-06-17 07:56 AM",
+        "fromMe": false
+      },
+      {
+        "text": "Set the aperture to f/2.8 for a sharper image.",
+        "time": "2025-06-16 08:54 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Live preview is up on the external monitor.",
+        "time": "2025-06-17 04:38 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Do we have vertical crops for Instagram stories?",
+        "time": "2025-06-16 10:18 PM",
+        "fromMe": false
+      },
+      {
+        "text": "We're going with strobe lighting for better contrast.",
+        "time": "2025-06-17 08:56 AM",
+        "fromMe": false
+      },
+      {
+        "text": "We're going with strobe lighting for better contrast.",
+        "time": "2025-06-17 08:41 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Is the Capture One tether working properly?",
+        "time": "2025-06-17 09:46 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Set the aperture to f/2.8 for a sharper image.",
+        "time": "2025-06-17 05:52 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Client wants a clean, high-key look today.",
+        "time": "2025-06-16 10:32 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Do we have enough light modifiers for today's shoot?",
+        "time": "2025-06-18 07:56 AM",
+        "fromMe": false
+      },
+      {
+        "text": "Kill the overhead lights \u2014 we only want strobes.",
+        "time": "2025-06-16 09:06 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Backdrop is wrinkled. Should I steam it?",
+        "time": "2025-06-17 02:32 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Make sure to bring the 85mm and 50mm primes.",
+        "time": "2025-06-17 10:06 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Color grading for the maternity shoot is in progress.",
+        "time": "2025-06-17 09:14 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Make sure to bring the 85mm and 50mm primes.",
+        "time": "2025-06-19 04:50 AM",
+        "fromMe": true
+      },
+      {
+        "text": "We need to match the brand's blue palette.",
+        "time": "2025-06-19 08:56 AM",
+        "fromMe": true
+      },
+      {
+        "text": "The Godox trigger batteries are low.",
+        "time": "2025-06-18 03:02 PM",
+        "fromMe": true
+      },
+      {
+        "text": "The Godox trigger batteries are low.",
+        "time": "2025-06-17 10:32 AM",
+        "fromMe": true
+      },
+      {
+        "text": "I'll finalize edits by 2 PM.",
+        "time": "2025-06-19 07:22 AM",
+        "fromMe": true
+      },
+      {
+        "text": "We're going with strobe lighting for better contrast.",
+        "time": "2025-06-19 08:32 PM",
+        "fromMe": true
+      },
+      {
+        "text": "https://storage.photostudio.com/images/final-edits.jpeg",
+        "time": "2025-06-23T10:42:38",
+        "fromMe": false
+      }
+    ],
+    "links": [
+      "https://storage.photostudio.com/files/sample-invoice.pdf",
+      "https://drive.google.com/drive/u/0/folders/sharedfolder123"
+    ],
+    "media": [
+      "https://storage.photostudio.com/images/final-edits.jpeg",
+      "https://storage.photostudio.com/images/session1.jpg"
+    ],
+    "appointments": [
+      {
+        "package": "Wedding Package",
+        "client": "Hannah Lee"
+      },
+      {
+        "package": "Fashion Catalog",
+        "client": "Hannah Lee"
+      }
+    ]
+  },
+  {
+    "name": "Ivan Novak",
+    "message": "Do you want me to greet the client?",
+    "time": "2025-06-14 05:09 PM",
+    "unread": false,
+    "messages": [
+      {
+        "text": "The Godox trigger batteries are low.",
+        "time": "2025-06-11 08:26 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Is the Capture One tether working properly?",
+        "time": "2025-06-11 11:08 AM",
+        "fromMe": true
+      },
+      {
+        "text": "I'll finalize edits by 2 PM.",
+        "time": "2025-06-11 02:22 PM",
+        "fromMe": true
+      },
+      {
+        "text": "I'll finalize edits by 2 PM.",
+        "time": "2025-06-11 02:11 PM",
+        "fromMe": false
+      },
+      {
+        "text": "The reflector should go camera-left and feathered.",
+        "time": "2025-06-11 05:14 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Backdrop is wrinkled. Should I steam it?",
+        "time": "2025-06-11 06:21 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Coffee is ready and the waiting area is prepped.",
+        "time": "2025-06-11 04:08 PM",
+        "fromMe": true
+      },
+      {
+        "text": "The Godox trigger batteries are low.",
+        "time": "2025-06-11 03:40 PM",
+        "fromMe": false
+      },
+      {
+        "text": "The Godox trigger batteries are low.",
+        "time": "2025-06-12 07:54 AM",
+        "fromMe": false
+      },
+      {
+        "text": "We're going with strobe lighting for better contrast.",
+        "time": "2025-06-11 06:02 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Client wants a clean, high-key look today.",
+        "time": "2025-06-11 05:36 PM",
+        "fromMe": true
+      },
+      {
+        "text": "I'll finalize edits by 2 PM.",
+        "time": "2025-06-12 05:20 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Client wants a clean, high-key look today.",
+        "time": "2025-06-12 11:38 AM",
+        "fromMe": false
+      },
+      {
+        "text": "Set the aperture to f/2.8 for a sharper image.",
+        "time": "2025-06-12 07:24 AM",
+        "fromMe": false
+      },
+      {
+        "text": "Soft jazz for background music, right?",
+        "time": "2025-06-11 10:26 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Do we have vertical crops for Instagram stories?",
+        "time": "2025-06-12 02:26 AM",
+        "fromMe": false
+      },
+      {
+        "text": "Soft jazz for background music, right?",
+        "time": "2025-06-11 05:46 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Yes, I brought the softboxes and reflectors.",
+        "time": "2025-06-13 05:29 AM",
+        "fromMe": false
+      },
+      {
+        "text": "Soft jazz for background music, right?",
+        "time": "2025-06-13 12:02 AM",
+        "fromMe": false
+      },
+      {
+        "text": "I'll finalize edits by 2 PM.",
+        "time": "2025-06-13 12:39 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Do you want me to greet the client?",
+        "time": "2025-06-12 06:26 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Do we have vertical crops for Instagram stories?",
+        "time": "2025-06-12 02:53 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Yes, I brought the softboxes and reflectors.",
+        "time": "2025-06-13 08:12 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Backdrop is wrinkled. Should I steam it?",
+        "time": "2025-06-13 05:33 PM",
+        "fromMe": true
+      },
+      {
+        "text": "The reflector should go camera-left and feathered.",
+        "time": "2025-06-13 08:02 AM",
+        "fromMe": false
+      },
+      {
+        "text": "Set the aperture to f/2.8 for a sharper image.",
+        "time": "2025-06-12 08:41 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Color grading for the maternity shoot is in progress.",
+        "time": "2025-06-12 05:40 AM",
+        "fromMe": false
+      },
+      {
+        "text": "Check if the flash sync is firing consistently.",
+        "time": "2025-06-14 02:17 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Soft jazz for background music, right?",
+        "time": "2025-06-13 09:34 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Do you want me to greet the client?",
+        "time": "2025-06-14 05:09 PM",
+        "fromMe": false
+      },
+      {
+        "text": "https://storage.photostudio.com/images/final-edits.jpeg",
+        "time": "2025-06-24T10:42:38",
+        "fromMe": false
+      }
+    ],
+    "links": [
+      "https://storage.photostudio.com/files/sample-invoice.pdf",
+      "https://drive.google.com/drive/u/0/folders/sharedfolder123"
+    ],
+    "media": [
+      "https://storage.photostudio.com/images/behind-scenes.png",
+      "https://storage.photostudio.com/images/session1.jpg"
+    ],
+    "appointments": [
+      {
+        "package": "Wedding Package",
+        "client": "Ivan Novak"
+      },
+      {
+        "package": "Graduation Special",
+        "client": "Ivan Novak"
+      }
+    ]
+  },
+  {
+    "name": "Jade Thomas",
+    "message": "Do you want me to greet the client?",
+    "time": "2025-06-22 10:42 AM",
+    "unread": false,
+    "messages": [
+      {
+        "text": "Check if the flash sync is firing consistently.",
+        "time": "2025-06-20 08:26 AM",
+        "fromMe": false
+      },
+      {
+        "text": "Make sure to bring the 85mm and 50mm primes.",
+        "time": "2025-06-20 10:30 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Do we have enough light modifiers for today's shoot?",
+        "time": "2025-06-20 09:38 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Client wants a clean, high-key look today.",
+        "time": "2025-06-20 10:23 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Do you want me to greet the client?",
+        "time": "2025-06-20 02:34 PM",
+        "fromMe": true
+      },
+      {
+        "text": "We're going with strobe lighting for better contrast.",
+        "time": "2025-06-20 02:26 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Color grading for the maternity shoot is in progress.",
+        "time": "2025-06-20 04:20 PM",
+        "fromMe": false
+      },
+      {
+        "text": "The reflector should go camera-left and feathered.",
+        "time": "2025-06-21 04:37 AM",
+        "fromMe": true
+      },
+      {
+        "text": "We're going with strobe lighting for better contrast.",
+        "time": "2025-06-20 12:42 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Do you want me to greet the client?",
+        "time": "2025-06-21 04:32 AM",
+        "fromMe": false
+      },
+      {
+        "text": "Soft jazz for background music, right?",
+        "time": "2025-06-21 03:56 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Coffee is ready and the waiting area is prepped.",
+        "time": "2025-06-21 06:26 AM",
+        "fromMe": false
+      },
+      {
+        "text": "Check if the flash sync is firing consistently.",
+        "time": "2025-06-21 07:50 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Check if the flash sync is firing consistently.",
+        "time": "2025-06-21 12:28 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Do we have enough light modifiers for today's shoot?",
+        "time": "2025-06-21 01:50 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Is the Capture One tether working properly?",
+        "time": "2025-06-22 05:26 AM",
+        "fromMe": true
+      },
+      {
+        "text": "We need to match the brand's blue palette.",
+        "time": "2025-06-21 03:38 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Make sure to bring the 85mm and 50mm primes.",
+        "time": "2025-06-21 12:46 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Client wants a clean, high-key look today.",
+        "time": "2025-06-21 06:38 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Make sure to bring the 85mm and 50mm primes.",
+        "time": "2025-06-20 11:38 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Do you want me to greet the client?",
+        "time": "2025-06-21 08:06 AM",
+        "fromMe": false
+      },
+      {
+        "text": "Live preview is up on the external monitor.",
+        "time": "2025-06-22 03:44 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Check if the flash sync is firing consistently.",
+        "time": "2025-06-22 03:42 AM",
+        "fromMe": false
+      },
+      {
+        "text": "Set the aperture to f/2.8 for a sharper image.",
+        "time": "2025-06-21 12:09 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Check if the flash sync is firing consistently.",
+        "time": "2025-06-22 02:50 AM",
+        "fromMe": false
+      },
+      {
+        "text": "Do we have vertical crops for Instagram stories?",
+        "time": "2025-06-22 12:31 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Coffee is ready and the waiting area is prepped.",
+        "time": "2025-06-22 04:38 AM",
+        "fromMe": false
+      },
+      {
+        "text": "Color grading for the maternity shoot is in progress.",
+        "time": "2025-06-23 03:56 AM",
+        "fromMe": true
+      },
+      {
+        "text": "We need to match the brand's blue palette.",
+        "time": "2025-06-21 11:10 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Do you want me to greet the client?",
+        "time": "2025-06-22 10:42 AM",
+        "fromMe": true
+      },
+      {
+        "text": "https://storage.photostudio.com/images/final-edits.jpeg",
+        "time": "2025-06-23T10:42:38",
+        "fromMe": false
+      }
+    ],
+    "links": [
+      "https://drive.google.com/drive/u/0/folders/sharedfolder123",
+      "https://photostudio.com/booking-details"
+    ],
+    "media": [
+      "https://storage.photostudio.com/images/final-edits.jpeg",
+      "https://storage.photostudio.com/images/behind-scenes.png"
+    ],
+    "appointments": [
+      {
+        "package": "Studio Portrait",
+        "client": "Jade Thomas"
+      },
+      {
+        "package": "Fashion Catalog",
+        "client": "Jade Thomas"
+      }
+    ]
+  },
+  {
+    "name": "Kevin Patel",
+    "message": "Make sure to bring the 85mm and 50mm primes.",
+    "time": "2025-06-16 02:05 PM",
+    "unread": true,
+    "messages": [
+      {
+        "text": "Kill the overhead lights \u2014 we only want strobes.",
+        "time": "2025-06-14 08:26 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Yes, I brought the softboxes and reflectors.",
+        "time": "2025-06-14 11:23 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Do we have enough light modifiers for today's shoot?",
+        "time": "2025-06-14 09:32 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Soft jazz for background music, right?",
+        "time": "2025-06-14 04:56 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Check if the flash sync is firing consistently.",
+        "time": "2025-06-14 02:14 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Do you want me to greet the client?",
+        "time": "2025-06-14 08:31 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Yes, I brought the softboxes and reflectors.",
+        "time": "2025-06-14 08:56 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Set the aperture to f/2.8 for a sharper image.",
+        "time": "2025-06-15 02:38 AM",
+        "fromMe": false
+      },
+      {
+        "text": "Coffee is ready and the waiting area is prepped.",
+        "time": "2025-06-14 08:02 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Kill the overhead lights \u2014 we only want strobes.",
+        "time": "2025-06-15 09:47 AM",
+        "fromMe": false
+      },
+      {
+        "text": "Make sure to bring the 85mm and 50mm primes.",
+        "time": "2025-06-14 04:06 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Soft jazz for background music, right?",
+        "time": "2025-06-15 02:57 AM",
+        "fromMe": false
+      },
+      {
+        "text": "Set the aperture to f/2.8 for a sharper image.",
+        "time": "2025-06-15 04:14 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Live preview is up on the external monitor.",
+        "time": "2025-06-14 07:55 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Do we have vertical crops for Instagram stories?",
+        "time": "2025-06-14 06:28 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Kill the overhead lights \u2014 we only want strobes.",
+        "time": "2025-06-15 03:41 AM",
+        "fromMe": false
+      },
+      {
+        "text": "Soft jazz for background music, right?",
+        "time": "2025-06-16 12:26 AM",
+        "fromMe": false
+      },
+      {
+        "text": "Color grading for the maternity shoot is in progress.",
+        "time": "2025-06-16 04:21 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Is the Capture One tether working properly?",
+        "time": "2025-06-15 07:32 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Soft jazz for background music, right?",
+        "time": "2025-06-15 04:25 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Do we have vertical crops for Instagram stories?",
+        "time": "2025-06-14 09:06 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Soft jazz for background music, right?",
+        "time": "2025-06-16 12:56 PM",
+        "fromMe": false
+      },
+      {
+        "text": "The reflector should go camera-left and feathered.",
+        "time": "2025-06-15 03:30 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Coffee is ready and the waiting area is prepped.",
+        "time": "2025-06-14 09:51 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Do we have vertical crops for Instagram stories?",
+        "time": "2025-06-14 09:14 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Client wants a clean, high-key look today.",
+        "time": "2025-06-15 03:16 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Yes, I brought the softboxes and reflectors.",
+        "time": "2025-06-16 06:56 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Check if the flash sync is firing consistently.",
+        "time": "2025-06-16 09:56 AM",
+        "fromMe": false
+      },
+      {
+        "text": "Do we have enough light modifiers for today's shoot?",
+        "time": "2025-06-17 12:22 AM",
+        "fromMe": false
+      },
+      {
+        "text": "Make sure to bring the 85mm and 50mm primes.",
+        "time": "2025-06-16 02:05 PM",
+        "fromMe": false
+      },
+      {
+        "text": "https://storage.photostudio.com/images/behind-scenes.png",
+        "time": "2025-06-24T10:42:38",
+        "fromMe": false
+      }
+    ],
+    "links": [
+      "https://photostudio.com/booking-details",
+      "https://storage.photostudio.com/files/sample-invoice.pdf"
+    ],
+    "media": [
+      "https://storage.photostudio.com/images/behind-scenes.png",
+      "https://storage.photostudio.com/images/final-edits.jpeg"
+    ],
+    "appointments": [
+      {
+        "package": "Outdoor Editorial",
+        "client": "Kevin Patel"
+      },
+      {
+        "package": "Fashion Catalog",
+        "client": "Kevin Patel"
+      }
+    ]
+  },
+  {
+    "name": "Lana Kim",
+    "message": "Backdrop is wrinkled. Should I steam it?",
+    "time": "2025-06-13 01:12 AM",
+    "unread": true,
+    "messages": [
+      {
+        "text": "Do we have vertical crops for Instagram stories?",
+        "time": "2025-06-10 08:26 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Do we have enough light modifiers for today's shoot?",
+        "time": "2025-06-10 10:19 AM",
+        "fromMe": false
+      },
+      {
+        "text": "Client wants a clean, high-key look today.",
+        "time": "2025-06-10 12:46 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Live preview is up on the external monitor.",
+        "time": "2025-06-10 01:53 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Make sure to bring the 85mm and 50mm primes.",
+        "time": "2025-06-10 01:06 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Is the Capture One tether working properly?",
+        "time": "2025-06-10 01:56 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Do we have vertical crops for Instagram stories?",
+        "time": "2025-06-10 06:14 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Do we have enough light modifiers for today's shoot?",
+        "time": "2025-06-11 12:11 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Kill the overhead lights \u2014 we only want strobes.",
+        "time": "2025-06-10 02:50 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Coffee is ready and the waiting area is prepped.",
+        "time": "2025-06-10 06:11 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Is the Capture One tether working properly?",
+        "time": "2025-06-10 07:26 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Is the Capture One tether working properly?",
+        "time": "2025-06-11 06:37 AM",
+        "fromMe": true
+      },
+      {
+        "text": "The Godox trigger batteries are low.",
+        "time": "2025-06-11 06:14 PM",
+        "fromMe": false
+      },
+      {
+        "text": "I'll finalize edits by 2 PM.",
+        "time": "2025-06-11 11:57 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Do we have enough light modifiers for today's shoot?",
+        "time": "2025-06-11 02:32 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Color grading for the maternity shoot is in progress.",
+        "time": "2025-06-11 08:56 AM",
+        "fromMe": false
+      },
+      {
+        "text": "Backdrop is wrinkled. Should I steam it?",
+        "time": "2025-06-11 05:30 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Do you want me to greet the client?",
+        "time": "2025-06-11 05:01 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Check if the flash sync is firing consistently.",
+        "time": "2025-06-10 09:20 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Live preview is up on the external monitor.",
+        "time": "2025-06-10 10:03 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Backdrop is wrinkled. Should I steam it?",
+        "time": "2025-06-12 12:06 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Make sure to bring the 85mm and 50mm primes.",
+        "time": "2025-06-11 09:17 AM",
+        "fromMe": false
+      },
+      {
+        "text": "Make sure to bring the 85mm and 50mm primes.",
+        "time": "2025-06-12 08:56 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Set the aperture to f/2.8 for a sharper image.",
+        "time": "2025-06-12 01:27 AM",
+        "fromMe": false
+      },
+      {
+        "text": "The Godox trigger batteries are low.",
+        "time": "2025-06-11 11:14 AM",
+        "fromMe": false
+      },
+      {
+        "text": "Color grading for the maternity shoot is in progress.",
+        "time": "2025-06-11 08:36 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Do we have vertical crops for Instagram stories?",
+        "time": "2025-06-12 04:46 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Backdrop is wrinkled. Should I steam it?",
+        "time": "2025-06-11 08:26 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Live preview is up on the external monitor.",
+        "time": "2025-06-11 01:50 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Backdrop is wrinkled. Should I steam it?",
+        "time": "2025-06-13 01:12 AM",
+        "fromMe": false
+      },
+      {
+        "text": "https://storage.photostudio.com/images/behind-scenes.png",
+        "time": "2025-06-25T10:42:38",
+        "fromMe": false
+      }
+    ],
+    "links": [
+      "https://drive.google.com/drive/u/0/folders/sharedfolder123",
+      "https://storage.photostudio.com/files/sample-invoice.pdf"
+    ],
+    "media": [
+      "https://storage.photostudio.com/images/behind-scenes.png",
+      "https://storage.photostudio.com/images/final-edits.jpeg"
+    ],
+    "appointments": [
+      {
+        "package": "Studio Portrait",
+        "client": "Lana Kim"
+      },
+      {
+        "package": "Fashion Catalog",
+        "client": "Lana Kim"
+      }
+    ]
+  },
+  {
+    "name": "Mason Ward",
+    "message": "Yes, I brought the softboxes and reflectors.",
+    "time": "2025-06-20 11:54 PM",
+    "unread": true,
+    "messages": [
+      {
+        "text": "The Godox trigger batteries are low.",
+        "time": "2025-06-20 08:26 AM",
+        "fromMe": false
+      },
+      {
+        "text": "I'll finalize edits by 2 PM.",
+        "time": "2025-06-20 09:20 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Yes, I brought the softboxes and reflectors.",
+        "time": "2025-06-20 11:08 AM",
+        "fromMe": false
+      },
+      {
+        "text": "Check if the flash sync is firing consistently.",
+        "time": "2025-06-20 04:17 PM",
+        "fromMe": false
+      },
+      {
+        "text": "The Godox trigger batteries are low.",
+        "time": "2025-06-20 05:10 PM",
+        "fromMe": false
+      },
+      {
+        "text": "I'll finalize edits by 2 PM.",
+        "time": "2025-06-20 02:06 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Backdrop is wrinkled. Should I steam it?",
+        "time": "2025-06-20 11:50 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Set the aperture to f/2.8 for a sharper image.",
+        "time": "2025-06-20 01:20 PM",
+        "fromMe": false
+      },
+      {
+        "text": "I'll finalize edits by 2 PM.",
+        "time": "2025-06-21 12:26 AM",
+        "fromMe": false
+      },
+      {
+        "text": "The reflector should go camera-left and feathered.",
+        "time": "2025-06-21 07:59 AM",
+        "fromMe": false
+      },
+      {
+        "text": "Client wants a clean, high-key look today.",
+        "time": "2025-06-21 02:16 PM",
+        "fromMe": true
+      },
+      {
+        "text": "We're going with strobe lighting for better contrast.",
+        "time": "2025-06-20 05:36 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Coffee is ready and the waiting area is prepped.",
+        "time": "2025-06-21 04:14 AM",
+        "fromMe": false
+      },
+      {
+        "text": "Do you want me to greet the client?",
+        "time": "2025-06-21 08:16 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Set the aperture to f/2.8 for a sharper image.",
+        "time": "2025-06-22 01:02 AM",
+        "fromMe": true
+      },
+      {
+        "text": "We need to match the brand's blue palette.",
+        "time": "2025-06-22 01:56 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Backdrop is wrinkled. Should I steam it?",
+        "time": "2025-06-22 02:50 AM",
+        "fromMe": false
+      },
+      {
+        "text": "We need to match the brand's blue palette.",
+        "time": "2025-06-20 10:53 PM",
+        "fromMe": true
+      },
+      {
+        "text": "We need to match the brand's blue palette.",
+        "time": "2025-06-21 01:14 PM",
+        "fromMe": true
+      },
+      {
+        "text": "We need to match the brand's blue palette.",
+        "time": "2025-06-21 06:36 AM",
+        "fromMe": true
+      },
+      {
+        "text": "The reflector should go camera-left and feathered.",
+        "time": "2025-06-20 08:26 PM",
+        "fromMe": false
+      },
+      {
+        "text": "The reflector should go camera-left and feathered.",
+        "time": "2025-06-22 09:47 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Color grading for the maternity shoot is in progress.",
+        "time": "2025-06-21 01:18 AM",
+        "fromMe": true
+      },
+      {
+        "text": "We're going with strobe lighting for better contrast.",
+        "time": "2025-06-22 12:34 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Live preview is up on the external monitor.",
+        "time": "2025-06-20 10:26 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Coffee is ready and the waiting area is prepped.",
+        "time": "2025-06-22 05:31 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Check if the flash sync is firing consistently.",
+        "time": "2025-06-22 03:02 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Set the aperture to f/2.8 for a sharper image.",
+        "time": "2025-06-21 06:56 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Yes, I brought the softboxes and reflectors.",
+        "time": "2025-06-22 06:38 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Yes, I brought the softboxes and reflectors.",
+        "time": "2025-06-20 11:54 PM",
+        "fromMe": true
+      },
+      {
+        "text": "https://storage.photostudio.com/images/behind-scenes.png",
+        "time": "2025-06-22T10:42:38",
+        "fromMe": false
+      }
+    ],
+    "links": [
+      "https://drive.google.com/drive/u/0/folders/sharedfolder123",
+      "https://photostudio.com/booking-details"
+    ],
+    "media": [
+      "https://storage.photostudio.com/images/final-edits.jpeg",
+      "https://storage.photostudio.com/images/session1.jpg"
+    ],
+    "appointments": [
+      {
+        "package": "Outdoor Editorial",
+        "client": "Mason Ward"
+      },
+      {
+        "package": "Event Coverage",
+        "client": "Mason Ward"
+      }
+    ]
+  },
+  {
+    "name": "Nina Diaz",
+    "message": "Do we have vertical crops for Instagram stories?",
+    "time": "2025-06-23 05:33 AM",
+    "unread": true,
+    "messages": [
+      {
+        "text": "Backdrop is wrinkled. Should I steam it?",
+        "time": "2025-06-20 08:26 AM",
+        "fromMe": false
+      },
+      {
+        "text": "Do we have vertical crops for Instagram stories?",
+        "time": "2025-06-20 09:07 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Set the aperture to f/2.8 for a sharper image.",
+        "time": "2025-06-20 01:18 PM",
+        "fromMe": true
+      },
+      {
+        "text": "The Godox trigger batteries are low.",
+        "time": "2025-06-20 11:11 AM",
+        "fromMe": false
+      },
+      {
+        "text": "Kill the overhead lights \u2014 we only want strobes.",
+        "time": "2025-06-20 01:54 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Do we have vertical crops for Instagram stories?",
+        "time": "2025-06-20 07:06 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Coffee is ready and the waiting area is prepped.",
+        "time": "2025-06-20 12:56 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Client wants a clean, high-key look today.",
+        "time": "2025-06-20 09:37 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Do we have vertical crops for Instagram stories?",
+        "time": "2025-06-20 08:18 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Do you want me to greet the client?",
+        "time": "2025-06-20 10:14 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Check if the flash sync is firing consistently.",
+        "time": "2025-06-21 11:06 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Set the aperture to f/2.8 for a sharper image.",
+        "time": "2025-06-20 10:22 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Soft jazz for background music, right?",
+        "time": "2025-06-21 07:02 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Set the aperture to f/2.8 for a sharper image.",
+        "time": "2025-06-21 07:11 AM",
+        "fromMe": false
+      },
+      {
+        "text": "We're going with strobe lighting for better contrast.",
+        "time": "2025-06-21 03:00 PM",
+        "fromMe": true
+      },
+      {
+        "text": "We need to match the brand's blue palette.",
+        "time": "2025-06-20 10:41 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Live preview is up on the external monitor.",
+        "time": "2025-06-21 04:26 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Make sure to bring the 85mm and 50mm primes.",
+        "time": "2025-06-21 12:18 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Client wants a clean, high-key look today.",
+        "time": "2025-06-22 01:32 PM",
+        "fromMe": false
+      },
+      {
+        "text": "We need to match the brand's blue palette.",
+        "time": "2025-06-21 03:09 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Set the aperture to f/2.8 for a sharper image.",
+        "time": "2025-06-20 08:46 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Check if the flash sync is firing consistently.",
+        "time": "2025-06-21 03:35 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Backdrop is wrinkled. Should I steam it?",
+        "time": "2025-06-20 11:28 PM",
+        "fromMe": false
+      },
+      {
+        "text": "We're going with strobe lighting for better contrast.",
+        "time": "2025-06-21 06:56 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Check if the flash sync is firing consistently.",
+        "time": "2025-06-22 12:26 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Do we have enough light modifiers for today's shoot?",
+        "time": "2025-06-23 02:16 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Yes, I brought the softboxes and reflectors.",
+        "time": "2025-06-23 08:48 AM",
+        "fromMe": false
+      },
+      {
+        "text": "Soft jazz for background music, right?",
+        "time": "2025-06-21 05:44 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Color grading for the maternity shoot is in progress.",
+        "time": "2025-06-23 07:58 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Do we have vertical crops for Instagram stories?",
+        "time": "2025-06-23 05:33 AM",
+        "fromMe": true
+      },
+      {
+        "text": "https://storage.photostudio.com/images/session1.jpg",
+        "time": "2025-06-22T10:42:38",
+        "fromMe": false
+      }
+    ],
+    "links": [
+      "https://drive.google.com/drive/u/0/folders/sharedfolder123",
+      "https://storage.photostudio.com/files/sample-invoice.pdf"
+    ],
+    "media": [
+      "https://storage.photostudio.com/images/session1.jpg",
+      "https://storage.photostudio.com/images/behind-scenes.png"
+    ],
+    "appointments": [
+      {
+        "package": "Studio Portrait",
+        "client": "Nina Diaz"
+      },
+      {
+        "package": "Graduation Special",
+        "client": "Nina Diaz"
+      }
+    ]
+  },
+  {
+    "name": "Oscar Reed",
+    "message": "Is the Capture One tether working properly?",
+    "time": "2025-06-25 06:45 PM",
+    "unread": false,
+    "messages": [
+      {
+        "text": "We're going with strobe lighting for better contrast.",
+        "time": "2025-06-23 08:26 AM",
+        "fromMe": false
+      },
+      {
+        "text": "Do we have vertical crops for Instagram stories?",
+        "time": "2025-06-23 10:19 AM",
+        "fromMe": false
+      },
+      {
+        "text": "Do we have vertical crops for Instagram stories?",
+        "time": "2025-06-23 01:50 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Soft jazz for background music, right?",
+        "time": "2025-06-23 02:47 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Soft jazz for background music, right?",
+        "time": "2025-06-23 11:58 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Yes, I brought the softboxes and reflectors.",
+        "time": "2025-06-23 10:16 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Set the aperture to f/2.8 for a sharper image.",
+        "time": "2025-06-23 02:56 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Make sure to bring the 85mm and 50mm primes.",
+        "time": "2025-06-23 12:24 PM",
+        "fromMe": false
+      },
+      {
+        "text": "The Godox trigger batteries are low.",
+        "time": "2025-06-23 12:58 PM",
+        "fromMe": true
+      },
+      {
+        "text": "We're going with strobe lighting for better contrast.",
+        "time": "2025-06-23 01:23 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Do you want me to greet the client?",
+        "time": "2025-06-24 12:36 AM",
+        "fromMe": false
+      },
+      {
+        "text": "The Godox trigger batteries are low.",
+        "time": "2025-06-23 02:07 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Do you want me to greet the client?",
+        "time": "2025-06-24 08:50 AM",
+        "fromMe": false
+      },
+      {
+        "text": "Kill the overhead lights \u2014 we only want strobes.",
+        "time": "2025-06-24 01:59 AM",
+        "fromMe": false
+      },
+      {
+        "text": "I'll finalize edits by 2 PM.",
+        "time": "2025-06-24 10:28 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Client wants a clean, high-key look today.",
+        "time": "2025-06-24 11:26 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Do you want me to greet the client?",
+        "time": "2025-06-24 08:10 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Is the Capture One tether working properly?",
+        "time": "2025-06-25 11:26 AM",
+        "fromMe": false
+      },
+      {
+        "text": "Kill the overhead lights \u2014 we only want strobes.",
+        "time": "2025-06-24 06:38 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Coffee is ready and the waiting area is prepped.",
+        "time": "2025-06-23 07:50 PM",
+        "fromMe": true
+      },
+      {
+        "text": "I'll finalize edits by 2 PM.",
+        "time": "2025-06-25 01:26 AM",
+        "fromMe": true
+      },
+      {
+        "text": "We're going with strobe lighting for better contrast.",
+        "time": "2025-06-25 12:35 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Color grading for the maternity shoot is in progress.",
+        "time": "2025-06-25 09:12 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Backdrop is wrinkled. Should I steam it?",
+        "time": "2025-06-24 02:43 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Kill the overhead lights \u2014 we only want strobes.",
+        "time": "2025-06-25 03:14 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Set the aperture to f/2.8 for a sharper image.",
+        "time": "2025-06-26 07:16 AM",
+        "fromMe": false
+      },
+      {
+        "text": "We need to match the brand's blue palette.",
+        "time": "2025-06-25 05:12 PM",
+        "fromMe": false
+      },
+      {
+        "text": "We need to match the brand's blue palette.",
+        "time": "2025-06-24 02:08 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Soft jazz for background music, right?",
+        "time": "2025-06-24 02:10 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Is the Capture One tether working properly?",
+        "time": "2025-06-24 06:45 PM",
+        "fromMe": false
+      },
+      {
+        "text": "https://storage.photostudio.com/images/final-edits.jpeg",
+        "time": "2025-06-22T10:42:38",
+        "fromMe": false
+      }
+    ],
+    "links": [
+      "https://storage.photostudio.com/files/sample-invoice.pdf",
+      "https://photostudio.com/booking-details"
+    ],
+    "media": [
+      "https://storage.photostudio.com/images/final-edits.jpeg",
+      "https://storage.photostudio.com/images/behind-scenes.png"
+    ],
+    "appointments": [
+      {
+        "package": "Outdoor Editorial",
+        "client": "Oscar Reed"
+      },
+      {
+        "package": "Graduation Special",
+        "client": "Oscar Reed"
+      }
+    ]
+  },
+  {
+    "name": "Priya Shah",
+    "message": "The Godox trigger batteries are low.",
+    "time": "2025-06-18 12:23 AM",
+    "unread": false,
+    "messages": [
+      {
+        "text": "Make sure to bring the 85mm and 50mm primes.",
+        "time": "2025-06-17 08:26 AM",
+        "fromMe": false
+      },
+      {
+        "text": "Do we have vertical crops for Instagram stories?",
+        "time": "2025-06-17 09:31 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Yes, I brought the softboxes and reflectors.",
+        "time": "2025-06-17 01:58 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Soft jazz for background music, right?",
+        "time": "2025-06-17 04:50 PM",
+        "fromMe": true
+      },
+      {
+        "text": "We're going with strobe lighting for better contrast.",
+        "time": "2025-06-17 12:14 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Is the Capture One tether working properly?",
+        "time": "2025-06-17 04:51 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Is the Capture One tether working properly?",
+        "time": "2025-06-17 06:26 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Check if the flash sync is firing consistently.",
+        "time": "2025-06-17 10:33 PM",
+        "fromMe": true
+      },
+      {
+        "text": "We're going with strobe lighting for better contrast.",
+        "time": "2025-06-18 05:46 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Live preview is up on the external monitor.",
+        "time": "2025-06-18 03:29 AM",
+        "fromMe": false
+      },
+      {
+        "text": "Live preview is up on the external monitor.",
+        "time": "2025-06-17 06:26 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Do we have vertical crops for Instagram stories?",
+        "time": "2025-06-17 07:48 PM",
+        "fromMe": false
+      },
+      {
+        "text": "The Godox trigger batteries are low.",
+        "time": "2025-06-17 09:50 PM",
+        "fromMe": false
+      },
+      {
+        "text": "We need to match the brand's blue palette.",
+        "time": "2025-06-17 03:09 PM",
+        "fromMe": false
+      },
+      {
+        "text": "The reflector should go camera-left and feathered.",
+        "time": "2025-06-18 10:48 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Backdrop is wrinkled. Should I steam it?",
+        "time": "2025-06-18 12:41 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Is the Capture One tether working properly?",
+        "time": "2025-06-18 12:58 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Kill the overhead lights \u2014 we only want strobes.",
+        "time": "2025-06-17 11:27 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Do we have enough light modifiers for today's shoot?",
+        "time": "2025-06-18 04:32 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Coffee is ready and the waiting area is prepped.",
+        "time": "2025-06-19 02:16 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Do we have vertical crops for Instagram stories?",
+        "time": "2025-06-18 01:06 AM",
+        "fromMe": false
+      },
+      {
+        "text": "I'll finalize edits by 2 PM.",
+        "time": "2025-06-18 05:20 PM",
+        "fromMe": false
+      },
+      {
+        "text": "We're going with strobe lighting for better contrast.",
+        "time": "2025-06-19 05:54 AM",
+        "fromMe": false
+      },
+      {
+        "text": "Set the aperture to f/2.8 for a sharper image.",
+        "time": "2025-06-20 01:13 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Do we have vertical crops for Instagram stories?",
+        "time": "2025-06-19 10:02 AM",
+        "fromMe": true
+      },
+      {
+        "text": "I'll finalize edits by 2 PM.",
+        "time": "2025-06-20 08:31 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Client wants a clean, high-key look today.",
+        "time": "2025-06-20 12:08 AM",
+        "fromMe": false
+      },
+      {
+        "text": "I'll finalize edits by 2 PM.",
+        "time": "2025-06-18 01:41 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Color grading for the maternity shoot is in progress.",
+        "time": "2025-06-19 07:14 PM",
+        "fromMe": false
+      },
+      {
+        "text": "The Godox trigger batteries are low.",
+        "time": "2025-06-18 12:23 AM",
+        "fromMe": true
+      },
+      {
+        "text": "https://storage.photostudio.com/images/behind-scenes.png",
+        "time": "2025-06-25T10:42:38",
+        "fromMe": false
+      }
+    ],
+    "links": [
+      "https://photostudio.com/booking-details",
+      "https://drive.google.com/drive/u/0/folders/sharedfolder123"
+    ],
+    "media": [
+      "https://storage.photostudio.com/images/session1.jpg",
+      "https://storage.photostudio.com/images/behind-scenes.png"
+    ],
+    "appointments": [
+      {
+        "package": "Wedding Package",
+        "client": "Priya Shah"
+      },
+      {
+        "package": "Fashion Catalog",
+        "client": "Priya Shah"
+      }
+    ]
+  },
+  {
+    "name": "Quentin Brooks",
+    "message": "Live preview is up on the external monitor.",
+    "time": "2025-06-17 07:58 AM",
+    "unread": true,
+    "messages": [
+      {
+        "text": "Check if the flash sync is firing consistently.",
+        "time": "2025-06-14 08:26 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Color grading for the maternity shoot is in progress.",
+        "time": "2025-06-14 11:18 AM",
+        "fromMe": true
+      },
+      {
+        "text": "The Godox trigger batteries are low.",
+        "time": "2025-06-14 09:38 AM",
+        "fromMe": false
+      },
+      {
+        "text": "We're going with strobe lighting for better contrast.",
+        "time": "2025-06-14 02:23 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Do you want me to greet the client?",
+        "time": "2025-06-14 07:06 PM",
+        "fromMe": true
+      },
+      {
+        "text": "I'll finalize edits by 2 PM.",
+        "time": "2025-06-14 01:16 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Live preview is up on the external monitor.",
+        "time": "2025-06-14 09:20 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Do we have vertical crops for Instagram stories?",
+        "time": "2025-06-14 03:33 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Set the aperture to f/2.8 for a sharper image.",
+        "time": "2025-06-14 11:46 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Do we have enough light modifiers for today's shoot?",
+        "time": "2025-06-14 03:47 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Client wants a clean, high-key look today.",
+        "time": "2025-06-14 05:56 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Do you want me to greet the client?",
+        "time": "2025-06-15 08:27 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Soft jazz for background music, right?",
+        "time": "2025-06-14 04:38 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Backdrop is wrinkled. Should I steam it?",
+        "time": "2025-06-15 01:41 PM",
+        "fromMe": true
+      },
+      {
+        "text": "The reflector should go camera-left and feathered.",
+        "time": "2025-06-15 11:16 AM",
+        "fromMe": false
+      },
+      {
+        "text": "Do you want me to greet the client?",
+        "time": "2025-06-15 09:26 AM",
+        "fromMe": false
+      },
+      {
+        "text": "Kill the overhead lights \u2014 we only want strobes.",
+        "time": "2025-06-15 07:22 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Coffee is ready and the waiting area is prepped.",
+        "time": "2025-06-15 11:32 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Live preview is up on the external monitor.",
+        "time": "2025-06-14 06:56 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Backdrop is wrinkled. Should I steam it?",
+        "time": "2025-06-15 09:29 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Check if the flash sync is firing consistently.",
+        "time": "2025-06-16 10:06 AM",
+        "fromMe": false
+      },
+      {
+        "text": "Do we have vertical crops for Instagram stories?",
+        "time": "2025-06-15 06:44 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Soft jazz for background music, right?",
+        "time": "2025-06-15 10:56 PM",
+        "fromMe": false
+      },
+      {
+        "text": "I'll finalize edits by 2 PM.",
+        "time": "2025-06-15 11:55 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Is the Capture One tether working properly?",
+        "time": "2025-06-16 08:02 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Yes, I brought the softboxes and reflectors.",
+        "time": "2025-06-15 07:26 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Set the aperture to f/2.8 for a sharper image.",
+        "time": "2025-06-16 08:06 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Client wants a clean, high-key look today.",
+        "time": "2025-06-15 08:17 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Do you want me to greet the client?",
+        "time": "2025-06-17 05:10 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Live preview is up on the external monitor.",
+        "time": "2025-06-17 07:58 AM",
+        "fromMe": true
+      },
+      {
+        "text": "https://storage.photostudio.com/images/session1.jpg",
+        "time": "2025-06-24T10:42:38",
+        "fromMe": false
+      }
+    ],
+    "links": [
+      "https://storage.photostudio.com/files/sample-invoice.pdf",
+      "https://photostudio.com/booking-details"
+    ],
+    "media": [
+      "https://storage.photostudio.com/images/session1.jpg",
+      "https://storage.photostudio.com/images/behind-scenes.png"
+    ],
+    "appointments": [
+      {
+        "package": "Wedding Package",
+        "client": "Quentin Brooks"
+      },
+      {
+        "package": "Fashion Catalog",
+        "client": "Quentin Brooks"
+      }
+    ]
+  },
+  {
+    "name": "Rina Sato",
+    "message": "Is the Capture One tether working properly?",
+    "time": "2025-06-23 04:30 PM",
+    "unread": true,
+    "messages": [
+      {
+        "text": "We need to match the brand's blue palette.",
+        "time": "2025-06-21 08:26 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Backdrop is wrinkled. Should I steam it?",
+        "time": "2025-06-21 10:15 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Set the aperture to f/2.8 for a sharper image.",
+        "time": "2025-06-21 01:44 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Do we have enough light modifiers for today's shoot?",
+        "time": "2025-06-21 12:53 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Check if the flash sync is firing consistently.",
+        "time": "2025-06-21 06:50 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Soft jazz for background music, right?",
+        "time": "2025-06-21 04:51 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Backdrop is wrinkled. Should I steam it?",
+        "time": "2025-06-21 08:02 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Do you want me to greet the client?",
+        "time": "2025-06-21 01:34 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Kill the overhead lights \u2014 we only want strobes.",
+        "time": "2025-06-22 06:26 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Kill the overhead lights \u2014 we only want strobes.",
+        "time": "2025-06-22 07:41 AM",
+        "fromMe": false
+      },
+      {
+        "text": "We're going with strobe lighting for better contrast.",
+        "time": "2025-06-22 06:56 AM",
+        "fromMe": false
+      },
+      {
+        "text": "Live preview is up on the external monitor.",
+        "time": "2025-06-22 10:06 AM",
+        "fromMe": false
+      },
+      {
+        "text": "Do we have enough light modifiers for today's shoot?",
+        "time": "2025-06-21 03:02 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Do you want me to greet the client?",
+        "time": "2025-06-22 04:48 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Yes, I brought the softboxes and reflectors.",
+        "time": "2025-06-22 06:36 AM",
+        "fromMe": false
+      },
+      {
+        "text": "Is the Capture One tether working properly?",
+        "time": "2025-06-23 12:26 AM",
+        "fromMe": false
+      },
+      {
+        "text": "Do we have vertical crops for Instagram stories?",
+        "time": "2025-06-22 01:30 AM",
+        "fromMe": false
+      },
+      {
+        "text": "Make sure to bring the 85mm and 50mm primes.",
+        "time": "2025-06-21 11:10 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Client wants a clean, high-key look today.",
+        "time": "2025-06-23 09:20 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Make sure to bring the 85mm and 50mm primes.",
+        "time": "2025-06-23 02:52 AM",
+        "fromMe": false
+      },
+      {
+        "text": "Check if the flash sync is firing consistently.",
+        "time": "2025-06-22 01:06 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Check if the flash sync is firing consistently.",
+        "time": "2025-06-22 12:11 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Do we have vertical crops for Instagram stories?",
+        "time": "2025-06-23 04:04 AM",
+        "fromMe": false
+      },
+      {
+        "text": "Color grading for the maternity shoot is in progress.",
+        "time": "2025-06-21 09:05 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Do you want me to greet the client?",
+        "time": "2025-06-24 03:38 AM",
+        "fromMe": false
+      },
+      {
+        "text": "The Godox trigger batteries are low.",
+        "time": "2025-06-22 07:46 AM",
+        "fromMe": false
+      },
+      {
+        "text": "Check if the flash sync is firing consistently.",
+        "time": "2025-06-22 04:48 AM",
+        "fromMe": false
+      },
+      {
+        "text": "Do we have enough light modifiers for today's shoot?",
+        "time": "2025-06-24 07:59 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Is the Capture One tether working properly?",
+        "time": "2025-06-23 09:54 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Is the Capture One tether working properly?",
+        "time": "2025-06-23 04:30 PM",
+        "fromMe": false
+      },
+      {
+        "text": "https://storage.photostudio.com/images/behind-scenes.png",
+        "time": "2025-06-22T10:42:38",
+        "fromMe": false
+      }
+    ],
+    "links": [
+      "https://photostudio.com/booking-details",
+      "https://drive.google.com/drive/u/0/folders/sharedfolder123"
+    ],
+    "media": [
+      "https://storage.photostudio.com/images/behind-scenes.png",
+      "https://storage.photostudio.com/images/session1.jpg"
+    ],
+    "appointments": [
+      {
+        "package": "Wedding Package",
+        "client": "Rina Sato"
+      },
+      {
+        "package": "Event Coverage",
+        "client": "Rina Sato"
+      }
+    ]
+  },
+  {
+    "name": "Samir Khan",
+    "message": "Kill the overhead lights \u2014 we only want strobes.",
+    "time": "2025-06-21 12:28 PM",
+    "unread": true,
+    "messages": [
+      {
+        "text": "Yes, I brought the softboxes and reflectors.",
+        "time": "2025-06-20 08:26 AM",
+        "fromMe": true
+      },
+      {
+        "text": "The Godox trigger batteries are low.",
+        "time": "2025-06-20 10:55 AM",
+        "fromMe": true
+      },
+      {
+        "text": "We're going with strobe lighting for better contrast.",
+        "time": "2025-06-20 01:48 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Do you want me to greet the client?",
+        "time": "2025-06-20 03:05 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Is the Capture One tether working properly?",
+        "time": "2025-06-20 06:18 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Soft jazz for background music, right?",
+        "time": "2025-06-20 03:01 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Client wants a clean, high-key look today.",
+        "time": "2025-06-20 12:50 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Yes, I brought the softboxes and reflectors.",
+        "time": "2025-06-20 06:28 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Color grading for the maternity shoot is in progress.",
+        "time": "2025-06-20 05:46 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Set the aperture to f/2.8 for a sharper image.",
+        "time": "2025-06-21 12:29 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Backdrop is wrinkled. Should I steam it?",
+        "time": "2025-06-21 01:36 AM",
+        "fromMe": false
+      },
+      {
+        "text": "Kill the overhead lights \u2014 we only want strobes.",
+        "time": "2025-06-21 05:04 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Client wants a clean, high-key look today.",
+        "time": "2025-06-20 07:26 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Do you want me to greet the client?",
+        "time": "2025-06-20 04:14 PM",
+        "fromMe": false
+      },
+      {
+        "text": "The reflector should go camera-left and feathered.",
+        "time": "2025-06-20 09:16 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Backdrop is wrinkled. Should I steam it?",
+        "time": "2025-06-22 02:26 AM",
+        "fromMe": false
+      },
+      {
+        "text": "Kill the overhead lights \u2014 we only want strobes.",
+        "time": "2025-06-20 06:02 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Client wants a clean, high-key look today.",
+        "time": "2025-06-20 07:29 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Soft jazz for background music, right?",
+        "time": "2025-06-21 08:44 AM",
+        "fromMe": false
+      },
+      {
+        "text": "Kill the overhead lights \u2014 we only want strobes.",
+        "time": "2025-06-21 06:17 AM",
+        "fromMe": true
+      },
+      {
+        "text": "We need to match the brand's blue palette.",
+        "time": "2025-06-20 11:26 PM",
+        "fromMe": true
+      },
+      {
+        "text": "I'll finalize edits by 2 PM.",
+        "time": "2025-06-22 04:26 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Is the Capture One tether working properly?",
+        "time": "2025-06-21 02:52 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Check if the flash sync is firing consistently.",
+        "time": "2025-06-20 08:19 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Kill the overhead lights \u2014 we only want strobes.",
+        "time": "2025-06-22 09:38 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Kill the overhead lights \u2014 we only want strobes.",
+        "time": "2025-06-22 07:06 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Color grading for the maternity shoot is in progress.",
+        "time": "2025-06-21 06:40 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Soft jazz for background music, right?",
+        "time": "2025-06-23 10:14 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Check if the flash sync is firing consistently.",
+        "time": "2025-06-22 01:38 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Kill the overhead lights \u2014 we only want strobes.",
+        "time": "2025-06-21 12:28 PM",
+        "fromMe": false
+      },
+      {
+        "text": "https://storage.photostudio.com/images/behind-scenes.png",
+        "time": "2025-06-22T10:42:38",
+        "fromMe": false
+      }
+    ],
+    "links": [
+      "https://storage.photostudio.com/files/sample-invoice.pdf",
+      "https://photostudio.com/booking-details"
+    ],
+    "media": [
+      "https://storage.photostudio.com/images/behind-scenes.png",
+      "https://storage.photostudio.com/images/final-edits.jpeg"
+    ],
+    "appointments": [
+      {
+        "package": "Outdoor Editorial",
+        "client": "Samir Khan"
+      },
+      {
+        "package": "Graduation Special",
+        "client": "Samir Khan"
+      }
+    ]
+  },
+  {
+    "name": "Talia Grey",
+    "message": "Set the aperture to f/2.8 for a sharper image.",
+    "time": "2025-06-22 02:19 AM",
+    "unread": true,
+    "messages": [
+      {
+        "text": "Do you want me to greet the client?",
+        "time": "2025-06-21 08:26 AM",
+        "fromMe": false
+      },
+      {
+        "text": "I'll finalize edits by 2 PM.",
+        "time": "2025-06-21 09:16 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Do we have vertical crops for Instagram stories?",
+        "time": "2025-06-21 10:32 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Do we have enough light modifiers for today's shoot?",
+        "time": "2025-06-21 03:05 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Do you want me to greet the client?",
+        "time": "2025-06-21 08:02 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Color grading for the maternity shoot is in progress.",
+        "time": "2025-06-21 05:56 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Client wants a clean, high-key look today.",
+        "time": "2025-06-21 01:02 PM",
+        "fromMe": true
+      },
+      {
+        "text": "The Godox trigger batteries are low.",
+        "time": "2025-06-21 07:03 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Do we have enough light modifiers for today's shoot?",
+        "time": "2025-06-21 10:26 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Do we have vertical crops for Instagram stories?",
+        "time": "2025-06-21 04:41 PM",
+        "fromMe": true
+      },
+      {
+        "text": "We need to match the brand's blue palette.",
+        "time": "2025-06-21 07:16 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Set the aperture to f/2.8 for a sharper image.",
+        "time": "2025-06-22 05:04 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Yes, I brought the softboxes and reflectors.",
+        "time": "2025-06-22 01:26 AM",
+        "fromMe": false
+      },
+      {
+        "text": "Yes, I brought the softboxes and reflectors.",
+        "time": "2025-06-21 08:08 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Set the aperture to f/2.8 for a sharper image.",
+        "time": "2025-06-22 12:18 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Soft jazz for background music, right?",
+        "time": "2025-06-22 03:11 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Yes, I brought the softboxes and reflectors.",
+        "time": "2025-06-22 03:22 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Backdrop is wrinkled. Should I steam it?",
+        "time": "2025-06-21 08:03 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Check if the flash sync is firing consistently.",
+        "time": "2025-06-22 01:50 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Is the Capture One tether working properly?",
+        "time": "2025-06-22 03:28 PM",
+        "fromMe": true
+      },
+      {
+        "text": "We need to match the brand's blue palette.",
+        "time": "2025-06-22 09:06 AM",
+        "fromMe": false
+      },
+      {
+        "text": "Yes, I brought the softboxes and reflectors.",
+        "time": "2025-06-23 04:11 AM",
+        "fromMe": false
+      },
+      {
+        "text": "Color grading for the maternity shoot is in progress.",
+        "time": "2025-06-22 11:12 AM",
+        "fromMe": true
+      },
+      {
+        "text": "Color grading for the maternity shoot is in progress.",
+        "time": "2025-06-21 10:37 PM",
+        "fromMe": true
+      },
+      {
+        "text": "Do we have enough light modifiers for today's shoot?",
+        "time": "2025-06-23 12:02 AM",
+        "fromMe": false
+      },
+      {
+        "text": "Backdrop is wrinkled. Should I steam it?",
+        "time": "2025-06-23 01:46 PM",
+        "fromMe": false
+      },
+      {
+        "text": "We're going with strobe lighting for better contrast.",
+        "time": "2025-06-21 09:52 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Do you want me to greet the client?",
+        "time": "2025-06-24 05:44 AM",
+        "fromMe": true
+      },
+      {
+        "text": "The reflector should go camera-left and feathered.",
+        "time": "2025-06-22 03:42 PM",
+        "fromMe": false
+      },
+      {
+        "text": "Set the aperture to f/2.8 for a sharper image.",
+        "time": "2025-06-22 02:19 AM",
+        "fromMe": false
+      },
+      {
+        "text": "https://storage.photostudio.com/images/final-edits.jpeg",
+        "time": "2025-06-24T10:42:38",
+        "fromMe": false
+      }
+    ],
+    "links": [
+      "https://drive.google.com/drive/u/0/folders/sharedfolder123",
+      "https://storage.photostudio.com/files/sample-invoice.pdf"
+    ],
+    "media": [
+      "https://storage.photostudio.com/images/session1.jpg",
+      "https://storage.photostudio.com/images/behind-scenes.png"
+    ],
+    "appointments": [
+      {
+        "package": "Wedding Package",
+        "client": "Talia Grey"
+      },
+      {
+        "package": "Graduation Special",
+        "client": "Talia Grey"
+      }
+    ]
+  }
+]

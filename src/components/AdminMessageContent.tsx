@@ -1,8 +1,8 @@
-// ChatInterface.tsx (Main Layout Entry)
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import SidebarChatList from "./Messaging/SidebarChatList";
 import ChatThread from "./Messaging/ChatThread";
 import ChatDetails from "./Messaging/ChatDetails";
+import mockChats from "../data/mockChats.json";
 
 export type Message = {
   text: string;
@@ -14,88 +14,125 @@ export type Chat = {
   name: string;
   message: string;
   time: string;
+  unread?: boolean;
   active?: boolean;
   messages: Message[];
+  media?: string[];
+  links?: string[];
+  appointments?: {
+    package: string;
+    client: string;
+  }[];
 };
 
-const initialChats: Chat[] = [
-  {
-    name: "Stephen Yustiono",
-    message:
-      "I don't know why people get all worked up about hawaiian pizza...",
-    time: "9:36 AM",
-    active: true,
-    messages: [
-      {
-        text: "It is a long established fact...",
-        time: "6:30 PM",
-        fromMe: false,
-      },
-      {
-        text: "There are many variations of passages...",
-        time: "6:34 PM",
-        fromMe: true,
-      },
-      {
-        text: "The point of using Lorem Ipsum...",
-        time: "6:38 PM",
-        fromMe: false,
-      },
-    ],
-  },
-  {
-    name: "Erin Steed",
-    message: "(Sad fact: you cannot search for a gif of the word 'girl'...",
-    time: "9:28 AM",
-    messages: [],
-  },
-  {
-    name: "Daisy Tinsley",
-    message: "Maybe email isn't the best form of communication.",
-    time: "9:20 AM",
-    messages: [],
-  },
-];
+const initialChats: Chat[] = (mockChats as Chat[]).sort(
+  (a, b) => new Date(b.time).getTime() - new Date(a.time).getTime()
+);
 
 const AdminMessageContent: React.FC = () => {
   const [chats, setChats] = useState<Chat[]>(initialChats);
-  const [activeIndex, setActiveIndex] = useState<number>(0);
+  const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const [input, setInput] = useState<string>("");
+  const [showDetails, setShowDetails] = useState(false);
 
-  const activeChat = chats[activeIndex];
+  const activeChat = activeIndex !== null ? chats[activeIndex] : null;
+
+  // ✅ Auto-select latest chat on desktop
+  useEffect(() => {
+    const isDesktop = window.innerWidth >= 1024;
+    if (isDesktop && activeIndex === null && chats.length > 0) {
+      setActiveIndex(0); // most recent since it's already sorted
+    }
+  }, [chats, activeIndex]);
 
   const handleSend = () => {
-    if (!input.trim()) return;
+    if (!input.trim() || activeIndex === null) return;
     const newMessage: Message = {
       text: input,
-      time: new Date().toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-      }),
+      time: new Date().toISOString(),
       fromMe: true,
     };
+
     const updatedChats = [...chats];
     updatedChats[activeIndex].messages.push(newMessage);
     updatedChats[activeIndex].message = input;
     updatedChats[activeIndex].time = newMessage.time;
-    setChats(updatedChats);
+    updatedChats[activeIndex].unread = false;
+
+    // Re-sort chats
+    const resorted = updatedChats.sort(
+      (a, b) => new Date(b.time).getTime() - new Date(a.time).getTime()
+    );
+
+    setChats(resorted);
     setInput("");
   };
 
   return (
-    <div className="flex h-screen bg-gray-100 font-sans">
-      <SidebarChatList
-        chats={chats}
-        activeIndex={activeIndex}
-        setActiveIndex={setActiveIndex}
-      />
-      <ChatThread
-        chat={activeChat}
-        input={input}
-        setInput={setInput}
-        handleSend={handleSend}
-      />
-      <ChatDetails />
+    <div className="flex h-screen font-sans bg-gray-100 overflow-hidden relative">
+      {/* Desktop Layout */}
+      <div className="hidden lg:flex w-screen">
+        {/* Sidebar */}
+        <div className="w-1/4 border-r">
+          <SidebarChatList
+            chats={chats}
+            activeIndex={activeIndex ?? -1}
+            setActiveIndex={setActiveIndex}
+          />
+        </div>
+
+        {/* Chat Thread */}
+        <div className="w-2/4 border-r">
+          <ChatThread
+            chat={activeChat ?? chats[0]} // fallback to latest if null
+            input={input}
+            setInput={setInput}
+            handleSend={handleSend}
+            onShowDetails={() => setShowDetails((prev) => !prev)}
+            onBack={() => setActiveIndex(null)}
+          />
+        </div>
+
+        {/* Chat Details */}
+        <div className="w-1/4">
+          <ChatDetails
+            chat={activeChat ?? chats[0]}
+            isMobileVisible={true}
+            onClose={() => setShowDetails(false)}
+          />
+        </div>
+      </div>
+
+      {/* Mobile Layout: conditional rendering */}
+      <div className="flex lg:hidden w-full h-full">
+        {activeChat ? (
+          <ChatThread
+            chat={activeChat}
+            input={input}
+            setInput={setInput}
+            handleSend={handleSend}
+            onShowDetails={() => setShowDetails((prev) => !prev)}
+            onBack={() => setActiveIndex(null)}
+          />
+        ) : (
+          <SidebarChatList
+            chats={chats}
+            activeIndex={activeIndex ?? -1}
+            setActiveIndex={setActiveIndex}
+          />
+        )}
+      </div>
+
+      {/* Mobile Chat Details Slide-In */}
+      {activeChat && (
+        <div className="lg:hidden">
+          <ChatDetails
+            chat={activeChat}
+            isMobileVisible={showDetails}
+            onClose={() => setShowDetails(false)}
+          />
+        </div>
+      )}
     </div>
   );
 };
