@@ -31,6 +31,7 @@ const App = () => {
         <Route path="/register" element={<Register />} />
         <Route path="/register-info" element={<RegisterInfoForm />} />
         <Route path="/register-success" element={<RegisterSuccess />} />
+        <Route path="/profile" element={<AdminProfilePage />} />
 
         {/* Admin routes */}
         <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
