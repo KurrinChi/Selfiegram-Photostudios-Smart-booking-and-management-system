@@ -4,6 +4,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faChevronRight, faSearch } from "@fortawesome/free-solid-svg-icons";
 import { AnimatePresence, motion } from "framer-motion";
 import UserDetailPanel from "./UserDetailPanel";
+import AssignRoleModal from "./ModalAssignRoleDialog.tsx";
 
 // Types & Mock Data
 interface Appointment {
@@ -60,10 +61,12 @@ const mockAppointments: Appointment[] = [
 
 // Main Component
 const AdminUsersContent: React.FC = () => {
-  const [activeRole, setActiveRole] = useState<(typeof roles)[number]>("Customer");
+  const [activeRole, setActiveRole] =
+    useState<(typeof roles)[number]>("Customer");
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<User | null>(null);
+  const [showAssignModal, setShowAssignModal] = useState(false);
   const pageSize = 10;
 
   const filtered = useMemo(() => {
@@ -102,7 +105,9 @@ const AdminUsersContent: React.FC = () => {
               key={r}
               onClick={() => setActiveRole(r)}
               className={`pb-2 transition-colors ${
-                activeRole === r ? "text-black" : "text-gray-500 hover:text-black"
+                activeRole === r
+                  ? "text-black"
+                  : "text-gray-500 hover:text-black"
               }`}
             >
               {r}
@@ -123,7 +128,10 @@ const AdminUsersContent: React.FC = () => {
 
         {/* Controls */}
         <div className="flex items-center gap-3 flex-wrap">
-          <button className="px-3 py-1.5 text-xs bg-gray-300 rounded-md hover:bg-gray-600  hover:text-white transition-colors">
+          <button
+            className="px-3 py-1.5 text-xs bg-gray-300 rounded-md hover:bg-gray-600 hover:text-white transition-colors"
+            onClick={() => setShowAssignModal(true)}
+          >
             + Assign Role
           </button>
           <div className="relative w-64">
@@ -226,6 +234,16 @@ const AdminUsersContent: React.FC = () => {
               appointments: mockAppointments,
             }}
             onClose={() => setSelected(null)}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Assign Role Modal */}
+      <AnimatePresence>
+        {showAssignModal && (
+          <AssignRoleModal
+            isOpen={true}
+            onClose={() => setShowAssignModal(false)}
           />
         )}
       </AnimatePresence>

@@ -7,6 +7,7 @@ import {
   isBefore,
   isAfter,
 } from "date-fns";
+import type { TransactionModalProps } from "../ModalAppointmentInfoDialog";
 
 interface Appointment {
   id: number;
@@ -39,7 +40,12 @@ const sampleAppointments: Appointment[] = [
 const getTimeLabel = (hour: number) =>
   `${hour % 12 || 12}${hour < 12 ? "am" : "pm"}`;
 
-const WeekView: React.FC<{ currentDate: Date }> = ({ currentDate }) => {
+interface WeekViewProps {
+  currentDate: Date;
+  onEventClick: (data: TransactionModalProps["data"]) => void;
+}
+
+const WeekView: React.FC<WeekViewProps> = ({ currentDate, onEventClick }) => {
   const rowHeight = 64;
   const startHour = 9;
   const endHour = 20;
@@ -81,6 +87,7 @@ const WeekView: React.FC<{ currentDate: Date }> = ({ currentDate }) => {
                   style={{ height: `${rowHeight}px` }}
                 />
               ))}
+
               {sampleAppointments
                 .filter((appt) => isSameDay(appt.startTime, day))
                 .map((appt) => {
@@ -110,10 +117,39 @@ const WeekView: React.FC<{ currentDate: Date }> = ({ currentDate }) => {
                   return (
                     <div
                       key={appt.id}
-                      className={`absolute left-1 right-1 px-2 py-1 text-[11px] rounded-md border shadow-sm text-gray-700 ${bgColor}`}
+                      onClick={() =>
+                        onEventClick({
+                          id: appt.id.toString(),
+                          customerName: appt.title.includes("John")
+                            ? "John Doe"
+                            : appt.title.includes("Jane")
+                            ? "Jane Smith"
+                            : "Mark Cruz",
+                          email: appt.title.includes("John")
+                            ? "john@example.com"
+                            : appt.title.includes("Jane")
+                            ? "jane@example.com"
+                            : "mark@example.com",
+                          address: "123 Main Street",
+                          contact: "09171234567",
+                          package: appt.title,
+                          date: format(appt.startTime, "yyyy-MM-dd"),
+                          time: format(appt.startTime, "h:mm a"),
+                          subtotal: 1200,
+                          paidAmount: 500,
+                          feedback: "Excited to get this done!",
+                          rating: appt.id % 5 || 4,
+                        })
+                      }
+                      className={`absolute left-1 right-1 px-2 py-1 text-[11px] rounded-md border shadow-sm text-gray-700 cursor-pointer ${bgColor}`}
                       style={{ top: `${top}px`, height: `${height}px` }}
                     >
                       {appt.title}
+                      <br />
+                      <span className="text-gray-500 text-[10px]">
+                        {format(appt.startTime, "h:mm a")} –{" "}
+                        {format(appt.endTime, "h:mm a")}
+                      </span>
                     </div>
                   );
                 })}

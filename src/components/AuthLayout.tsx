@@ -12,9 +12,13 @@ interface AuthLayoutProps {
   }[];
 }
 
-const AuthLayout = ({ children, reverse = false, images = [] }: AuthLayoutProps) => {
+const AuthLayout = ({
+  children,
+  reverse = false,
+  images = [],
+}: AuthLayoutProps) => {
   return (
-    <div className="min-h-screen bg-white flex items-center justify-center font-sf overflow-hidden">
+    <div className="min-h-screen bg-white flex items-center justify-center font-sf">
       <div
         className={`w-full max-w-full flex flex-col md:flex-row ${
           reverse ? "md:flex-row-reverse" : ""
@@ -30,7 +34,6 @@ const AuthLayout = ({ children, reverse = false, images = [] }: AuthLayoutProps)
         >
           {/* Inner gray padded panel */}
           <div className="w-full h-full bg-[#212121] rounded-xl p-2 sm:p-4 flex items-center justify-center">
-
             <div className="relative w-full max-w-[500px] h-[600px] mx-auto hidden sm:block">
               {images.map((image, index) => (
                 <motion.div

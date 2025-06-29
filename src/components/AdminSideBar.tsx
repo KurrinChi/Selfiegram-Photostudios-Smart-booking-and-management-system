@@ -43,7 +43,10 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
     >
       {/* ─── Toggle Button ────────────────────────────── */}
       <button
-        onClick={toggle}
+        onClick={() => {
+          toggle();
+          localStorage.setItem("sidebar-collapsed", String(!collapsed));
+        }}
         className="absolute -right-4 top-4 w-8 h-8 flex items-center justify-center
                    bg-[#1e1e1e] border border-gray-600 rounded-full
                    text-white hover:scale-110 transition-transform duration-300"
@@ -78,19 +81,17 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
                transition-all duration-300 ease-in-out
                ${
                  isActive
-                   ? "bg-[rgba(238,238,225,0.13)] text-white scale-[1.02] active"
+                   ? "bg-[rgba(238,238,225,0.13)] text-white scale-[1.02]"
                    : "hover:bg-gray-700 text-gray-300"
                }`
             }
           >
-            {/* Sliding indicator */}
             <span
               className={`absolute left-0 top-0 h-full w-1 bg-[#ffffff] rounded-tr-md rounded-br-md
                           transition-all duration-300 ease-in-out
                           group-[.active]:opacity-100 opacity-0 group-hover:opacity-30`}
             />
 
-            {/* background hover effect (underlay) */}
             <div
               className={`absolute inset-0 z-0 transition-all duration-300 ease-in-out rounded-md
                           ${collapsed ? "" : "group-hover:bg-gray-700"}`}
@@ -112,17 +113,20 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
       </nav>
 
       {/* ─── User Info Link ───────────────────────────── */}
-      <NavLink to="/profile" className="relative block group">
+      <NavLink
+        to="/profile"
+        className={({ isActive }) =>
+          `relative block group ${
+            isActive
+              ? "bg-[rgba(238,238,225,0.13)] text-white scale-[1.02]"
+              : "hover:bg-gray-700 text-gray-400"
+          }`
+        }
+      >
         <div
           className={`relative flex items-center gap-2 text-[10px] px-3 py-4 rounded-md cursor-pointer 
-                      transition-all duration-300 ease-in-out
-                      ${
-                        isProfileActive
-                          ? "bg-[rgba(238,238,225,0.13)] text-white scale-[1.02]"
-                          : "hover:bg-gray-700 text-gray-400"
-                      } group`}
+                      transition-all duration-300 ease-in-out group`}
         >
-          {/* Sliding active indicator bar */}
           <span
             className={`absolute left-0 top-0 h-full w-1 bg-white rounded-tr-md rounded-br-md
                         transition-opacity duration-300 ease-in-out
@@ -133,18 +137,15 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
                         }`}
           />
 
-          {/* Hover underlay background */}
           <div
             className={`absolute inset-0 z-0 rounded-md transition-all duration-300 ease-in-out 
                         ${collapsed ? "" : "group-hover:bg-gray-700"}`}
           />
 
-          {/* Profile Avatar */}
           <div className="z-10 w-8 h-8 bg-white rounded-full flex items-center justify-center text-black font-semibold">
             {username.charAt(0).toUpperCase()}
           </div>
 
-          {/* Username and role */}
           {!collapsed && (
             <div className="z-10 transition-opacity duration-300">
               <div className="text-white font-medium text-xs">{username}</div>
