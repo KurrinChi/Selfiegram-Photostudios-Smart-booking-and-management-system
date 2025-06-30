@@ -1,0 +1,12 @@
+/uploads/
+   /user_12/
+       selfie1.jpg
+       selfie2.jpg
+   /user_13/
+       maternity1.png
+
+User uploads image through website (e.g., <input type="file">)
+
+Backend (PHP, Node.js, etc.) saves the file to uploads/user_{id}/filename.jpg
+
+File metadata is saved in MySQL user_images table
