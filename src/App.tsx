@@ -1,3 +1,4 @@
+// Updated App.tsx with Client Routes and Admin Routes
 import { Routes, Route, useLocation } from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
 
@@ -13,12 +14,21 @@ import AdminSalesPage from "./page/admin/SalesPage.tsx";
 import AdminMessagesPage from "./page/admin/MessagesPage.tsx";
 import AdminProfilePage from "./page/admin/ProfilePage.tsx";
 
-// Package routes
 import AdminPackagesPage from "./page/admin/PackagesPage.tsx";
 import AdminPackageContent from "../src/components/AdminPackageContent.tsx";
 import AddPackagePage from "../src/components/Packages/add.tsx";
 import EditPackagePage from "../src/components/Packages/edit.tsx";
 import SelectPackagePage from "../src/components/Packages/select.tsx";
+
+// Client pages
+import ClientHomePage from "./page/client/HomePage.tsx";
+import ClientPackagesPage from "./page/client/PackagePage.tsx";
+import ClientFavoritesPage from "./page/client/FavoritePage.tsx";
+import ClientGalleryPage from "./page/client/GalleryPage.tsx";
+import ClientInboxPage from "./page/client/InboxPage.tsx";
+import ClientAppointmentsPage from "./page/client/AppointmentsPage.tsx";
+import ClientHistoryPage from "./page/client/HistoryPage.tsx";
+import ClientSettingsPage from "./page/client/SettingsPage.tsx";
 
 const App = () => {
   const location = useLocation();
@@ -41,13 +51,25 @@ const App = () => {
         <Route path="/admin/messages" element={<AdminMessagesPage />} />
         <Route path="/admin/profile" element={<AdminProfilePage />} />
 
-        {/* Admin Packages - Nested Routing */}
         <Route path="/admin/packages" element={<AdminPackagesPage />}>
           <Route index element={<AdminPackageContent />} />
           <Route path="add" element={<AddPackagePage />} />
           <Route path="edit/:id" element={<EditPackagePage />} />
           <Route path="select/:id" element={<SelectPackagePage />} />
         </Route>
+
+        {/* Client Routes */}
+        <Route path="/client/home" element={<ClientHomePage />} />
+        <Route path="/client/packages" element={<ClientPackagesPage />} />
+        <Route path="/client/favorites" element={<ClientFavoritesPage />} />
+        <Route path="/client/gallery" element={<ClientGalleryPage />} />
+        <Route path="/client/inbox" element={<ClientInboxPage />} />
+        <Route
+          path="/client/appointments"
+          element={<ClientAppointmentsPage />}
+        />
+        <Route path="/client/history" element={<ClientHistoryPage />} />
+        <Route path="/client/profile" element={<ClientSettingsPage />} />
 
         {/* Fallback */}
         <Route path="*" element={<Login />} />
