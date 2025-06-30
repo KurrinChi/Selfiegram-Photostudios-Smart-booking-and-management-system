@@ -96,7 +96,7 @@ const ClientSidebar = ({ isOpen, toggle }: SidebarProps) => {
         })}
 
         {/* Bottom Links */}
-        <div className="absolute bottom-8 px-4 space-y-2 w-full">
+        <div className="absolute bottom-8 px-4 space-y-2 left-0 w-full">
           <Link
             to="/client/settings"
             onClick={toggle}
