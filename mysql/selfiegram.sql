@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Jun 23, 2025 at 09:30 PM
+-- Generation Time: Jul 01, 2025 at 08:19 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -86,6 +86,111 @@ INSERT INTO `packages` (`packageID`, `name`, `description`, `price`, `status`) V
 (1016, 'Student Groupie', '• Good for 10 pax\r\n• 50 mins unlimited self shoot\r\n• 1 backdrop of your choice (7 choices of backdrop)\r\n• 10 digital copies\r\n• 4 printed copies (4R) [3 portrait & 1 band*]\r\n• For students only (present ID with current school year)\r\n', 1499.00, 1),
 (1017, 'Solo Graduation', '• Good for 1 pax\r\n• 20 mins unlimited self shoot & poses on Graduation backdrop & 1 plain backdrop\r\n• Free use of full Toga set w/ academic hood & cap or Barong / Filipiniana\r\n• 7 Digital copies\r\n• Free 2 printed copies\r\n', 1749.00, 1),
 (1018, 'Barkada Graduation', '• Good for 4 pax\r\n• 30 mins unlimited self shoot & poses on Graduation backdrop w/ 1 plain backdrop\r\n• Free use of full Toga set w/ academic hood cap & Barong or Filipiniana\r\n• 7 digital copies\r\n• Free 4 printed copies\r\n\r\nAcademic hood\r\nCollege (Black Toga)\r\nSenior High (Blue & Pink Toga)\r\nKindergarten (Blue & Pink Toga)\r\n\r\nNow available\r\n\r\nNote: Kindly bring your measurement for the Barong/Filipiniana\r\n', 1999.00, 1);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `package_images`
+--
+
+CREATE TABLE `package_images` (
+  `imageID` int(11) NOT NULL,
+  `packageID` int(11) NOT NULL,
+  `imagePath` varchar(255) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `package_images`
+--
+
+INSERT INTO `package_images` (`imageID`, `packageID`, `imagePath`) VALUES
+(1, 1000, 'img/packages/selfieforone/sone1.png'),
+(2, 1000, 'img/packages/selfieforone/sone2.png'),
+(3, 1000, 'img/packages/selfieforone/sone3.png'),
+(4, 1000, 'img/packages/selfieforone/sone4.png'),
+(5, 1000, 'img/packages/selfieforone/sone5.png'),
+(6, 1001, 'img/packages/selfiefortwo/stwo1.png'),
+(7, 1001, 'img/packages/selfiefortwo/stwo2.png'),
+(8, 1001, 'img/packages/selfiefortwo/stwo3.png'),
+(9, 1001, 'img/packages/selfiefortwo/stwo4.png'),
+(10, 1001, 'img/packages/selfiefortwo/stwo5.png'),
+(11, 1002, 'img/packages/squadgroupie/squad1.jpg'),
+(12, 1002, 'img/packages/squadgroupie/squad2.jpg'),
+(13, 1002, 'img/packages/squadgroupie/squad3.jpg'),
+(14, 1002, 'img/packages/squadgroupie/squad4.jpg'),
+(15, 1003, 'img/packages/barkadagroupie/barkada1.jpg'),
+(16, 1003, 'img/packages/barkadagroupie/barkada2.jpg'),
+(17, 1003, 'img/packages/barkadagroupie/barkada3.jpg'),
+(18, 1004, 'img/packages/conceptstudio/cstudio1.jpg'),
+(19, 1004, 'img/packages/conceptstudio/cstudio2.jpg'),
+(20, 1004, 'img/packages/conceptstudio/cstudio3.jpg'),
+(21, 1004, 'img/packages/conceptstudio/cstudio4.jpg'),
+(22, 1005, 'img/packages/graduationpremium/premium1.jpg'),
+(23, 1005, 'img/packages/graduationpremium/premium2.jpg'),
+(24, 1005, 'img/packages/graduationpremium/premium3.jpg'),
+(25, 1006, 'img/packages/graduationelite/elite1.jpg'),
+(26, 1006, 'img/packages/graduationelite/elite2.jpg'),
+(27, 1006, 'img/packages/graduationelite/elite3.jpg'),
+(28, 1006, 'img/packages/graduationelite/elite4.jpg'),
+(29, 1006, 'img/packages/graduationelite/elite5.jpg'),
+(30, 1007, 'img/packages/studiorental/studio1.jpg'),
+(31, 1007, 'img/packages/studiorental/studio2.jpg'),
+(32, 1007, 'img/packages/studiorental/studio3.jpg'),
+(33, 1007, 'img/packages/studiorental/studio4.jpg'),
+(34, 1007, 'img/packages/studiorental/studio5.jpg'),
+(35, 1008, 'img/packages/vogue/vogue1.jpg'),
+(36, 1008, 'img/packages/vogue/vogue2.jpg'),
+(37, 1008, 'img/packages/vogue/vogue3.jpg'),
+(38, 1008, 'img/packages/vogue/vogue4.jpg'),
+(39, 1008, 'img/packages/vogue/vogue5.jpg'),
+(40, 1008, 'img/packages/vogue/vogue6.jpg'),
+(41, 1009, 'img/packages/kiddie/kiddie1.jpg'),
+(42, 1009, 'img/packages/kiddie/kiddie2.jpg'),
+(43, 1009, 'img/packages/kiddie/kiddie3.jpg'),
+(44, 1009, 'img/packages/kiddie/kiddie4.jpg'),
+(45, 1009, 'img/packages/kiddie/kiddie5.jpg'),
+(46, 1009, 'img/packages/kiddie/kiddie6.jpg'),
+(47, 1010, 'img/packages/maternity/maternity1.png'),
+(48, 1010, 'img/packages/maternity/maternity2.png'),
+(49, 1010, 'img/packages/maternity/maternity3.png'),
+(50, 1010, 'img/packages/maternity/maternity4.png'),
+(51, 1010, 'img/packages/maternity/maternity5.png'),
+(52, 1011, 'img/packages/newborn/newborn1.jpg'),
+(53, 1011, 'img/packages/newborn/newborn2.jpg'),
+(54, 1011, 'img/packages/newborn/newborn3.jpg'),
+(55, 1011, 'img/packages/newborn/newborn4.jpg'),
+(56, 1011, 'img/packages/newborn/newborn5.jpg'),
+(57, 1012, 'img/packages/intimategenderreveal/gender1.jpg'),
+(58, 1012, 'img/packages/intimategenderreveal/gender2.jpg'),
+(59, 1013, 'img/packages/birthday/birthday1.jpg'),
+(60, 1013, 'img/packages/birthday/birthday2.jpg'),
+(61, 1013, 'img/packages/birthday/birthday3.jpg'),
+(62, 1013, 'img/packages/birthday/birthday4.jpg'),
+(63, 1013, 'img/packages/birthday/birthday5.jpg'),
+(64, 1013, 'img/packages/birthday/birthday6.jpg'),
+(65, 1014, 'img/packages/family/fam1.jpg'),
+(66, 1014, 'img/packages/family/fam2.jpg'),
+(67, 1014, 'img/packages/family/fam3.jpg'),
+(68, 1014, 'img/packages/family/fam4.jpg'),
+(69, 1014, 'img/packages/family/fam5.jpg'),
+(70, 1014, 'img/packages/family/fam6.jpg'),
+(71, 1014, 'img/packages/family/fam7.jpg'),
+(72, 1014, 'img/packages/family/fam8.jpg'),
+(73, 1014, 'img/packages/family/fam9.jpg'),
+(74, 1014, 'img/packages/family/fam10.jpg'),
+(75, 1015, 'img/packages/prenup/prenup1.jpg'),
+(76, 1015, 'img/packages/prenup/prenup2.jpg'),
+(77, 1016, 'img/packages/studentgroupie/studentgroupie1.png'),
+(78, 1016, 'img/packages/studentgroupie/studentgroupie2.png'),
+(79, 1016, 'img/packages/studentgroupie/studentgroupie3.png'),
+(80, 1016, 'img/packages/studentgroupie/studentgroupie4.png'),
+(81, 1017, 'img/packages/solograduation/solo1.jpg'),
+(82, 1017, 'img/packages/solograduation/solo2.jpg'),
+(83, 1018, 'img/packages/barkadagraduation/barkadagrad1.jpg'),
+(84, 1018, 'img/packages/barkadagraduation/barkadagrad2.jpg'),
+(85, 1018, 'img/packages/barkadagraduation/barkadagrad3.jpg'),
+(86, 1018, 'img/packages/barkadagraduation/barkadagrad4.jpg'),
+(87, 1018, 'img/packages/barkadagraduation/barkadagrad5.jpg');
 
 -- --------------------------------------------------------
 
@@ -184,7 +289,24 @@ CREATE TABLE `users` (
   `status` tinyint(4) NOT NULL,
   `profilePicture` varchar(255) NOT NULL,
   `address` varchar(255) NOT NULL,
-  `archive` tinyint(4) NOT NULL
+  `archive` tinyint(4) NOT NULL,
+  `userType` varchar(255) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `user_images`
+--
+
+CREATE TABLE `user_images` (
+  `imageID` int(11) NOT NULL,
+  `userID` int(11) NOT NULL,
+  `packageID` int(11) DEFAULT NULL,
+  `fileName` varchar(255) NOT NULL,
+  `filePath` varchar(255) NOT NULL,
+  `uploadDate` datetime DEFAULT current_timestamp(),
+  `isPrivate` tinyint(1) DEFAULT 1
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
@@ -206,6 +328,13 @@ ALTER TABLE `packages`
   ADD PRIMARY KEY (`packageID`);
 
 --
+-- Indexes for table `package_images`
+--
+ALTER TABLE `package_images`
+  ADD PRIMARY KEY (`imageID`),
+  ADD KEY `packageID` (`packageID`);
+
+--
 -- Indexes for table `package_types`
 --
 ALTER TABLE `package_types`
@@ -225,6 +354,14 @@ ALTER TABLE `users`
   ADD PRIMARY KEY (`userID`);
 
 --
+-- Indexes for table `user_images`
+--
+ALTER TABLE `user_images`
+  ADD PRIMARY KEY (`imageID`),
+  ADD KEY `userID` (`userID`),
+  ADD KEY `packageID` (`packageID`);
+
+--
 -- AUTO_INCREMENT for dumped tables
 --
 
@@ -241,6 +378,12 @@ ALTER TABLE `packages`
   MODIFY `packageID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1019;
 
 --
+-- AUTO_INCREMENT for table `package_images`
+--
+ALTER TABLE `package_images`
+  MODIFY `imageID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=88;
+
+--
 -- AUTO_INCREMENT for table `package_types`
 --
 ALTER TABLE `package_types`
@@ -251,6 +394,12 @@ ALTER TABLE `package_types`
 --
 ALTER TABLE `users`
   MODIFY `userID` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `user_images`
+--
+ALTER TABLE `user_images`
+  MODIFY `imageID` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- Constraints for dumped tables
@@ -264,11 +413,24 @@ ALTER TABLE `booking`
   ADD CONSTRAINT `booking_ibfk_2` FOREIGN KEY (`packageID`) REFERENCES `packages` (`packageID`);
 
 --
+-- Constraints for table `package_images`
+--
+ALTER TABLE `package_images`
+  ADD CONSTRAINT `package_images_ibfk_1` FOREIGN KEY (`packageID`) REFERENCES `packages` (`packageID`) ON DELETE CASCADE;
+
+--
 -- Constraints for table `package_type_mapping`
 --
 ALTER TABLE `package_type_mapping`
   ADD CONSTRAINT `package_type_mapping_ibfk_1` FOREIGN KEY (`packageID`) REFERENCES `packages` (`packageID`),
   ADD CONSTRAINT `package_type_mapping_ibfk_2` FOREIGN KEY (`typeID`) REFERENCES `package_types` (`typeID`);
+
+--
+-- Constraints for table `user_images`
+--
+ALTER TABLE `user_images`
+  ADD CONSTRAINT `user_images_ibfk_1` FOREIGN KEY (`userID`) REFERENCES `users` (`userID`),
+  ADD CONSTRAINT `user_images_ibfk_2` FOREIGN KEY (`packageID`) REFERENCES `packages` (`packageID`);
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
