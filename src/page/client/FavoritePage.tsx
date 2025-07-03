@@ -1,10 +1,13 @@
 // page/client/HomePage.tsx
-const ClientFavoritesPage = () => {
+import ClientLayout from "../../components/ClientLayout.tsx";
+import ClientFavoritePageContent from "../../components/ClientFavoritePageContent.tsx";
+
+const ClientHomePage = () => {
   return (
-    <div className="flex items-center justify-center h-full">
-      <h1 className="text-2xl font-semibold">This is the Client Faves Page</h1>
-    </div>
+    <ClientLayout>
+      <ClientFavoritePageContent />
+    </ClientLayout>
   );
 };
 
-export default ClientFavoritesPage;
+export default ClientHomePage;

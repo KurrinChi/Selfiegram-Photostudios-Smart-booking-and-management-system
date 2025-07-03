@@ -1,12 +1,13 @@
 // page/client/HomePage.tsx
-const ClientSettingsPage = () => {
+import ClientLayout from "../../components/ClientLayout.tsx";
+import ProfileContent from "../../components/ProfileContent";
+
+const ClientHomePage = () => {
   return (
-    <div className="flex items-center justify-center h-full">
-      <h1 className="text-2xl font-semibold">
-        This is the Client Settings Page
-      </h1>
-    </div>
+    <ClientLayout>
+      <ProfileContent />
+    </ClientLayout>
   );
 };
 
-export default ClientSettingsPage;
+export default ClientHomePage;

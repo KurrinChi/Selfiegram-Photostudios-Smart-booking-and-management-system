@@ -1,10 +1,13 @@
 // page/client/HomePage.tsx
-const ClientInboxPage = () => {
+import ClientLayout from "../../components/ClientLayout.tsx";
+import ClientInboxPageContent from "../../components/ClientInboxPageContent.tsx";
+
+const ClientHomePage = () => {
   return (
-    <div className="flex items-center justify-center h-full">
-      <h1 className="text-2xl font-semibold">This is the Client Inbox Page</h1>
-    </div>
+    <ClientLayout>
+      <ClientInboxPageContent />
+    </ClientLayout>
   );
 };
 
-export default ClientInboxPage;
+export default ClientHomePage;

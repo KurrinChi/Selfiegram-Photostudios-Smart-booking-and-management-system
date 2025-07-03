@@ -8,7 +8,6 @@ import {
   Calendar,
   Clock,
   Settings,
-  LogOut,
   X,
 } from "lucide-react";
 import clsx from "clsx";
@@ -97,26 +96,42 @@ const ClientSidebar = ({ isOpen, toggle }: SidebarProps) => {
 
         {/* Bottom Links */}
         <div className="absolute bottom-8 px-4 space-y-2 left-0 w-full">
-          <Link
-            to="/client/settings"
-            onClick={toggle}
-            className="flex items-center gap-3 w-full p-2 rounded-md hover:bg-gray-100 hover:translate-x-1 transition-all duration-200 group"
-          >
-            <Settings className="w-5 h-5 text-gray-500 group-hover:text-[#212121] transition-colors" />
-            <span className="text-left text-gray-700 group-hover:text-[#212121] transition-colors">
-              Settings
-            </span>
-          </Link>
-          <Link
-            to="/login"
-            onClick={toggle}
-            className="flex items-center gap-3 w-full p-2 rounded-md hover:bg-gray-100 hover:translate-x-1 transition-all duration-200 group"
-          >
-            <LogOut className="w-5 h-5 text-gray-500 group-hover:text-[#212121] transition-colors" />
-            <span className="text-left text-gray-700 group-hover:text-[#212121] transition-colors">
-              Logout
-            </span>
-          </Link>
+          {(() => {
+            const settingsPath = "/client/profile";
+            const isActive = pathname === settingsPath;
+
+            return (
+              <Link
+                to={settingsPath}
+                onClick={toggle}
+                className={clsx(
+                  "flex items-center gap-3 w-full p-2 rounded-md transition-all duration-200 group",
+                  "hover:bg-gray-100 hover:translate-x-1",
+                  {
+                    "bg-gray-100 border-l-4 pl-2 font-semibold": isActive,
+                  }
+                )}
+                style={
+                  isActive ? { borderColor: "#212121", color: "#212121" } : {}
+                }
+              >
+                <Settings
+                  className={clsx("w-5 h-5 transition-colors duration-200", {
+                    "text-[#212121]": isActive,
+                    "text-gray-500 group-hover:text-[#212121]": !isActive,
+                  })}
+                />
+                <span
+                  className={clsx("text-left transition-colors duration-200", {
+                    "text-[#212121]": isActive,
+                    "text-gray-700 group-hover:text-[#212121]": !isActive,
+                  })}
+                >
+                  Settings
+                </span>
+              </Link>
+            );
+          })()}
         </div>
       </nav>
     </aside>

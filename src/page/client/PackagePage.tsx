@@ -1,12 +1,13 @@
-// page/client/HomePage.tsx
-const ClientPackagesPage = () => {
+// page/client/PackagePage.tsx
+import ClientLayout from "../../components/ClientLayout";
+import { Outlet } from "react-router-dom";
+
+const ClientPackagePage = () => {
   return (
-    <div className="flex items-center justify-center h-full">
-      <h1 className="text-2xl font-semibold">
-        This is the Client Package Page
-      </h1>
-    </div>
+    <ClientLayout>
+      <Outlet />
+    </ClientLayout>
   );
 };
 
-export default ClientPackagesPage;
+export default ClientPackagePage;

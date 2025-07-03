@@ -1,12 +1,13 @@
 // page/client/HomePage.tsx
-const ClientGalleryPage = () => {
+import ClientLayout from "../../components/ClientLayout.tsx";
+import ClientGalleryPageContent from "../../components/ClientGalleryPageContent.tsx";
+
+const ClientHomePage = () => {
   return (
-    <div className="flex items-center justify-center h-full">
-      <h1 className="text-2xl font-semibold">
-        This is the Client Gallery Page
-      </h1>
-    </div>
+    <ClientLayout>
+      <ClientGalleryPageContent />
+    </ClientLayout>
   );
 };
 
-export default ClientGalleryPage;
+export default ClientHomePage;

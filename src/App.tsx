@@ -29,6 +29,7 @@ import ClientInboxPage from "./page/client/InboxPage.tsx";
 import ClientAppointmentsPage from "./page/client/AppointmentsPage.tsx";
 import ClientHistoryPage from "./page/client/HistoryPage.tsx";
 import ClientSettingsPage from "./page/client/SettingsPage.tsx";
+import ClientPackagePageContent from "./components/ClientPackagePageContent.tsx";
 
 const App = () => {
   const location = useLocation();
@@ -60,7 +61,11 @@ const App = () => {
 
         {/* Client Routes */}
         <Route path="/client/home" element={<ClientHomePage />} />
-        <Route path="/client/packages" element={<ClientPackagesPage />} />
+        <Route path="/client/packages" element={<ClientPackagesPage />}>
+          <Route index element={<ClientPackagePageContent />} />
+          <Route path="select/:id" element={<SelectPackagePage />} />
+        </Route>
+
         <Route path="/client/favorites" element={<ClientFavoritesPage />} />
         <Route path="/client/gallery" element={<ClientGalleryPage />} />
         <Route path="/client/inbox" element={<ClientInboxPage />} />

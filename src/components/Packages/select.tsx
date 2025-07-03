@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, Link } from "react-router-dom"; // 👈 Link imported here
+import { useParams, Link, useNavigate } from "react-router-dom"; // 👈 Link and useNavigate imported here
 import mockPackages from "../../data/mockPackages.json";
 import { DayPicker } from "react-day-picker";
 import "react-day-picker/dist/style.css";
@@ -17,6 +17,7 @@ interface Package {
 
 const SelectPackagePage = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [pkg, setPkg] = useState<Package | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [selectedTime, setSelectedTime] = useState<string>("");
@@ -53,9 +54,12 @@ const SelectPackagePage = () => {
     <div className="max-w-6xl mx-auto px-6 py-8 space-y-10 drop-shadow-xl">
       {/* 👉 Breadcrumb embedded here */}
       <nav className="text-sm text-black mb-6">
-        <Link to="/admin/packages" className="hover:underline text-gray-400">
-          Packages
-        </Link>{" "}
+        <button
+          onClick={() => navigate(-1)}
+          className="hover:underline text-gray-400"
+        >
+          Back
+        </button>{" "}
         / Book {pkg.title}
       </nav>
 

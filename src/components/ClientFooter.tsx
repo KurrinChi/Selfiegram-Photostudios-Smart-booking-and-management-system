@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import { Facebook, Instagram, Mail } from "lucide-react";
 
 interface ClientFooterProps {
@@ -11,12 +12,38 @@ const ClientFooter = ({
   infoX = 0,
   socialX = 0,
 }: ClientFooterProps) => {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const [isVisible, setIsVisible] = useState(false);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => setIsVisible(entry.isIntersecting),
+      {
+        threshold: 0.2,
+      }
+    );
+
+    if (containerRef.current) observer.observe(containerRef.current);
+
+    return () => {
+      if (containerRef.current) observer.unobserve(containerRef.current);
+    };
+  }, []);
+
   return (
     <footer className="bg-[#212121] text-white py-10 mt-auto">
-      <div className=" mx-auto flex flex-row relative px-10">
+      <div
+        ref={containerRef}
+        className="mx-auto flex flex-row relative px-10 gap-4"
+      >
         {/* Logo */}
         <div
-          className="flex-[5]"
+          className={`flex-[5] transform transition-all duration-700 ease-out delay-100
+            ${
+              isVisible
+                ? "opacity-100 translate-y-0"
+                : "opacity-0 translate-y-6"
+            }`}
           style={{ transform: `translateX(${logoX}px)` }}
         >
           <img
@@ -28,7 +55,12 @@ const ClientFooter = ({
 
         {/* Contact Info */}
         <div
-          className="flex-[2] text-sm"
+          className={`flex-[2] text-sm transform transition-all duration-700 ease-out delay-300
+            ${
+              isVisible
+                ? "opacity-100 translate-y-0"
+                : "opacity-0 translate-y-6"
+            }`}
           style={{ transform: `translateX(${infoX}px)` }}
         >
           <p>3rd Floor Kim Kar Building F Estrella St., Malolos, Philippines</p>
@@ -38,7 +70,12 @@ const ClientFooter = ({
 
         {/* Social Icons */}
         <div
-          className="flex-[1] flex gap-4 items-center justify-end"
+          className={`flex-[1] flex gap-4 items-center justify-end transform transition-all duration-700 ease-out delay-500
+            ${
+              isVisible
+                ? "opacity-100 translate-y-0"
+                : "opacity-0 translate-y-6"
+            }`}
           style={{ transform: `translateX(${socialX}px)` }}
         >
           <Facebook className="w-5 h-5" />

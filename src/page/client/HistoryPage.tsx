@@ -1,12 +1,13 @@
 // page/client/HomePage.tsx
-const ClientHistoryPage = () => {
+import ClientLayout from "../../components/ClientLayout.tsx";
+import ClientHistoryPageContent from "../../components/ClientHistoryPageContent.tsx";
+
+const ClientHomePage = () => {
   return (
-    <div className="flex items-center justify-center h-full">
-      <h1 className="text-2xl font-semibold">
-        This is the Client History Page
-      </h1>
-    </div>
+    <ClientLayout>
+      <ClientHistoryPageContent />
+    </ClientLayout>
   );
 };
 
-export default ClientHistoryPage;
+export default ClientHomePage;

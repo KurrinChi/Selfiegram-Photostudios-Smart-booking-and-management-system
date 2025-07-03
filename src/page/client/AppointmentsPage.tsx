@@ -1,12 +1,13 @@
 // page/client/HomePage.tsx
-const ClientAppointmentsPage = () => {
+import ClientLayout from "../../components/ClientLayout.tsx";
+import ClientAppointmentsPageContent from "../../components/ClientappointmentspageContent.tsx";
+
+const ClientHomePage = () => {
   return (
-    <div className="flex items-center justify-center h-full">
-      <h1 className="text-2xl font-semibold">
-        This is the Client Appointmets Page
-      </h1>
-    </div>
+    <ClientLayout>
+      <ClientAppointmentsPageContent />
+    </ClientLayout>
   );
 };
 
-export default ClientAppointmentsPage;
+export default ClientHomePage;
