@@ -1,0 +1,40 @@
+{
+  "name": "Selfiegram",
+  "message": "Let us know how we can help you!",
+  "time": "2025-07-01T10:30:00Z",
+  "unread": false,
+  "active": true,
+  "messages": [
+    {
+      "text": "Hi, I’d like to ask about the group package availability.",
+      "time": "2025-07-01T10:31:00Z",
+      "fromMe": true
+    },
+    {
+      "text": "Hello! Yes, the Squad Groupie package is available on weekends.",
+      "time": "2025-07-01T10:32:00Z",
+      "fromMe": false
+    },
+    {
+      "text": "Can I book for this Saturday afternoon?",
+      "time": "2025-07-01T10:33:00Z",
+      "fromMe": true
+    },
+    {
+      "text": "Absolutely! I’ll block a 1:00PM slot for you.",
+      "time": "2025-07-01T10:34:00Z",
+      "fromMe": false
+    }
+  ],
+  "media": ["/chat-media/sample1.jpg", "/chat-media/sample2.jpg"],
+  "links": [
+    "https://selfiegram.com/packages/groupie",
+    "https://selfiegram.com/gallery"
+  ],
+  "appointments": [
+    {
+      "package": "Squad Groupie",
+      "client": "Juan Dela Cruz"
+    }
+  ]
+}

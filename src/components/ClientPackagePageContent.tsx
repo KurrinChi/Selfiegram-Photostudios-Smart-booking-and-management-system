@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Heart } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faSearch } from "@fortawesome/free-solid-svg-icons";
 import mockPackages from "../data/mockPackages.json";
@@ -24,12 +25,22 @@ const ClientPackagePageContent: React.FC = () => {
   );
   const [fadingImages, setFadingImages] = useState<Record<string, boolean>>({});
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
+
   const navigate = useNavigate();
 
   const toggleTag = (tag: string) => {
     setSelectedTags((prev) =>
       prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
     );
+  };
+
+  const toggleFavorite = (id: string) => {
+    setFavoriteIds((prev) => {
+      const newSet = new Set(prev);
+      newSet.has(id) ? newSet.delete(id) : newSet.add(id);
+      return newSet;
+    });
   };
 
   const filtered = allPackages.filter((pkg) => {
@@ -140,12 +151,64 @@ const ClientPackagePageContent: React.FC = () => {
           {filtered.map((pkg) => {
             const currentImgIdx = imageIndexMap[pkg.id] ?? 0;
             const isFading = fadingImages[pkg.id];
+            const isFav = favoriteIds.has(pkg.id);
 
             return (
               <div
                 key={pkg.id}
-                className="relative bg-white rounded-xl shadow-sm transition-all duration-300 transform hover:-translate-y-2 hover:scale-105 hover:shadow-xl p-2 overflow-hidden group"
+                className="relative bg-white rounded-xl shadow-sm transition-all duration-300 transform hover:-translate-y-2 hover:scale-102 hover:shadow-xl p-2 overflow-hidden group"
               >
+                {/* Heart Icon */}
+                <motion.button
+                  onClick={() => toggleFavorite(pkg.id)}
+                  whileTap={{ scale: 5 }}
+                  className="absolute top-3 right-3 z-20 w-8 h-8 rounded-full  backdrop-blur-sm flex items-center justify-center transition"
+                >
+                  <Heart
+                    className={`w-5 h-5 transition-colors ${
+                      isFav ? "text-red-500 fill-red-500" : "text-gray-600"
+                    }`}
+                  />
+                  <AnimatePresence>
+                    {isFav && (
+                      <motion.div
+                        key="burst"
+                        initial={{ scale: 0, opacity: 0 }}
+                        animate={{ scale: 1.6, opacity: 0 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.4 }}
+                        className="absolute inset-0"
+                      >
+                        <svg
+                          viewBox="0 0 100 100"
+                          className="w-full h-full text-red-400"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                        >
+                          {Array.from({ length: 8 }).map((_, i) => {
+                            const angle = (i * 360) / 8;
+                            const x1 =
+                              50 + 20 * Math.cos((angle * Math.PI) / 180);
+                            const y1 =
+                              50 + 20 * Math.sin((angle * Math.PI) / 180);
+                            return (
+                              <line
+                                key={i}
+                                x1="50"
+                                y1="50"
+                                x2={x1}
+                                y2={y1}
+                                strokeLinecap="round"
+                              />
+                            );
+                          })}
+                        </svg>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </motion.button>
+
                 <div className="relative z-0 h-100 rounded-md overflow-hidden">
                   <img
                     src={pkg.images[currentImgIdx]}

@@ -37,11 +37,10 @@ const AdminMessageContent: React.FC = () => {
 
   const activeChat = activeIndex !== null ? chats[activeIndex] : null;
 
-  // ✅ Auto-select latest chat on desktop
   useEffect(() => {
     const isDesktop = window.innerWidth >= 1024;
     if (isDesktop && activeIndex === null && chats.length > 0) {
-      setActiveIndex(0); // most recent since it's already sorted
+      setActiveIndex(0);
     }
   }, [chats, activeIndex]);
 
@@ -59,7 +58,6 @@ const AdminMessageContent: React.FC = () => {
     updatedChats[activeIndex].time = newMessage.time;
     updatedChats[activeIndex].unread = false;
 
-    // Re-sort chats
     const resorted = updatedChats.sort(
       (a, b) => new Date(b.time).getTime() - new Date(a.time).getTime()
     );
@@ -72,7 +70,6 @@ const AdminMessageContent: React.FC = () => {
     <div className="flex h-screen font-sans bg-gray-100 overflow-hidden relative">
       {/* Desktop Layout */}
       <div className="hidden lg:flex w-screen">
-        {/* Sidebar */}
         <div className="w-1/4 border-r">
           <SidebarChatList
             chats={chats}
@@ -81,10 +78,9 @@ const AdminMessageContent: React.FC = () => {
           />
         </div>
 
-        {/* Chat Thread */}
         <div className="w-2/4 border-r">
           <ChatThread
-            chat={activeChat ?? chats[0]} // fallback to latest if null
+            chat={activeChat ?? chats[0]}
             input={input}
             setInput={setInput}
             handleSend={handleSend}
@@ -93,7 +89,6 @@ const AdminMessageContent: React.FC = () => {
           />
         </div>
 
-        {/* Chat Details */}
         <div className="w-1/4">
           <ChatDetails
             chat={activeChat ?? chats[0]}
@@ -103,7 +98,7 @@ const AdminMessageContent: React.FC = () => {
         </div>
       </div>
 
-      {/* Mobile Layout: conditional rendering */}
+      {/* Mobile Layout */}
       <div className="flex lg:hidden w-full h-full">
         {activeChat ? (
           <ChatThread
@@ -113,6 +108,7 @@ const AdminMessageContent: React.FC = () => {
             handleSend={handleSend}
             onShowDetails={() => setShowDetails((prev) => !prev)}
             onBack={() => setActiveIndex(null)}
+            showBackButton={true} // ✅ Enables the back button
           />
         ) : (
           <SidebarChatList
