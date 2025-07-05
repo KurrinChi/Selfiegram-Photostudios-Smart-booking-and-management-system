@@ -21,10 +21,52 @@ const LoginForm = () => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log(formData);
-    navigate("/admin/dashboard");
+
+    try {
+      const response = await fetch("http://127.0.0.1:8000/api/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: formData.email, 
+          password: formData.password,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.status === "success") {
+        console.log("Login successful:", data.user);
+        // Save session if needed
+        // localStorage.setItem("user", JSON.stringify(data.user));
+        const userType = data.user.userType;
+        console.log("User Type:", userType);
+
+        // Redirect based on usertype
+        switch (userType) {
+          case "Admin":
+            navigate("/admin/dashboard");
+            break;
+          case "Customer":
+            navigate("/client/home");
+            break;
+          case "Staff":
+            alert("Redirecting to staff page...");
+            //navigate("/staff/dashboard");
+            break;
+          default:
+            navigate("/"); // fallback
+        }
+      } else {
+        alert(data.message || "Invalid email or password");
+      }
+    } catch (error) {
+      console.error("Login error:", error);
+      alert("Something went wrong. Please try again.");
+    }
   };
 
   return (
@@ -46,6 +88,7 @@ const LoginForm = () => {
           className="w-full px-4 py-3 rounded-xl bg-[#f7f7f7] border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#111]"
           onChange={handleChange}
           value={formData.email}
+          required
         />
         {/* Login Password Input with Eye Toggle */}
         <div className="relative">
@@ -56,6 +99,7 @@ const LoginForm = () => {
             className="w-full px-4 py-3 rounded-xl bg-[#f7f7f7] border border-gray-300 pr-12 focus:outline-none focus:ring-2 focus:ring-[#111]"
             onChange={handleChange}
             value={formData.password}
+            required
           />
           <button
             type="button"

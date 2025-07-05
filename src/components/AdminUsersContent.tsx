@@ -20,17 +20,11 @@ interface User {
   id: string;
   name: string;
   email: string;
+  username: string;
   role: "Customer" | "Staff" | "Admin";
 }
 
 const roles = ["Customer", "Staff", "Admin"] as const;
-
-const mockUsers: User[] = Array.from({ length: 55 }, (_, i) => ({
-  id: `202412${i.toString().padStart(3, "0")}`,
-  name: "Ian Conception",
-  email: "ian_concep27@gmail.com",
-  role: "Customer",
-}));
 
 const mockAppointments: Appointment[] = [
   {
@@ -69,15 +63,42 @@ const AdminUsersContent: React.FC = () => {
   const [showAssignModal, setShowAssignModal] = useState(false);
   const pageSize = 10;
 
+    const [users, setUsers] = useState<User[]>([]);
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const response = await fetch("http://127.0.0.1:8000/api/users");
+        const rawData = await response.json();
+
+        //for mapping, so that there will be no conflict here with the ones in the database!!!
+        const mappedUsers: User[] = rawData.map((user: any) => ({
+          id: user.userID.toString(),
+          name: user.name,
+          email: user.email,
+          username: user.username,
+          role: user.userType,
+        }));
+
+        setUsers(mappedUsers);
+      } catch (error) {
+        console.error("Failed to fetch users:", error);
+      }
+    };
+
+    fetchUsers();
+  }, []);
+
+
   const filtered = useMemo(() => {
-    const byRole = mockUsers.filter((u) => u.role === activeRole);
+    const byRole = users.filter((u) => u.role === activeRole);
     if (!query) return byRole;
     return byRole.filter(
       (u) =>
         u.id.includes(query) ||
         u.name.toLowerCase().includes(query.toLowerCase())
     );
-  }, [activeRole, query]);
+  }, [activeRole, query, users]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const current = filtered.slice((page - 1) * pageSize, page * pageSize);

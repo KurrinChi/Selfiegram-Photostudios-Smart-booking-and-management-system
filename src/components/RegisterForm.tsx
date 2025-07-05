@@ -15,16 +15,15 @@ const RegisterForm = () => {
   };
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  e.preventDefault();
 
-    // Simple password match check
-    if (formData.password !== formData.confirmPassword) {
-      alert("Passwords do not match!");
-      return;
-    }
+  if (formData.password !== formData.confirmPassword) {
+    alert("Passwords do not match!");
+    return;
+  }
 
-    console.log("Register Data:", formData);
-    navigate("/register-info"); // ✅ navigate after validation
+  localStorage.setItem("registerStep1", JSON.stringify(formData)); // save to localStorage
+  navigate("/register-info");
   };
 
   return (

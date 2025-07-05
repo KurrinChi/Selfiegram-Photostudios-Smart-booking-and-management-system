@@ -17,16 +17,51 @@ const RegisterInfoForm = () => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.name || !formData.email) {
+    const step1Data = JSON.parse(localStorage.getItem("registerStep1") || "{}");
+
+    if (!formData.name || !formData.email || !step1Data.username) {
       alert("Please fill in all required fields.");
       return;
     }
 
-    // Proceed to the next step or send data to backend
-    navigate("/next-step"); // 🔁 Replace with actual next route
+    // Split name into fname and lname
+    const [fname, lname = ""] = formData.name.trim().split(" ");
+
+    try {
+        const response = await fetch("http://127.0.0.1:8000/api/register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json", // ✅ critical fix
+        },
+        body: JSON.stringify({
+          username: step1Data.username,
+          password: step1Data.password,
+          password_confirmation: step1Data.confirmPassword,
+          fname,
+          lname,
+          email: formData.email,
+          address: formData.address,
+          contactNo: formData.contact,
+        }),
+      });
+
+
+        const data = await response.json();
+
+        if (data.status === "success") {
+          alert("Registered successfully!");
+          navigate("/");
+        } else {
+          alert(data.message || "Registration failed.");
+        }
+    } catch (error) {
+      console.error("Register error:", error);
+      alert("Something went wrong.");
+    }
   };
 
   return (

@@ -1,6 +1,6 @@
 // page/client/HomePage.tsx
 import ClientLayout from "../../components/ClientLayout.tsx";
-import ClientAppointmentsPageContent from "../../components/ClientAppointmentsPageContent.tsx";
+import ClientAppointmentsPageContent from "../../components/ClientappointmentspageContent.tsx";
 
 const ClientHomePage = () => {
   return (
