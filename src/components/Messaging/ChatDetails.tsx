@@ -56,11 +56,6 @@ const ChatDetails: React.FC<ChatDetailsProps> = ({
         </button>
       </div>
 
-      {/* Upload Button */}
-      <button className="w-full py-2 rounded-lg mb-5 bg-white text-gray-800 font-medium text-sm shadow-md hover:bg-gray-100 transition">
-        Upload Photo
-      </button>
-
       {/* Media */}
       <section>
         <div

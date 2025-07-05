@@ -79,7 +79,7 @@ const mockHistoryData: HistoryItem[] = [
   })),
 ];
 
-const ITEMS_PER_PAGE = 7;
+const ITEMS_PER_PAGE = 6;
 
 const ClientHistoryPageContent: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
@@ -115,7 +115,7 @@ const ClientHistoryPageContent: React.FC = () => {
   return (
     <div className="p-4 animate-fadeIn">
       <h1 className="text-2xl font-semibold mb-4">History</h1>
-      <div className="bg-white rounded-2xl shadow-md overflow-x-auto">
+      <div className="bg-white rounded-2xl shadow-md overflow-x-auto h-[calc(100vh-20vh)]">
         <table className="min-w-full table-auto text-left text-sm">
           <thead className="bg-gray-50 text-gray-700 font-semibold">
             <tr>

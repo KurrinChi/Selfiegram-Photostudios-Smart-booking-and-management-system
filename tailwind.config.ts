@@ -4,12 +4,10 @@ const config: Config = {
   content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
   theme: {
     extend: {
-      fontFamily: {
-        sf: ['"SF Pro Display"', "sans-serif"],
-      },
       animation: {
         fadeIn: "fadeIn 0.3s ease-out",
-        slideInLeft: "slideInLeft 0.3s ease-out forwards", // ✅ Added
+        slideInLeft: "slideInLeft 0.3s ease-out forwards",
+        slideOutLeft: "slideOutLeft 0.3s ease-out forwards", // ✅ Added
       },
       keyframes: {
         fadeIn: {
@@ -19,7 +17,11 @@ const config: Config = {
         slideInLeft: {
           "0%": { transform: "translateX(-100%)" },
           "100%": { transform: "translateX(0)" },
-        }, // ✅ Added
+        },
+        slideOutLeft: {
+          "0%": { transform: "translateX(0)" },
+          "100%": { transform: "translateX(-100%)" },
+        },
       },
     },
   },

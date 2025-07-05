@@ -38,10 +38,10 @@ const ClientInboxPageContent: React.FC = () => {
   if (!chat) return null;
 
   return (
-    <div className="flex h-[calc(100vh-64px)] w-full bg-gray-100 font-sf overflow-hidden animate-fadeIn relative">
+    <div className="flex h-[calc(100vh-64px)] w-full font-sf overflow-hidden relative bg-gradient-to-br from-gray-100 to-white animate-fadeIn">
       {/* Desktop Layout */}
-      <div className="hidden lg:flex w-full">
-        <div className="w-2/3 border-r border-gray-200">
+      <div className="hidden lg:flex w-full px-4 py-6 gap-4">
+        <div className="w-2/3 rounded-2xl bg-white shadow-xl overflow-hidden border border-gray-200">
           <ChatThread
             chat={chat}
             input={input}
@@ -49,10 +49,10 @@ const ClientInboxPageContent: React.FC = () => {
             handleSend={handleSend}
             onShowDetails={() => setShowDetails((prev) => !prev)}
             onBack={() => {}}
-            showBackButton={false} // ✅ Explicitly disable on desktop
+            showBackButton={false}
           />
         </div>
-        <div className="w-1/3">
+        <div className="w-1/3 rounded-2xl bg-white shadow-xl border border-gray-200 overflow-hidden">
           <ChatDetails
             chat={chat}
             isMobileVisible={true}
@@ -62,21 +62,23 @@ const ClientInboxPageContent: React.FC = () => {
       </div>
 
       {/* Mobile Layout */}
-      <div className="flex lg:hidden w-full h-full">
-        <ChatThread
-          chat={chat}
-          input={input}
-          setInput={setInput}
-          handleSend={handleSend}
-          onShowDetails={() => setShowDetails((prev) => !prev)}
-          onBack={() => {}}
-          showBackButton={false} // ✅ Disable back button on mobile
-        />
+      <div className="flex lg:hidden w-full h-full px-2 py-3">
+        <div className="flex-1 rounded-2xl bg-white shadow-md border border-gray-200 overflow-hidden">
+          <ChatThread
+            chat={chat}
+            input={input}
+            setInput={setInput}
+            handleSend={handleSend}
+            onShowDetails={() => setShowDetails((prev) => !prev)}
+            onBack={() => {}}
+            showBackButton={false}
+          />
+        </div>
       </div>
 
       {/* Mobile Slide-in Chat Details */}
       <div
-        className={`lg:hidden fixed top-0 right-0 h-full w-full z-50 bg-white transform transition-transform duration-300 ease-in-out ${
+        className={`lg:hidden fixed top-0 right-0 h-full w-full z-50 bg-white rounded-l-2xl shadow-xl border-l transition-transform duration-300 ease-in-out ${
           showDetails ? "translate-x-0" : "translate-x-full"
         }`}
       >

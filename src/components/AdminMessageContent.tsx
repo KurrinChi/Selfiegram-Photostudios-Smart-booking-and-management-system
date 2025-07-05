@@ -67,10 +67,10 @@ const AdminMessageContent: React.FC = () => {
   };
 
   return (
-    <div className="flex h-screen font-sans bg-gray-100 overflow-hidden relative">
+    <div className="flex h-screen w-full font-sf overflow-hidden relative bg-gradient-to-br from-gray-100 to-white animate-fadeIn">
       {/* Desktop Layout */}
-      <div className="hidden lg:flex w-screen">
-        <div className="w-1/4 border-r">
+      <div className="hidden lg:flex w-full px-4 py-6 gap-4">
+        <div className="w-1/4 rounded-2xl bg-white shadow-xl overflow-hidden border border-gray-200">
           <SidebarChatList
             chats={chats}
             activeIndex={activeIndex ?? -1}
@@ -78,7 +78,7 @@ const AdminMessageContent: React.FC = () => {
           />
         </div>
 
-        <div className="w-2/4 border-r">
+        <div className="w-2/4 rounded-2xl bg-white shadow-xl overflow-hidden border border-gray-200">
           <ChatThread
             chat={activeChat ?? chats[0]}
             input={input}
@@ -89,7 +89,7 @@ const AdminMessageContent: React.FC = () => {
           />
         </div>
 
-        <div className="w-1/4">
+        <div className="w-1/4 rounded-2xl bg-white shadow-xl border border-gray-200 overflow-hidden">
           <ChatDetails
             chat={activeChat ?? chats[0]}
             isMobileVisible={true}
@@ -99,17 +99,19 @@ const AdminMessageContent: React.FC = () => {
       </div>
 
       {/* Mobile Layout */}
-      <div className="flex lg:hidden w-full h-full">
+      <div className="flex lg:hidden w-full h-full px-2 py-3">
         {activeChat ? (
-          <ChatThread
-            chat={activeChat}
-            input={input}
-            setInput={setInput}
-            handleSend={handleSend}
-            onShowDetails={() => setShowDetails((prev) => !prev)}
-            onBack={() => setActiveIndex(null)}
-            showBackButton={true} // ✅ Enables the back button
-          />
+          <div className="flex-1 rounded-2xl bg-white shadow-md border border-gray-200 overflow-hidden">
+            <ChatThread
+              chat={activeChat}
+              input={input}
+              setInput={setInput}
+              handleSend={handleSend}
+              onShowDetails={() => setShowDetails((prev) => !prev)}
+              onBack={() => setActiveIndex(null)}
+              showBackButton={true}
+            />
+          </div>
         ) : (
           <SidebarChatList
             chats={chats}
@@ -121,7 +123,11 @@ const AdminMessageContent: React.FC = () => {
 
       {/* Mobile Chat Details Slide-In */}
       {activeChat && (
-        <div className="lg:hidden">
+        <div
+          className={`lg:hidden fixed top-0 right-0 h-full w-full z-50 bg-white rounded-l-2xl shadow-xl border-l transition-transform duration-300 ease-in-out ${
+            showDetails ? "translate-x-0" : "translate-x-full"
+          }`}
+        >
           <ChatDetails
             chat={activeChat}
             isMobileVisible={showDetails}
