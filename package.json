@@ -22,6 +22,7 @@
     "react-day-picker": "^9.7.0",
     "react-dom": "^19.1.0",
     "react-router-dom": "^7.6.2",
+    "react-toastify": "^11.0.5",
     "recharts": "^2.15.3"
   },
   "devDependencies": {
@@ -30,6 +31,7 @@
     "@types/react-date-range": "^1.4.10",
     "@types/react-dom": "^19.1.2",
     "@types/react-fontawesome": "^1.6.8",
+    "@types/react-toastify": "^4.0.2",
     "@types/recharts": "^1.8.29",
     "@types/tailwindcss": "^3.0.11",
     "@vitejs/plugin-react": "^4.4.1",

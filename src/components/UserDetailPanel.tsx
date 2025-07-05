@@ -1,7 +1,8 @@
-import React from "react";
+import React, { useState } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Star } from "lucide-react";
+import TransactionModal from "./ModalTransactionDialog"; // Ensure this is the correct path
 
 interface Appointment {
   package: string;
@@ -27,15 +28,37 @@ interface UserDetailPanelProps {
   } | null;
 }
 
-/**
- * Renders a right‑hand sliding user detail panel with a click‑away backdrop.
- */
-const UserDetailPanel: React.FC<UserDetailPanelProps> = ({ isOpen, onClose, onExited, user }) => {
+const UserDetailPanel: React.FC<UserDetailPanelProps> = ({
+  isOpen,
+  onClose,
+  onExited,
+  user,
+}) => {
+  const [selectedTransaction, setSelectedTransaction] =
+    useState<Appointment | null>(null);
+
+  const transactionData =
+    selectedTransaction && user
+      ? {
+          id: user.username + "-" + selectedTransaction.package,
+          customerName: user.name,
+          email: user.email,
+          address: user.address,
+          contact: user.contact,
+          package: selectedTransaction.package,
+          date: selectedTransaction.date,
+          time: selectedTransaction.time,
+          subtotal: 399,
+          paidAmount: 399,
+          feedback: "Thank you! Will book again.",
+          rating: selectedTransaction.rating,
+        }
+      : null;
+
   return createPortal(
     <AnimatePresence>
       {isOpen && user && (
         <>
-          {/* Backdrop */}
           <motion.div
             key="backdrop"
             initial={{ opacity: 0 }}
@@ -45,7 +68,7 @@ const UserDetailPanel: React.FC<UserDetailPanelProps> = ({ isOpen, onClose, onEx
             className="fixed inset-0 z-40 bg-black"
             onClick={onClose}
           />
-          {/* Panel */}
+
           <motion.aside
             key="panel"
             initial={{ x: "100%" }}
@@ -58,15 +81,17 @@ const UserDetailPanel: React.FC<UserDetailPanelProps> = ({ isOpen, onClose, onEx
             className="fixed inset-y-0 right-0 w-full max-w-md z-50 bg-[#1C1C1E] text-white shadow-2xl overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-800 sticky top-0 bg-[#1C1C1E] z-10">
               <h2 className="text-lg font-semibold">Account Details</h2>
-              <button onClick={onClose} className="text-2xl leading-none hover:text-red-400">×</button>
+              <button
+                onClick={onClose}
+                className="text-2xl leading-none hover:text-red-400"
+              >
+                ×
+              </button>
             </div>
 
-            {/* Panel Content */}
             <div className="px-6 py-6 space-y-8">
-              {/* Profile */}
               <div className="flex flex-col items-center gap-3">
                 <div className="w-24 h-24 rounded-full bg-zinc-700 flex items-center justify-center text-4xl select-none">
                   🧑🏻
@@ -77,13 +102,20 @@ const UserDetailPanel: React.FC<UserDetailPanelProps> = ({ isOpen, onClose, onEx
                 </div>
               </div>
 
-              {/* Stats */}
               <div className="grid grid-cols-2 gap-4">
-                <StatBox label="Appointments" value={user?.appointments.length || 0} />
-                <StatBox label="Cancellations" value={user?.appointments.filter(a => a.status === "Pending").length || 0} />
+                <StatBox
+                  label="Appointments"
+                  value={user?.appointments.length || 0}
+                />
+                <StatBox
+                  label="Cancellations"
+                  value={
+                    user?.appointments.filter((a) => a.status === "Pending")
+                      .length || 0
+                  }
+                />
               </div>
 
-              {/* Personal Info */}
               <div className="space-y-3">
                 <InfoRow label="Username" value={`@${user?.username}`} />
                 <div className="grid grid-cols-2 gap-3">
@@ -97,30 +129,60 @@ const UserDetailPanel: React.FC<UserDetailPanelProps> = ({ isOpen, onClose, onEx
                 </div>
               </div>
 
-              {/* Appointment History */}
               <div className="space-y-2">
-                <h3 className="text-sm font-semibold mb-1">Appointment History</h3>
-                {user?.appointments.length ? user.appointments.map((appt, idx) => (
-                  <div key={idx} className="flex items-center justify-between bg-zinc-800 rounded-md px-4 py-3 text-xs">
-                    <div className="space-y-0.5">
-                      <p className="font-medium text-white">{appt.package}</p>
-                      <p className="text-zinc-400">{appt.date} | {appt.time}</p>
+                <h3 className="text-sm font-semibold mb-1">
+                  Appointment History
+                </h3>
+                {user?.appointments.length ? (
+                  user.appointments.map((appt, idx) => (
+                    <div
+                      key={idx}
+                      className="flex items-center justify-between bg-zinc-800 rounded-md px-4 py-3 text-xs cursor-pointer hover:bg-zinc-700"
+                      onClick={() => setSelectedTransaction(appt)}
+                    >
+                      <div className="space-y-0.5">
+                        <p className="font-medium text-white">{appt.package}</p>
+                        <p className="text-zinc-400">
+                          {appt.date} | {appt.time}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <span
+                          className={`text-xs ${
+                            appt.status === "Done"
+                              ? "text-green-400"
+                              : "text-yellow-400"
+                          }`}
+                        >
+                          {appt.status}
+                        </span>
+                        <RatingStars rating={appt.rating} />
+                      </div>
                     </div>
-                    <div className="flex items-center gap-4">
-                      <span className={`text-xs ${appt.status === "Done" ? "text-green-400" : "text-yellow-400"}`}>{appt.status}</span>
-                      <RatingStars rating={appt.rating} />
-                    </div>
-                  </div>
-                )) : (
-                  <p className="text-center text-zinc-500 text-xs">No appointments yet.</p>
+                  ))
+                ) : (
+                  <p className="text-center text-zinc-500 text-xs">
+                    No appointments yet.
+                  </p>
                 )}
               </div>
 
-              {/* Close Button */}
-              <button onClick={onClose} className="w-full py-2 bg-zinc-700 hover:bg-zinc-600 rounded-md text-sm mt-6">
+              <button
+                onClick={onClose}
+                className="w-full py-2 bg-zinc-700 hover:bg-zinc-600 rounded-md text-sm mt-6"
+              >
                 Close Panel
               </button>
             </div>
+
+            {/* Transaction Modal */}
+            {transactionData && (
+              <TransactionModal
+                isOpen={!!selectedTransaction}
+                onClose={() => setSelectedTransaction(null)}
+                data={transactionData}
+              />
+            )}
           </motion.aside>
         </>
       )}
@@ -129,16 +191,24 @@ const UserDetailPanel: React.FC<UserDetailPanelProps> = ({ isOpen, onClose, onEx
   );
 };
 
-
-// Reusable Sub‑components
-const InfoRow: React.FC<{ label: string; value: string }> = ({ label, value }) => (
+const InfoRow: React.FC<{ label: string; value: string }> = ({
+  label,
+  value,
+}) => (
   <div className="flex flex-col gap-0.5">
-    <span className="text-[11px] uppercase tracking-wider text-zinc-400">{label}</span>
-    <span className="bg-zinc-800 rounded-md p-2 text-sm break-words">{value}</span>
+    <span className="text-[11px] uppercase tracking-wider text-zinc-400">
+      {label}
+    </span>
+    <span className="bg-zinc-800 rounded-md p-2 text-sm break-words">
+      {value}
+    </span>
   </div>
 );
 
-const StatBox: React.FC<{ label: string; value: number }> = ({ label, value }) => (
+const StatBox: React.FC<{ label: string; value: number }> = ({
+  label,
+  value,
+}) => (
   <div className="bg-zinc-800 rounded-lg p-4 text-center">
     <p className="text-2xl font-bold">{value.toString().padStart(3, "0")}</p>
     <p className="text-xs text-zinc-400">{label}</p>

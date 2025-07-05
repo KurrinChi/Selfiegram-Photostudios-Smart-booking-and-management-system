@@ -1,24 +1,24 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   format,
   startOfWeek,
   endOfWeek,
   isSameDay,
   isWithinInterval,
-  isToday
-} from 'date-fns';
+  isToday,
+} from "date-fns";
 import {
   Bell,
   Info,
   AlertCircle,
   CheckCircle,
   ChevronLeft,
-  ChevronRight
-} from 'lucide-react';
-import { DayPicker } from 'react-day-picker';
-import 'react-day-picker/dist/style.css';
+  ChevronRight,
+} from "lucide-react";
+import { DayPicker } from "react-day-picker";
+import "react-day-picker/dist/style.css";
 
-type NotificationType = 'info' | 'alert' | 'reminder' | 'success';
+type NotificationType = "info" | "alert" | "reminder" | "success";
 
 type Notification = {
   id: number;
@@ -28,17 +28,32 @@ type Notification = {
 };
 
 const notifications: Notification[] = [
-  { id: 1, type: 'info', icon: Info, message: 'New package added to system.' },
-  { id: 2, type: 'alert', icon: AlertCircle, message: 'Payment gateway delay alert.' },
-  { id: 3, type: 'reminder', icon: Bell, message: 'Reminder: Upcoming booking today.' },
-  { id: 4, type: 'success', icon: CheckCircle, message: 'Appointment successfully completed.' },
+  { id: 1, type: "info", icon: Info, message: "New package added to system." },
+  {
+    id: 2,
+    type: "alert",
+    icon: AlertCircle,
+    message: "Payment gateway delay alert.",
+  },
+  {
+    id: 3,
+    type: "reminder",
+    icon: Bell,
+    message: "Reminder: Upcoming booking today.",
+  },
+  {
+    id: 4,
+    type: "success",
+    icon: CheckCircle,
+    message: "Appointment successfully completed.",
+  },
 ];
 
 const notificationStyles: Record<NotificationType, string> = {
-  info: 'bg-blue-100 text-blue-700',
-  alert: 'bg-red-100 text-red-700',
-  reminder: 'bg-yellow-100 text-yellow-700',
-  success: 'bg-green-100 text-green-700',
+  info: "bg-blue-100 text-blue-700",
+  alert: "bg-red-100 text-red-700",
+  reminder: "bg-yellow-100 text-yellow-700",
+  success: "bg-green-100 text-green-700",
 };
 
 const AdminAppointmentSidebar: React.FC<{
@@ -57,13 +72,21 @@ const AdminAppointmentSidebar: React.FC<{
   const weekEnd = endOfWeek(currentDate, { weekStartsOn: 0 });
 
   return (
-    <div className={`h-full flex flex-col bg-white border-r ${collapsed ? 'w-12' : 'w-full md:w-80'} transition-all duration-300 ease-in-out`}>
+    <div
+      className={`h-full flex flex-col bg-white  ${
+        collapsed ? "w-12" : "w-full md:w-80"
+      } transition-all duration-300 ease-in-out`}
+    >
       {/* Mobile toggle button */}
       <button
         className="absolute top-2 left-2 z-30 md:hidden bg-gray-100 rounded-full p-1 shadow"
         onClick={() => setCollapsed(!collapsed)}
       >
-        {collapsed ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
+        {collapsed ? (
+          <ChevronRight className="w-5 h-5" />
+        ) : (
+          <ChevronLeft className="w-5 h-5" />
+        )}
       </button>
 
       {!collapsed && (
@@ -71,10 +94,11 @@ const AdminAppointmentSidebar: React.FC<{
           {/* Top summary */}
           <div className="mb-4">
             <h2 className="text-lg font-semibold">
-              Selected: {format(currentDate, 'eeee, MMM d')}
+              Selected: {format(currentDate, "eeee, MMM d")}
             </h2>
             <p className="text-sm text-gray-500">
-              Week {getWeekOfMonth(currentDate)} of {format(currentDate, 'MMMM')}
+              Week {getWeekOfMonth(currentDate)} of{" "}
+              {format(currentDate, "MMMM")}
             </p>
 
             {/* Date Picker */}
@@ -84,34 +108,38 @@ const AdminAppointmentSidebar: React.FC<{
                 <input
                   type="date"
                   className="w-full border border-gray-300 rounded px-2 py-1 text-sm"
-                  value={format(currentDate, 'yyyy-MM-dd')}
+                  value={format(currentDate, "yyyy-MM-dd")}
                   onChange={(e) => onDateChange(new Date(e.target.value))}
                 />
               </div>
 
               {/* Desktop: calendar */}
-              <div className="hidden md:block bg-white p-2 rounded-md" style={{ filter: 'grayscale(100%)' }}>
+              <div
+                className="hidden md:block bg-white p-2 rounded-md"
+                style={{ filter: "grayscale(100%)" }}
+              >
                 <DayPicker
                   mode="single"
                   selected={currentDate}
                   onSelect={(date) => date && onDateChange(date)}
                   captionLayout="label"
                   modifiers={{
-                    week: (d) => isWithinInterval(d, { start: weekStart, end: weekEnd }),
+                    week: (d) =>
+                      isWithinInterval(d, { start: weekStart, end: weekEnd }),
                     selected: (d) => isSameDay(d, currentDate),
                     today: (d) => isToday(d),
                   }}
                   modifiersClassNames={{
-                    week: 'bg-gray-200',
-                    selected: 'bg-gray-800 text-white',
-                    today: 'font-bold text-black bg-gray-100 rounded-xl',
+                    week: "bg-gray-200",
+                    selected: "bg-gray-800 text-white",
+                    today: "font-bold text-black bg-gray-100 rounded-xl",
                   }}
                   classNames={{
-                    caption: 'text-sm text-black',
-                    dropdown: 'text-black z-30',
-                    day: 'text-sm',
-                    nav_button: 'text-black hover:bg-gray-100 p-1 rounded',
-                    nav_icon: 'stroke-black fill-black w-4 h-4',
+                    caption: "text-sm text-black",
+                    dropdown: "text-black z-30",
+                    day: "text-sm",
+                    nav_button: "text-black hover:bg-gray-100 p-1 rounded",
+                    nav_icon: "stroke-black fill-black w-4 h-4",
                   }}
                 />
               </div>
@@ -125,7 +153,7 @@ const AdminAppointmentSidebar: React.FC<{
               className="text-sm text-black hover:underline"
               onClick={() => setMinimized(!minimized)}
             >
-              {minimized ? 'Expand' : 'Minimize'}
+              {minimized ? "Expand" : "Minimize"}
             </button>
           </div>
 
@@ -134,7 +162,9 @@ const AdminAppointmentSidebar: React.FC<{
               {notifications.map((note) => (
                 <div
                   key={note.id}
-                  className={`flex items-start gap-2 p-3 rounded ${notificationStyles[note.type]}`}
+                  className={`flex items-start gap-2 p-3 rounded ${
+                    notificationStyles[note.type]
+                  }`}
                 >
                   <note.icon className="w-5 h-5 mt-1" />
                   <p className="text-sm leading-snug">{note.message}</p>

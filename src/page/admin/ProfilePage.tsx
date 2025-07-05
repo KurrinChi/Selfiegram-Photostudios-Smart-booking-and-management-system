@@ -1,10 +1,9 @@
-import AdminLayout from "../../components/AdminLayout.tsx";
-import ProfileContent from "../../components/ProfileContent.tsx";
+import AdminLayout from "../../components/AdminLayout";
+import ProfileContent from "../../components/ProfileContent";
 
-const ProfilePage = () => (
+const ProfileContents = () => (
   <AdminLayout>
-    <ProfileContent/>
+    <ProfileContent />
   </AdminLayout>
 );
-
-export default ProfilePage;
+export default ProfileContents;
