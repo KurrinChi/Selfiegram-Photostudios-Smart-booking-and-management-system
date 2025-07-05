@@ -3,216 +3,27 @@ import { useNavigate } from "react-router-dom";
 import { ChevronDown } from "lucide-react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faSearch } from "@fortawesome/free-solid-svg-icons";
+import mockPackages from "../data/mockPackages.json";
 
 interface Package {
+  id: string;
   title: string;
   price: number;
   tags: string[];
   images: string[];
 }
 
-const mockPackages: Package[] = [
-  {
-    title: "Selfie for ONE",
-    price: 379,
-    tags: ["Self Shoot"],
-    images: [
-      "/slfg-placeholder 1.png",
-      "/slfg-placeholder 2.png",
-      "/slfg-placeholder 3.png",
-    ],
-  },
-  {
-    title: "Selfie for TWO",
-    price: 479,
-    tags: ["Self Shoot"],
-    images: [
-      "/slfg-placeholder 1.png",
-      "/slfg-placeholder 2.png",
-      "/slfg-placeholder 3.png",
-    ],
-  },
-  {
-    title: "Squad Groupie",
-    price: 699,
-    tags: ["Self Shoot"],
-    images: [
-      "/slfg-placeholder 1.png",
-      "/slfg-placeholder 2.png",
-      "/slfg-placeholder 3.png",
-    ],
-  },
-  {
-    title: "Barkada Groupie",
-    price: 899,
-    tags: ["Self Shoot"],
-    images: [
-      "/slfg-placeholder 1.png",
-      "/slfg-placeholder 2.png",
-      "/slfg-placeholder 3.png",
-    ],
-  },
-  {
-    title: "Concept Studio",
-    price: 749,
-    tags: ["Self Shoot", "Studio"],
-    images: [
-      "/slfg-placeholder 1.png",
-      "/slfg-placeholder 2.png",
-      "/slfg-placeholder 3.png",
-    ],
-  },
-  {
-    title: "Graduation PREMIUM",
-    price: 1199,
-    tags: ["Graduation", "Photoshoot"],
-    images: [
-      "/slfg-placeholder 1.png",
-      "/slfg-placeholder 2.png",
-      "/slfg-placeholder 3.png",
-    ],
-  },
-  {
-    title: "Graduation ELITE",
-    price: 1499,
-    tags: ["Graduation", "Photoshoot"],
-    images: [
-      "/slfg-placeholder 1.png",
-      "/slfg-placeholder 2.png",
-      "/slfg-placeholder 3.png",
-    ],
-  },
-  {
-    title: "Studio Rental",
-    price: 1499,
-    tags: ["Studio"],
-    images: [
-      "/slfg-placeholder 1.png",
-      "/slfg-placeholder 2.png",
-      "/slfg-placeholder 3.png",
-    ],
-  },
-  {
-    title: "Vogue Photoshoot",
-    price: 2999,
-    tags: ["Photoshoot"],
-    images: [
-      "/slfg-placeholder 1.png",
-      "/slfg-placeholder 2.png",
-      "/slfg-placeholder 3.png",
-    ],
-  },
-  {
-    title: "Kiddie Photoshoot",
-    price: 2499,
-    tags: ["Photoshoot"],
-    images: [
-      "/slfg-placeholder 1.png",
-      "/slfg-placeholder 2.png",
-      "/slfg-placeholder 3.png",
-    ],
-  },
-  {
-    title: "Maternity Photoshoot",
-    price: 3999,
-    tags: ["Photoshoot"],
-    images: [
-      "/slfg-placeholder 1.png",
-      "/slfg-placeholder 2.png",
-      "/slfg-placeholder 3.png",
-    ],
-  },
-  {
-    title: "Newborn Baby Photoshoot",
-    price: 3999,
-    tags: ["Photoshoot"],
-    images: [
-      "/slfg-placeholder 1.png",
-      "/slfg-placeholder 2.png",
-      "/slfg-placeholder 3.png",
-    ],
-  },
-  {
-    title: "Intimate Gender Reveal",
-    price: 4999,
-    tags: ["Photoshoot"],
-    images: [
-      "/slfg-placeholder 1.png",
-      "/slfg-placeholder 2.png",
-      "/slfg-placeholder 3.png",
-    ],
-  },
-  {
-    title: "Birthday",
-    price: 749,
-    tags: ["Self Shoot", "Studio"],
-    images: [
-      "/slfg-placeholder 1.png",
-      "/slfg-placeholder 2.png",
-      "/slfg-placeholder 3.png",
-    ],
-  },
-  {
-    title: "Family Photoshoot",
-    price: 2999,
-    tags: ["Photoshoot"],
-    images: [
-      "/slfg-placeholder 1.png",
-      "/slfg-placeholder 2.png",
-      "/slfg-placeholder 3.png",
-    ],
-  },
-  {
-    title: "Pre Nup Photoshoot",
-    price: 2999,
-    tags: ["Photoshoot"],
-    images: [
-      "/slfg-placeholder 1.png",
-      "/slfg-placeholder 2.png",
-      "/slfg-placeholder 3.png",
-    ],
-  },
-  {
-    title: "Student Groupie",
-    price: 1499,
-    tags: ["Self Shoot"],
-    images: [
-      "/slfg-placeholder 1.png",
-      "/slfg-placeholder 2.png",
-      "/slfg-placeholder 3.png",
-    ],
-  },
-  {
-    title: "Solo Graduation Package",
-    price: 1749,
-    tags: ["Graduation"],
-    images: [
-      "/slfg-placeholder 1.png",
-      "/slfg-placeholder 2.png",
-      "/slfg-placeholder 3.png",
-    ],
-  },
-  {
-    title: "Barkada Graduation Package",
-    price: 1999,
-    tags: ["Graduation", "Self Shoot"],
-    images: [
-      "/slfg-placeholder 1.png",
-      "/slfg-placeholder 2.png",
-      "/slfg-placeholder 3.png",
-    ],
-  },
-];
+const allPackages: Package[] = mockPackages as Package[];
 
-const allTags = ["Self Shoot", "Graduation", "Studio", "Photoshoot"];
+const allTags = Array.from(new Set(allPackages.flatMap((pkg) => pkg.tags)));
 
 const AdminPackageContent: React.FC = () => {
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState<string>("");
-  const [imageIndexMap, setImageIndexMap] = useState<Record<number, number>>(
+  const [imageIndexMap, setImageIndexMap] = useState<Record<string, number>>(
     {}
   );
-  const [fadingImages, setFadingImages] = useState<Record<number, boolean>>({});
+  const [fadingImages, setFadingImages] = useState<Record<string, boolean>>({});
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const navigate = useNavigate();
 
@@ -222,7 +33,7 @@ const AdminPackageContent: React.FC = () => {
     );
   };
 
-  const filtered = mockPackages.filter((pkg) => {
+  const filtered = allPackages.filter((pkg) => {
     const matchesTags =
       selectedTags.length === 0 ||
       selectedTags.every((tag) => pkg.tags.includes(tag));
@@ -236,17 +47,17 @@ const AdminPackageContent: React.FC = () => {
   });
 
   useEffect(() => {
-    const timers = filtered.map((_, idx) => {
+    const timers = filtered.map((pkg) => {
       const delay = 3000 + Math.random() * 2000;
       return setInterval(() => {
-        setFadingImages((prev) => ({ ...prev, [idx]: true }));
+        setFadingImages((prev) => ({ ...prev, [pkg.id]: true }));
         setTimeout(() => {
           setImageIndexMap((prev) => {
-            const current = prev[idx] ?? 0;
-            const next = (current + 1) % 3;
-            return { ...prev, [idx]: next };
+            const current = prev[pkg.id] ?? 0;
+            const next = (current + 1) % pkg.images.length;
+            return { ...prev, [pkg.id]: next };
           });
-          setFadingImages((prev) => ({ ...prev, [idx]: false }));
+          setFadingImages((prev) => ({ ...prev, [pkg.id]: false }));
         }, 200);
       }, delay);
     });
@@ -331,18 +142,17 @@ const AdminPackageContent: React.FC = () => {
       {/* Grid */}
       {filtered.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filtered.map((pkg, idx) => {
-            const currentImgIdx = imageIndexMap[idx] ?? 0;
-            const isFading = fadingImages[idx];
-            const encodedTitle = encodeURIComponent(pkg.title);
+          {filtered.map((pkg) => {
+            const currentImgIdx = imageIndexMap[pkg.id] ?? 0;
+            const isFading = fadingImages[pkg.id];
 
             return (
               <div
-                key={pkg.title + idx}
+                key={pkg.id}
                 className="relative bg-white rounded-xl shadow-sm transition-all duration-300 transform hover:-translate-y-2 hover:scale-105 hover:shadow-xl p-2 overflow-hidden group"
               >
                 <button
-                  onClick={() => navigate(`edit/${encodedTitle}`)}
+                  onClick={() => navigate(`edit/${pkg.id}`)}
                   className="absolute top-5 right-5 px-3 py-1 text-xs z-30 rounded-md text-black font-bold backdrop-blur-md bg-white/10 border border-white/20 shadow-md hover:bg-white/20 transition"
                 >
                   EDIT
@@ -388,7 +198,7 @@ const AdminPackageContent: React.FC = () => {
                     ))}
                   </div>
                   <button
-                    onClick={() => navigate(`select/${encodedTitle}`)}
+                    onClick={() => navigate(`select/${pkg.id}`)}
                     className="mt-2 w-full py-2 text-xs bg-gray-100 rounded-md hover:bg-gray-200 transition"
                   >
                     SELECT

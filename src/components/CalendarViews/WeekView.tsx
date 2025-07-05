@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 import {
   startOfWeek,
   addDays,
@@ -6,7 +6,8 @@ import {
   isSameDay,
   isBefore,
   isAfter,
-} from 'date-fns';
+} from "date-fns";
+import type { TransactionModalProps } from "../ModalAppointmentInfoDialog";
 
 interface Appointment {
   id: number;
@@ -18,47 +19,54 @@ interface Appointment {
 const sampleAppointments: Appointment[] = [
   {
     id: 1,
-    title: 'Haircut – John',
+    title: "Haircut – John",
     startTime: new Date(new Date().setHours(9, 30)),
     endTime: new Date(new Date().setHours(10, 30)),
   },
   {
     id: 2,
-    title: 'Coloring – Jane',
+    title: "Coloring – Jane",
     startTime: addDays(new Date(), 1),
     endTime: addDays(new Date(), 1),
   },
   {
     id: 3,
-    title: 'Treatment – Mark',
+    title: "Treatment – Mark",
     startTime: new Date(new Date().setHours(11, 0)),
     endTime: new Date(new Date().setHours(12, 0)),
   },
 ];
 
-const getTimeLabel = (hour: number) => `${hour % 12 || 12}${hour < 12 ? 'am' : 'pm'}`;
+const getTimeLabel = (hour: number) =>
+  `${hour % 12 || 12}${hour < 12 ? "am" : "pm"}`;
 
-const WeekView: React.FC<{ currentDate: Date }> = ({ currentDate }) => {
+interface WeekViewProps {
+  currentDate: Date;
+  onEventClick: (data: TransactionModalProps["data"]) => void;
+}
+
+const WeekView: React.FC<WeekViewProps> = ({ currentDate, onEventClick }) => {
   const rowHeight = 64;
   const startHour = 9;
   const endHour = 20;
 
   const weekStart = startOfWeek(currentDate, { weekStartsOn: 0 });
   const days = Array.from({ length: 7 }).map((_, i) => addDays(weekStart, i));
-  const hours = Array.from({ length: endHour - startHour + 1 }).map((_, i) => i + startHour);
+  const hours = Array.from({ length: endHour - startHour + 1 }).map(
+    (_, i) => i + startHour
+  );
 
   return (
-    <div className="w-full overflow-auto bg-white rounded-md shadow">
-      <div className="grid grid-cols-[80px_repeat(7,1fr)] w-full">
+    <div className="w-full overflow-x-auto bg-white rounded-md shadow">
+      <div className="min-w-[900px] grid grid-cols-[80px_repeat(7,1fr)]">
         {/* Time Column */}
         <div className="border-r bg-gray-50 text-s text-center">
-          {/* Header Spacer */}
           <div className="h-10 border-b bg-white sticky top-0 z-10" />
           {hours.map((h) => (
             <div
               key={h}
-              className="flex items-start justify-end pr-2 text-gray-500 border-b text-[11px]"
-              style={{ height: `${rowHeight}px`, minWidth: '80px' }}
+              className="flex items-start justify-end pr-2 text-gray-500 border-b text-xs"
+              style={{ height: `${rowHeight}px`, minWidth: "80px" }}
             >
               {getTimeLabel(h)}
             </div>
@@ -68,12 +76,9 @@ const WeekView: React.FC<{ currentDate: Date }> = ({ currentDate }) => {
         {/* Day Columns */}
         {days.map((day, dayIdx) => (
           <div key={dayIdx} className="border-r min-w-0 relative bg-white">
-            {/* Day Header */}
             <div className="text-center text-xs py-2 font-semibold bg-white border-b h-10 sticky top-0 z-10 text-gray-700">
-              {format(day, 'EEE, MMM d')}
+              {format(day, "EEE, MMM d")}
             </div>
-
-            {/* Hour Rows */}
             <div className="relative">
               {hours.map((_, idx) => (
                 <div
@@ -83,7 +88,6 @@ const WeekView: React.FC<{ currentDate: Date }> = ({ currentDate }) => {
                 />
               ))}
 
-              {/* Appointments */}
               {sampleAppointments
                 .filter((appt) => isSameDay(appt.startTime, day))
                 .map((appt) => {
@@ -92,27 +96,60 @@ const WeekView: React.FC<{ currentDate: Date }> = ({ currentDate }) => {
                   const apptEndHour = appt.endTime.getHours();
                   const duration =
                     (apptEndHour - apptStartHour) * 60 +
-                    appt.endTime.getMinutes() - apptStartMinutes;
+                    appt.endTime.getMinutes() -
+                    apptStartMinutes;
                   const top =
                     (apptStartHour - startHour) * rowHeight +
                     (apptStartMinutes / 60) * rowHeight;
                   const height = (duration / 60) * rowHeight;
 
-                  if (apptStartHour < startHour || apptEndHour > endHour) return null;
+                  if (apptStartHour < startHour || apptEndHour > endHour)
+                    return null;
 
-                  let bgColor = 'bg-yellow-100 border-yellow-300';
+                  let bgColor = "bg-yellow-100 border-yellow-300";
                   const now = new Date();
-                  if (isBefore(appt.endTime, now)) bgColor = 'bg-green-100 border-green-300';
-                  else if (isAfter(appt.startTime, now)) bgColor = 'bg-yellow-100 border-yellow-300';
-                  else bgColor = 'bg-orange-200 border-orange-300';
+                  if (isBefore(appt.endTime, now))
+                    bgColor = "bg-green-100 border-green-300";
+                  else if (isAfter(appt.startTime, now))
+                    bgColor = "bg-yellow-100 border-yellow-300";
+                  else bgColor = "bg-orange-200 border-orange-300";
 
                   return (
                     <div
                       key={appt.id}
-                      className={`absolute left-1 right-1 px-2 py-1 text-[11px] rounded-md border shadow-sm text-gray-700 ${bgColor}`}
+                      onClick={() =>
+                        onEventClick({
+                          id: appt.id.toString(),
+                          customerName: appt.title.includes("John")
+                            ? "John Doe"
+                            : appt.title.includes("Jane")
+                            ? "Jane Smith"
+                            : "Mark Cruz",
+                          email: appt.title.includes("John")
+                            ? "john@example.com"
+                            : appt.title.includes("Jane")
+                            ? "jane@example.com"
+                            : "mark@example.com",
+                          address: "123 Main Street",
+                          contact: "09171234567",
+                          package: appt.title,
+                          date: format(appt.startTime, "yyyy-MM-dd"),
+                          time: format(appt.startTime, "h:mm a"),
+                          subtotal: 1200,
+                          paidAmount: 500,
+                          feedback: "Excited to get this done!",
+                          rating: appt.id % 5 || 4,
+                        })
+                      }
+                      className={`absolute left-1 right-1 px-2 py-1 text-[11px] rounded-md border shadow-sm text-gray-700 cursor-pointer ${bgColor}`}
                       style={{ top: `${top}px`, height: `${height}px` }}
                     >
                       {appt.title}
+                      <br />
+                      <span className="text-gray-500 text-[10px]">
+                        {format(appt.startTime, "h:mm a")} –{" "}
+                        {format(appt.endTime, "h:mm a")}
+                      </span>
                     </div>
                   );
                 })}
