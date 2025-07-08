@@ -4,30 +4,41 @@ import { ChevronDown, Heart } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faSearch } from "@fortawesome/free-solid-svg-icons";
-import mockPackages from "../data/mockPackages.json";
 
 interface Package {
   id: string;
   title: string;
   price: number;
-  tags: string[];
-  images: string[];
+  tags?: string[];  // Optional in case tags aren't in the DB yet
+  images?: string[]; // Optional in case images aren't in the DB yet
 }
 
-const allPackages: Package[] = mockPackages as Package[];
-const allTags = Array.from(new Set(allPackages.flatMap((pkg) => pkg.tags)));
-
 const ClientPackagePageContent: React.FC = () => {
+  const [allPackages, setAllPackages] = useState<Package[]>([]);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState<string>("");
-  const [imageIndexMap, setImageIndexMap] = useState<Record<string, number>>(
-    {}
-  );
+  const [imageIndexMap, setImageIndexMap] = useState<Record<string, number>>({});
   const [fadingImages, setFadingImages] = useState<Record<string, boolean>>({});
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
+  const [loading, setLoading] = useState(true);
 
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const fetchPackages = async () => {
+      try {
+        const response = await fetch("http://localhost:8000/api/packages");
+        const data = await response.json();
+        setAllPackages(data);
+      } catch (error) {
+        console.error("Failed to fetch packages:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchPackages();
+  }, []);
 
   const toggleTag = (tag: string) => {
     setSelectedTags((prev) =>
@@ -43,14 +54,16 @@ const ClientPackagePageContent: React.FC = () => {
     });
   };
 
+  const allTags = Array.from(new Set(allPackages.flatMap((pkg) => pkg.tags ?? [])));
+
   const filtered = allPackages.filter((pkg) => {
     const matchesTags =
       selectedTags.length === 0 ||
-      selectedTags.every((tag) => pkg.tags.includes(tag));
+      selectedTags.every((tag) => pkg.tags?.includes(tag));
     const lowerQuery = searchQuery.toLowerCase();
     const matchesSearch =
       pkg.title.toLowerCase().includes(lowerQuery) ||
-      pkg.tags.some((tag) => tag.toLowerCase().includes(lowerQuery)) ||
+      pkg.tags?.some((tag) => tag.toLowerCase().includes(lowerQuery)) ||
       pkg.price.toString() === searchQuery;
 
     return matchesTags && matchesSearch;
@@ -58,13 +71,18 @@ const ClientPackagePageContent: React.FC = () => {
 
   useEffect(() => {
     const timers = filtered.map((pkg) => {
+      console.log("Images for", pkg.title, pkg.images);
+      console.log("Current index:", imageIndexMap[pkg.id]);
+      console.log("Image URL:", pkg.images?.[imageIndexMap[pkg.id] ?? 0]);
+
       const delay = 3000 + Math.random() * 2000;
       return setInterval(() => {
         setFadingImages((prev) => ({ ...prev, [pkg.id]: true }));
         setTimeout(() => {
           setImageIndexMap((prev) => {
             const current = prev[pkg.id] ?? 0;
-            const next = (current + 1) % pkg.images.length;
+            const images = pkg.images ?? [];
+            const next = (current + 1) % images.length;
             return { ...prev, [pkg.id]: next };
           });
           setFadingImages((prev) => ({ ...prev, [pkg.id]: false }));
@@ -146,7 +164,9 @@ const ClientPackagePageContent: React.FC = () => {
       </div>
 
       {/* Grid */}
-      {filtered.length > 0 ? (
+      {loading ? (
+        <div className="text-center py-20 text-gray-400">Loading packages...</div>
+      ) : filtered.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {filtered.map((pkg) => {
             const currentImgIdx = imageIndexMap[pkg.id] ?? 0;
@@ -188,10 +208,8 @@ const ClientPackagePageContent: React.FC = () => {
                         >
                           {Array.from({ length: 8 }).map((_, i) => {
                             const angle = (i * 360) / 8;
-                            const x1 =
-                              50 + 20 * Math.cos((angle * Math.PI) / 180);
-                            const y1 =
-                              50 + 20 * Math.sin((angle * Math.PI) / 180);
+                            const x1 = 50 + 20 * Math.cos((angle * Math.PI) / 180);
+                            const y1 = 50 + 20 * Math.sin((angle * Math.PI) / 180);
                             return (
                               <line
                                 key={i}
@@ -209,40 +227,55 @@ const ClientPackagePageContent: React.FC = () => {
                   </AnimatePresence>
                 </motion.button>
 
-                <div className="relative z-0 h-100 rounded-md overflow-hidden">
-                  <img
-                    src={pkg.images[currentImgIdx]}
-                    className={`w-full h-full object-cover transition-opacity duration-500 ease-in-out ${
-                      isFading ? "opacity-0" : "opacity-100"
-                    }`}
-                    alt="Package"
-                  />
-                  <div className="absolute bottom-2 w-full flex justify-center gap-1">
-                    {pkg.images.map((_, i) => (
-                      <div
-                        key={i}
-                        className={`h-2 w-2 rounded-full ${
-                          i === currentImgIdx
-                            ? "bg-black"
-                            : "bg-gray-300 scale-60"
-                        }`}
-                      />
-                    ))}
-                  </div>
-                </div>
 
+           
+               <div className="relative z-0 h-100 rounded-md overflow-hidden bg-gray-100">
+              <img
+                src={pkg.images?.[imageIndexMap[pkg.id] ?? 0] ?? "/fallback.jpg"}
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = "/fallback.jpg";
+                }}
+                className={`w-full h-full object-cover transition-opacity duration-500 ease-in-out ${
+                  fadingImages[pkg.id] ? "opacity-0" : "opacity-100"
+                }`}
+                alt="Package"
+              />
+
+              {/* Thumbnails */}
+              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1 bg-white/60 px-2 py-1 rounded-full backdrop-blur-sm">
+                {pkg.images?.map((img, i) => (
+                  <img
+                    key={i}
+                    src={img}
+                    onClick={() =>
+                      setImageIndexMap((prev) => ({ ...prev, [pkg.id]: i }))
+                    }
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = "/fallback-thumb.jpg";
+                    }}
+                    className={`w-6 h-6 object-cover rounded-full border-2 cursor-pointer transition ${
+                      i === (imageIndexMap[pkg.id] ?? 0)
+                        ? "border-black"
+                        : "border-transparent opacity-60"
+                    }`}
+                    alt={`Thumb ${i + 1}`}
+                  />
+                ))}
+              </div>
+            </div>
+
+
+                
                 <div className="p-3 space-y-2">
                   <div className="font-medium text-sm">{pkg.title}</div>
                   <div className="text-gray-500 text-xs">
-                    ₱{pkg.price.toFixed(2)}
+                    ₱{Number(pkg.price).toFixed(2)}
                   </div>
                   <div className="flex flex-wrap gap-1">
-                    {pkg.tags.map((tag) => (
+                    {(pkg.tags ?? []).map((tag) => (
                       <span
                         key={tag}
-                        className={`px-2 py-0.5 rounded-full text-[10px] ${getTagPillClass(
-                          tag
-                        )}`}
+                        className={`px-2 py-0.5 rounded-full text-[10px] ${getTagPillClass(tag)}`}
                       >
                         {tag}
                       </span>
