@@ -30,6 +30,8 @@ import { DateRange } from "react-date-range";
 import { format, startOfWeek, subWeeks } from "date-fns";
 import "react-date-range/dist/styles.css";
 import "react-date-range/dist/theme/default.css";
+import axios from "axios";
+import { useEffect } from "react";
 
 // -----------------------------------------------------------------------------
 // Types
@@ -51,15 +53,21 @@ interface PackageRow {
   trendPositive: boolean;
 }
 
+interface SummaryData {
+  totalUsers: number;
+  totalBookings: number;
+  totalSales: number;
+  totalAppointments: number;
+  salesTrend: {
+    value: string;
+    up: boolean;
+  };
+}
+
 // -----------------------------------------------------------------------------
 // Static Demo Data (replace w/ API)
 // -----------------------------------------------------------------------------
-const summaryCards: SummaryCard[] = [
-  { label: "Total User",         value: 200,           icon: faUser,          trend: { value: "2%",   up: true  } },
-  { label: "Total Schedule",     value: 117,           icon: faClipboardList,trend: { value: "13%",  up: true  } },
-  { label: "Total Sales",        value: "₱ 15,000",   icon: faPesoSign,     trend: { value: "4.3%", up: false } },
-  { label: "Total Appointments", value: 102,           icon: faCalendarAlt,  trend: { value: "18%",  up: true  } },
-];
+
 
 const today = new Date();
 const thisMonday = startOfWeek(today, { weekStartsOn: 1 });
@@ -102,6 +110,45 @@ const StarRating: React.FC<{ value: number }> = ({ value }) => (
 // Main Component
 // -----------------------------------------------------------------------------
 const AdminDashboardContents: React.FC = () => {
+  const [summaryData, setSummaryData] = useState<SummaryData>({
+    totalUsers: 0,
+    totalBookings: 0,
+    totalSales: 0,
+    totalAppointments: 0,
+    salesTrend: {
+      value: "0%",
+      up: true,
+    },
+  });
+
+  useEffect(() => {
+    axios.get<SummaryData>("http://127.0.0.1:8000/api/admin/summary")
+      .then((response) => {
+        setSummaryData(response.data);
+      })
+      .catch((error) => {
+        console.error("Error fetching summary data:", error);
+      });
+  }, []);
+
+  useEffect(() => {
+    axios.get<SummaryData>("http://127.0.0.1:8000/api/admin/summary")
+      .then((response) => {
+        const data: SummaryData = response.data;
+        setSummaryData(data);
+      })
+      .catch((error) => {
+        console.error("Error fetching summary data:", error);
+      });
+  }, []);
+
+  const summaryCards: SummaryCard[] = [
+    { label: "Total User", value: summaryData.totalUsers, icon: faUser, trend: { value: "2%", up: true } },
+    { label: "Total Schedule", value: summaryData.totalBookings, icon: faClipboardList, trend: { value: "13%", up: true } },
+    { label: "Total Sales", value: `₱ ${summaryData.totalSales.toLocaleString()}`, icon: faPesoSign, trend: { value: summaryData.salesTrend.value, up: summaryData.salesTrend.up } },
+    { label: "Total Appointments", value: summaryData.totalAppointments, icon: faCalendarAlt, trend: { value: "18%", up: true } },
+  ];
+
   const [search, setSearch] = useState("");
   const [pickerOpen, setPickerOpen] = useState(false);
   const [range, setRange] = useState([
