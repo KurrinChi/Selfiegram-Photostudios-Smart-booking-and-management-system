@@ -8,7 +8,7 @@ use Illuminate\Http\Request;
 class UserController extends Controller
 {
     public function users(){
-        $users = User::select('userID', 'username', 'fname', 'lname', 'email', 'userType')->get();
+        $users = User::select('userID', 'username', 'fname', 'lname', 'email', 'address', 'contactNo', 'userType')->get();
         
         // Optionally merge fname + lname into 'name'
         $users->transform(function ($user) {

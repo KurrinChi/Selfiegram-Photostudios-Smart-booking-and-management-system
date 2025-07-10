@@ -13,7 +13,7 @@ class DashboardController extends Controller
     {
         // General stats 
         // Under maintenance, might return incorrect values due to logic error
-        $totalUsers = DB::table('users')->where('archive', 0)->count();
+        $totalUsers = DB::table('users')->where('archive', 1)->count();
         $totalBookings = DB::table('booking')->count();
         $totalSales = DB::table('transaction')->sum('receivedAmount');
         $totalAppointments = DB::table('booking')->count();

@@ -21,6 +21,10 @@ interface User {
   name: string;
   email: string;
   username: string;
+  age: number;
+  birthday: string;
+  address: string;
+  contact: string;
   role: "Customer" | "Staff" | "Admin";
 }
 
@@ -78,6 +82,8 @@ const AdminUsersContent: React.FC = () => {
           email: user.email,
           username: user.username,
           role: user.userType,
+          address: user.address,
+          contact: user.contactNo,
         }));
 
         setUsers(mappedUsers);
@@ -246,12 +252,12 @@ const AdminUsersContent: React.FC = () => {
             isOpen={true}
             user={{
               name: selected.name,
-              username: selected.name.toLowerCase().replace(/\s+/g, "_"),
-              age: 25,
-              birthday: "1999-01-01",
-              address: "123 Main St, City",
+              username: selected.username,
+              age: 15, //need sa db ng age at bday
+              birthday: selected.birthday, //eto ren
+              address: selected.address,
               email: selected.email,
-              contact: "09123456789",
+              contact: selected.contact,
               appointments: mockAppointments,
             }}
             onClose={() => setSelected(null)}
