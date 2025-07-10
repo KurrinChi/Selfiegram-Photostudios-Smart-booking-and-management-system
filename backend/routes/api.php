@@ -21,4 +21,5 @@
 
     Route::post('/register', [AuthController::class, 'register']);
     Route::get('/packages', [PackageController::class, 'index']);
+    Route::get('/packages/{id}', [PackageController::class, 'show']);
     Route::get('/admin/summary', [DashboardController::class, 'getSummary']);

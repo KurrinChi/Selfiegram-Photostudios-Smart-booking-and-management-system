@@ -9,7 +9,7 @@ interface Package {
   id: string;
   title: string;
   price: number;
-  tags?: string[];  // Optional in case tags aren't in the DB yet
+  tags: string[];  // Optional in case tags aren't in the DB yet
   images?: string[]; // Optional in case images aren't in the DB yet
 }
 
@@ -54,7 +54,7 @@ const ClientPackagePageContent: React.FC = () => {
     });
   };
 
-  const allTags = Array.from(new Set(allPackages.flatMap((pkg) => pkg.tags ?? [])));
+  const allTags = Array.from(new Set(allPackages.flatMap((pkg) => pkg.tags)));
 
   const filtered = allPackages.filter((pkg) => {
     const matchesTags =
@@ -231,9 +231,13 @@ const ClientPackagePageContent: React.FC = () => {
            
                <div className="relative z-0 h-100 rounded-md overflow-hidden bg-gray-100">
               <img
-                src={pkg.images?.[imageIndexMap[pkg.id] ?? 0] ?? "/fallback.jpg"}
+                src={
+                pkg.images && pkg.images.length > 0
+                  ? pkg.images[imageIndexMap[pkg.id] ?? 0]
+                  : "slfg-placeholder 2.png"
+              }
                 onError={(e) => {
-                  (e.target as HTMLImageElement).src = "/fallback.jpg";
+                  (e.target as HTMLImageElement).src = "/slfg-placeholder 2.png";
                 }}
                 className={`w-full h-full object-cover transition-opacity duration-500 ease-in-out ${
                   fadingImages[pkg.id] ? "opacity-0" : "opacity-100"
@@ -243,7 +247,7 @@ const ClientPackagePageContent: React.FC = () => {
 
               {/* Thumbnails */}
               <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1 bg-white/60 px-2 py-1 rounded-full backdrop-blur-sm">
-                {pkg.images?.map((img, i) => (
+                {(pkg.images && pkg.images.length > 0 ? pkg.images : ["/slfg-placeholder 2.png"]).map((img, i) => (
                   <img
                     key={i}
                     src={img}
@@ -251,7 +255,7 @@ const ClientPackagePageContent: React.FC = () => {
                       setImageIndexMap((prev) => ({ ...prev, [pkg.id]: i }))
                     }
                     onError={(e) => {
-                      (e.target as HTMLImageElement).src = "/fallback-thumb.jpg";
+                      (e.target as HTMLImageElement).src = "/slfg-placeholder 2.png";
                     }}
                     className={`w-6 h-6 object-cover rounded-full border-2 cursor-pointer transition ${
                       i === (imageIndexMap[pkg.id] ?? 0)

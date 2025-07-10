@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom"; // 👈 Link and useNavigate imported here
-import mockPackages from "../../data/mockPackages.json";
 import { DayPicker } from "react-day-picker";
 import "react-day-picker/dist/style.css";
 import { isToday, isSameDay } from "date-fns";
@@ -28,11 +27,20 @@ const SelectPackagePage = () => {
   const [paymentMode, setPaymentMode] = useState("");
   const [agreed, setAgreed] = useState(false);
 
-  useEffect(() => {
-    if (!id) return;
-    const found = (mockPackages as Package[]).find((p) => p.id === id);
-    setPkg(found ?? null);
-  }, [id]);
+useEffect(() => {
+  const fetchPackage = async () => {
+    try {
+      const response = await fetch(`http://localhost:8000/api/packages/${id}`);
+      const data = await response.json();
+      setPkg(data);
+    } catch (error) {
+      console.error("Failed to fetch package:", error);
+      setPkg(null);
+    }
+  };
+
+  if (id) fetchPackage();
+}, [id]);
 
   if (!pkg)
     return <div className="p-4 text-sm text-gray-500">Package not found.</div>;
