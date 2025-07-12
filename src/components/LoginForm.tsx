@@ -40,8 +40,11 @@ const LoginForm = () => {
 
       if (data.status === "success") {
         console.log("Login successful:", data.user);
-        // Save session if needed
-        // localStorage.setItem("user", JSON.stringify(data.user));
+        
+        //store userid
+        localStorage.setItem("user", JSON.stringify(data.user));
+        console.log("Saving user to localStorage:", data.user);
+
         const userType = data.user.userType;
         console.log("User Type:", userType);
 

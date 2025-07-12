@@ -8,9 +8,10 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 class User extends Authenticatable
 {
     use HasFactory;
+    use Notifiable;
 
     public $timestamps = false; // ✅ Disable automatic timestamps
-
+    protected $primaryKey = 'userID'; 
     protected $fillable = [
         'username',
         'fname',

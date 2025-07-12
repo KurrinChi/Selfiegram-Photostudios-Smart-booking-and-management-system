@@ -1,36 +1,51 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Heart } from "lucide-react";
-import mockPackages from "../data/mockPackages.json";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface Package {
-  id: string;
+  id: number;
   title: string;
-  price: number;
-  tags: string[];
-  duration: string;
   description: string;
+  price: number;
+  status: number;
   images: string[];
 }
 
-const initialFavoriteIds = ["pkg-001", "pkg-005", "pkg-006", "pkg-014"];
-
 const ClientFavoritePageContent: React.FC = () => {
-  const navigate = useNavigate();
-  const [imageIndexMap, setImageIndexMap] = useState<Record<string, number>>(
-    {}
-  );
-  const [fadingImages, setFadingImages] = useState<Record<string, boolean>>({});
-  const [favoriteIds, setFavoriteIds] = useState<string[]>(initialFavoriteIds);
-  const [confirmingId, setConfirmingId] = useState<string | null>(null);
 
-  const allPackages = mockPackages as Package[];
-  const favoritePackages = allPackages.filter((pkg) =>
-    favoriteIds.includes(pkg.id)
-  );
+  const fullImagePath = (path: string) =>
+  path.startsWith("http") ? path : `http://127.0.0.1:8000/${path}`;
+  
+  const navigate = useNavigate();
+  const [favorites, setFavorites] = useState<Package[]>([]);
+  const [imageIndexMap, setImageIndexMap] = useState<Record<number, number>>({});
+  const [fadingImages, setFadingImages] = useState<Record<number, boolean>>({});
+  const [loading, setLoading] = useState(true);
+
+  const user = JSON.parse(localStorage.getItem("user") || "{}");
+  const userId = user.userID;
 
   useEffect(() => {
-    const timers = favoritePackages.map((pkg) => {
+    if (!userId) return;
+
+  fetch(`http://127.0.0.1:8000/api/favorites/${userId}`)
+    .then((res) => {
+      if (!res.ok) throw new Error(`Server error: ${res.status}`);
+      return res.json();
+    })
+    .then((data) => {
+      console.log("Fetched favorites:", data);
+      setFavorites(data);
+    })
+    .catch((err) => {
+      console.error("Failed to fetch favorites:", err.message);
+    })      
+    .finally(() => setLoading(false));  
+  }, [userId]);
+
+  useEffect(() => {
+    const timers = favorites.map((pkg) => {
       const delay = 3000 + Math.random() * 2000;
       return setInterval(() => {
         setFadingImages((prev) => ({ ...prev, [pkg.id]: true }));
@@ -46,58 +61,42 @@ const ClientFavoritePageContent: React.FC = () => {
     });
 
     return () => timers.forEach(clearInterval);
-  }, [favoritePackages]);
+  }, [favorites]);
 
-  const getTagClass = (tag: string) => {
-    const map: Record<string, string> = {
-      "Self Shoot": "bg-blue-200 text-blue-800",
-      Graduation: "bg-red-200 text-red-800",
-      Studio: "bg-yellow-200 text-yellow-800",
-      Photoshoot: "bg-cyan-200 text-cyan-800",
-    };
-    return map[tag] || "bg-gray-100 text-gray-700";
-  };
+    const removeFavorite = async (packageId: number) => {
+      setFavorites((prev) => prev.filter((pkg) => pkg.id !== packageId));
 
-  const removeFromFavorites = (id: string) => {
-    setFavoriteIds((prev) => prev.filter((pkgId) => pkgId !== id));
-    setConfirmingId(null);
+      fetch(`http://127.0.0.1:8000/api/favorites/remove`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          userID: userId,
+          packageID: packageId,
+        }),
+      })
+        .then((res) => {
+          if (!res.ok) throw new Error("Failed to remove favorite");
+          return res.json();
+        })
+        .then((data) => console.log("Removed from favorites:", data))
+        .catch((err) => console.error("Remove favorite error:", err));
   };
 
   return (
     <div className="p-4 overflow-y-auto max-h-160 rounded-3xl transition-all duration-300">
       <h1 className="text-2xl font-semibold mb-6">Your Favorite Packages</h1>
 
-      {/* Modal */}
-      {confirmingId && (
-        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 shadow-lg w-80">
-            <h2 className="text-lg font-semibold mb-2 text-center">
-              Remove from Favorites?
-            </h2>
-            <p className="text-sm text-gray-600 mb-4 text-center">
-              Are you sure you want to remove this package from your favorites?
-            </p>
-            <div className="flex justify-end gap-2">
-              <button
-                onClick={() => setConfirmingId(null)}
-                className="px-4 py-2 text-sm border rounded-md hover:bg-gray-100"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => removeFromFavorites(confirmingId)}
-                className="px-4 py-2 text-sm bg-red-500 text-white rounded-md hover:bg-red-600"
-              >
-                Remove
-              </button>
-            </div>
-          </div>
+      {loading ? (
+        <div className="text-center text-gray-500">Loading favorites...</div>
+      ) : favorites.length === 0 ? (
+        <div className="text-center text-gray-500 border border-dashed py-20 rounded-md">
+          You don't have any favorites yet.
         </div>
-      )}
-
-      {favoritePackages.length > 0 ? (
+      ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {favoritePackages.map((pkg) => {
+          {favorites.map((pkg) => {
             const currentImgIdx = imageIndexMap[pkg.id] ?? 0;
             const isFading = fadingImages[pkg.id];
 
@@ -106,57 +105,93 @@ const ClientFavoritePageContent: React.FC = () => {
                 key={pkg.id}
                 className="relative bg-white rounded-xl shadow-sm transition-all duration-300 transform hover:-translate-y-2 hover:scale-105 hover:shadow-xl p-2 overflow-hidden group"
               >
-                {/* Heart button with confirm */}
-                <button
-                  onClick={() => setConfirmingId(pkg.id)}
-                  className="absolute top-4 right-4 z-10"
-                >
-                  <Heart className="w-5 h-5 text-red-500 fill-red-500" />
-                </button>
+                {/* Favorite Heart icon */}
+              
+                 <motion.button
+                onClick={() => removeFavorite(pkg.id)}
+                whileTap={{ scale: 5 }}
+                className="absolute top-3 right-3 z-20 w-8 h-8 rounded-full backdrop-blur-sm flex items-center justify-center transition"
+              >
+                <Heart className="w-5 h-5 text-red-500 fill-red-500 text-gray-600 transition-colors" />
+                <AnimatePresence>
+                  <motion.div
+                    key="burst"
+                    initial={{ scale: 0, opacity: 0 }}
+                    animate={{ scale: 1.6, opacity: 0 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.4 }}
+                    className="absolute inset-0"
+                  >
+                    <svg
+                      viewBox="0 0 100 100"
+                      className="w-full h-full text-gray-400"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                    >
+                      {Array.from({ length: 8 }).map((_, i) => {
+                        const angle = (i * 360) / 8;
+                        const x1 = 50 + 20 * Math.cos((angle * Math.PI) / 180);
+                        const y1 = 50 + 20 * Math.sin((angle * Math.PI) / 180);
+                        return (
+                          <line
+                            key={i}
+                            x1="50"
+                            y1="50"
+                            x2={x1}
+                            y2={y1}
+                            strokeLinecap="round"
+                          />
+                        );
+                      })}
+                    </svg>
+                  </motion.div>
+                </AnimatePresence>
+              </motion.button>
 
+                {/* Image */}
                 <div className="relative z-0 h-100 rounded-md overflow-hidden">
                   <img
-                    src={pkg.images[currentImgIdx]}
-                    className={`w-full h-full object-cover transition-opacity duration-500 ease-in-out ${
-                      isFading ? "opacity-0" : "opacity-100"
-                    }`}
-                    alt={pkg.title}
-                  />
-                  <div className="absolute bottom-2 w-full flex justify-center gap-1">
-                    {pkg.images.map((_, i) => (
-                      <div
+                  src={
+                    pkg.images && pkg.images.length > 0
+                      ? fullImagePath(pkg.images[currentImgIdx])
+                      : "/slfg-placeholder 2.png"
+                  }
+                  onError={(e) =>
+                    ((e.target as HTMLImageElement).src = "/slfg-placeholder 2.png")
+                  }
+                  className={`w-full h-full object-cover transition-opacity duration-500 ease-in-out ${
+                    isFading ? "opacity-0" : "opacity-100"
+                  }`}
+                  alt={pkg.title}
+                />
+
+                  <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1 bg-white/60 px-2 py-1 rounded-full backdrop-blur-sm">
+                    {(pkg.images ?? ["/slfg-placeholder 2.png"]).map((img, i) => (
+                      <img
                         key={i}
-                        className={`h-2 w-2 rounded-full ${
+                        src={fullImagePath(img)}
+                        className={`w-6 h-6 object-cover rounded-full border-2 cursor-pointer transition ${
                           i === currentImgIdx
-                            ? "bg-black"
-                            : "bg-gray-300 scale-60"
+                            ? "border-black"
+                            : "border-transparent opacity-60"
                         }`}
+                        onClick={() =>
+                          setImageIndexMap((prev) => ({ ...prev, [pkg.id]: i }))
+                        }
                       />
                     ))}
                   </div>
                 </div>
 
+                {/* Info */}
                 <div className="p-3 space-y-2">
                   <div className="font-medium text-sm">{pkg.title}</div>
                   <div className="text-gray-500 text-xs">
-                    ₱{pkg.price.toFixed(2)}
-                  </div>
-                  <div className="flex flex-wrap gap-1">
-                    {pkg.tags.map((tag) => (
-                      <span
-                        key={tag}
-                        className={`px-2 py-0.5 rounded-full text-[10px] ${getTagClass(
-                          tag
-                        )}`}
-                      >
-                        {tag}
-                      </span>
-                    ))}
+                    ₱{Number(pkg.price).toFixed(2)}
                   </div>
                   <button
-                    onClick={() =>
-                      navigate(`/client/packages/select/${pkg.id}`)
-                    }
+                    onClick={() => navigate(`/client/packages/select/${pkg.id}`)}
                     className="mt-2 w-full py-2 text-xs bg-gray-100 rounded-md hover:bg-gray-200 transition"
                   >
                     SELECT
@@ -165,10 +200,6 @@ const ClientFavoritePageContent: React.FC = () => {
               </div>
             );
           })}
-        </div>
-      ) : (
-        <div className="w-full py-20 text-center text-gray-500 border border-dashed border-gray-300 rounded-md">
-          You don’t have any favorites yet.
         </div>
       )}
     </div>
