@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from "react";
+// components/client/ClientHeader.tsx
+import { useEffect, useState } from "react";
 import { Menu } from "lucide-react";
 
 interface HeaderProps {
@@ -6,45 +7,19 @@ interface HeaderProps {
 }
 
 const ClientHeader = ({ onToggleSidebar }: HeaderProps) => {
-  const [username, setUsername] = useState<string>("");
+  const [username, setUsername] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchUsername = async () => {
-      const user = JSON.parse(localStorage.getItem("user") || "{}");
-      const userId = user?.userID;
-
-      if (!userId) return;
-
+   useEffect(() => {
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
       try {
-        const res = await fetch(`http://localhost:8000/api/user/${userId}`);
-        const data = await res.json();
-
-        if (data && data.username) {
-          setUsername(data.username);
-        } else {
-          console.warn("No username found for user:", data);
-        }
-      } catch (error) {
-        console.error("Failed to fetch user info:", error);
+        const user = JSON.parse(storedUser);
+        setUsername(user.username || "Guest");
+      } catch (e) {
+        console.error("Failed to parse user from localStorage:", e);
       }
-    };
-
-    fetchUsername();
+    }
   }, []);
-
-  useEffect(() => {
-  const user = JSON.parse(localStorage.getItem("user") || "{}");
-  const userId = user?.userID;
-
-  if (!userId) return;
-
-  fetch(`http://localhost:8000/api/user/${userId}`)
-    .then((res) => res.json())
-    .then((data) => setUsername(data.username)) // or name/email
-    .catch((err) => {
-      console.error("Failed to fetch user:", err);
-    });
-}, []);
 
   return (
     <header className="w-full bg-white px-4 py-3 flex justify-between items-center shadow-sm">
@@ -60,7 +35,7 @@ const ClientHeader = ({ onToggleSidebar }: HeaderProps) => {
 
       <div className="flex items-center gap-2">
         <div className="w-8 h-8 rounded-full bg-gray-300" />
-        <span className="text-sm">{username || "..."}</span>
+        <span className="text-sm">{username ?? "Loading..."}</span>
       </div>
     </header>
   );

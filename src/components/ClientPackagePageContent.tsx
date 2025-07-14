@@ -28,27 +28,27 @@ const ClientPackagePageContent: React.FC = () => {
   const fetchFavorites = async () => {
    const user = JSON.parse(localStorage.getItem("user") || "{}");
     const userId = user?.userID;
-    console.log("🔍 LocalStorage user:", user);
+    console.log("LocalStorage user:", user);
 
     if (!userId) {
-      console.warn("⚠️ No user ID found in localStorage.");
+      console.warn("No user ID found in localStorage.");
       return;
     }
 
     try {
       const res = await fetch(`http://localhost:8000/api/favorites/user/${userId}`);
       const data = await res.json();
-      console.log("📦 Fetched favorites from backend:", data);
+      console.log("Fetched favorites from backend:", data);
 
       if (Array.isArray(data)) {
         const idSet = new Set(data.map((id) => id.toString()));
-        console.log("✅ Converted favorite ID set:", idSet);
+        console.log("Converted favorite ID set:", idSet);
         setFavoriteIds(idSet);
       } else {
-        console.error("❌ Unexpected response for favorites:", data);
+        console.error("Unexpected response for favorites:", data);
       }
     } catch (error) {
-      console.error("🔥 Failed to fetch favorites:", error);
+      console.error("Failed to fetch favorites:", error);
     }
   };
 
@@ -104,23 +104,23 @@ const ClientPackagePageContent: React.FC = () => {
     });
 
     const data = await response.json();
-    console.log("🧠 Favorite toggle response:", data);
+    console.log("Favorite toggle response:", data);
 
     if (data.success) {
       setFavoriteIds((prev) => {
         const newSet = new Set(prev);
         if (isAlreadyFavorite) {
-          newSet.delete(idStr); // Remove from UI state
+          newSet.delete(idStr); 
         } else {
-          newSet.add(idStr); // Add to UI state
+          newSet.add(idStr); 
         }
         return newSet;
       });
     } else {
-      console.error("🚨 Favorite update failed:", data.message);
+      console.error("Favorite update failed:", data.message);
     }
   } catch (error) {
-    console.error("❌ Error in toggleFavorite:", error);
+    console.error("Error in toggleFavorite:", error);
   }
 };
 

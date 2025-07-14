@@ -17,14 +17,15 @@ return [
 
 
 
-    'paths' => ['api/*'], // allow all API routes
-    'allowed_methods' => ['*'], // allow all HTTP methods
-    'allowed_origins' => ['http://localhost:5173'], // allow your frontend
+    'paths' => ['api/*', 'sanctum/csrf-cookie'],
+    'allowed_methods' => ['*'],
+    'allowed_origins' => ['http://localhost:5173'],
     'allowed_origins_patterns' => [],
-    'allowed_headers' => ['*'], // allow any headers
+    'allowed_headers' => ['*'],
     'exposed_headers' => [],
     'max_age' => 0,
     'supports_credentials' => true,
+
 
 
 ];
