@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import type { ChangeEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast, ToastContainer } from "react-toastify";
@@ -6,18 +6,60 @@ import "react-toastify/dist/ReactToastify.css";
 
 const ProfileContents: React.FC = () => {
   const navigate = useNavigate();
+  const localUser = JSON.parse(localStorage.getItem("user") || "{}");
 
   const [photo, setPhoto] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(localUser.photoUrl || null);
+
   const [formData, setFormData] = useState({
-    username: "user01",
-    firstName: "",
-    lastName: "",
-    email: "",
-    phone: "",
-    birthdate: "",
-    gender: "Male",
+    username: localUser.username || "",
+    firstName: localUser.fname || "",
+    lastName: localUser.lname || "",
+    email: localUser.email || "",
+    phone: localUser.contactNo || "",
+    birthdate: localUser.birthdate || "",
+    gender: localUser.gender || "Male",
   });
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      const userID = localStorage.getItem("userID");
+      if (!userID) {
+        toast.error("User not logged in");
+        return;
+      }
+
+      try {
+        const response = await fetch(`http://localhost:8000/api/users/${userID}`);
+        const data = await response.json();
+
+        if (!response.ok || !data || data.message === "User not found") {
+          throw new Error("Invalid user data");
+        }
+
+        // Update form with latest backend values
+        setFormData({
+          username: data.username || "",
+          firstName: data.fname || "",
+          lastName: data.lname || "",
+          email: data.email || "",
+          phone: data.contactNo || "",
+          birthdate: data.birthdate || "",
+          gender: data.gender || "Male",
+        });
+
+        setPreviewUrl(data.photoUrl || null);
+
+        // Update localStorage with fresh user data
+        localStorage.setItem("user", JSON.stringify(data));
+      } catch (error) {
+        console.error("Error fetching user:", error);
+        toast.error("Failed to load user profile");
+      }
+    };
+
+    fetchUser();
+  }, []);
 
   const handlePhotoChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -36,8 +78,44 @@ const ProfileContents: React.FC = () => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSave = () => {
-    toast.success("Profile updated successfully!");
+  const handleSave = async () => {
+    const userID = localStorage.getItem("userID");
+
+    if (!userID) {
+      toast.error("User not logged in.");
+      return;
+    }
+
+    try {
+      const response = await fetch(`http://localhost:8000/api/users/${userID}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          fname: formData.firstName,
+          lname: formData.lastName,
+          email: formData.email,
+          contactNo: formData.phone,
+          birthdate: formData.birthdate,
+          gender: formData.gender,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to update profile.");
+      }
+
+      // Save updated user to localStorage
+      localStorage.setItem("user", JSON.stringify(data.user));
+
+      toast.success("Profile updated successfully!");
+    } catch (error) {
+      console.error("Update error:", error);
+      toast.error("Error updating profile.");
+    }
   };
 
   const handleLogout = () => {
@@ -45,6 +123,8 @@ const ProfileContents: React.FC = () => {
     sessionStorage.clear();
     navigate("/login");
   };
+
+ 
 
   return (
     <div className="p-10 transition-all duration-300">
