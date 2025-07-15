@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { format, parse, isWithinInterval } from "date-fns";
 import { DateRange } from "react-date-range";
 import "react-date-range/dist/styles.css";
@@ -8,30 +8,23 @@ import { faSearch } from "@fortawesome/free-solid-svg-icons";
 import TransactionModal from "../components/ModalTransactionDialog";
 
 interface Sale {
-  id: string;
+  transactionID: number;
   customerName: string;
   package: string;
-  date: string;
+  transactionDate: string;
+  bookingDate: string;
   time: string;
   downPayment: number;
-  paidBalance: number;
+  balance: number;
   totalAmount: number;
+  email: string;
+  address: string;
+  contactNo: string;
   paymentStatus: "Completed" | "Pending";
 }
 
-const mockSales: Sale[] = Array.from({ length: 78 }, (_, i) => ({
-  id: `S${i % 2 === 0 ? "FO" : "FT"}#${(i + 1).toString().padStart(3, "0")}`,
-  customerName: "Ian Conception",
-  package: i % 2 === 0 ? "Selfie for ONE" : "Selfie for TWO",
-  date: `2025-04-${(18 + (i % 10)).toString().padStart(2, "0")}`,
-  time: "1:00 NN - 1:30 pm",
-  downPayment: 200,
-  paidBalance: i % 3 === 0 ? 200 : 399,
-  totalAmount: 399,
-  paymentStatus: i % 3 === 0 ? "Pending" : "Completed",
-}));
-
 const AdminSalesContent: React.FC = () => {
+  const [sales, setSales] = useState<Sale[]>([]);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [packageFilter, setPackageFilter] = useState("All");
@@ -39,20 +32,43 @@ const AdminSalesContent: React.FC = () => {
   const [pageSize, setPageSize] = useState(10);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [selectedSale, setSelectedSale] = useState<any>(null);
-  const [range, setRange] = useState([
+  const [range, setRange] = useState<[{ startDate: Date; endDate: Date; key: string }]>([
     {
-      startDate: new Date("2025-04-18"),
-      endDate: new Date("2025-04-27"),
+      startDate: new Date("2025-01-01"),
+      endDate: new Date("2025-12-31"),
       key: "selection",
     },
   ]);
 
-  const packages = Array.from(new Set(mockSales.map((s) => s.package)));
+  useEffect(() => {
+    fetch("http://localhost:8000/api/sales")
+      .then((res) => res.json())
+      .then((data) => {
+        const parsedData: Sale[] = data.map((item: any) => ({
+          transactionID: item.transactionID,
+          customerName: item.customerName,
+          package: item.package,
+          transactionDate: item.transactionDate,
+          bookingDate: item.bookingDate,
+          time: item.time,
+          downPayment: Number(item.downPayment),
+          balance: Number(item.balance),
+          totalAmount: Number(item.totalAmount),
+          paymentStatus: item.paymentStatus,
+          email: item.customerEmail,
+          address: item.customerAddress,
+          contactNo: item.customerContactNo,
+        }));
+        setSales(parsedData);
+      });
+  }, []);
+
+  const packages = Array.from(new Set(sales.map((s) => s.package)));
 
   const filtered = useMemo(() => {
-    return mockSales.filter((s) => {
+    return sales.filter((s) => {
       const matchesSearch =
-        s.id.toLowerCase().includes(search.toLowerCase()) ||
+        s.transactionID.toString().toLowerCase().includes(search.toLowerCase()) ||
         s.customerName.toLowerCase().includes(search.toLowerCase()) ||
         s.package.toLowerCase().includes(search.toLowerCase());
 
@@ -62,7 +78,7 @@ const AdminSalesContent: React.FC = () => {
       const matchesPackage =
         packageFilter === "All" || s.package === packageFilter;
 
-      const saleDate = parse(s.date, "yyyy-MM-dd", new Date());
+      const saleDate = parse(s.transactionDate, "yyyy-MM-dd", new Date());
       const matchesDate = isWithinInterval(saleDate, {
         start: range[0].startDate,
         end: range[0].endDate,
@@ -70,7 +86,7 @@ const AdminSalesContent: React.FC = () => {
 
       return matchesSearch && matchesStatus && matchesPackage && matchesDate;
     });
-  }, [search, statusFilter, packageFilter, range]);
+  }, [sales, search, statusFilter, packageFilter, range]);
 
   const totalPages = Math.ceil(filtered.length / pageSize);
   const paginated = filtered.slice((page - 1) * pageSize, page * pageSize);
@@ -120,7 +136,6 @@ const AdminSalesContent: React.FC = () => {
           ))}
         </select>
 
-        {/* Date Range Picker */}
         <div className="relative text-xs">
           <button
             onClick={() => setPickerOpen((prev) => !prev)}
@@ -152,7 +167,7 @@ const AdminSalesContent: React.FC = () => {
         </div>
       </div>
 
-      {/* Table Variant A: Scrollable Table */}
+      {/* Table */}
       <div className="overflow-x-auto rounded-lg border">
         <table className="min-w-full text-xs">
           <thead className="bg-gray-100 text-left text-gray-600">
@@ -162,7 +177,7 @@ const AdminSalesContent: React.FC = () => {
               <th className="px-4 py-2">Package</th>
               <th className="px-4 py-2">Date & Time</th>
               <th className="px-4 py-2">Down Payment</th>
-              <th className="px-4 py-2">Paid Balance</th>
+              <th className="px-4 py-2">Balance</th>
               <th className="px-4 py-2">Total Amount</th>
               <th className="px-4 py-2">Payment Status</th>
             </tr>
@@ -174,34 +189,32 @@ const AdminSalesContent: React.FC = () => {
                 className="border-t hover:bg-gray-50 cursor-pointer"
                 onClick={() =>
                   setSelectedSale({
-                    id: s.id,
+                    id: s.transactionID,
                     customerName: s.customerName,
-                    email: "ian@example.com",
-                    address: "123 Sample Street",
-                    contact: "09171234567",
+                    email: s.email,
+                    address: s.address,
+                    contact: s.contactNo,
                     package: s.package,
-                    date: s.date,
+                    bookingDate: s.bookingDate,
+                    transactionDate: s.transactionDate,
                     time: s.time,
                     subtotal: s.totalAmount,
-                    paidAmount: s.downPayment + s.paidBalance,
+                    balance: s.balance,
                     feedback: "Great experience!",
-                    rating: s.paidBalance < s.totalAmount ? 4 : 5,
+                    rating: s.balance < s.totalAmount ? 4 : 5,
                   })
                 }
               >
-                <td className="px-4 py-2 whitespace-nowrap">{s.id}</td>
+                <td className="px-4 py-2 whitespace-nowrap">{s.transactionID}</td>
                 <td className="px-4 py-2">{s.customerName}</td>
                 <td className="px-4 py-2">{s.package}</td>
                 <td className="px-4 py-2 whitespace-nowrap">
-                  {format(
-                    parse(s.date, "yyyy-MM-dd", new Date()),
-                    "MMMM d, yyyy"
-                  )}
+                  {format(parse(s.transactionDate, "yyyy-MM-dd", new Date()), "MMMM d, yyyy")}
                   <br />[{s.time}]
                 </td>
-                <td className="px-4 py-2">{s.downPayment.toFixed(2)}</td>
-                <td className="px-4 py-2">{s.paidBalance.toFixed(2)}</td>
-                <td className="px-4 py-2">{s.totalAmount.toFixed(2)}</td>
+                <td className="px-4 py-2">{Number(s.downPayment).toFixed(2)}</td>
+                <td className="px-4 py-2">{Number(s.balance).toFixed(2)}</td>
+                <td className="px-4 py-2">{Number(s.totalAmount).toFixed(2)}</td>
                 <td className="px-4 py-2">
                   <span
                     className={`px-2 py-1 rounded-md text-xs font-medium ${
@@ -219,7 +232,7 @@ const AdminSalesContent: React.FC = () => {
         </table>
       </div>
 
-      {/* Pagination Controls */}
+      {/* Pagination */}
       <div className="flex flex-wrap items-center justify-between text-xs mt-4">
         <span>
           Showing {(page - 1) * pageSize + 1}-

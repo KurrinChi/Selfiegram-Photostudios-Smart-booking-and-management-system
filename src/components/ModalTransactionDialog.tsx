@@ -1,4 +1,5 @@
 import React from "react";
+import { format, parse } from "date-fns";
 
 interface TransactionModalProps {
   isOpen: boolean;
@@ -10,10 +11,11 @@ interface TransactionModalProps {
     address: string;
     contact: string;
     package: string;
-    date: string;
+    bookingDate: string;
+    transactionDate: string;
     time: string;
     subtotal: number;
-    paidAmount: number;
+    balance: number;
     feedback: string;
     rating: number; // 0–5
   } | null;
@@ -30,7 +32,10 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
     <div className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm transition-opacity duration-300 flex justify-center items-center p-4">
       <div className="bg-white max-w-xl w-full rounded-lg shadow-md overflow-y-auto max-h-[95vh] p-6">
         <h1 className="text-lg font-bold mb-1">{data.package}</h1>
-        <p className="text-sm text-gray-500 mb-4">Booking ID: {data.id}</p>
+        <div className="grid grid-cols-2 text-sm gap-y-1 mb-6">
+          <p className="text-sm text-gray-500 mb-4">Booking ID: {data.id}</p>
+          <p className="text-sm text-gray-500 mb-4">Date: {data.transactionDate}</p>
+        </div>
 
         <div className="grid grid-cols-2 text-sm gap-y-1 mb-6">
           <span className="text-gray-500">Name</span>
@@ -58,7 +63,7 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
             </label>
             <input
               disabled
-              value={data.date}
+              value={format(parse(data.bookingDate, "yyyy-MM-dd", new Date()), "MMMM d, yyyy")}
               className="w-full border rounded-md px-3 py-1.5 bg-gray-100"
             />
           </div>
@@ -81,11 +86,11 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
           </div>
           <div className="flex justify-between">
             <span>Paid Amount</span>
-            <span>₱{data.paidAmount.toFixed(2)}</span>
+            <span>₱{(data.subtotal - data.balance).toFixed(2)}</span>
           </div>
           <div className="flex justify-between font-semibold">
             <span>Pending Balance</span>
-            <span>₱{(data.subtotal - data.paidAmount).toFixed(2)}</span>
+            <span>₱{(data.balance).toFixed(2)}</span>
           </div>
         </div>
 

@@ -7,6 +7,8 @@
     use App\Http\Controllers\DashboardController;
     use App\Http\Controllers\PackageController;
     use App\Http\Controllers\FavoriteController;
+    use App\Http\Controllers\SalesController;
+    
 
     //for api testing to see if it worksss
     Route::middleware('api')->get('/test', function (Request $request) {
@@ -30,6 +32,9 @@
 
     //admin dashboard
     Route::get('/admin/summary', [DashboardController::class, 'getSummary']);
+
+    //admin sales
+    Route::get('/sales', [SalesController::class, 'getSales']);
 
     //Client Package
     Route::get('/packages', [PackageController::class, 'index']);
