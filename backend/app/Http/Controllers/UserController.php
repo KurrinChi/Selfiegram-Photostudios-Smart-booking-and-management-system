@@ -7,11 +7,9 @@ use Illuminate\Http\Request;
 
 class UserController extends Controller
 {
-    
-    public function users(){
+    public function users() {
         $users = User::select('userID', 'username', 'fname', 'lname', 'email', 'address', 'contactNo', 'userType')->get();
-        
-        // Optionally merge fname + lname into 'name'
+
         $users->transform(function ($user) {
             $user->name = $user->fname . ' ' . $user->lname;
             unset($user->fname, $user->lname);
@@ -20,35 +18,35 @@ class UserController extends Controller
 
         return response()->json($users);
     }
+
     public function show($id)
     {
         try {
-                $user = User::find($id); // Now uses `userID` instead of `id`
+            $user = User::find($id);
 
-                if (!$user) {
-                    return response()->json(['message' => 'User not found'], 404);
-                }
+            if (!$user) {
+                return response()->json(['message' => 'User not found'], 404);
+            }
 
-                return response()->json([
-                    'userID' => $user->userID,
-                    'username' => $user->username,
-                    'fname' => $user->fname,
-                    'lname' => $user->lname,
-                    'email' => $user->email,
-                    'contactNo' => $user->contactNo,
-                    //'birthdate' => $user->birthdate,
-                    //'gender' => $user->gender,
-                    //'photoUrl' => $user->photoUrl ?? null 
-                ]);
-            } catch (\Exception $e) {
-                return response()->json([
-                    'error' => 'Server Error',
-                    'message' => $e->getMessage()
-                ], 500);
-            }   
-            return response()->json($user)->header('Access-Control-Allow-Origin', '*');
-
+            return response()->json([
+                'userID' => $user->userID,
+                'username' => $user->username,
+                'fname' => $user->fname,
+                'lname' => $user->lname,
+                'email' => $user->email,
+                'contactNo' => $user->contactNo,
+                'birthday' => $user->birthday, // ✅ corrected from 'birthdate'
+                'gender' => $user->gender,
+                'profilePicture' => $user->profilePicture ?? null, // ✅ corrected key
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'Server Error',
+                'message' => $e->getMessage()
+            ], 500);
+        }
     }
+
     public function update(Request $request, $id)
     {
         $user = User::find($id);
@@ -57,23 +55,48 @@ class UserController extends Controller
             return response()->json(['message' => 'User not found'], 404);
         }
 
-        // Validate fields (you can customize this)
         $validated = $request->validate([
             'fname' => 'nullable|string|max:255',
             'lname' => 'nullable|string|max:255',
             'email' => 'nullable|email|max:255',
             'contactNo' => 'nullable|string|max:20',
-            //'birthdate' => 'nullable|date',
-            //'gender' => 'nullable|string|in:Male,Female,Non-binary,Other',
+            'birthday' => 'nullable|date', 
+            'gender' => 'nullable|string|in:Male,Female,Prefer not to say',
         ]);
 
-        // Update user info
         $user->update($validated);
+
+      
+      if ($request->hasFile('photo')) {
+    try {
+        $file = $request->file('photo');
+        $filename = time() . '_' . $file->getClientOriginalName();
+
+        \Log::info('Original file name: ' . $file->getClientOriginalName());
+        \Log::info('Storing as: ' . $filename);
+
+        
+        $path = $file->storeAs('profile_photos', $filename, 'public');
+
+        if (!$path) {
+            \Log::error('File storage failed');
+        }
+
+        \Log::info('File stored at: ' . $path);
+
+        $user->profilePicture = asset('storage/profile_photos/' . $filename);
+        $user->save();
+
+    } catch (\Exception $e) {
+        \Log::error('Photo upload error: ' . $e->getMessage());
+    }
+}
+
+   
 
         return response()->json([
             'message' => 'Profile updated successfully',
             'user' => $user,
         ]);
     }
-
 }

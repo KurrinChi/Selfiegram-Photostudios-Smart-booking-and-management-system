@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Jul 12, 2025 at 11:04 PM
+-- Generation Time: Jul 17, 2025 at 09:36 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -108,7 +108,6 @@ CREATE TABLE `favorites` (
 INSERT INTO `favorites` (`favoriteID`, `userID`, `packageID`, `createdAt`) VALUES
 (27, 2, 1002, '2025-07-12 20:48:17'),
 (28, 2, 1000, '2025-07-12 20:48:52'),
-(36, 2, 1001, '2025-07-12 21:02:27'),
 (37, 3, 1004, '2025-07-12 21:03:03');
 
 -- --------------------------------------------------------
@@ -206,21 +205,21 @@ INSERT INTO `packages` (`packageID`, `name`, `description`, `price`, `status`) V
 (1001, 'Selfie for TWO', 'Suitable for up to 2 people, including a free baby or fur baby\r\n20 minutes of self-shoot on one chosen backdrop from six aesthetic backdrop options\r\n7 digital copies\r\n2 printed copies (4R - 1 portrait and 1 grid)', 479.00, 1),
 (1002, 'Squad Groupie', 'Suitable for 3 to 4 people, including a free baby or fur baby\n20 minutes of self-shoot on one chosen backdrop from six aesthetic backdrop options\n7 digital copies\n2 printed copies (4R - 1 portrait and 1 grid)\'', 699.00, 1),
 (1003, 'Barkada Groupie', 'Good for 8 persons\n20 mins unlimited self shoot\n1 backdrop of your choice\n10 digital copies\n2 printed copies (4R)', 899.00, 1),
-(1004, 'Concept Studio', 'Good for 2 persons\r\n20 mins unlimited self shoot\r\n1 chosen plain backdrop\r\n1 chosen concept backdrop\r\nBohemian Dream\r\nChingu Pink\r\n', 749.00, 1),
-(1005, 'Graduation PREMIUM', '• 15 minutes UNLIMITED Photoshoot with a photographer\n• Use of Graduation Backdrop\n• 4 ENHANCED photos\n• FREE Ecobag\n\nPRINTS:\n• 1 x A4 Photo\n• 1 x A4 Glass to Glass Frame\n• 1 x 5R Photo\n• 4 x Wallet Size Photos (2.5\" x 3.5\")\n', 1199.00, 1),
-(1006, 'Graduation ELITE', '• 30 minutes UNLIMITED Photoshoot with a photographer\n• Use of Graduation Backdrop\n• Use of 1 Chosen Plain Backdrop\n• 8 ENHANCED photos\n• FREE Ecobag\n\nPRINTS:\n• 1 x A4 Photo\n• 1 x A4 Glass to Glass Frame\n• 1 x 5R Photo\n• 4 x Wallet Size Photos (Toga)\n• 4 x Wallet Size Photos (Formal)\n\nNOTES:\n• Packages are good for 1 pax only\n• Additional P200 for Toga with accent color (White/Black) — only 1 set per color provided\n• Free use of Barong/Filipiniana (Different colors available depending on size)\n• Kindly bring your measurement for the Barong/Filipiniana\n• HMUA available upon request', 1499.00, 1),
+(1004, 'Concept Studio', 'Good for 2 persons\n20 mins unlimited self shoot\n1 chosen plain backdrop\n1 chosen concept backdrop\nBohemian Dream and Chingu Pink', 749.00, 1),
+(1005, 'Graduation PREMIUM', '15 minutes UNLIMITED Photoshoot with a photographer\nUse of Graduation Backdrop\n4 ENHANCED photos\nFREE Ecobag\n1 x A4 Photo\n1 x A4 Glass to Glass Frame\n1 x 5R Photo\n4 x Wallet Size Photos (2.5\" x 3.5\")', 1199.00, 1),
+(1006, 'Graduation ELITE', '30 minutes UNLIMITED Photoshoot with a photographer\nUse of Graduation Backdrop\nUse of 1 Chosen Plain Backdrop\n8 ENHANCED photos\nFREE Ecobag\n1 x A4 Photo\n1 x A4 Glass to Glass Frame\n1 x 5R Photo\n4 x Wallet Size Photos (Toga)\n4 x Wallet Size Photos (Formal)\nPackages are good for 1 pax only\nAdditional P200 for Toga with accent color (White/Black) — only 1 set per color provided\nFree use of Barong/Filipiniana (Different colors available depending on size)\nKindly bring your measurement for the Barong/Filipiniana\nHMUA available upon request', 1499.00, 1),
 (1007, 'Studio Rental', 'Suitable for 1 to 4 people\n1-hour unlimited self-shoot\nAccess to all plain backdrops\nFree access to one chosen concept from the aesthetic backdrop options (Bohemian Dream, Chingu Pink, etc.)\nAll digital copies included\nFree use of all equipment\nIdeal For: Barkada, Family, Maternity, and Pre-nup self-photoshoots\nAdd-ons Available: Additional pax with an extra fee', 1499.00, 1),
 (1008, 'Vogue Photoshoot', 'For 1 model\n1-hour photoshoot with a senior female photographer\nIncludes all soft copies (edited and enhanced)\nAccess to 6 backdrop colors and 3 unique concepts (Spotlight, Bohemian Dream, Chingu Pink)\nIncludes 1 printed copy (4R size) and 1 printed copy (A4 size)', 3999.00, 1),
-(1009, 'Kiddie Photoshoot', '• 30 mins photoshoot of the celebrant + 2 parents & 1 sibling\r\n• 30 mins photoshoot w/ photographer\r\n• Creative directions by photographer included\r\n• 1 chosen theme backdrop\r\n• Access to 1 plain backdrop\r\n• 10 digital copies\r\n• All raw copies will be shared\r\n• 2 free prints\r\n• Free use of costume theme\r\n• Free use of props\r\n• Birthday cake smash is allowed (bring outfit for cake smash)\r\n\r\nAVAILABLE THEMES\r\n• Princess\r\n• Safari\r\n• Unicorn\r\n• Race Car\r\n• Boho\r\n• Outer Space\r\n', 2499.00, 1),
-(1010, 'Maternity Photoshoot', '• 1 hr photoshoot w/ photographer\n• Creative directions by photographer included\n• All plain backdrops & access to all concepts\n• All enhanced digital copies\n• Free maternity costumes & props\n• Family photoshoot included\n• Printed copy included', 3999.00, 1),
-(1011, 'Newborn Baby Photoshoot', '• Good for 1 newborn + 2 family members\n• 1 hr photoshoot w/ photographer\n• Creative directions by photographer included\n• 2 homy sets + costumes & props\n• All enhanced digital copies\n• Family photoshoot included\n• Printed copy included\n\nBest time for newborn photoshoot is between 6 to 14 days old, however, this package is also applicable for baby monthly milestone photoshoot.', 3999.00, 1),
-(1012, 'Initimate Gender Reveal', '• 1 hour Photoshoot with Photographer\n• Creative directions by photographer included\n• With Static Video Coverage and 1 minute Edited Video\n• Props included (Paint, Balloons & Poppers)\n• All enhanced Digital copies\n• Printed Copy included', 4499.00, 1),
-(1013, 'Birthday', '• Good for 1 pax\n• 20 mins unlimited self shoot on chosen plain backdrop\n• PLUS 5 mins photoshoot with Photographer (choose 1 concept)\n• 7 Digital copies\n• Free 2 printed copies (4R)\n• Free Birthday sash & headband\n• 2 free number balloons\n\nNote: Free headband with sash sample\nNote: Additional pax is applicable here', 749.00, 1),
-(1014, 'Family Photoshoot', '• Good for 5 family members\n• Can add family members\n• 1 hr photoshoot w/ photographer\n• Creative directions by photographer included\n• All plain backdrops & access to 1 chosen concept\n• All enhanced digital copies\n• Props included\n• Printed copies included\n', 2999.00, 1),
-(1015, 'Pre Nup Photoshoot', '• Good for 1 couple\r\n• Can add family members\r\n• 1 hr photoshoot w/ photographer\r\n• Creative directions by photographer included\r\n• All plain backdrops & access to 1 chosen concept\r\n• All enhanced digital copies\r\n• Printed copies included\r\n', 2999.00, 1),
-(1016, 'Student Groupie', '• Good for 10 pax\r\n• 50 mins unlimited self shoot\r\n• 1 backdrop of your choice (7 choices of backdrop)\r\n• 10 digital copies\r\n• 4 printed copies (4R) [3 portrait & 1 band*]\r\n• For students only (present ID with current school year)\r\n', 1499.00, 1),
-(1017, 'Solo Graduation', '• Good for 1 pax\r\n• 20 mins unlimited self shoot & poses on Graduation backdrop & 1 plain backdrop\r\n• Free use of full Toga set w/ academic hood & cap or Barong / Filipiniana\r\n• 7 Digital copies\r\n• Free 2 printed copies\r\n', 1749.00, 1),
-(1018, 'Barkada Graduation', '• Good for 4 pax\r\n• 30 mins unlimited self shoot & poses on Graduation backdrop w/ 1 plain backdrop\r\n• Free use of full Toga set w/ academic hood cap & Barong or Filipiniana\r\n• 7 digital copies\r\n• Free 4 printed copies\r\n\r\nAcademic hood\r\nCollege (Black Toga)\r\nSenior High (Blue & Pink Toga)\r\nKindergarten (Blue & Pink Toga)\r\n\r\nNow available\r\n\r\nNote: Kindly bring your measurement for the Barong/Filipiniana\r\n', 1999.00, 1);
+(1009, 'Kiddie Photoshoot', '30 mins photoshoot of the celebrant + 2 parents & 1 sibling\n30 mins photoshoot with photographer\nCreative directions by photographer included\n1 chosen theme backdrop\nAccess to 1 plain backdrop\n10 digital copies\nAll raw copies will be shared\n2 free prints\nFree use of costume theme\nFree use of props\nBirthday cake smash is allowed (bring outfit for cake smash)\nAvailable Themes: Princess, Safari, Unicorn, Race Car, Boho, Outer Space', 2499.00, 1),
+(1010, 'Maternity Photoshoot', '1 hr photoshoot with photographer\nCreative directions by photographer included\nAll plain backdrops and access to all concepts\nAll enhanced digital copies\nFree maternity costumes and props\nFamily photoshoot included\nPrinted copy included', 3999.00, 1),
+(1011, 'Newborn Baby Photoshoot', 'Good for 1 newborn and 2 family members\n1 hr photoshoot with photographer\nCreative directions by photographer included\n2 homy sets with costumes and props\nAll enhanced digital copies\nFamily photoshoot included\nPrinted copy included\nBest time for newborn photoshoot is between 6 to 14 days old; however, this package is also applicable for baby monthly milestone photoshoots.', 3999.00, 1),
+(1012, 'Initimate Gender Reveal', '1 hour photoshoot with photographer\nCreative directions by photographer included\nIncludes static video coverage and a 1-minute edited video\nProps included (paint, balloons, and poppers)\nAll enhanced digital copies\nPrinted copy included', 4499.00, 1),
+(1013, 'Birthday', 'Good for 1 pax\n20 minutes unlimited self-shoot on chosen plain backdrop\nPlus 5 minutes photoshoot with photographer (choose 1 concept)\n7 digital copies\nFree 2 printed copies (4R)\nFree birthday sash and headband\n2 free number balloons\nNote: Free headband comes with sash sample\nNote: Additional pax is applicable for this package', 749.00, 1),
+(1014, 'Family Photoshoot', 'Good for 5 family members\nCan add additional family members\n1 hour photoshoot with photographer\nCreative directions by photographer included\nAll plain backdrops and access to 1 chosen concept\nAll enhanced digital copies\nProps included\nPrinted copies included', 2999.00, 1),
+(1015, 'Pre Nup Photoshoot', 'Good for 1 couple\nCan add family members\n1 hour photoshoot with photographer\nCreative directions by photographer included\nAll plain backdrops and access to 1 chosen concept\nAll enhanced digital copies\nPrinted copies included', 2999.00, 1),
+(1016, 'Student Groupie', 'Good for 10 pax\n50 minutes unlimited self-shoot\n1 backdrop of your choice (7 available backdrop options)\n10 digital copies\n4 printed copies (4R) – 3 portrait and 1 band*\nFor students only (present ID with current school year)', 1499.00, 1),
+(1017, 'Solo Graduation', 'Good for 1 pax\n20 minutes unlimited self-shoot and poses on graduation backdrop and 1 plain backdrop\nFree use of full toga set with academic hood and cap, or Barong / Filipiniana\n7 digital copies\nFree 2 printed copies', 1749.00, 1),
+(1018, 'Barkada Graduation', 'Good for 4 pax\n30 minutes unlimited self-shoot and poses on graduation backdrop with 1 plain backdrop\nFree use of full toga set with academic hood, cap, and Barong or Filipiniana\n7 digital copies\nFree 4 printed copies\nCollege – Black Toga\nSenior High – Blue & Pink Toga\nKindergarten – Blue & Pink Toga\nNote: Kindly bring your measurement for the Barong or Filipiniana', 1999.00, 1);
 
 -- --------------------------------------------------------
 
@@ -441,8 +440,7 @@ CREATE TABLE `sessions` (
 --
 
 INSERT INTO `sessions` (`id`, `user_id`, `ip_address`, `user_agent`, `payload`, `last_activity`) VALUES
-('9h0qCZbsAfilC1i4MznxUW0Fn6SohBsB7kxRfsVX', NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36', 'YTozOntzOjY6Il90b2tlbiI7czo0MDoiNkJldlVYTjRmOU5hNHdleHo2VjBsVmpVYndLOUdvUDZDVDRXRVNjQyI7czo5OiJfcHJldmlvdXMiO2E6MTp7czozOiJ1cmwiO3M6Mjk6Imh0dHA6Ly8xMjcuMC4wLjE6ODAwMC9kYi10ZXN0Ijt9czo2OiJfZmxhc2giO2E6Mjp7czozOiJvbGQiO2E6MDp7fXM6MzoibmV3IjthOjA6e319fQ==', 1751819365),
-('Xp4BBOWaiSGM0XEE1kU9iiVYWLGpLJwJLNDq4c0E', NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36', 'YTozOntzOjY6Il90b2tlbiI7czo0MDoialRBR3l1RWJ0OGVUOE5qZTR1OFphdnlKN2NEcDVPcG1YN1NUb2JhdCI7czo5OiJfcHJldmlvdXMiO2E6MTp7czozOiJ1cmwiO3M6Mjk6Imh0dHA6Ly8xMjcuMC4wLjE6ODAwMC9kYi10ZXN0Ijt9czo2OiJfZmxhc2giO2E6Mjp7czozOiJvbGQiO2E6MDp7fXM6MzoibmV3IjthOjA6e319fQ==', 1751655960);
+('ey8vzns0s5SgcT8lQYg2ZQJe3uPTGDhaTVMkzo5k', NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36', 'YTozOntzOjY6Il90b2tlbiI7czo0MDoiWGJqZ3huS29CUUNnUUhtMWJkNWFQaElvOXlsdnZ5MmE4WUh0cHZ4dSI7czo5OiJfcHJldmlvdXMiO2E6MTp7czozOiJ1cmwiO3M6MzM6Imh0dHA6Ly9sb2NhbGhvc3Q6ODAwMC90ZXN0LXVwbG9hZCI7fXM6NjoiX2ZsYXNoIjthOjI6e3M6Mzoib2xkIjthOjA6e31zOjM6Im5ldyI7YTowOnt9fX0=', 1752776237);
 
 -- --------------------------------------------------------
 
@@ -475,6 +473,8 @@ CREATE TABLE `users` (
   `email` varchar(255) NOT NULL,
   `password` varchar(255) NOT NULL,
   `contactNo` varchar(255) NOT NULL,
+  `birthday` date DEFAULT NULL,
+  `gender` varchar(30) NOT NULL,
   `status` tinyint(4) NOT NULL,
   `profilePicture` varchar(255) NOT NULL,
   `address` varchar(255) NOT NULL,
@@ -486,10 +486,11 @@ CREATE TABLE `users` (
 -- Dumping data for table `users`
 --
 
-INSERT INTO `users` (`userID`, `username`, `fname`, `lname`, `email`, `password`, `contactNo`, `status`, `profilePicture`, `address`, `archive`, `userType`) VALUES
-(1, 'okim', 'Miko', 'Santos', 'santosmikoallen@gmail.com', '$2y$12$5fiTMf0S/7ll.UcIeQYhIuLKKsuObtkuv4iWZT3ahxXaokqIR6ybm', '09292902337', 0, '', 'San Juan', 1, 'Admin'),
-(2, 'bibingka20', 'Mary', 'Hannah', 'reyesmaryhannahcaryl@gmail.com', '$2y$12$7aAuFyzyNrWoggmlULLs.uNvq.eDC/xdE5d47cWSVEMelo9yfx9J6', '09155467893', 0, '', 'Malinis St', 1, 'Customer'),
-(3, 'reyesmaryhannahcaryl@gmail.com', 'Nicole', 'Varga', 'nicolevarga19@icloud.com', '$2y$12$O5dvQVpUA64PqaGq5vTwiuNtkH4/tAGMPmn6mcXDhjSCqolXigfNK', '091554', 0, '', 'Guiguinto Bulacan', 1, 'Customer');
+INSERT INTO `users` (`userID`, `username`, `fname`, `lname`, `email`, `password`, `contactNo`, `birthday`, `gender`, `status`, `profilePicture`, `address`, `archive`, `userType`) VALUES
+(1, 'okim', 'Miko', 'Santos', 'santosmikoallen@gmail.com', '$2y$12$5fiTMf0S/7ll.UcIeQYhIuLKKsuObtkuv4iWZT3ahxXaokqIR6ybm', '09292902337', NULL, '', 0, '', 'San Juan', 1, 'Admin'),
+(2, 'bibingka20', 'Mary Hannah', 'Reyes', 'reyesmaryhannahcaryl@gmail.com', '$2y$12$7aAuFyzyNrWoggmlULLs.uNvq.eDC/xdE5d47cWSVEMelo9yfx9J6', '09155467893', '2003-09-20', 'Female', 0, 'http://localhost:8000/storage/profile_photos/1752778930_675867e8c1ffa.jpg', 'Malinis St', 1, 'Customer'),
+(3, 'reyesmaryhannahcaryl@gmail.com', 'Nicolas', 'Varga', 'nicolevarga19@icloud.com1', '$2y$12$O5dvQVpUA64PqaGq5vTwiuNtkH4/tAGMPmn6mcXDhjSCqolXigfNK', '091554', '2025-07-12', 'Male', 0, 'http://localhost:8000/storage/profile_photos/1752779194_6758951a49661.jpg', 'Guiguinto Bulacan', 1, 'Customer'),
+(4, 'reyesmaryhannahcary2l@gmail.com', 'Mary', 'Hannah', 'reyesmaryhannahcary2l@gmail.com', '$2y$12$TbE67dPtHdhKF6D2f.3Bn.LBI0GxrklfjoAXdghqbwsI5h.IYKMya', '09155467893', NULL, '', 0, '', 'Malinis St', 1, 'Customer');
 
 -- --------------------------------------------------------
 
@@ -716,7 +717,7 @@ ALTER TABLE `transaction`
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `userID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `userID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
 -- AUTO_INCREMENT for table `user_images`
@@ -746,7 +747,7 @@ ALTER TABLE `booking`
 --
 ALTER TABLE `favorites`
   ADD CONSTRAINT `fk_fav_package` FOREIGN KEY (`packageID`) REFERENCES `packages` (`packageID`) ON DELETE CASCADE,
-  ADD CONSTRAINT `fk_fav_user` FOREIGN KEY (`userId`) REFERENCES `users` (`userID`) ON DELETE CASCADE;
+  ADD CONSTRAINT `fk_fav_user` FOREIGN KEY (`userID`) REFERENCES `users` (`userID`) ON DELETE CASCADE;
 
 --
 -- Constraints for table `messages`

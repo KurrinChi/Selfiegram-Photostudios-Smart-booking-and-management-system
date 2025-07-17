@@ -50,3 +50,6 @@
 
     //Client Header
     Route::get('/user/{id}', [UserController::class, 'show']);
+
+    //Update Client User Profile
+   Route::put('/user/{id}', [UserController::class, 'update']);

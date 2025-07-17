@@ -1,4 +1,3 @@
-// components/client/ClientHeader.tsx
 import { useEffect, useState } from "react";
 import { Menu } from "lucide-react";
 
@@ -8,13 +7,15 @@ interface HeaderProps {
 
 const ClientHeader = ({ onToggleSidebar }: HeaderProps) => {
   const [username, setUsername] = useState<string | null>(null);
+  const [profilePicture, setProfilePicture] = useState<string | null>(null);
 
-   useEffect(() => {
+  useEffect(() => {
     const storedUser = localStorage.getItem("user");
     if (storedUser) {
       try {
         const user = JSON.parse(storedUser);
         setUsername(user.username || "Guest");
+        setProfilePicture(user.profilePicture || null);
       } catch (e) {
         console.error("Failed to parse user from localStorage:", e);
       }
@@ -34,7 +35,18 @@ const ClientHeader = ({ onToggleSidebar }: HeaderProps) => {
       </div>
 
       <div className="flex items-center gap-2">
-        <div className="w-8 h-8 rounded-full bg-gray-300" />
+        {profilePicture ? (
+          <img
+            src={profilePicture}
+            alt="Profile"
+            className="w-8 h-8 rounded-full object-cover border border-gray-300"
+            onError={(e) => {
+              e.currentTarget.src = "/fallback.png"; // optional fallback image
+            }}
+          />
+        ) : (
+          <div className="w-8 h-8 rounded-full bg-gray-300" />
+        )}
         <span className="text-sm">{username ?? "Loading..."}</span>
       </div>
     </header>
