@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Jul 17, 2025 at 09:36 PM
+-- Generation Time: Jul 18, 2025 at 01:23 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -18,7 +18,7 @@ SET time_zone = "+00:00";
 /*!40101 SET NAMES utf8mb4 */;
 
 --
--- Database: `selfiegram`
+-- Database: `test2`
 --
 
 -- --------------------------------------------------------
@@ -47,6 +47,14 @@ CREATE TABLE `booking` (
   `rem` decimal(10,2) NOT NULL,
   `receivedAmount` decimal(10,2) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `booking`
+--
+
+INSERT INTO `booking` (`bookingID`, `userID`, `packageID`, `bookingDate`, `bookingStartTime`, `bookingEndTime`, `status`, `customerName`, `customerContactNo`, `customerEmail`, `customerAddress`, `date`, `paymentMethod`, `paymentStatus`, `subTotal`, `total`, `rem`, `receivedAmount`) VALUES
+(1, 2, 1000, '2025-07-20', '14:00:00', '14:10:00', 2, 'Mary Hannah Reyes', '09155467893', 'reyesmaryhannahcaryl@gmail.com', 'Malinis St', '2025-07-15', 'GCash', 1, 379.00, 379.00, 0.00, 379.00),
+(2, 3, 1001, '2025-07-22', '16:00:00', '16:20:00', 2, 'Nicole Varga', '091554', 'nicolevarga19@icloud.com', 'Guiguinto Bulacan', '2025-07-15', 'GCash', 0, 479.00, 479.00, 279.00, 200.00);
 
 -- --------------------------------------------------------
 
@@ -459,6 +467,14 @@ CREATE TABLE `transaction` (
   `rem` double(10,2) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Dumping data for table `transaction`
+--
+
+INSERT INTO `transaction` (`transId`, `bookingId`, `total`, `paymentStatus`, `date`, `receivedAmount`, `paymentMethod`, `rem`) VALUES
+(1, 1, 379.00, 1, '2025-07-15', 379.00, 'GCash', 0.00),
+(2, 2, 479.00, 0, '2025-07-15', 200.00, 'GCash', 279.00);
+
 -- --------------------------------------------------------
 
 --
@@ -711,7 +727,7 @@ ALTER TABLE `personal_access_tokens`
 -- AUTO_INCREMENT for table `transaction`
 --
 ALTER TABLE `transaction`
-  MODIFY `transId` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `transId` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT for table `users`
