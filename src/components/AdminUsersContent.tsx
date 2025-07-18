@@ -8,16 +8,21 @@ import AssignRoleModal from "./ModalAssignRoleDialog.tsx";
 
 // Types & Mock Data
 interface Appointment {
-  id: string;
+  id: string
+  customerName: string;
   package: string;
-  date: string;
+  bookingDate: string;
+  transactionDate: string;
   time: string;
-  status: "Pending" | "Done";
+  subtotal: number;
+  balance: number;
+  status: "Pending" | "Done" | "Cancelled";
   rating: number;
 }
 
 interface User {
   id: string;
+  profilePicture: string;
   name: string;
   email: string;
   username: string;
@@ -30,32 +35,6 @@ interface User {
 
 const roles = ["Customer", "Staff", "Admin"] as const;
 
-const mockAppointments: Appointment[] = [
-  {
-    id: "APT-001",
-    package: "Graduation Package",
-    date: "2024-06-01",
-    time: "10:00 AM",
-    status: "Done",
-    rating: 5,
-  },
-  {
-    id: "APT-002",
-    package: "Prenup Package",
-    date: "2024-06-10",
-    time: "3:00 PM",
-    status: "Pending",
-    rating: 0,
-  },
-  {
-    id: "APT-003",
-    package: "Wedding Package",
-    date: "2024-06-15",
-    time: "1:00 PM",
-    status: "Done",
-    rating: 4,
-  },
-];
 
 // Main Component
 const AdminUsersContent: React.FC = () => {
@@ -84,6 +63,9 @@ const AdminUsersContent: React.FC = () => {
           role: user.userType,
           address: user.address,
           contact: user.contactNo,
+          birthday: user.birthday,
+          age: user.age,
+          profilePicture: user.profilePicture
         }));
 
         setUsers(mappedUsers);
@@ -112,6 +94,27 @@ const AdminUsersContent: React.FC = () => {
   useEffect(() => {
     if (page > totalPages) setPage(1);
   }, [page, totalPages]);
+
+  const [userAppointments, setUserAppointments] = useState<Record<string, Appointment[]>>({});
+
+  useEffect(() => {
+    if (!selected) return;
+
+    const fetchAppointments = async () => {
+      try {
+        const res = await fetch(
+          `http://127.0.0.1:8000/api/user-appointments/${selected.id}`
+        );
+        const data = await res.json();
+        setUserAppointments((prev) => ({ ...prev, [selected.id]: data }));
+      } catch (error) {
+        console.error("Failed to fetch appointments:", error);
+      }
+    };
+
+    fetchAppointments();
+  }, [selected]);
+
 
   return (
     <div className="relative flex flex-col gap-6 p-4 md:p-6">
@@ -251,14 +254,15 @@ const AdminUsersContent: React.FC = () => {
             key={selected.id}
             isOpen={true}
             user={{
+              profilePicture: selected.profilePicture,
               name: selected.name,
               username: selected.username,
-              age: 15, //need sa db ng age at bday
-              birthday: selected.birthday, //eto ren
+              age: selected.age, //need sa db ng age at bday
+              birthday: selected.birthday, 
               address: selected.address,
               email: selected.email,
               contact: selected.contact,
-              appointments: mockAppointments,
+              appointments: userAppointments[selected.id] || [],
             }}
             onClose={() => setSelected(null)}
           />

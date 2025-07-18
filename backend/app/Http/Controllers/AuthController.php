@@ -47,6 +47,8 @@ class AuthController extends Controller
             'email' => 'required|email|unique:users,email',
             'address' => 'required|string|max:255',
             'contactNo' => 'required|string|max:20',
+            'gender' => 'required|string|max:20',
+            'birthday' => 'required|string|max:40'
         ]);
 
         // Hash the password
@@ -65,6 +67,8 @@ class AuthController extends Controller
             'status' => '0',
             'profilePicture' => '',
             'archive' => '1',
+            'gender' => $registerFields['gender'],
+            'birthday' => $registerFields['birthday']
         ]);
 
         return response()->json([

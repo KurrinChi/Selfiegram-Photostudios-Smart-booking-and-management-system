@@ -30,7 +30,7 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm transition-opacity duration-300 flex justify-center items-center p-4">
-      <div className="bg-white max-w-xl w-full rounded-lg shadow-md overflow-y-auto max-h-[95vh] p-6">
+      <div className="bg-white text-gray-900 max-w-xl w-full rounded-lg shadow-md overflow-y-auto max-h-[95vh] p-6">
         <h1 className="text-lg font-bold mb-1">{data.package}</h1>
         <div className="grid grid-cols-2 text-sm gap-y-1 mb-6">
           <p className="text-sm text-gray-500 mb-4">Booking ID: {data.id}</p>

@@ -8,11 +8,22 @@ use Illuminate\Http\Request;
 class UserController extends Controller
 {
     public function users() {
-        $users = User::select('userID', 'username', 'fname', 'lname', 'email', 'address', 'contactNo', 'userType')->get();
+        $users = User::select('userID', 'username', 'fname', 'lname', 'email', 'address', 'contactNo', 'userType', 'birthday', 'profilePicture')->get();
 
         $users->transform(function ($user) {
             $user->name = $user->fname . ' ' . $user->lname;
             unset($user->fname, $user->lname);
+
+            // AGE
+            if ($user->birthday) {
+                $birthDate = new \DateTime($user->birthday);
+                $today = new \DateTime();
+                $age = $today->diff($birthDate)->y;
+                $user->age = $age;
+            } else {
+                $user->age = 0;
+            }
+
             return $user;
         });
 

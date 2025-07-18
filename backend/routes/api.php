@@ -8,6 +8,7 @@
     use App\Http\Controllers\PackageController;
     use App\Http\Controllers\FavoriteController;
     use App\Http\Controllers\SalesController;
+    use App\Http\Controllers\AppointmentController;
     
 
     //for api testing to see if it worksss
@@ -29,6 +30,7 @@
 
     //admin user management
     Route::get('/users', [UserController::class, 'users']);
+    Route::get('/user-appointments/{userId}', [AppointmentController::class, 'getAppointmentsByUser']);
 
     //admin dashboard
     Route::get('/admin/summary', [DashboardController::class, 'getSummary']);
