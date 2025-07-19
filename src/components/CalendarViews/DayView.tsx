@@ -1,5 +1,5 @@
-import React, { useEffect, useRef } from "react";
-import { format } from "date-fns";
+import React, { useEffect, useRef, useState } from "react";
+import { format, parseISO } from "date-fns";
 import type { TransactionModalProps } from "../ModalAppointmentInfoDialog";
 
 interface Appointment {
@@ -7,22 +7,8 @@ interface Appointment {
   title: string;
   start: Date;
   end: Date;
+  raw: any;
 }
-
-const sampleAppointments: Appointment[] = [
-  {
-    id: 1,
-    title: "Haircut – John",
-    start: new Date(new Date().setHours(9, 0)),
-    end: new Date(new Date().setHours(10, 0)),
-  },
-  {
-    id: 2,
-    title: "Coloring – Jane",
-    start: new Date(new Date().setHours(13, 30)),
-    end: new Date(new Date().setHours(15, 0)),
-  },
-];
 
 interface DayViewProps {
   currentDate: Date;
@@ -32,10 +18,41 @@ interface DayViewProps {
 const DayView: React.FC<DayViewProps> = ({ currentDate, onEventClick }) => {
   const nowRef = useRef<HTMLDivElement>(null);
   const now = new Date();
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+
+  useEffect(() => {
+  const fetchAppointments = async () => {
+      try {
+        const res = await fetch("http://localhost:8000/api/appointments");
+        const json = await res.json();
+
+        const filtered = json.filter((item: any) => {
+          return item.bookingDate === format(currentDate, "yyyy-MM-dd");
+        });
+
+        const transformed = filtered.map((item: any, index: number) => {
+          return {
+            id: item.transId || index,
+            title: `${item.package} – ${item.customerName}`,
+            start: parseISO(`${item.bookingDate}T${item.bookingStartTime}`),
+            end: parseISO(`${item.bookingDate}T${item.bookingEndTime}`),
+            raw: item,
+          };
+        });
+
+        setAppointments(transformed);
+      } catch (error) {
+        console.error("Error fetching appointments:", error);
+      }
+    };
+
+    fetchAppointments();
+  }, [currentDate]);
+
 
   useEffect(() => {
     nowRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-  }, [currentDate]);
+  }, [appointments]);
 
   const minutesSinceMidnight = now.getHours() * 60 + now.getMinutes();
   const topPercent = (minutesSinceMidnight / (24 * 60)) * 100;
@@ -74,7 +91,7 @@ const DayView: React.FC<DayViewProps> = ({ currentDate, onEventClick }) => {
         </div>
 
         {/* Appointments */}
-        {sampleAppointments.map((appt) => {
+        {appointments.map((appt) => {
           const startMin = appt.start.getHours() * 60 + appt.start.getMinutes();
           const endMin = appt.end.getHours() * 60 + appt.end.getMinutes();
           const top = (startMin / (24 * 60)) * 100;
@@ -84,6 +101,8 @@ const DayView: React.FC<DayViewProps> = ({ currentDate, onEventClick }) => {
           if (appt.end < now) bg = "bg-green-200";
           else if (appt.start <= now && appt.end >= now) bg = "bg-orange-200";
 
+          const { raw } = appt;
+
           return (
             <div
               key={appt.id}
@@ -91,22 +110,18 @@ const DayView: React.FC<DayViewProps> = ({ currentDate, onEventClick }) => {
               style={{ top: `${top}%`, height: `${height}%` }}
               onClick={() =>
                 onEventClick({
-                  id: appt.id.toString(),
-                  customerName: appt.title.includes("John")
-                    ? "John Doe"
-                    : "Jane Smith",
-                  email: appt.title.includes("John")
-                    ? "john@example.com"
-                    : "jane@example.com",
-                  address: "123 Main Street",
-                  contact: "09171234567",
-                  package: appt.title,
-                  date: format(appt.start, "yyyy-MM-dd"),
-                  time: format(appt.start, "h:mm a"),
-                  subtotal: 1200,
-                  paidAmount: 500,
-                  feedback: "Excited to get this done!",
-                  rating: appt.id % 5 || 4,
+                  id: raw.id.toString(),
+                  customerName: raw.customerName,
+                  email: raw.email,
+                  address: raw.address,
+                  contact: raw.contactNo,
+                  package: raw.package,
+                  date: raw.bookingDate,
+                  time: raw.time,
+                  subtotal: Number(raw.subtotal),
+                  paidAmount: Number(raw.payment),
+                  feedback: raw.feedback || "N/A",
+                  rating: Number(raw.rating || 0),
                 })
               }
             >

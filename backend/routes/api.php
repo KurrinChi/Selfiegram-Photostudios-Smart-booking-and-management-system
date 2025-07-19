@@ -38,6 +38,9 @@
     //admin sales
     Route::get('/sales', [SalesController::class, 'getSales']);
 
+    //admin apointments calendar
+    Route::get('/appointments', [AppointmentController::class, 'getAllAppointments']);
+
     //Client Package
     Route::get('/packages', [PackageController::class, 'index']);
     Route::get('/packages/{id}', [PackageController::class, 'show']);

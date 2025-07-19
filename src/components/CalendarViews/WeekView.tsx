@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   startOfWeek,
   addDays,
@@ -6,6 +6,7 @@ import {
   isSameDay,
   isBefore,
   isAfter,
+  parseISO,
 } from "date-fns";
 import type { TransactionModalProps } from "../ModalAppointmentInfoDialog";
 
@@ -14,28 +15,8 @@ interface Appointment {
   title: string;
   startTime: Date;
   endTime: Date;
+  raw: any; // For storing original appointment fields (like customerName, etc.)
 }
-
-const sampleAppointments: Appointment[] = [
-  {
-    id: 1,
-    title: "Haircut – John",
-    startTime: new Date(new Date().setHours(9, 30)),
-    endTime: new Date(new Date().setHours(10, 30)),
-  },
-  {
-    id: 2,
-    title: "Coloring – Jane",
-    startTime: addDays(new Date(), 1),
-    endTime: addDays(new Date(), 1),
-  },
-  {
-    id: 3,
-    title: "Treatment – Mark",
-    startTime: new Date(new Date().setHours(11, 0)),
-    endTime: new Date(new Date().setHours(12, 0)),
-  },
-];
 
 const getTimeLabel = (hour: number) =>
   `${hour % 12 || 12}${hour < 12 ? "am" : "pm"}`;
@@ -49,12 +30,29 @@ const WeekView: React.FC<WeekViewProps> = ({ currentDate, onEventClick }) => {
   const rowHeight = 64;
   const startHour = 9;
   const endHour = 20;
-
   const weekStart = startOfWeek(currentDate, { weekStartsOn: 0 });
   const days = Array.from({ length: 7 }).map((_, i) => addDays(weekStart, i));
   const hours = Array.from({ length: endHour - startHour + 1 }).map(
     (_, i) => i + startHour
   );
+
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+
+  useEffect(() => {
+    fetch("http://localhost:8000/api/appointments")
+      .then((res) => res.json())
+      .then((data) => {
+        const formatted = data.map((item: any) => ({
+          id: item.id,
+          title: item.package + " – " + item.customerName,
+          startTime: parseISO(`${item.bookingDate}T${item.bookingStartTime}`),
+          endTime: parseISO(`${item.bookingDate}T${item.bookingEndTime}`),
+          raw: item,
+        }));
+        setAppointments(formatted);
+      })
+      .catch((err) => console.error("Failed to fetch appointments:", err));
+  }, [currentDate]);
 
   return (
     <div className="w-full overflow-x-auto bg-white rounded-md shadow">
@@ -88,7 +86,7 @@ const WeekView: React.FC<WeekViewProps> = ({ currentDate, onEventClick }) => {
                 />
               ))}
 
-              {sampleAppointments
+              {appointments
                 .filter((appt) => isSameDay(appt.startTime, day))
                 .map((appt) => {
                   const apptStartHour = appt.startTime.getHours();
@@ -96,8 +94,7 @@ const WeekView: React.FC<WeekViewProps> = ({ currentDate, onEventClick }) => {
                   const apptEndHour = appt.endTime.getHours();
                   const duration =
                     (apptEndHour - apptStartHour) * 60 +
-                    appt.endTime.getMinutes() -
-                    apptStartMinutes;
+                    appt.endTime.getMinutes() - apptStartMinutes;
                   const top =
                     (apptStartHour - startHour) * rowHeight +
                     (apptStartMinutes / 60) * rowHeight;
@@ -120,25 +117,17 @@ const WeekView: React.FC<WeekViewProps> = ({ currentDate, onEventClick }) => {
                       onClick={() =>
                         onEventClick({
                           id: appt.id.toString(),
-                          customerName: appt.title.includes("John")
-                            ? "John Doe"
-                            : appt.title.includes("Jane")
-                            ? "Jane Smith"
-                            : "Mark Cruz",
-                          email: appt.title.includes("John")
-                            ? "john@example.com"
-                            : appt.title.includes("Jane")
-                            ? "jane@example.com"
-                            : "mark@example.com",
-                          address: "123 Main Street",
-                          contact: "09171234567",
-                          package: appt.title,
-                          date: format(appt.startTime, "yyyy-MM-dd"),
-                          time: format(appt.startTime, "h:mm a"),
-                          subtotal: 1200,
-                          paidAmount: 500,
-                          feedback: "Excited to get this done!",
-                          rating: appt.id % 5 || 4,
+                          customerName: appt.raw.customerName,
+                          email: appt.raw.email,
+                          address: appt.raw.address,
+                          contact: appt.raw.contactNo,
+                          package: appt.raw.package,
+                          date: appt.raw.bookingDate,
+                          time: appt.raw.time,
+                          subtotal: Number(appt.raw.subtotal),
+                          paidAmount: Number(appt.raw.payment),
+                          feedback: appt.raw.feedback || "N/A",
+                          rating: appt.raw.rating || 4,
                         })
                       }
                       className={`absolute left-1 right-1 px-2 py-1 text-[11px] rounded-md border shadow-sm text-gray-700 cursor-pointer ${bgColor}`}
