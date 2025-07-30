@@ -34,6 +34,8 @@
 
     //admin dashboard
     Route::get('/admin/summary', [DashboardController::class, 'getSummary']);
+    Route::get('/admin/gross-income-weekly',  [DashboardController::class, 'getWeeklyGrossIncome']);
+    Route::get('/admin/packages', [DashboardController::class, 'getPackageDetails']);
 
     //admin sales
     Route::get('/sales', [SalesController::class, 'getSales']);

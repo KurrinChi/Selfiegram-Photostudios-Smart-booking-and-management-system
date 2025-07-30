@@ -27,11 +27,14 @@ import {
 import { faStar as farStar } from "@fortawesome/free-regular-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { DateRange } from "react-date-range";
-import { format, startOfWeek, subWeeks } from "date-fns";
+import { startOfWeek, subWeeks, endOfWeek } from "date-fns";
+import { subDays } from "date-fns";
+import { format } from "date-fns";
 import "react-date-range/dist/styles.css";
 import "react-date-range/dist/theme/default.css";
 import axios from "axios";
 import { useEffect } from "react";
+
 
 // -----------------------------------------------------------------------------
 // Types
@@ -64,6 +67,21 @@ interface SummaryData {
   };
 }
 
+interface WeeklyIncome {
+  week: string;
+  income: number;
+}
+
+interface PackageRow {
+  name: string;
+  totalBooking: number;
+  revenue: string;
+  bookingPct: string;
+  rating: number;
+  trend: string;
+  trendPositive: boolean;
+}
+
 // -----------------------------------------------------------------------------
 // Static Demo Data (replace w/ API)
 // -----------------------------------------------------------------------------
@@ -71,6 +89,8 @@ interface SummaryData {
 
 const today = new Date();
 const thisMonday = startOfWeek(today, { weekStartsOn: 1 });
+const startOfLastWeek = startOfWeek(subWeeks(today, 1), { weekStartsOn: 1 });
+const endOfLastWeek = endOfWeek(subWeeks(today, 1), { weekStartsOn: 1 });
 const grossIncomeWeeklyData = Array.from({ length: 16 }, (_, i) => {
   const start = subWeeks(thisMonday, i);
   return {
@@ -121,27 +141,48 @@ const AdminDashboardContents: React.FC = () => {
     },
   });
 
-  useEffect(() => {
-    axios.get<SummaryData>("http://127.0.0.1:8000/api/admin/summary")
-      .then((response) => {
-        setSummaryData(response.data);
-      })
-      .catch((error) => {
-        console.error("Error fetching summary data:", error);
-      });
-  }, []);
+  const [range, setRange] = useState([
+  {
+    startDate: subDays(new Date(), 7),
+    endDate: new Date(),               
+    key: "selection",
+  },
+]);
 
-  useEffect(() => {
-    axios.get<SummaryData>("http://127.0.0.1:8000/api/admin/summary")
-      .then((response) => {
-        const data: SummaryData = response.data;
-        setSummaryData(data);
-      })
-      .catch((error) => {
-        console.error("Error fetching summary data:", error);
-      });
-  }, []);
+  const [grossIncomeWeeklyData, setGrossIncomeWeeklyData] =
+  useState<WeeklyIncome[]>([]);
+  const [packageRows, setPackageRows] = useState<PackageRow[]>([]); 
+  const { startDate, endDate } = range[0];
+  const start = format(startDate, "yyyy-MM-dd");
+  const end   = format(endDate,   "yyyy-MM-dd");
 
+useEffect(() => {
+//Axios for outputting sumamry cards data from JSON in DashboradController.php
+  axios
+    .get<SummaryData>("http://127.0.0.1:8000/api/admin/summary", {
+      params: { startDate: start, endDate: end },
+    })
+    .then((r) => setSummaryData(r.data))
+    .catch((e) => console.error(e));
+
+//Axios for outputting graph data from JSON in DashboradController.php
+   axios
+    .get<WeeklyIncome[]>("http://127.0.0.1:8000/api/admin/gross-income-weekly")
+    .then((res) => setGrossIncomeWeeklyData(res.data))
+    .catch(console.error);  
+}, [range]);
+
+//Use Effect for Package Details data from JSON in DashboradController.php
+useEffect(() => {
+  axios
+    .get<PackageRow[]>("http://127.0.0.1:8000/api/admin/packages", {
+      params: { startDate: start, endDate: end },
+    })
+    .then(r => setPackageRows(r.data))
+    .catch(console.error);
+}, [start, end]);
+
+//Summary Cards for Total User, Total Schedule, Total Sales, and Total Appointments
   const summaryCards: SummaryCard[] = [
     { label: "Total User", value: summaryData.totalUsers, icon: faUser, trend: { value: "2%", up: true } },
     { label: "Total Schedule", value: summaryData.totalBookings, icon: faClipboardList, trend: { value: "13%", up: true } },
@@ -151,13 +192,14 @@ const AdminDashboardContents: React.FC = () => {
 
   const [search, setSearch] = useState("");
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [range, setRange] = useState([
-    { startDate: new Date(2025, 2, 30), endDate: new Date(2025, 3, 5), key: "selection" },
-  ]);
 
-  const filteredRows = useMemo(() => (
-    search ? packageRows.filter(r => r.name.toLowerCase().includes(search.toLowerCase())) : packageRows
-  ), [search]);
+  const filteredRows = useMemo(() =>
+    search
+      ? packageRows.filter(r =>
+          r.name.toLowerCase().includes(search.toLowerCase())
+        )
+      : packageRows
+  , [search, packageRows]);
 
   const tableCell = "py-3 px-4 text-xs whitespace-nowrap";
 
