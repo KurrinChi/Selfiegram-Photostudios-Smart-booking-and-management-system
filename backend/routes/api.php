@@ -8,8 +8,10 @@
     use App\Http\Controllers\PackageController;
     use App\Http\Controllers\FavoriteController;
     use App\Http\Controllers\SalesController;
+    use App\Http\Controllers\HistoryController;
     use App\Http\Controllers\AppointmentController;
-    
+    use App\Http\Controllers\ReceiptController;
+        use App\Http\Controllers\HomeController;
 
     //for api testing to see if it worksss
     Route::middleware('api')->get('/test', function (Request $request) {
@@ -18,6 +20,8 @@
             'message' => 'API is working!',
         ]);
     });
+    //testing receiptttttttttttt
+   Route::get('/receipt/{id}', [ReceiptController::class, 'show']);
 
     //user profile
     Route::get('/users/{id}', [UserController::class, 'show']);
@@ -34,13 +38,12 @@
 
     //admin dashboard
     Route::get('/admin/summary', [DashboardController::class, 'getSummary']);
-    Route::get('/admin/gross-income-weekly',  [DashboardController::class, 'getWeeklyGrossIncome']);
+     Route::get('/admin/gross-income-weekly',  [DashboardController::class, 'getWeeklyGrossIncome']);
     Route::get('/admin/packages', [DashboardController::class, 'getPackageDetails']);
+
 
     //admin sales
     Route::get('/sales', [SalesController::class, 'getSales']);
-
-    //admin apointments calendar
     Route::get('/appointments', [AppointmentController::class, 'getAllAppointments']);
     Route::post('/appointments/cancel', [AppointmentController::class, 'cancelAppointment']);
     Route::post('/appointments/reschedule', [AppointmentController::class, 'rescheduleAppointment']);
@@ -62,4 +65,19 @@
     Route::get('/user/{id}', [UserController::class, 'show']);
 
     //Update Client User Profile
-   Route::put('/user/{id}', [UserController::class, 'update']);
+    Route::put('/user/{id}', [UserController::class, 'update']);
+
+   //Client History Page
+    Route::get('/booking/history/{userID}', [HistoryController::class, 'getHistory']);
+    Route::delete('/booking/{id}', [HistoryController::class, 'deleteBooking']);
+   Route::get('/booking/{id}', [HistoryController::class, 'getTransactionDetails']);
+   Route::put('/booking/{id}', [HistoryController::class, 'updateFeedback']);
+
+   //Client Appointment Page
+    Route::get('/appointments/{userID}', [AppointmentController::class, 'getAppointments']);
+
+    //Client Home Page
+    Route::get('/top-selling-packages', [HomeController::class, 'getTopSellingPackages']);
+
+
+

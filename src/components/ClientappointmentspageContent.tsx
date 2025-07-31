@@ -2,19 +2,27 @@ import { useEffect, useState } from "react";
 import { Menu, Plus, X, Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import ModalTransactionDialog from "../components/ModalTransactionDialog";
-import mockAppointments from "../data/mockAppointment.json";
+import axios from "axios";
 
 interface Appointment {
   id: string;
   date: string;
   time: string;
+  bookingStartTime: string;
+  bookingEndTime: string;
   package: string;
   price: number;
+  paidAmount: number;
+  pendingBalance: number;
   status: string;
   image: string | null;
+  contact: string;
   location: string;
   name: string;
+  email: string;
   tagColor: string;
+  paymentStatus: number; 
+  rawStatus: number;
 }
 
 const ClientAppointmentsPageContent = () => {
@@ -25,9 +33,62 @@ const ClientAppointmentsPageContent = () => {
   const [showSidebar, setShowSidebar] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const navigate = useNavigate();
+  const [profilePicture, setProfilePicture] = useState<string | null>(null);
+  
+  useEffect(() => {
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      try {
+        const user = JSON.parse(storedUser);
+        setProfilePicture(user.profilePicture || null);
+      } catch (e) {
+        console.error("Failed to parse user from localStorage:", e);
+      }
+    }
+  }, []);
 
   useEffect(() => {
-    setAppointments(mockAppointments);
+    const fetchAppointments = async () => {
+    try {
+     const userID = localStorage.getItem("userID");
+
+      if (!userID) {
+        console.warn("No userID in localStorage");
+        return;
+      }
+
+      const response = await axios.get(`http://localhost:8000/api/appointments/${userID}`);
+
+      const data = response.data as any[];
+
+      const formatted = data.map((item: any) => ({
+        id: String(item.bookingID),
+        date: item.bookingDate,
+        time: item.bookingStartTime,
+        package: item.name,
+        price: parseFloat(item.subTotal),
+        paidAmount: parseFloat(item.receivedAmount),
+        pendingBalance: parseFloat(item.rem),
+        status: item.paymentStatus === 1 ? "FULLY PAID" : "PENDING",
+        image: item.imagePath,
+        location: item.customerAddress,
+        contact: item.customerContactNo,
+        email: item.customerEmail,
+        name: item.customerName,
+         paymentStatus: item.paymentStatus,
+          rawStatus: item.status,
+          bookingStartTime: item.bookingStartTime,
+          bookingEndTime: item.bookingEndTime,
+        tagColor: item.paymentStatus === 1 ? "bg-green-500" : "bg-yellow-500",
+      }));
+
+      setAppointments(formatted);
+    } catch (error) {
+      console.error("Failed to fetch appointments:", error);
+    }
+  };
+
+  fetchAppointments();
   }, []);
 
   const getMonthDays = (date: Date) => {
@@ -79,6 +140,34 @@ const ClientAppointmentsPageContent = () => {
     const weekStart = Math.floor(indexInGrid / 7) * 7;
     currentWeekIndexRange = Array.from({ length: 7 }, (_, i) => weekStart + i);
   }
+  
+
+    const formatTime = (time: string) => {
+    const date = new Date(`1970-01-01T${time}`);
+    return date.toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    });
+  };
+
+  const formatDate = (dateStr: string) => {
+  const date = new Date(dateStr);
+  return date.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+};
+
+  const getBookingLabel = (bookingID: number, packageName: string) => {
+    const acronym = packageName
+      .split(" ")
+      .map((word) => word[0])
+      .join("")
+      .toUpperCase();
+    return `${acronym}#${bookingID}`;
+  };
 
   const filteredAppointments = appointments.filter(
     (a) =>
@@ -118,46 +207,47 @@ const ClientAppointmentsPageContent = () => {
             ))}
           </div>
           <div className="h-[calc(70vh)] grid grid-cols-7 gap-y-2 mt-2 text-center text-sm">
-            {days.map((day, i) => {
-              const dayStr = day !== null ? String(day).padStart(2, "0") : "";
-              const dateKey = `${currentMonth.getFullYear()}-${String(
-                currentMonth.getMonth() + 1
-              ).padStart(2, "0")}-${dayStr}`;
-              const matched = appointments.find((a) => a.date === dateKey);
+           {days.map((day, i) => {
+  const dayStr = day !== null ? String(day).padStart(2, "0") : "";
+  const dateKey = `${currentMonth.getFullYear()}-${String(
+    currentMonth.getMonth() + 1
+  ).padStart(2, "0")}-${dayStr}`;
 
-              const isToday = isSameMonth && day === today.getDate();
-              const isInCurrentWeek = currentWeekIndexRange.includes(i);
+  const matched = appointments.filter((a) => a.date === dateKey);
 
-              return (
-                <div
-                  key={i}
-                  className={`relative h-full flex items-center justify-center
-                    ${matched ? "cursor-pointer hover:bg-gray-100" : ""}
-                    ${isInCurrentWeek ? "bg-gray-100" : ""}
-                    ${
-                      isToday
-                        ? "border border-gray-900 rounded-full font-bold text-gray-900"
-                        : ""
-                    }
-                    ${matched ? "rounded" : ""}
-                  `}
-                  onClick={() => matched && setSelectedAppointment(matched)}
-                >
-                  {day && (
-                    <>
-                      <span>{day}</span>
-                      {matched && (
-                        <span
-                          className={`absolute bottom-0 left-1/2 transform -translate-x-1/2 text-[10px] text-white px-1 rounded ${matched.tagColor}`}
-                        >
-                          {matched.id}
-                        </span>
-                      )}
-                    </>
-                  )}
-                </div>
-              );
-            })}
+  const isToday = isSameMonth && day === today.getDate();
+  const isInCurrentWeek = currentWeekIndexRange.includes(i);
+
+  return (
+    <div
+      key={i}
+      className={`relative h-full px-1 py-2 text-center
+        ${isInCurrentWeek ? "bg-gray-100" : ""}
+        ${isToday ? "border border-gray-900 font-bold text-gray-900 rounded-full" : ""}
+      `}
+    >
+      {day && (
+        <div className="flex flex-col items-center justify-start space-y-[3px]">
+          <span className="text-sm">{day}</span>
+
+          {matched.map((appointment, index) => (
+            <span
+              key={index}
+              onClick={(e) => {
+                e.stopPropagation();
+                setSelectedAppointment(appointment);
+              }}
+              className={`text-[15px] text-white px-5 py-[1px] rounded-md cursor-pointer truncate max-w-full ${appointment.tagColor}`}
+              title={getBookingLabel(Number(appointment.id), appointment.package)}
+            >
+              {getBookingLabel(Number(appointment.id), appointment.package)}
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+})}
           </div>
         </div>
 
@@ -168,14 +258,20 @@ const ClientAppointmentsPageContent = () => {
               key={i}
               className="bg-white rounded-xl shadow p-4 flex flex-col items-start hover:shadow-md transition"
             >
+              {a.image ? (
               <img
-                src={a.image || "/slfg-placeholder.png"}
+                src={`http://localhost:8000/storage/${a.image?.split('storage/')[1]}`}
                 alt={a.package}
-                className="w-full h-40 object-cover rounded-xl mb-4"
+                className="w-full h-48 object-cover rounded-lg mb-3"
               />
-              <div className="text-sm font-semibold">{a.id}</div>
+            ) : (
+              <div className="w-full h-48 bg-gray-200 rounded-lg mb-3 flex items-center justify-center text-gray-500">
+                No Image
+              </div>
+            )}
+              <div className="text-sm font-semibold">{getBookingLabel(Number(a.id), a.package)}</div>
               <div className="text-sm">
-                {a.date} at {a.time}
+                {formatDate(a.date)} at {formatTime(a.time)}
               </div>
               <div className="text-sm mb-1">
                 {a.package} | ₱{a.price.toFixed(2)}
@@ -243,17 +339,24 @@ const ClientAppointmentsPageContent = () => {
                   setShowSidebar(false);
                 }}
               >
-                <img
-                  src={a.image || "/slfg-placeholder.png"}
-                  alt="user"
-                  className="w-10 h-10 rounded-full object-cover"
-                />
+                 {profilePicture ? (
+                    <img
+                      src={profilePicture}
+                      alt="Profile"
+                      className="w-8 h-8 rounded-full object-cover border border-gray-300"
+                      onError={(e) => {
+                        e.currentTarget.src = "/fallback.png"; 
+                      }}
+                    />
+                  ) : (
+                    <div className="w-8 h-8 rounded-full bg-gray-300" />
+                  )}
                 <div className="text-xs text-gray-700">
-                  <div className="font-medium">{a.id}</div>
+                  <div className="font-bold">{getBookingLabel(Number(a.id), a.package)}</div>
                   <div className="text-[11px]">
-                    {a.date} at {a.time}
+                    {formatDate(a.date)} at {formatTime(a.time)}
                   </div>
-                  <div className="text-[11px] leading-tight">{a.location}</div>
+                  <div className="text-[11px] leading-tight">3rd Floor Kim Kar Building F Estrella St., Malolos, Philippines</div>
                   <div className="text-[11px] italic mt-1">Name: {a.name}</div>
                 </div>
               </div>
@@ -270,19 +373,20 @@ const ClientAppointmentsPageContent = () => {
           data={{
             id: selectedAppointment.id,
             customerName: selectedAppointment.name,
-            email: "client@email.com",
+            email: selectedAppointment.email,
             address: selectedAppointment.location,
-            contact: "0917-123-4567",
+            contact: selectedAppointment.contact,
             package: selectedAppointment.package,
-            date: selectedAppointment.date,
-            time: selectedAppointment.time,
+            bookingDate: selectedAppointment.date,
+            transactionDate: selectedAppointment.date, // or use another appropriate value
+            time: `${formatTime(selectedAppointment.bookingStartTime)} - ${formatTime(selectedAppointment.bookingEndTime)}` || "",
             subtotal: selectedAppointment.price,
-            paidAmount:
-              selectedAppointment.status === "FULLY PAID"
-                ? selectedAppointment.price
-                : 0,
+            paidAmount: selectedAppointment.paidAmount,
+            pendingBalance: selectedAppointment.pendingBalance,
             feedback: "N/A",
             rating: 4,
+            status: selectedAppointment.rawStatus,
+            paymentStatus: selectedAppointment.paymentStatus
           }}
         />
       )}

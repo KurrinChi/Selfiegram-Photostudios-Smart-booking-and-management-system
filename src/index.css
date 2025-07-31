@@ -9,3 +9,29 @@ body {
   font-family: "SF Pro Display", sans-serif;
   background-color: white;
 }
+
+@media print {
+  body * {
+    visibility: hidden !important;
+  }
+
+  .printable, .printable * {
+    visibility: visible !important;
+  }
+
+  .printable {
+    position: absolute !important;
+    top: 0;
+    left: 0;
+    width: 100% !important;
+    background: white !important;
+    z-index: 9999 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    max-height: none !important;
+  }
+
+  .print\:hidden {
+    display: none !important;
+  }
+}

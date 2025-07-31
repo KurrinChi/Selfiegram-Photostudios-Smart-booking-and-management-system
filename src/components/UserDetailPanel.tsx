@@ -60,7 +60,11 @@ const UserDetailPanel: React.FC<UserDetailPanelProps> = ({
         price: Number(selectedTransaction.price),
         balance: Number(selectedTransaction.balance), // or selectedTransaction.balance if available
         feedback: selectedTransaction.feedback,
-        rating: Number(selectedTransaction.rating),
+        rating: Number(selectedTransaction.rating),   // ✅ Add missing fields below
+        paidAmount:  Number(selectedTransaction.price) - Number(selectedTransaction.balance),
+        pendingBalance: Number(selectedTransaction.balance),
+        status: Number(selectedTransaction.status),
+        paymentStatus: selectedTransaction.balance === 0 ? 1 : 0,
       }
       : null;
 

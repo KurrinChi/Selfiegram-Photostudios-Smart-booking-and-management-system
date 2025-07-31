@@ -1,116 +1,127 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import axios from "axios";
 import { Eye, Trash2 } from "lucide-react";
-import ModalTransactionDialog from "./ModalTransactionDialog";
+import ModalTransactionDialog from "./ModalTransactionDialog"; // adjust path if needed
 
-type HistoryItem = {
-  id: string;
-  packageName: string;
-  dateTime: string;
-  price: string;
-  image?: string;
-  feedback: number | null; // null = no rating
-};
+const ITEMS_PER_PAGE = 5;
 
-const mockHistoryData: HistoryItem[] = [
-  {
-    id: "SFO#0005",
-    packageName: "Selfie for ONE",
-    dateTime: "02.2.25 1:00PM",
-    price: "₱379.00",
-    image: "/avatars/avatar1.jpg",
-    feedback: null,
-  },
-  {
-    id: "SFO#0004",
-    packageName: "Selfie for ONE",
-    dateTime: "01.4.25 12:00PM",
-    price: "₱379.00",
-    image: "/avatars/avatar2.jpg",
-    feedback: null,
-  },
-  {
-    id: "SQG#0003",
-    packageName: "Squad Groupie",
-    dateTime: "12.2.24 1:00PM",
-    price: "₱699.00",
-    image: "/avatars/squad1.jpg",
-    feedback: 4,
-  },
-  {
-    id: "SQG#0002",
-    packageName: "Squad Groupie",
-    dateTime: "10.3.24 10:00AM",
-    price: "₱699.00",
-    image: "/avatars/squad2.jpg",
-    feedback: 4,
-  },
-  {
-    id: "SQG#0001",
-    packageName: "Squad Groupie",
-    dateTime: "06.8.24 1:00PM",
-    price: "₱699.00",
-    image: "/avatars/squad3.jpg",
-    feedback: 4,
-  },
-  {
-    id: "SFO#0003",
-    packageName: "Selfie for ONE",
-    dateTime: "04.5.24 2:00PM",
-    price: "₱379.00",
-    image: "/avatars/avatar2.jpg",
-    feedback: 4,
-  },
-  {
-    id: "SFO#0002",
-    packageName: "Selfie for ONE",
-    dateTime: "01.7.24 5:00PM",
-    price: "₱379.00",
-    image: "/avatars/avatar1.jpg",
-    feedback: 4,
-  },
-  // Add more to test pagination
-  ...Array.from({ length: 5 }).map((_, i) => ({
-    id: `SFO#00${6 + i}`,
-    packageName: "Selfie for ONE",
-    dateTime: `03.${i + 1}.24 3:00PM`,
-    price: "₱379.00",
-    image: "",
-    feedback: i % 2 === 0 ? 4 : null,
-  })),
-];
-
-const ITEMS_PER_PAGE = 6;
-
-const ClientHistoryPageContent: React.FC = () => {
+const ClientHistoryPageContent = () => {
+  const [historyData, setHistoryData] = useState<any[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
-  const [selectedItem, setSelectedItem] = useState<HistoryItem | null>(null);
   const [showModal, setShowModal] = useState(false);
-  const [itemToDelete, setItemToDelete] = useState<HistoryItem | null>(null);
+  const [selectedItem, setSelectedItem] = useState<any | null>(null);
+  const [itemToDelete, setItemToDelete] = useState<any | null>(null);
+  const [rawBookingMap, setRawBookingMap] = useState<{ [id: number]: any }>({});
 
-  const totalPages = Math.ceil(mockHistoryData.length / ITEMS_PER_PAGE);
+  const fetchHistory = async () => {
+    try {
+      const user_id = localStorage.getItem("userID");
+      const response = await axios.get(
+        `http://localhost:8000/api/booking/history/${user_id}`
+      );
 
-  const paginatedData = mockHistoryData.slice(
+      const data = response.data as any[];
+
+      const formatted = data.map((item: any) => ({
+          id: item.bookingID,
+          packageName: item.packageName,
+          image: null,
+          dateTime: item.dateTime,
+          price: `₱${parseFloat(item.price).toFixed(2)}`,
+          feedback: item.feedback ?? null,
+          rating: item.rating ?? null,
+          status: item.status,
+          paymentStatus: item.paymentStatus,
+          paidAmount: item.paidAmount,
+          pendingBalance: item.pendingBalance,
+        }));
+
+
+        const rawMap: { [id: number]: any } = {};
+        data.forEach((item) => {
+          rawMap[item.bookingID] = item;
+        });
+
+        setRawBookingMap(rawMap);
+        setHistoryData(formatted);
+    } catch (error) {
+      console.error("Failed to fetch history:", error);
+    }
+  };
+
+  useEffect(() => {
+    
+  fetchHistory();
+  }, []);
+
+  const paginatedData = historyData.slice(
     (currentPage - 1) * ITEMS_PER_PAGE,
     currentPage * ITEMS_PER_PAGE
   );
+  const totalPages = Math.ceil(historyData.length / ITEMS_PER_PAGE);
 
-  const handleView = (item: HistoryItem) => {
-    setSelectedItem(item);
-    setShowModal(true);
+  const handleView = async (item: any) => {
+       try {
+        const response = await axios.get(
+          `http://localhost:8000/api/booking/${item.id}`
+        );
+
+        const fullData = response.data;
+
+        const mergedItem = {
+          ...item,
+          ...(typeof fullData === "object" && fullData !== null ? fullData : {}),
+    
+        };
+
+        setSelectedItem(mergedItem);
+        setShowModal(true);
+      } catch (error) {
+        console.error("Failed to fetch full transaction data:", error);
+      }
   };
 
-  const handleDelete = (item: HistoryItem) => {
+  const handleDelete = (item: any) => {
     setItemToDelete(item);
   };
 
-  const confirmDelete = () => {
-    // In real case, call API here
-    const index = mockHistoryData.findIndex((i) => i.id === itemToDelete?.id);
-    if (index !== -1) {
-      mockHistoryData.splice(index, 1);
-    }
-    setItemToDelete(null);
+  const confirmDelete = async () => {
+    try {
+        await axios.delete(`http://localhost:8000/api/booking/${itemToDelete.id}`);
+        setHistoryData((prev) => prev.filter((item) => item.id !== itemToDelete.id));
+
+        setItemToDelete(null);
+      } catch (error) {
+        console.error("Failed to delete:", error);
+      }
   };
+    const formatTime = (time: string) => {
+    const date = new Date(`1970-01-01T${time}`);
+    return date.toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    });
+  };
+
+  const formatDate = (dateStr: string) => {
+  const date = new Date(dateStr);
+  return date.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+};
+
+  const getBookingLabel = (bookingID: number, packageName: string) => {
+    const acronym = packageName
+      .split(" ")
+      .map((word) => word[0])
+      .join("")
+      .toUpperCase();
+    return `${acronym}#${bookingID}`;
+  };
+
 
   return (
     <div className="p-4 animate-fadeIn">
@@ -120,7 +131,7 @@ const ClientHistoryPageContent: React.FC = () => {
           <thead className="bg-gray-50 text-gray-700 font-semibold">
             <tr>
               <th className="p-4">Package Name</th>
-              <th className="p-4">Date & Time</th>
+              <th className="p-4">Transaction Date</th>
               <th className="p-4">Price</th>
               <th className="p-4">ID</th>
               <th className="p-4">Feedback</th>
@@ -134,30 +145,22 @@ const ClientHistoryPageContent: React.FC = () => {
                 className="border-t border-gray-100 hover:bg-gray-50 transition-all"
               >
                 <td className="p-4 flex items-center gap-3">
-                  <img
-                    src={item.image || "/slfg-placeholder.png"}
-                    onError={(e) =>
-                      ((e.target as HTMLImageElement).src =
-                        "/slfg-placeholder.png")
-                    }
-                    className="w-10 h-10 object-cover rounded-full"
-                    alt="avatar"
-                  />
+              
                   {item.packageName}
                 </td>
-                <td className="p-4">{item.dateTime}</td>
+                <td className="p-4">{formatDate(item.dateTime)}</td>
                 <td className="p-4">{item.price}</td>
-                <td className="p-4">{item.id}</td>
-                <td className="p-4">
-                  {item.feedback === null ? (
-                    <em className="text-gray-400">No Rating Yet</em>
-                  ) : (
-                    <StarRating rating={item.feedback} />
-                  )}
-                </td>
+                <td className="p-4">{getBookingLabel(item.id, item.packageName)}</td>
+              <td className="p-4">
+              {item.rating === null || item.rating === 0 ? (
+                <em className="text-gray-400">No Rating Yet</em>
+              ) : (
+                <StarRating rating={item.rating} />
+              )}
+            </td>
                 <td className="p-4 text-center flex gap-2 justify-center">
                   <button
-                    className="text-gray-600 hover:text-blue-500 transition"
+                    className="text-gray-600 hover:text-gray-300 transition"
                     onClick={() => handleView(item)}
                   >
                     <Eye className="w-5 h-5" />
@@ -195,26 +198,30 @@ const ClientHistoryPageContent: React.FC = () => {
 
       {/* View Modal */}
       {showModal && selectedItem && (
+
         <ModalTransactionDialog
           isOpen={showModal}
           data={{
             id: selectedItem.id,
-            customerName: "N/A",
-            email: "N/A",
-            address: "N/A",
-            contact: "N/A",
+            customerName: selectedItem.customerName || "N/A",
+            email: selectedItem.customerEmail || "N/A",
+            address: selectedItem.customerAddress || "N/A",
+            contact: selectedItem.customerContactNo || "N/A",
             package: selectedItem.packageName,
-            date: selectedItem.dateTime.split(" ")[0] || "",
-            time: selectedItem.dateTime.split(" ")[1] || "",
-            subtotal: Number(selectedItem.price.replace(/[^\d.]/g, "")) || 0,
-            paidAmount: Number(selectedItem.price.replace(/[^\d.]/g, "")) || 0,
-            feedback:
-              selectedItem.feedback !== null
-                ? String(selectedItem.feedback)
-                : "",
-            rating: selectedItem.feedback ?? 0,
+            bookingDate: selectedItem.bookingDate.split(" ")[0] || "",
+            transactionDate: formatDate(selectedItem.dateTime.split(" ")[0] || ""),
+            time: `${formatTime(selectedItem.bookingStartTime)} - ${formatTime(selectedItem.bookingEndTime)}` || "",
+            subtotal: Number(selectedItem.subTotal.replace(/[^\d.]/g, "")) || 0,
+            paidAmount: Number(selectedItem.receivedAmount.replace(/[^\d.]/g, "")) || 0,
+            pendingBalance: Number(selectedItem.rem.replace(/[^\d.]/g, "")) || 0,
+            feedback: selectedItem.feedback !== null ? String(selectedItem.feedback) : "",
+            rating: selectedItem.rating ?? 0,
+            status: selectedItem.status,
+            paymentStatus: selectedItem.paymentStatus
+            
           }}
           onClose={() => setShowModal(false)}
+          onSaved={fetchHistory}
         />
       )}
 
@@ -248,9 +255,6 @@ const ClientHistoryPageContent: React.FC = () => {
 
 export default ClientHistoryPageContent;
 
-// -------------------------
-// Embedded StarRating Component
-// -------------------------
 const StarRating: React.FC<{ rating: number }> = ({ rating }) => {
   const stars = Array(5)
     .fill(null)
@@ -264,23 +268,5 @@ const StarRating: React.FC<{ rating: number }> = ({ rating }) => {
         ★
       </span>
     ));
-
   return <div className="flex">{stars}</div>;
 };
-
-// -------------------------
-// Tailwind Animations (add to tailwind.config.js)
-// -------------------------
-/*
-extend: {
-  animation: {
-    fadeIn: 'fadeIn 0.3s ease-out',
-  },
-  keyframes: {
-    fadeIn: {
-      '0%': { opacity: '0', transform: 'scale(0.95)' },
-      '100%': { opacity: '1', transform: 'scale(1)' },
-    },
-  },
-}
-*/
