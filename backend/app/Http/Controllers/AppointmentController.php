@@ -120,5 +120,27 @@ class AppointmentController extends Controller
             return response()->json(['message' => 'Failed to mark appointment as done'], 400);
         }
     }
+     public function getAppointments($userID)
+    {
+        if (!$userID) {
+            return response()->json(['error' => 'User ID is required'], 400);
+        }
 
+     $appointments = DB::select("
+           SELECT 
+            booking.*, 
+            packages.name, 
+            (
+                SELECT imagePath 
+                FROM package_images 
+                WHERE package_images.packageID = packages.packageID 
+                LIMIT 1
+            ) AS imagePath 
+            FROM booking 
+            JOIN packages ON booking.packageID = packages.packageID 
+            WHERE booking.userID = ? AND booking.status = 2
+        ", [$userID]);
+
+        return response()->json($appointments);
+    }
 }
