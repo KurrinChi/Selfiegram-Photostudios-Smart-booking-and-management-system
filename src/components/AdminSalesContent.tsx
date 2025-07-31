@@ -17,10 +17,13 @@ interface Sale {
   downPayment: number;
   balance: number;
   totalAmount: number;
+  price: number;
   email: string;
   address: string;
   contactNo: string;
   paymentStatus: "Completed" | "Pending";
+  rating: number;
+  feedback: string;
 }
 
 const AdminSalesContent: React.FC = () => {
@@ -54,10 +57,13 @@ const AdminSalesContent: React.FC = () => {
           downPayment: Number(item.downPayment),
           balance: Number(item.balance),
           totalAmount: Number(item.totalAmount),
+          price: Number(item.price),
           paymentStatus: item.paymentStatus,
           email: item.customerEmail,
           address: item.customerAddress,
           contactNo: item.customerContactNo,
+          feedback: item.feedback,
+          rating: Number(item.rating),
         }));
         setSales(parsedData);
       });
@@ -175,8 +181,8 @@ const AdminSalesContent: React.FC = () => {
               <th className="px-4 py-2">ID</th>
               <th className="px-4 py-2">Customer Name</th>
               <th className="px-4 py-2">Package</th>
-              <th className="px-4 py-2">Date & Time</th>
-              <th className="px-4 py-2">Down Payment</th>
+              <th className="px-4 py-2">Date</th>
+              <th className="px-4 py-2">Payment</th>
               <th className="px-4 py-2">Balance</th>
               <th className="px-4 py-2">Total Amount</th>
               <th className="px-4 py-2">Payment Status</th>
@@ -199,9 +205,10 @@ const AdminSalesContent: React.FC = () => {
                     transactionDate: s.transactionDate,
                     time: s.time,
                     subtotal: s.totalAmount,
+                    price: s.price,
                     balance: s.balance,
-                    feedback: "Great experience!",
-                    rating: s.balance < s.totalAmount ? 4 : 5,
+                    feedback: s.feedback,
+                    rating: s.rating,
                   })
                 }
               >
@@ -209,8 +216,10 @@ const AdminSalesContent: React.FC = () => {
                 <td className="px-4 py-2">{s.customerName}</td>
                 <td className="px-4 py-2">{s.package}</td>
                 <td className="px-4 py-2 whitespace-nowrap">
+                  <br />
                   {format(parse(s.transactionDate, "yyyy-MM-dd", new Date()), "MMMM d, yyyy")}
-                  <br />[{s.time}]
+                  <br />
+                  <br />
                 </td>
                 <td className="px-4 py-2">{Number(s.downPayment).toFixed(2)}</td>
                 <td className="px-4 py-2">{Number(s.balance).toFixed(2)}</td>

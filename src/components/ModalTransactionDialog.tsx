@@ -15,6 +15,7 @@ interface TransactionModalProps {
     transactionDate: string;
     time: string;
     subtotal: number;
+    price: number;
     balance: number;
     feedback: string;
     rating: number; // 0–5
@@ -34,7 +35,7 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
         <h1 className="text-lg font-bold mb-1">{data.package}</h1>
         <div className="grid grid-cols-2 text-sm gap-y-1 mb-6">
           <p className="text-sm text-gray-500 mb-4">Booking ID: {data.id}</p>
-          <p className="text-sm text-gray-500 mb-4">Date: {data.transactionDate}</p>
+          <p className="text-sm text-gray-500 mb-4">Transaction Date: {data.transactionDate}</p>
         </div>
 
         <div className="grid grid-cols-2 text-sm gap-y-1 mb-6">
@@ -52,7 +53,7 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
         <div className="text-sm mb-2">
           {data.package}{" "}
           <span className="float-right font-semibold">
-            ₱{data.subtotal.toFixed(2)}
+            ₱{data.price.toFixed(2)}
           </span>
         </div>
 

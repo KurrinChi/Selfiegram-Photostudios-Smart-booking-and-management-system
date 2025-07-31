@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Star } from "lucide-react";
 import TransactionModal from "./ModalTransactionDialog"; // Ensure this is the correct path
 
 interface Appointment {
@@ -13,8 +12,10 @@ interface Appointment {
   time: string;
   subtotal: number;
   balance: number;
+  price: number;
   status: "Pending" | "Done" | "Cancelled";
   rating: number;
+  feedback: string;
 }
 
 interface UserDetailPanelProps {
@@ -56,9 +57,10 @@ const UserDetailPanel: React.FC<UserDetailPanelProps> = ({
         transactionDate: selectedTransaction.transactionDate, // ✅
         time: selectedTransaction.time,
         subtotal: Number(selectedTransaction.subtotal),
+        price: Number(selectedTransaction.price),
         balance: Number(selectedTransaction.balance), // or selectedTransaction.balance if available
-        feedback: "Thank you! Will book again.",
-        rating: 5,
+        feedback: selectedTransaction.feedback,
+        rating: Number(selectedTransaction.rating),
       }
       : null;
 
@@ -235,8 +237,15 @@ const RatingStars: React.FC<{ rating: number }> = ({ rating }) => (
     {rating === 0 ? (
       <span className="text-zinc-500">No Rating</span>
     ) : (
-      [...Array(rating)].map((_, i) => (
-        <Star key={i} className="w-4 h-4 text-yellow-400 fill-yellow-400" />
+      Array.from({ length: 5 }, (_, i) => (
+        <span
+            key={i}
+            className={`text-xl ${
+            i < rating ? "text-yellow-500" : "text-gray-500"
+            }`}
+        >
+          ★
+        </span>
       ))
     )}
   </div>

@@ -13,40 +13,42 @@ interface Appointment {
 interface DayViewProps {
   currentDate: Date;
   onEventClick: (data: TransactionModalProps["data"]) => void;
+  onReady?: (refreshFn: () => void) => void;
 }
 
-const DayView: React.FC<DayViewProps> = ({ currentDate, onEventClick }) => {
+const DayView: React.FC<DayViewProps> = ({ currentDate, onEventClick, onReady }) => {
   const nowRef = useRef<HTMLDivElement>(null);
   const now = new Date();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
 
-  useEffect(() => {
   const fetchAppointments = async () => {
-      try {
-        const res = await fetch("http://localhost:8000/api/appointments");
-        const json = await res.json();
+    try {
+      const res = await fetch("http://localhost:8000/api/appointments");
+      const json = await res.json();
 
-        const filtered = json.filter((item: any) => {
-          return item.bookingDate === format(currentDate, "yyyy-MM-dd");
-        });
+      const filtered = json.filter((item: any) => {
+        return item.bookingDate === format(currentDate, "yyyy-MM-dd");
+      });
 
-        const transformed = filtered.map((item: any, index: number) => {
-          return {
-            id: item.transId || index,
-            title: `${item.package} – ${item.customerName}`,
-            start: parseISO(`${item.bookingDate}T${item.bookingStartTime}`),
-            end: parseISO(`${item.bookingDate}T${item.bookingEndTime}`),
-            raw: item,
-          };
-        });
+      const transformed = filtered.map((item: any) => ({
+        id: item.id,
+        title: `${item.package} – ${item.customerName}`,
+        start: parseISO(`${item.bookingDate}T${item.bookingStartTime}`),
+        end: parseISO(`${item.bookingDate}T${item.bookingEndTime}`),
+        raw: item,
+      }));
 
-        setAppointments(transformed);
-      } catch (error) {
-        console.error("Error fetching appointments:", error);
-      }
-    };
+      setAppointments(transformed);
+    } catch (error) {
+      console.error("Error fetching appointments:", error);
+    }
+  };
 
+  useEffect(() => {
     fetchAppointments();
+    if (onReady) {
+      onReady(fetchAppointments); // 👈 expose the refresh function to parent
+    }
   }, [currentDate]);
 
 
@@ -98,7 +100,7 @@ const DayView: React.FC<DayViewProps> = ({ currentDate, onEventClick }) => {
           const height = ((endMin - startMin) / (24 * 60)) * 100;
 
           let bg = "bg-yellow-200";
-          if (appt.end < now) bg = "bg-green-200";
+          if (appt.end < now || appt.raw.status == "Done") bg = "bg-green-200";
           else if (appt.start <= now && appt.end >= now) bg = "bg-orange-200";
 
           const { raw } = appt;
@@ -110,7 +112,7 @@ const DayView: React.FC<DayViewProps> = ({ currentDate, onEventClick }) => {
               style={{ top: `${top}%`, height: `${height}%` }}
               onClick={() =>
                 onEventClick({
-                  id: raw.id.toString(),
+                  id: appt.id.toString(),
                   customerName: raw.customerName,
                   email: raw.email,
                   address: raw.address,
@@ -119,6 +121,7 @@ const DayView: React.FC<DayViewProps> = ({ currentDate, onEventClick }) => {
                   date: raw.bookingDate,
                   time: raw.time,
                   subtotal: Number(raw.subtotal),
+                  price: Number(raw.price),
                   paidAmount: Number(raw.payment),
                   feedback: raw.feedback || "N/A",
                   rating: Number(raw.rating || 0),

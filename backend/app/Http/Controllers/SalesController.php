@@ -14,11 +14,14 @@ class SalesController extends Controller
         ->join('packages', 'booking.packageID', '=', 'packages.packageID')
         ->join('users', 'booking.userID', '=', 'users.userID') // Join users table to get customer details
         ->select(
-            'transaction.transId as transactionID',
+            'booking.bookingID as transactionID',
             'booking.customerName as customerName',
             'packages.name as package',
+            'packages.price',
             'booking.bookingDate',
             'booking.date as transactionDate',
+            'booking.feedback',
+            'booking.rating',
             DB::raw("CONCAT(booking.bookingStartTime, ' - ', booking.bookingEndTime) as time"),
             DB::raw('booking.receivedAmount as downPayment'),
             'booking.rem as balance',

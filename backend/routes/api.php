@@ -42,6 +42,9 @@
 
     //admin apointments calendar
     Route::get('/appointments', [AppointmentController::class, 'getAllAppointments']);
+    Route::post('/appointments/cancel', [AppointmentController::class, 'cancelAppointment']);
+    Route::post('/appointments/reschedule', [AppointmentController::class, 'rescheduleAppointment']);
+    Route::post('/appointments/completed', [AppointmentController::class, 'markAsCompleted']);
 
     //Client Package
     Route::get('/packages', [PackageController::class, 'index']);

@@ -16,8 +16,10 @@ interface Appointment {
   time: string;
   subtotal: number;
   balance: number;
+  price: number;
   status: "Pending" | "Done" | "Cancelled";
   rating: number;
+  feedback: string;
 }
 
 interface User {

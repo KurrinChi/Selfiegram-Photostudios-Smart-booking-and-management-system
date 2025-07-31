@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { CalendarClock, Archive, X, Trash } from "lucide-react";
+import { CalendarClock, Archive, X, Trash, Check } from "lucide-react";
 import { DayPicker } from "react-day-picker";
 import { isToday, isSameDay } from "date-fns";
 import "react-day-picker/dist/style.css";
+import { toast} from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 export interface TransactionModalProps {
   isOpen: boolean;
@@ -17,10 +19,12 @@ export interface TransactionModalProps {
     date: string;
     time: string;
     subtotal: number;
+    price: number;
     paidAmount: number;
     feedback: string;
     rating: number;
   } | null;
+  refreshAppointments?: () => void;
 }
 
 const timeSlots = [
@@ -31,11 +35,19 @@ const timeSlots = [
   "12:00 PM",
   "12:30 PM",
   "1:00 PM",
+  "1:30 PM",
   "2:00 PM",
   "2:30 PM",
+  "3:00 PM",
+  "3:30 PM",
   "4:00 PM",
+  "4:30 PM",
   "5:00 PM",
+  "5:30 PM",
   "6:00 PM",
+  "6:30 PM",
+  "7:00 PM",
+  "7:30 PM",
   "8:00 PM",
 ];
 
@@ -43,8 +55,9 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
   isOpen,
   onClose,
   data,
+  refreshAppointments,
 }) => {
-  const [viewMode, setViewMode] = useState<"default" | "delete" | "reschedule">(
+  const [viewMode, setViewMode] = useState<"default" | "delete" | "reschedule" | "done">(
     "default"
   );
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
@@ -61,15 +74,111 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
 
   if (!isOpen || !data) return null;
 
-  const handleDelete = () => {
-    console.log("Deleted appointment:", data.id);
-    onClose();
+  const handleDelete = async () => {
+    try {
+      const response = await fetch("http://localhost:8000/api/appointments/cancel", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ id: data.id }),
+      });
+
+      const result = await response.json();
+      if (response.ok) {
+        console.log("Success:", result.message);
+        toast.success(result.message);
+        if (refreshAppointments) refreshAppointments();
+        onClose();
+      } else {
+        toast.error("Failed to cancel appointment.");
+        console.error(result.message);
+      }
+    } catch (error) {
+      console.error("Error cancelling appointment:", error);
+      toast.error("Something went wrong.");
+    }
   };
 
-  const handleRescheduleConfirm = () => {
-    console.log("Rescheduled:", selectedDate, selectedTime);
-    onClose();
+  const markAsDone = async () => {
+    try {
+      const response = await fetch("http://localhost:8000/api/appointments/completed", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ id: data.id }),
+      });
+
+      const result = await response.json();
+      if (response.ok) {
+        console.log("Success:", result.message);
+        toast.success(result.message);
+        if (refreshAppointments) refreshAppointments();
+        onClose();
+      } else {
+        toast.error("Failed to cancel appointment.");
+        console.error(result.message);
+      }
+    } catch (error) {
+      console.error("Error cancelling appointment:", error);
+      toast.error("Something went wrong.");
+    }
   };
+
+
+  const handleRescheduleConfirm = async () => {
+    if (!selectedDate || !selectedTime) {
+      toast.error("Please select both a date and time.");
+      return;
+    }
+
+    // Format selected date (YYYY-MM-DD)
+    const formattedDate = `${selectedDate.getFullYear()}-${String(
+      selectedDate.getMonth() + 1
+    ).padStart(2, "0")}-${String(selectedDate.getDate()).padStart(2, "0")}`;
+
+
+    // Convert to 24-hour format time and calculate end time
+    const [time, modifier] = selectedTime.split(" ");
+    let [hours, minutes] = time.split(":").map(Number);
+    if (modifier === "PM" && hours !== 12) hours += 12;
+    if (modifier === "AM" && hours === 12) hours = 0;
+
+    const startTime = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+    const endHour = hours + 1;
+    const endTime = `${String(endHour).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+
+    try {
+      const response = await fetch("http://localhost:8000/api/appointments/reschedule", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          id: data.id,
+          bookingDate: formattedDate,
+          startTime,
+          endTime,
+        }),
+      });
+
+      const result = await response.json();
+      if (response.ok) {
+        console.log("Success:", result.message);
+        toast.success(result.message);
+        if (refreshAppointments) refreshAppointments();
+        onClose();
+      } else {
+        toast.error("Failed to reschedule appointment.");
+        console.error(result.message);
+      }
+    } catch (error) {
+      console.error("Error rescheduling appointment:", error);
+      toast.error("Something went wrong.");
+    }
+  };
+
 
   const goBack = () => setViewMode("default");
 
@@ -93,6 +202,14 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
             >
               <Archive className="w-5 h-5 text-red-600" />
             </button>
+
+             <button
+              onClick={() => setViewMode("done")} // Replace with your function
+              title="Mark as Done"
+              className="p-2 rounded-full bg-gray-100 hover:bg-gray-200"
+            >
+              <Check className="w-5 h-5 text-green-600" />
+    </button>
           </div>
         )}
 
@@ -126,7 +243,7 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
             <div className="text-sm mb-2">
               {data.package}
               <span className="float-right font-semibold">
-                ₱{data.subtotal.toFixed(2)}
+                ₱{data.price.toFixed(2)}
               </span>
             </div>
 
@@ -217,7 +334,7 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
             <div className="mx-auto bg-red-100 w-12 h-12 flex items-center justify-center rounded-full">
               <Trash className="text-red-600" />
             </div>
-            <h2 className="text-lg font-semibold">Delete Package</h2>
+            <h2 className="text-lg font-semibold">Delete Appointment</h2>
             <p className="text-sm text-gray-600">
               Are you sure you want to delete this appointment? This action
               cannot be undone.
@@ -234,6 +351,34 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
                 className="w-full py-2 bg-red-600 text-white text-sm rounded-md hover:bg-red-700"
               >
                 Delete
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* MARK AS DONE VIEW */}
+        {viewMode === "done" && (
+          <div className="text-center space-y-6">
+            <div className="mx-auto bg-green-100 w-12 h-12 flex items-center justify-center rounded-full">
+              <Check className="text-green-600" />
+            </div>
+            <h2 className="text-lg font-semibold">Mark Appointment as Done</h2>
+            <p className="text-sm text-gray-600">
+              Are you sure this appointment is completed? This action
+              cannot be undone.
+            </p>
+            <div className="flex justify-between gap-4 pt-4">
+              <button
+                onClick={goBack}
+                className="w-full py-2 border rounded-md text-sm hover:bg-gray-100"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={markAsDone}
+                className="w-full py-2 bg-green-600 text-white text-sm rounded-md hover:bg-green-700"
+              >
+                Mark As Done
               </button>
             </div>
           </div>

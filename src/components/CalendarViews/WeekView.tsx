@@ -24,9 +24,10 @@ const getTimeLabel = (hour: number) =>
 interface WeekViewProps {
   currentDate: Date;
   onEventClick: (data: TransactionModalProps["data"]) => void;
+  onReady?: (refreshFn: () => void) => void;
 }
 
-const WeekView: React.FC<WeekViewProps> = ({ currentDate, onEventClick }) => {
+const WeekView: React.FC<WeekViewProps> = ({ currentDate, onEventClick, onReady  }) => {
   const rowHeight = 64;
   const startHour = 9;
   const endHour = 20;
@@ -38,21 +39,37 @@ const WeekView: React.FC<WeekViewProps> = ({ currentDate, onEventClick }) => {
 
   const [appointments, setAppointments] = useState<Appointment[]>([]);
 
+    const fetchAppointments = async () => {
+    try {
+      const res = await fetch("http://localhost:8000/api/appointments");
+      const data = await res.json();
+
+      const formatted = data.map((item: any) => ({
+        id: item.id,
+        title: item.package + " – " + item.customerName,
+        startTime: parseISO(`${item.bookingDate}T${item.bookingStartTime}`),
+        endTime: parseISO(`${item.bookingDate}T${item.bookingEndTime}`),
+        raw: item,
+      }));
+
+      setAppointments(formatted);
+    } catch (err) {
+      console.error("Failed to fetch appointments:", err);
+    }
+  };
+
+  // Fetch on date change
   useEffect(() => {
-    fetch("http://localhost:8000/api/appointments")
-      .then((res) => res.json())
-      .then((data) => {
-        const formatted = data.map((item: any) => ({
-          id: item.id,
-          title: item.package + " – " + item.customerName,
-          startTime: parseISO(`${item.bookingDate}T${item.bookingStartTime}`),
-          endTime: parseISO(`${item.bookingDate}T${item.bookingEndTime}`),
-          raw: item,
-        }));
-        setAppointments(formatted);
-      })
-      .catch((err) => console.error("Failed to fetch appointments:", err));
+    fetchAppointments();
   }, [currentDate]);
+
+  // Expose fetchAppointments to parent
+  useEffect(() => {
+    if (onReady) {
+      onReady(fetchAppointments);
+    }
+  }, [onReady]);
+  
 
   return (
     <div className="w-full overflow-x-auto bg-white rounded-md shadow">
@@ -105,7 +122,7 @@ const WeekView: React.FC<WeekViewProps> = ({ currentDate, onEventClick }) => {
 
                   let bgColor = "bg-yellow-100 border-yellow-300";
                   const now = new Date();
-                  if (isBefore(appt.endTime, now))
+                  if (isBefore(appt.endTime, now) || appt.raw.status == "Done")
                     bgColor = "bg-green-100 border-green-300";
                   else if (isAfter(appt.startTime, now))
                     bgColor = "bg-yellow-100 border-yellow-300";
@@ -125,9 +142,10 @@ const WeekView: React.FC<WeekViewProps> = ({ currentDate, onEventClick }) => {
                           date: appt.raw.bookingDate,
                           time: appt.raw.time,
                           subtotal: Number(appt.raw.subtotal),
+                          price: Number(appt.raw.price),
                           paidAmount: Number(appt.raw.payment),
-                          feedback: appt.raw.feedback || "N/A",
-                          rating: appt.raw.rating || 4,
+                          feedback: appt.raw.feedback,
+                          rating: appt.raw.rating || 0,
                         })
                       }
                       className={`absolute left-1 right-1 px-2 py-1 text-[11px] rounded-md border shadow-sm text-gray-700 cursor-pointer ${bgColor}`}
