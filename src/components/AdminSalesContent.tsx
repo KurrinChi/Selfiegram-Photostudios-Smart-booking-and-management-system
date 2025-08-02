@@ -21,7 +21,7 @@ interface Sale {
   email: string;
   address: string;
   contactNo: string;
-  paymentStatus: "Completed" | "Pending";
+  paymentStatus: "Completed" | "Pending" | "Cancelled";
   rating: number;
   feedback: string;
 }
@@ -106,11 +106,100 @@ const AdminSalesContent: React.FC = () => {
   const totalPages = Math.ceil(filtered.length / pageSize);
   const paginated = filtered.slice((page - 1) * pageSize, page * pageSize);
 
+  const handleExport = () => {
+  const printWindow = window.open("", "_blank");
+  if (!printWindow) return;
+
+  const totalPayment = filtered.reduce((acc, s) => acc + s.downPayment, 0);
+  const pendingCount = filtered.filter((s) => s.paymentStatus === "Pending").length;
+  const completedCount = filtered.filter((s) => s.paymentStatus === "Completed").length
+  const cancelledCount = filtered.filter((s) => s.paymentStatus === "Cancelled").length
+
+  const htmlContent = `
+    <html>
+      <head>
+        <title>Sales Report</title>
+        <style>
+          body { font-family: Arial, sans-serif; padding: 20px; }
+          h2 { text-align: center;  margin: 0; padding: 0; }
+          h5 { text-align: center;  margin: 0; padding: 0; }
+          table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 12px; }
+          th, td { border: 1px solid #ccc; padding: 6px; text-align: left; vertical-align: top; }
+          th { background-color: #f2f2f2; text-align: center;}
+          tfoot td { font-weight: bold; }
+          .summary { margin: 2px 0 5px 0; font-size: 13px }
+          .summary p { margin: 2px 0; padding: 0; }
+        </style>
+      </head>
+      <body>
+        <h2>Sales Report</h2>
+        <h5>${format(range[0].startDate, "MMM dd yyyy")} - ${format(range[0].endDate, "MMM dd yyyy")}</h5>
+        <div class="summary">
+          <p><strong>Completed:</strong> ${completedCount}</p>
+          <p><strong>Pending:</strong> ${pendingCount}</p>
+          <p><strong>Cancelled:</strong> ${cancelledCount}</p>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Customer Name</th>
+              <th>Email</th>
+              <th>Contact No.</th>
+              <th>Package</th>
+              <th>Date</th>
+              <th>Payment</th>
+              <th>Balance</th>
+              <th>Total Amount</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${filtered
+              .map(
+                (s) => `
+              <tr>
+                <td>${getBookingLabel(s.transactionID, s.package)}</td>
+                <td>${s.customerName}</td>
+                <td>${s.email || "-"}</td>
+                <td>${s.contactNo || "-"}</td>
+                <td>${s.package}</td>
+                <td>${format(parse(s.transactionDate, "yyyy-MM-dd", new Date()), "MMMM d, yyyy")}</td>
+                <td>${s.downPayment.toFixed(2)}</td>
+                <td>${s.balance.toFixed(2)}</td>
+                <td>${s.totalAmount.toFixed(2)}</td>
+                <td>${s.paymentStatus}</td>
+              </tr>`
+              )
+              .join("")}
+          </tbody>
+          <tfoot>
+            <tr>
+              <td colspan="9" style="text-align:right">TOTAL PAYMENT:</td>
+              <td colspan="2">${totalPayment.toFixed(2)}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </body>
+    </html>
+  `;
+
+  printWindow.document.write(htmlContent);
+  printWindow.document.close();
+  printWindow.focus();
+  printWindow.print();
+  printWindow.close();
+};
+
+
   return (
     <div className="p-4 space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <h1 className="text-2xl font-semibold">Sales</h1>
-        <button className="px-4 py-2 bg-black text-white text-sm rounded-md hover:opacity-80 transition">
+        <button
+          onClick={handleExport}
+          className="px-4 py-2 bg-black text-white text-sm rounded-md hover:opacity-80 transition"
+        >
           Export Data
         </button>
       </div>
@@ -138,6 +227,7 @@ const AdminSalesContent: React.FC = () => {
           <option>All</option>
           <option>Completed</option>
           <option>Pending</option>
+          <option>Cancelled</option>
         </select>
 
         <select
@@ -160,7 +250,7 @@ const AdminSalesContent: React.FC = () => {
             {format(range[0].endDate, "MMM dd yyyy")}
           </button>
           {pickerOpen && (
-            <div className="absolute z-20 mt-2 bg-white shadow-lg rounded-md p-3">
+            <div className="fixed z-20 mt-2 bg-white shadow-lg rounded-md p-3">
               <DateRange
                 ranges={range}
                 onChange={(item) => {
@@ -238,7 +328,9 @@ const AdminSalesContent: React.FC = () => {
                     className={`px-2 py-1 rounded-md text-xs font-medium ${
                       s.paymentStatus === "Completed"
                         ? "bg-green-100 text-green-600"
-                        : "bg-red-100 text-red-600"
+                        : s.paymentStatus === "Cancelled"
+                          ? "bg-red-100 text-red-600"
+                          : "bg-yellow-100 text-yellow-600"
                     }`}
                   >
                     {s.paymentStatus}

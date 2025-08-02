@@ -123,9 +123,6 @@ const AdminUsersContent: React.FC = () => {
       {/* Header */}
       <div className="flex items-center justify-between gap-4">
         <h1 className="text-2xl font-semibold">User Management</h1>
-        <button className="px-4 py-2 bg-black text-white text-xs rounded-md hover:opacity-80 transition">
-          Export Data
-        </button>
       </div>
 
       {/* Tabs + Controls in a single row */}

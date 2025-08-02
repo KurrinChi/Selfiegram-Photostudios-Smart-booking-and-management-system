@@ -26,7 +26,13 @@ class SalesController extends Controller
             DB::raw('booking.receivedAmount as downPayment'),
             'booking.rem as balance',
             'transaction.total as totalAmount',
-            DB::raw("IF(transaction.paymentStatus = 1, 'Completed', 'Pending') as paymentStatus"),
+            DB::raw("
+                CASE
+                    WHEN booking.status = 0 THEN 'Cancelled'
+                    WHEN transaction.paymentStatus = 1 THEN 'Completed'
+                    ELSE 'Pending'
+                END as paymentStatus
+            "),
             'users.email as customerEmail',
             'users.address as customerAddress',
             'users.contactNo as customerContactNo'
