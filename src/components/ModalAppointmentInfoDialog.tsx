@@ -27,6 +27,15 @@ export interface TransactionModalProps {
   refreshAppointments?: () => void;
 }
 
+const getBookingLabel = (bookingID: string, packageName: string) => {
+    const acronym = packageName
+      .split(" ")
+      .map((word) => word[0])
+      .join("")
+      .toUpperCase();
+    return `${acronym}#${bookingID}`;
+  };
+
 const timeSlots = [
   "10:00 AM",
   "10:30 AM",
@@ -183,11 +192,11 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
   const goBack = () => setViewMode("default");
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm flex justify-center items-center p-4">
+    <div className="printable fixed inset-0 z-50 bg-black/30 backdrop-blur-sm flex justify-center items-center p-4">
       <div className="bg-white w-full max-w-2xl rounded-lg shadow-md max-h-[95vh] overflow-y-auto p-6 relative transition-all">
         {/* Top Right Buttons */}
         {viewMode === "default" && (
-          <div className="absolute top-4 right-4 flex gap-2">
+          <div className="absolute top-4 right-4 flex gap-2 print:hidden">
             <button
               onClick={() => setViewMode("reschedule")}
               title="Reschedule Appointment"
@@ -226,9 +235,9 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
         {viewMode === "default" && (
           <>
             <h1 className="text-lg font-bold mb-1">{data.package}</h1>
-            <p className="text-sm text-gray-500 mb-4">Booking ID: {data.id}</p>
+            <p className="text-sm text-gray-500 mb-4">Booking ID: {getBookingLabel(data.id, data.package)}</p>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 text-sm gap-y-1 mb-6">
+            <div className="grid grid-cols-2 sm:grid-cols-2 text-sm gap-y-1 mb-6">
               <span className="text-gray-500">Name</span>
               <span>{data.customerName}</span>
               <span className="text-gray-500">Email</span>
@@ -311,7 +320,7 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
               </div>
             </div>
 
-            <div className="flex justify-between">
+            <div className="flex justify-between print:hidden">
               <button
                 onClick={onClose}
                 className="px-6 py-2 border rounded-md text-sm hover:bg-gray-100"

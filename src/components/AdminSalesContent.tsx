@@ -5,7 +5,7 @@ import "react-date-range/dist/styles.css";
 import "react-date-range/dist/theme/default.css";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faSearch } from "@fortawesome/free-solid-svg-icons";
-import TransactionModal from "../components/ModalTransactionDialog";
+import TransactionModal from "../components/AdminModalTransactionDialog";
 
 interface Sale {
   transactionID: number;
@@ -25,6 +25,15 @@ interface Sale {
   rating: number;
   feedback: string;
 }
+
+const getBookingLabel = (transactionID: number, packageName: string) => {
+    const acronym = packageName
+      .split(" ")
+      .map((word) => word[0])
+      .join("")
+      .toUpperCase();
+    return `${acronym}#${transactionID}`;
+  };
 
 const AdminSalesContent: React.FC = () => {
   const [sales, setSales] = useState<Sale[]>([]);
@@ -212,7 +221,7 @@ const AdminSalesContent: React.FC = () => {
                   })
                 }
               >
-                <td className="px-4 py-2 whitespace-nowrap">{s.transactionID}</td>
+                <td className="px-4 py-2 whitespace-nowrap">{getBookingLabel(s.transactionID, s.package)}</td>
                 <td className="px-4 py-2">{s.customerName}</td>
                 <td className="px-4 py-2">{s.package}</td>
                 <td className="px-4 py-2 whitespace-nowrap">

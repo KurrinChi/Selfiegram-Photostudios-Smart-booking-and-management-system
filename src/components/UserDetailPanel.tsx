@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import TransactionModal from "./ModalTransactionDialog"; // Ensure this is the correct path
+import TransactionModal from "./AdminModalTransactionDialog"; 
 
 interface Appointment {
   id: string;
