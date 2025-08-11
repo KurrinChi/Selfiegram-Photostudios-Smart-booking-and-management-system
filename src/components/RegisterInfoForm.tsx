@@ -2,6 +2,8 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import '@fortawesome/fontawesome-free/css/all.min.css';
 
+const API_URL = import.meta.env.VITE_API_URL;
+
 const RegisterInfoForm = () => {
   const navigate = useNavigate();
 
@@ -30,7 +32,7 @@ const RegisterInfoForm = () => {
     }
 
     try {
-      const response = await fetch("http://127.0.0.1:8000/api/register", {
+      const response = await fetch(`${API_URL}/api/register`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -53,7 +55,7 @@ const RegisterInfoForm = () => {
       const data = await response.json();
 
       if (data.status === "success") {
-        alert("Registered successfully!");
+        alert("Registered successfully! Please check your email to proceed with log in.");
         navigate("/");
       } else {
         alert(data.message || "Registration failed.");

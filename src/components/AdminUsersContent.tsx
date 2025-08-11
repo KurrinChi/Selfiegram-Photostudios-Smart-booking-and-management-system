@@ -37,6 +37,7 @@ interface User {
 
 const roles = ["Customer", "Staff", "Admin"] as const;
 
+const API_URL = import.meta.env.VITE_API_URL;
 
 // Main Component
 const AdminUsersContent: React.FC = () => {
@@ -53,7 +54,7 @@ const AdminUsersContent: React.FC = () => {
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const response = await fetch("http://127.0.0.1:8000/api/users");
+        const response = await fetch(`${API_URL}/api/users`);
         const rawData = await response.json();
 
         //for mapping, so that there will be no conflict here with the ones in the database!!!
@@ -105,7 +106,7 @@ const AdminUsersContent: React.FC = () => {
     const fetchAppointments = async () => {
       try {
         const res = await fetch(
-          `http://127.0.0.1:8000/api/user-appointments/${selected.id}`
+          `${API_URL}/api/user-appointments/${selected.id}`
         );
         const data = await res.json();
         setUserAppointments((prev) => ({ ...prev, [selected.id]: data }));

@@ -20,6 +20,8 @@ const START_HOUR = 7;
 const END_HOUR = 22;
 const HOURS_IN_VIEW = END_HOUR - START_HOUR;
 
+const API_URL = import.meta.env.VITE_API_URL;
+
 const DayView: React.FC<DayViewProps> = ({ currentDate, onEventClick, onReady }) => {
   const nowRef = useRef<HTMLDivElement>(null);
   const now = new Date();
@@ -27,7 +29,7 @@ const DayView: React.FC<DayViewProps> = ({ currentDate, onEventClick, onReady })
 
   const fetchAppointments = async () => {
     try {
-      const res = await fetch("http://localhost:8000/api/appointments");
+      const res = await fetch(`${API_URL}/api/appointments`);
       const json = await res.json();
 
       const filtered = json.filter((item: any) => {

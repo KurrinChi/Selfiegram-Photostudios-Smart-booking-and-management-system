@@ -4,6 +4,8 @@ import { useNavigate } from "react-router-dom";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
+const API_URL = import.meta.env.VITE_API_URL;
+
 const ProfileContents: React.FC = () => {
   const navigate = useNavigate();
   const localUser = JSON.parse(localStorage.getItem("user") || "{}");
@@ -30,7 +32,7 @@ const ProfileContents: React.FC = () => {
       }
 
       try {
-        const response = await fetch(`http://localhost:8000/api/users/${userID}`);
+        const response = await fetch(`${API_URL}/api/users/${userID}`);
         const data = await response.json();
 
         if (!response.ok || !data || data.message === "User not found") {
@@ -133,7 +135,7 @@ const ProfileContents: React.FC = () => {
   form.append("_method", "PUT");
 
   try {
-    const response = await fetch(`http://localhost:8000/api/users/${userID}`, {
+    const response = await fetch(`${API_URL}/api/users/${userID}`, {
       method: "POST", // Laravel will treat this as PUT
       body: form,
     });

@@ -27,6 +27,8 @@ interface WeekViewProps {
   onReady?: (refreshFn: () => void) => void;
 }
 
+const API_URL = import.meta.env.VITE_API_URL;
+
 const WeekView: React.FC<WeekViewProps> = ({ currentDate, onEventClick, onReady  }) => {
   const rowHeight = 64;
   const startHour = 9;
@@ -41,7 +43,7 @@ const WeekView: React.FC<WeekViewProps> = ({ currentDate, onEventClick, onReady 
 
     const fetchAppointments = async () => {
     try {
-      const res = await fetch("http://localhost:8000/api/appointments");
+      const res = await fetch(`${API_URL}/api/appointments`);
       const data = await res.json();
 
       const formatted = data.map((item: any) => ({

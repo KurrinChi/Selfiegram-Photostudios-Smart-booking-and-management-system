@@ -141,6 +141,8 @@ const AdminDashboardContents: React.FC = () => {
     },
   });
 
+  const API_URL = import.meta.env.VITE_API_URL;
+
   const [range, setRange] = useState([
   {
     startDate: subDays(new Date(), 7),
@@ -159,7 +161,7 @@ const AdminDashboardContents: React.FC = () => {
 useEffect(() => {
 //Axios for outputting sumamry cards data from JSON in DashboradController.php
   axios
-    .get<SummaryData>("http://127.0.0.1:8000/api/admin/summary", {
+    .get<SummaryData>(`${API_URL}/api/admin/summary`, {
       params: { startDate: start, endDate: end },
     })
     .then((r) => setSummaryData(r.data))
@@ -167,7 +169,7 @@ useEffect(() => {
 
 //Axios for outputting graph data from JSON in DashboradController.php
    axios
-    .get<WeeklyIncome[]>("http://127.0.0.1:8000/api/admin/gross-income-weekly")
+    .get<WeeklyIncome[]>(`${API_URL}/api/admin/gross-income-weekly`)
     .then((res) => setGrossIncomeWeeklyData(res.data))
     .catch(console.error);  
 }, [range]);
@@ -175,7 +177,7 @@ useEffect(() => {
 //Use Effect for Package Details data from JSON in DashboradController.php
 useEffect(() => {
   axios
-    .get<PackageRow[]>("http://127.0.0.1:8000/api/admin/packages", {
+    .get<PackageRow[]>(`${API_URL}/api/admin/packages`, {
       params: { startDate: start, endDate: end },
     })
     .then(r => setPackageRows(r.data))

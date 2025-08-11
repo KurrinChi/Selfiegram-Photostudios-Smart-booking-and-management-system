@@ -52,8 +52,10 @@ const AdminSalesContent: React.FC = () => {
     },
   ]);
 
+  const API_URL = import.meta.env.VITE_API_URL;
+
   useEffect(() => {
-    fetch("http://localhost:8000/api/sales")
+    fetch(`${API_URL}/api/sales`)
       .then((res) => res.json())
       .then((data) => {
         const parsedData: Sale[] = data.map((item: any) => ({
