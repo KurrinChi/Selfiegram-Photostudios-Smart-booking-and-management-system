@@ -218,7 +218,7 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
               className="p-2 rounded-full bg-gray-100 hover:bg-gray-200"
             >
               <Check className="w-5 h-5 text-green-600" />
-    </button>
+            </button>
           </div>
         )}
 
