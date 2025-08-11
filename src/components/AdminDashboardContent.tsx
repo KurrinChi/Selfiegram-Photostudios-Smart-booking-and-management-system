@@ -56,15 +56,20 @@ interface PackageRow {
   trendPositive: boolean;
 }
 
+interface Trend {
+  value: string; 
+  up: boolean; 
+}
+
 interface SummaryData {
   totalUsers: number;
   totalBookings: number;
   totalSales: number;
   totalAppointments: number;
-  salesTrend: {
-    value: string;
-    up: boolean;
-  };
+  salesTrend: Trend;
+  userTrend: Trend; 
+  scheduleTrend: Trend; 
+  appointmentsTrend: Trend; 
 }
 
 interface WeeklyIncome {
@@ -99,13 +104,6 @@ const grossIncomeWeeklyData = Array.from({ length: 16 }, (_, i) => {
   };
 }).reverse();
 
-const packageRows: PackageRow[] = [
-  { name: "Selfie for TWO",  totalBooking: 10, revenue: "₱4,700",  bookingPct: "8.55% of the total 117", rating: 4, trend: "2.3% new vs prev. week", trendPositive: true  },
-  { name: "Squad Grouple",   totalBooking: 7,  revenue: "₱4,893",  bookingPct: "5.89% of the total 117", rating: 4, trend: "1.3% new vs prev. week", trendPositive: true  },
-  { name: "Barkada Grouple", totalBooking: 6,  revenue: "₱3,364",  bookingPct: "5.13% of the total 117", rating: 5, trend: "0.5% new vs prev. week", trendPositive: true  },
-  { name: "Concept Studio",  totalBooking: 4,  revenue: "₱2,956",  bookingPct: "3.42% of the total 117", rating: 5, trend: "-0.7% vs prev. week",  trendPositive: false },
-];
-
 // -----------------------------------------------------------------------------
 // Helper Components
 // -----------------------------------------------------------------------------
@@ -136,6 +134,18 @@ const AdminDashboardContents: React.FC = () => {
     totalSales: 0,
     totalAppointments: 0,
     salesTrend: {
+      value: "0%",
+      up: true,
+    },
+    userTrend: {
+      value: "0%",
+      up: true,
+    },
+    scheduleTrend: {
+      value: "0%",
+      up: true,
+    },
+    appointmentsTrend: {
       value: "0%",
       up: true,
     },
@@ -180,17 +190,48 @@ useEffect(() => {
     .get<PackageRow[]>(`${API_URL}/api/admin/packages`, {
       params: { startDate: start, endDate: end },
     })
-    .then(r => setPackageRows(r.data))
+    .then((r) => {
+      console.log(r.data); // Log the response
+      setPackageRows(r.data);
+    })
     .catch(console.error);
 }, [start, end]);
 
+
 //Summary Cards for Total User, Total Schedule, Total Sales, and Total Appointments
-  const summaryCards: SummaryCard[] = [
-    { label: "Total User", value: summaryData.totalUsers, icon: faUser, trend: { value: "2%", up: true } },
-    { label: "Total Schedule", value: summaryData.totalBookings, icon: faClipboardList, trend: { value: "13%", up: true } },
-    { label: "Total Sales", value: `₱ ${summaryData.totalSales.toLocaleString()}`, icon: faPesoSign, trend: { value: summaryData.salesTrend.value, up: summaryData.salesTrend.up } },
-    { label: "Total Appointments", value: summaryData.totalAppointments, icon: faCalendarAlt, trend: { value: "18%", up: true } },
-  ];
+const summaryCards: SummaryCard[] = [
+  { 
+    label: "Total User", 
+    value: summaryData?.totalUsers ?? 0, 
+    icon: faUser, 
+    trend: { value: "2%", up: true }
+  },
+  { 
+    label: "Total Schedule", 
+    value: summaryData?.totalBookings ?? 0, 
+    icon: faClipboardList, 
+    trend: { value: "13%", up: true }
+  },
+  { 
+    label: "Total Sales", 
+    value: `₱ ${summaryData?.totalSales?.toLocaleString() ?? "0"}`, 
+    icon: faPesoSign, 
+    trend: { 
+      value: summaryData?.salesTrend?.value ?? "0%", 
+      up: summaryData?.salesTrend?.up ?? true
+    }
+  },
+  { 
+    label: "Total Appointments", 
+    value: summaryData?.totalAppointments ?? 0, 
+    icon: faCalendarAlt, 
+    trend: { 
+      value: "18%", 
+      up: true
+    }
+  },
+];
+
 
   const [search, setSearch] = useState("");
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -286,7 +327,7 @@ useEffect(() => {
           </ResponsiveContainer>
         </div>
       </div>
-
+      //
       {/* Package Table */}
       <div className="bg-white shadow rounded-lg p-4 overflow-x-auto">
         <div className="flex items-center justify-between mb-4">
@@ -303,35 +344,53 @@ useEffect(() => {
           </div>
         </div>
 
-        <table className="min-w-full text-left text-xs">
-          <thead>
-            <tr className="text-gray-500">
-              <th className={tableCell}>Package</th>
-              <th className={tableCell}>Total Booking</th>
-              <th className={tableCell}>Revenue</th>
-              <th className={tableCell}>Booking %</th>
-              <th className={tableCell}>Avg Client Rating</th>
-              <th className={tableCell}>Trend</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredRows.map((row, i) => (
-              <tr key={i} className="border-t">
-                <td className={tableCell}>{row.name}</td>
-                <td className={tableCell}>{row.totalBooking}</td>
-                <td className={tableCell}>{row.revenue}</td>
-                <td className={tableCell}>{row.bookingPct}</td>
-                <td className={tableCell}><StarRating value={row.rating} /></td>
-                <td className={tableCell}>
-                  <span className={`inline-flex items-center gap-1 ${row.trendPositive ? "text-green-500" : "text-red-500"}`}>
-                    <FontAwesomeIcon icon={row.trendPositive ? faArrowUp : faArrowDown} />
-                    {row.trend}
-                  </span>
-                </td>
+          <table className="min-w-full text-left text-xs">
+            <thead>
+              <tr className="text-gray-500">
+                <th className={tableCell}>Package</th>
+                <th className={tableCell}>Total Booking</th>
+                <th className={tableCell}>Revenue</th>
+                <th className={tableCell}>Booking %</th>
+                <th className={tableCell}>Avg Client Rating</th>
+                <th className={tableCell}>Trend</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {filteredRows.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="text-center py-2">No packages found</td>
+                </tr>
+              ) : (
+                filteredRows.map((row, i) => {
+                  // Ensure revenue is parsed correctly by removing '₱' and commas
+                  const parsedRevenue = row.revenue 
+                    ? parseFloat(row.revenue.replace('₱', '').replace(',', '')) 
+                    : 0;
+
+                  // Ensure that the revenue is valid before formatting
+                  const formattedRevenue = parsedRevenue 
+                    ? '₱' + parsedRevenue.toLocaleString() 
+                    : '₱0.00';
+
+                  return (
+                    <tr key={i} className="border-t">
+                      <td className={tableCell}>{row.name}</td>
+                      <td className={tableCell}>{row.totalBooking}</td>
+                      <td className={tableCell}>{formattedRevenue}</td>
+                      <td className={tableCell}>{row.bookingPct}</td>
+                      <td className={tableCell}><StarRating value={row.rating} /></td>
+                      <td className={tableCell}>
+                        <span className={`inline-flex items-center gap-1 ${row.trendPositive ? "text-green-500" : "text-red-500"}`}>
+                          <FontAwesomeIcon icon={row.trendPositive ? faArrowUp : faArrowDown} />
+                          {row.trend}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
       </div>
     </div>
   );
