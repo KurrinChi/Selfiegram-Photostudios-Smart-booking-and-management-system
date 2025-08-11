@@ -126,7 +126,7 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
         if (refreshAppointments) refreshAppointments();
         onClose();
       } else {
-        toast.error("Failed to cancel appointment.");
+        toast.error("This appointment is already completed.");
         console.error(result.message);
       }
     } catch (error) {

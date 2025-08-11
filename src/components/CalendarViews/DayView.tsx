@@ -16,6 +16,10 @@ interface DayViewProps {
   onReady?: (refreshFn: () => void) => void;
 }
 
+const START_HOUR = 7;
+const END_HOUR = 22;
+const HOURS_IN_VIEW = END_HOUR - START_HOUR;
+
 const DayView: React.FC<DayViewProps> = ({ currentDate, onEventClick, onReady }) => {
   const nowRef = useRef<HTMLDivElement>(null);
   const now = new Date();
@@ -47,26 +51,25 @@ const DayView: React.FC<DayViewProps> = ({ currentDate, onEventClick, onReady })
   useEffect(() => {
     fetchAppointments();
     if (onReady) {
-      onReady(fetchAppointments); // 👈 expose the refresh function to parent
+      onReady(fetchAppointments);
     }
   }, [currentDate]);
-
 
   useEffect(() => {
     nowRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
   }, [appointments]);
 
-  const minutesSinceMidnight = now.getHours() * 60 + now.getMinutes();
-  const topPercent = (minutesSinceMidnight / (24 * 60)) * 100;
+  const minutesSinceStart = (now.getHours() - START_HOUR) * 60 + now.getMinutes();
+  const topPercent = (minutesSinceStart / (HOURS_IN_VIEW * 60)) * 100;
 
   return (
-    <div className="relative h-[1440px] flex border-l border-gray-300">
+    <div className="relative h-[840px] flex border-l border-gray-300">
       {/* Time Labels */}
       <div className="w-16 pr-2 text-right text-xs text-gray-500">
-        {Array.from({ length: 25 }).map((_, i) => (
+        {Array.from({ length: HOURS_IN_VIEW + 1 }).map((_, i) => (
           <div key={i} className="h-[60px] relative">
             <span className="absolute -top-2 right-0">
-              {format(new Date().setHours(i, 0), "h a")}
+              {format(new Date().setHours(START_HOUR + i, 0), "h a")}
             </span>
           </div>
         ))}
@@ -75,32 +78,41 @@ const DayView: React.FC<DayViewProps> = ({ currentDate, onEventClick, onReady })
       {/* Main Column */}
       <div className="flex-1 relative">
         {/* Hour Lines */}
-        {Array.from({ length: 25 }).map((_, i) => (
+        {Array.from({ length: HOURS_IN_VIEW + 1 }).map((_, i) => (
           <div
             key={i}
             className="absolute left-0 right-0 border-t border-gray-200"
-            style={{ top: `${(i / 24) * 100}%` }}
+            style={{ top: `${(i / HOURS_IN_VIEW) * 100}%` }}
           />
         ))}
 
+       
+
         {/* Current Time Line */}
-        <div
-          ref={nowRef}
-          className="absolute left-0 right-0 h-[3px] bg-red-600 z-10"
-          style={{ top: `${topPercent}%` }}
-        >
-          <div className="absolute -left-2 top-[-4px] w-3 h-3 bg-red-600 rounded-full animate-pulse shadow" />
-        </div>
+        {now.getHours() >= START_HOUR && now.getHours() <= END_HOUR && (
+          <div
+            ref={nowRef}
+            className="absolute left-0 right-0 h-[3px] bg-red-600 z-10"
+            style={{ top: `${topPercent}%` }}
+          >
+            <div className="absolute -left-2 top-[-4px] w-3 h-3 bg-red-600 rounded-full animate-pulse shadow" />
+          </div>
+        )}
 
         {/* Appointments */}
         {appointments.map((appt) => {
-          const startMin = appt.start.getHours() * 60 + appt.start.getMinutes();
-          const endMin = appt.end.getHours() * 60 + appt.end.getMinutes();
-          const top = (startMin / (24 * 60)) * 100;
-          const height = ((endMin - startMin) / (24 * 60)) * 100;
+          const startMin =
+            (appt.start.getHours() - START_HOUR) * 60 + appt.start.getMinutes();
+          const endMin =
+            (appt.end.getHours() - START_HOUR) * 60 + appt.end.getMinutes();
+
+          if (startMin < 0 || endMin > HOURS_IN_VIEW * 60) return null;
+
+          const top = (startMin / (HOURS_IN_VIEW * 60)) * 100;
+          const height = ((endMin - startMin) / (HOURS_IN_VIEW * 60)) * 100;
 
           let bg = "bg-yellow-200";
-          if (appt.end < now || appt.raw.status == "Done") bg = "bg-green-200";
+          if (appt.end < now || appt.raw.status === "Done") bg = "bg-green-200";
           else if (appt.start <= now && appt.end >= now) bg = "bg-orange-200";
 
           const { raw } = appt;
@@ -108,7 +120,7 @@ const DayView: React.FC<DayViewProps> = ({ currentDate, onEventClick, onReady })
           return (
             <div
               key={appt.id}
-              className={`${bg} absolute left-4 right-4 p-2 rounded-md shadow text-sm cursor-pointer`}
+              className={`${bg} absolute left-4 right-4 p-2 rounded-md shadow text-sm cursor-pointer transition transform hover:scale-[1.02] hover:shadow-lg`}
               style={{ top: `${top}%`, height: `${height}%` }}
               onClick={() =>
                 onEventClick({
