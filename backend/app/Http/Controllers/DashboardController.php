@@ -82,7 +82,7 @@ class DashboardController extends Controller
                         'up'    => $trendUp,
                     ],
                 ]);
-            }
+        }
 
             public function getWeeklyGrossIncome()
             {
@@ -108,75 +108,51 @@ class DashboardController extends Controller
             }
         
         public function getPackageDetails(Request $request)
-            {
-                // 1) Parse date range or default to last 7 days
-                if ($request->has(['startDate','endDate'])) {
-                    $rawStart = $request->query('startDate');
-                    $rawEnd   = $request->query('endDate');
-                } else {
-                    $rawEnd   = Carbon::today()->toDateString();
-                    $rawStart = Carbon::today()->subDays(6)->toDateString();
-                }
-                $start = Carbon::parse($rawStart)->startOfDay();
-                $end   = Carbon::parse($rawEnd)  ->endOfDay();
+        {
 
-                // 2) Build “previous” window of same length
-                $days      = $end->diffInDays($start) + 1;
-                $prevEnd   = $start->copy()->subDay()->endOfDay();
-                $prevStart = $prevEnd->copy()->subDays($days - 1)->startOfDay();
+            // 2) Total bookings in the overall data (for booking %)
+            $totalBookings = DB::table('transaction')
+                ->where('transaction.paymentStatus', 1) // Only successful transactions
+                ->count();
 
-                // 3) Total bookings in current window (for booking %)
-                $totalBookings = DB::table('booking')
-                    ->whereBetween('bookingDate', [$start, $end])
-                    ->where('status', 1)
-                    ->count();
+            // 3) Current data: group by packageID from transaction (overall data)
+            $current = DB::table('transaction')
+                ->join('booking', 'transaction.bookingId', '=', 'booking.bookingID')
+                ->join('packages', 'booking.packageID', '=', 'packages.packageID')
+                ->select(
+                    'packages.packageID',
+                    'packages.name',
+                    DB::raw('COUNT(*) as totalBooking'),
+                    DB::raw('COALESCE(SUM(transaction.receivedAmount), 0) as revenue'),  // Summing `DOUBLE` and using `COALESCE`
+                    DB::raw('NULL as avgRating') // Temporarily set to NULL for avgRating (no rating in current schema)
+                )
+                ->where('transaction.paymentStatus', 1) // Only successful transactions
+                ->groupBy('packages.packageID', 'packages.name')
+                ->get();
 
-                // 4) Current window: group by packageID from booking
-                $current = DB::table('booking')
-                    ->join('packages', 'booking.packageID', '=', 'packages.packageID')
-                    ->select(
-                        'packages.packageID',
-                        'packages.name',
-                        DB::raw('COUNT(*) as totalBooking'),
-                        DB::raw('COALESCE(SUM(booking.receivedAmount),0) as revenue')
-                    )
-                    ->whereBetween('booking.bookingDate', [$start, $end])
-                    ->where('booking.status', 1)
-                    ->groupBy('packages.packageID','packages.name')
-                    ->get();
+            // 4) Build response rows
+            $rows = [];
+            foreach ($current as $pkg) {
+                // Calculate trend (since there's no "previous window" anymore, we just set trend to 0 for all-time data)
+                $trendPct = 0;
 
-                // 5) Previous window: counts per packageID
-                $prevCounts = DB::table('booking')
-                    ->select('packageID', DB::raw('COUNT(*) as prevBooking'))
-                    ->whereBetween('bookingDate', [$prevStart, $prevEnd])
-                    ->where('status', 1)
-                    ->groupBy('packageID')
-                    ->pluck('prevBooking','packageID');
-                    // yields [ packageID => prevBookingCount ]
-
-                // 6) Build response rows
-                $rows = [];
-                foreach ($current as $pkg) {
-                    $prevCount = $prevCounts[$pkg->packageID] ?? 0;
-                    $trendPct  = $prevCount > 0
-                        ? round((($pkg->totalBooking - $prevCount) / $prevCount) * 100, 1)
-                        : 0;
-
-                    $rows[] = [
-                        'name'           => $pkg->name,
-                        'totalBooking'   => (int) $pkg->totalBooking,
-                        'revenue'        => '₱' . number_format($pkg->revenue, 2),
-                        'bookingPct'     => $totalBookings
-                                            ? round($pkg->totalBooking / $totalBookings * 100, 2)
-                                                . "% of the total {$totalBookings}"
-                                            : "0% of the total 0",
-                        'rating'         => null,  // placeholder
-                        'trend'          => "{$trendPct}% new vs prev. week",
-                        'trendPositive'  => $trendPct >= 0,
-                    ];
-                }
-
-                return response()->json($rows);
+                // Add the row data
+                $rows[] = [
+                    'name' => $pkg->name,
+                    'totalBooking' => (int) $pkg->totalBooking,
+                    'revenue' => '₱' . number_format((float)$pkg->revenue, 2), // Ensure float and correct formatting
+                    'bookingPct' => $totalBookings
+                        ? round($pkg->totalBooking / $totalBookings * 100, 2) . "% of the total {$totalBookings}"
+                        : "0% of the total 0",
+                    'rating' => null,  // No rating in the current schema, so set to null
+                    'trend' => "{$trendPct}% all-time", // Trend is always 0 for overall data
+                    'trendPositive' => true, // As we have no trend calculation, we can set it to true for all-time data
+                ];
             }
+
+            // Return the response with proper JSON encoding to avoid Unicode escape issues
+            return response()->json($rows, 200, [], JSON_UNESCAPED_UNICODE);
+        }
+
 }
 
