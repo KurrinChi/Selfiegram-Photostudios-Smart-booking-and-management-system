@@ -1,29 +1,34 @@
 <?php
 
 namespace App\Http\Controllers;
-use Illuminate\Support\Facades\DB;
+
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
-class HomeController extends Controller
+class ReceiptController extends Controller
 {
-public function getTopSellingPackages()
-{
-    $packages = DB::table('booking')
-        ->join('packages', 'booking.packageID', '=', 'packages.packageID')
-        ->leftJoin('package_images', 'packages.packageID', '=', 'package_images.packageID')
-        ->select(
-            'packages.packageID as id',
-            'packages.name as title',
-            'packages.price',
-            DB::raw('COUNT(booking.bookingID) as total_orders'),
-            DB::raw('AVG(booking.rating) as rating'),
-            DB::raw('MIN(package_images.imagePath) as image') // get one image per package
-        )
-        ->groupBy('packages.packageID', 'packages.name', 'packages.price')
-        ->orderByDesc('total_orders')
-        ->limit(3)
-        ->get();
+   public function show($id)
+    {
+      $receipt = DB::selectOne("
+        SELECT booking.*,
+               packages.name AS packageName,
+               packages.description,
+               users.fname,
+               users.lname,
+               users.email,
+               package_images.imagePath
+        FROM booking
+        INNER JOIN packages ON booking.packageID = packages.packageID
+        INNER JOIN users ON booking.userID = users.userID
+        LEFT JOIN package_images ON packages.packageID = package_images.packageID
+        WHERE booking.bookingID = ?
+        LIMIT 1
+    ", [$id]);
 
-    return response()->json($packages);
-}
+    if (!$receipt) {
+        return response()->json(['error' => 'Receipt not found'], 404);
+    }
+
+    return response()->json($receipt);
+  }
 }
