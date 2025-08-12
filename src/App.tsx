@@ -30,6 +30,7 @@ import ClientAppointmentsPage from "./page/client/AppointmentsPage.tsx";
 import ClientHistoryPage from "./page/client/HistoryPage.tsx";
 import ClientSettingsPage from "./page/client/SettingsPage.tsx";
 import ClientPackagePageContent from "./components/ClientPackagePageContent.tsx";
+import ReceiptPage from "./page/client/ReceiptPage.tsx";
 
 const App = () => {
   const location = useLocation();
@@ -76,6 +77,7 @@ const App = () => {
         <Route path="/client/history" element={<ClientHistoryPage />} />
         <Route path="/client/profile" element={<ClientSettingsPage />} />
 
+           <Route path="/receipt/booking/:bookingID" element={<ReceiptPage />} />
         {/* Fallback */}
         <Route path="*" element={<Login />} />
       </Routes>

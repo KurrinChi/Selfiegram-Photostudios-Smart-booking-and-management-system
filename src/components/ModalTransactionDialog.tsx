@@ -349,7 +349,7 @@ return (
             </div>
             <div className="flex justify-between">
               <span>Paid Amount</span>
-              <span>₱{data?.paidAmount?.toFixed(2) ?? "0.00"}</span>
+              <span>₱{data.paidAmount.toFixed(2)}</span>
             </div>
             <div className="flex justify-between font-semibold">
               <span>Pending Balance</span>
