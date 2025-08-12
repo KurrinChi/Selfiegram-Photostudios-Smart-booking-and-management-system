@@ -31,6 +31,11 @@
     //login and register
     Route::post('/login', [AuthController::class, 'login']);
     Route::post('/register', [AuthController::class, 'register']);
+    Route::get('/check-username', function (Request $request) {
+        $username = $request->query('username');
+        $exists = DB::table('users')->where('username', $username)->exists();
+        return response()->json(['exists' => $exists]);
+    });
 
     //admin user management
     Route::get('/users', [UserController::class, 'users']);

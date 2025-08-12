@@ -1,6 +1,7 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import '@fortawesome/fontawesome-free/css/all.min.css';
+import { toast } from "react-toastify";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -17,9 +18,21 @@ const RegisterInfoForm = () => {
     birthday: "",
   });
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
+   // Load saved data from localStorage when component mounts
+    useEffect(() => {
+      const savedData = localStorage.getItem("registerStep2");
+      if (savedData) {
+        setFormData(JSON.parse(savedData));
+      }
+    }, []);
+  
+    const handleChange = (
+      e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+    ) => {
+      const newData = { ...formData, [e.target.name]: e.target.value };
+      setFormData(newData);
+      localStorage.setItem("registerStep2", JSON.stringify(newData)); // save live while typing
+    };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,7 +40,13 @@ const RegisterInfoForm = () => {
     const step1Data = JSON.parse(localStorage.getItem("registerStep1") || "{}");
 
     if (!formData.fname || !formData.lname || !formData.email || !step1Data.username) {
-      alert("Please fill in all required fields.");
+      toast.error("Please fill in all required fields.");
+      return;
+    }
+
+    const phoneRegex = /^09\d{9}$/;
+    if (!phoneRegex.test(formData.contact)) {
+      toast.error("Please enter a valid Philippine mobile number (e.g., 09123456789).");
       return;
     }
 
@@ -55,14 +74,24 @@ const RegisterInfoForm = () => {
       const data = await response.json();
 
       if (data.status === "success") {
-        alert("Registered successfully! Please check your email to proceed with log in.");
-        navigate("/");
+        toast.success(
+          "Registered successfully! Please check your email to proceed with log in.",
+          {
+            position: "top-center",
+            autoClose: 5000, // time in ms before toast closes
+            onClose: () => {
+              localStorage.removeItem("registerStep1");
+              localStorage.removeItem("registerStep2");
+              navigate("/");
+            },
+          }
+        );
       } else {
-        alert(data.message || "Registration failed.");
+        toast.error(data.message || "Registration failed.");
       }
     } catch (error) {
       console.error("Register error:", error);
-      alert("Something went wrong.");
+      toast.error("Something went wrong.");
     }
   };
 
@@ -91,6 +120,7 @@ const RegisterInfoForm = () => {
               value={formData.fname}
               onChange={handleChange}
               className="w-1/2 p-3 border border-gray-300 rounded-xl"
+              required
             />
             <input
               type="text"
@@ -99,6 +129,7 @@ const RegisterInfoForm = () => {
               value={formData.lname}
               onChange={handleChange}
               className="w-1/2 p-3 border border-gray-300 rounded-xl"
+              required
             />
           </div>
 
@@ -110,6 +141,7 @@ const RegisterInfoForm = () => {
             value={formData.email}
             onChange={handleChange}
             className="w-full p-3 border border-gray-300 rounded-xl"
+            required
           />
 
         
@@ -120,6 +152,7 @@ const RegisterInfoForm = () => {
             value={formData.address}
             onChange={handleChange}
             className="w-full p-3 border border-gray-300 rounded-xl"
+            required
           />
 
           
@@ -130,6 +163,7 @@ const RegisterInfoForm = () => {
             value={formData.contact}
             onChange={handleChange}
             className="w-full p-3 border border-gray-300 rounded-xl"
+            required
           />
 
 
@@ -141,6 +175,7 @@ const RegisterInfoForm = () => {
         className={`w-full p-3 border border-gray-300 rounded-xl bg-white ${
           formData.gender === "" ? "text-gray-400" : "text-black"
         }`}
+        required
       >
         <option value="" disabled>
           Select Gender
@@ -165,6 +200,7 @@ const RegisterInfoForm = () => {
           className={`w-full p-3 border border-gray-300 rounded-xl ${
             !formData.birthday ? "text-gray-400" : "text-black"
           }`}
+          required
         />
 
           <button
