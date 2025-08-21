@@ -27,9 +27,14 @@ import {
 import { faStar as farStar } from "@fortawesome/free-regular-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { DateRange } from "react-date-range";
-import { format, startOfWeek, subWeeks } from "date-fns";
+import { startOfWeek, subWeeks, endOfWeek } from "date-fns";
+import { subDays } from "date-fns";
+import { format } from "date-fns";
 import "react-date-range/dist/styles.css";
 import "react-date-range/dist/theme/default.css";
+import axios from "axios";
+import { useEffect } from "react";
+
 
 // -----------------------------------------------------------------------------
 // Types
@@ -51,18 +56,46 @@ interface PackageRow {
   trendPositive: boolean;
 }
 
+interface Trend {
+  value: string; 
+  up: boolean; 
+}
+
+interface SummaryData {
+  totalUsers: number;
+  totalBookings: number;
+  totalSales: number;
+  totalAppointments: number;
+  salesTrend: Trend;
+  userTrend: Trend; 
+  scheduleTrend: Trend; 
+  appointmentsTrend: Trend; 
+}
+
+interface WeeklyIncome {
+  week: string;
+  income: number;
+}
+
+interface PackageRow {
+  name: string;
+  totalBooking: number;
+  revenue: string;
+  bookingPct: string;
+  rating: number;
+  trend: string;
+  trendPositive: boolean;
+}
+
 // -----------------------------------------------------------------------------
 // Static Demo Data (replace w/ API)
 // -----------------------------------------------------------------------------
-const summaryCards: SummaryCard[] = [
-  { label: "Total User",         value: 200,           icon: faUser,          trend: { value: "2%",   up: true  } },
-  { label: "Total Schedule",     value: 117,           icon: faClipboardList,trend: { value: "13%",  up: true  } },
-  { label: "Total Sales",        value: "₱ 15,000",   icon: faPesoSign,     trend: { value: "4.3%", up: false } },
-  { label: "Total Appointments", value: 102,           icon: faCalendarAlt,  trend: { value: "18%",  up: true  } },
-];
+
 
 const today = new Date();
 const thisMonday = startOfWeek(today, { weekStartsOn: 1 });
+const startOfLastWeek = startOfWeek(subWeeks(today, 1), { weekStartsOn: 1 });
+const endOfLastWeek = endOfWeek(subWeeks(today, 1), { weekStartsOn: 1 });
 const grossIncomeWeeklyData = Array.from({ length: 16 }, (_, i) => {
   const start = subWeeks(thisMonday, i);
   return {
@@ -70,13 +103,6 @@ const grossIncomeWeeklyData = Array.from({ length: 16 }, (_, i) => {
     income: 6000 + Math.floor(Math.random() * 8000),
   };
 }).reverse();
-
-const packageRows: PackageRow[] = [
-  { name: "Selfie for TWO",  totalBooking: 10, revenue: "₱4,700",  bookingPct: "8.55% of the total 117", rating: 4, trend: "2.3% new vs prev. week", trendPositive: true  },
-  { name: "Squad Grouple",   totalBooking: 7,  revenue: "₱4,893",  bookingPct: "5.89% of the total 117", rating: 4, trend: "1.3% new vs prev. week", trendPositive: true  },
-  { name: "Barkada Grouple", totalBooking: 6,  revenue: "₱3,364",  bookingPct: "5.13% of the total 117", rating: 5, trend: "0.5% new vs prev. week", trendPositive: true  },
-  { name: "Concept Studio",  totalBooking: 4,  revenue: "₱2,956",  bookingPct: "3.42% of the total 117", rating: 5, trend: "-0.7% vs prev. week",  trendPositive: false },
-];
 
 // -----------------------------------------------------------------------------
 // Helper Components
@@ -102,15 +128,121 @@ const StarRating: React.FC<{ value: number }> = ({ value }) => (
 // Main Component
 // -----------------------------------------------------------------------------
 const AdminDashboardContents: React.FC = () => {
+  const [summaryData, setSummaryData] = useState<SummaryData>({
+    totalUsers: 0,
+    totalBookings: 0,
+    totalSales: 0,
+    totalAppointments: 0,
+    salesTrend: {
+      value: "0%",
+      up: true,
+    },
+    userTrend: {
+      value: "0%",
+      up: true,
+    },
+    scheduleTrend: {
+      value: "0%",
+      up: true,
+    },
+    appointmentsTrend: {
+      value: "0%",
+      up: true,
+    },
+  });
+
+  const API_URL = import.meta.env.VITE_API_URL;
+
+  const [range, setRange] = useState([
+  {
+    startDate: subDays(new Date(), 7),
+    endDate: new Date(),               
+    key: "selection",
+  },
+]);
+
+  const [grossIncomeWeeklyData, setGrossIncomeWeeklyData] =
+  useState<WeeklyIncome[]>([]);
+  const [packageRows, setPackageRows] = useState<PackageRow[]>([]); 
+  const { startDate, endDate } = range[0];
+  const start = format(startDate, "yyyy-MM-dd");
+  const end   = format(endDate,   "yyyy-MM-dd");
+
+useEffect(() => {
+//Axios for outputting sumamry cards data from JSON in DashboradController.php
+  axios
+    .get<SummaryData>(`${API_URL}/api/admin/summary`, {
+      params: { startDate: start, endDate: end },
+    })
+    .then((r) => setSummaryData(r.data))
+    .catch((e) => console.error(e));
+
+//Axios for outputting graph data from JSON in DashboradController.php
+   axios
+    .get<WeeklyIncome[]>(`${API_URL}/api/admin/gross-income-weekly`)
+    .then((res) => setGrossIncomeWeeklyData(res.data))
+    .catch(console.error);  
+}, [range]);
+
+//Use Effect for Package Details data from JSON in DashboradController.php
+useEffect(() => {
+  axios
+    .get<PackageRow[]>(`${API_URL}/api/admin/packages`, {
+      params: { startDate: start, endDate: end },
+    })
+    .then((r) => {
+      console.log(r.data); // Log the response
+      setPackageRows(r.data);
+    })
+    .catch(console.error);
+}, [start, end]);
+
+
+//Summary Cards for Total User, Total Schedule, Total Sales, and Total Appointments
+const summaryCards: SummaryCard[] = [
+  { 
+    label: "Total User", 
+    value: summaryData?.totalUsers ?? 0, 
+    icon: faUser, 
+    trend: { value: "2%", up: true }
+  },
+  { 
+    label: "Total Schedule", 
+    value: summaryData?.totalBookings ?? 0, 
+    icon: faClipboardList, 
+    trend: { value: "13%", up: true }
+  },
+  { 
+    label: "Total Sales", 
+    value: `₱ ${summaryData?.totalSales?.toLocaleString() ?? "0"}`, 
+    icon: faPesoSign, 
+    trend: { 
+      value: summaryData?.salesTrend?.value ?? "0%", 
+      up: summaryData?.salesTrend?.up ?? true
+    }
+  },
+  { 
+    label: "Total Appointments", 
+    value: summaryData?.totalAppointments ?? 0, 
+    icon: faCalendarAlt, 
+    trend: { 
+      value: "18%", 
+      up: true
+    }
+  },
+];
+
+
   const [search, setSearch] = useState("");
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [range, setRange] = useState([
-    { startDate: new Date(2025, 2, 30), endDate: new Date(2025, 3, 5), key: "selection" },
-  ]);
 
-  const filteredRows = useMemo(() => (
-    search ? packageRows.filter(r => r.name.toLowerCase().includes(search.toLowerCase())) : packageRows
-  ), [search]);
+  const filteredRows = useMemo(() =>
+    search
+      ? packageRows.filter(r =>
+          r.name.toLowerCase().includes(search.toLowerCase())
+        )
+      : packageRows
+  , [search, packageRows]);
 
   const tableCell = "py-3 px-4 text-xs whitespace-nowrap";
 
@@ -195,7 +327,7 @@ const AdminDashboardContents: React.FC = () => {
           </ResponsiveContainer>
         </div>
       </div>
-
+      //
       {/* Package Table */}
       <div className="bg-white shadow rounded-lg p-4 overflow-x-auto">
         <div className="flex items-center justify-between mb-4">
@@ -212,35 +344,53 @@ const AdminDashboardContents: React.FC = () => {
           </div>
         </div>
 
-        <table className="min-w-full text-left text-xs">
-          <thead>
-            <tr className="text-gray-500">
-              <th className={tableCell}>Package</th>
-              <th className={tableCell}>Total Booking</th>
-              <th className={tableCell}>Revenue</th>
-              <th className={tableCell}>Booking %</th>
-              <th className={tableCell}>Avg Client Rating</th>
-              <th className={tableCell}>Trend</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredRows.map((row, i) => (
-              <tr key={i} className="border-t">
-                <td className={tableCell}>{row.name}</td>
-                <td className={tableCell}>{row.totalBooking}</td>
-                <td className={tableCell}>{row.revenue}</td>
-                <td className={tableCell}>{row.bookingPct}</td>
-                <td className={tableCell}><StarRating value={row.rating} /></td>
-                <td className={tableCell}>
-                  <span className={`inline-flex items-center gap-1 ${row.trendPositive ? "text-green-500" : "text-red-500"}`}>
-                    <FontAwesomeIcon icon={row.trendPositive ? faArrowUp : faArrowDown} />
-                    {row.trend}
-                  </span>
-                </td>
+          <table className="min-w-full text-left text-xs">
+            <thead>
+              <tr className="text-gray-500">
+                <th className={tableCell}>Package</th>
+                <th className={tableCell}>Total Booking</th>
+                <th className={tableCell}>Revenue</th>
+                <th className={tableCell}>Booking %</th>
+                <th className={tableCell}>Avg Client Rating</th>
+                <th className={tableCell}>Trend</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {filteredRows.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="text-center py-2">No packages found</td>
+                </tr>
+              ) : (
+                filteredRows.map((row, i) => {
+                  // Ensure revenue is parsed correctly by removing '₱' and commas
+                  const parsedRevenue = row.revenue 
+                    ? parseFloat(row.revenue.replace('₱', '').replace(',', '')) 
+                    : 0;
+
+                  // Ensure that the revenue is valid before formatting
+                  const formattedRevenue = parsedRevenue 
+                    ? '₱' + parsedRevenue.toLocaleString() 
+                    : '₱0.00';
+
+                  return (
+                    <tr key={i} className="border-t">
+                      <td className={tableCell}>{row.name}</td>
+                      <td className={tableCell}>{row.totalBooking}</td>
+                      <td className={tableCell}>{formattedRevenue}</td>
+                      <td className={tableCell}>{row.bookingPct}</td>
+                      <td className={tableCell}><StarRating value={row.rating} /></td>
+                      <td className={tableCell}>
+                        <span className={`inline-flex items-center gap-1 ${row.trendPositive ? "text-green-500" : "text-red-500"}`}>
+                          <FontAwesomeIcon icon={row.trendPositive ? faArrowUp : faArrowDown} />
+                          {row.trend}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
       </div>
     </div>
   );

@@ -151,12 +151,20 @@ const AdminPackageContent: React.FC = () => {
                 key={pkg.id}
                 className="relative bg-white rounded-xl shadow-sm transition-all duration-300 transform hover:-translate-y-2 hover:scale-105 hover:shadow-xl p-2 overflow-hidden group"
               >
-                <button
-                  onClick={() => navigate(`edit/${pkg.id}`)}
-                  className="absolute top-5 right-5 px-3 py-1 text-xs z-30 rounded-md text-black font-bold backdrop-blur-md bg-white/10 border border-white/20 shadow-md hover:bg-white/20 transition"
-                >
-                  EDIT
-                </button>
+                <div className="absolute top-4 right-4 flex gap-2">
+                    <button
+                      onClick={() => navigate(`edit/${pkg.id}`)}
+                      className=" top-5 right-5 px-3 py-1 text-xs z-30 rounded-md text-black font-bold backdrop-blur-md bg-white/10 border border-white/20 shadow-md hover:bg-white/20 transition"
+                    >
+                      ARCHIVE
+                    </button>
+                    <button
+                      onClick={() => navigate(`edit/${pkg.id}`)}
+                      className=" top-5 right-5 px-3 py-1 text-xs z-30 rounded-md text-black font-bold backdrop-blur-md bg-white/10 border border-white/20 shadow-md hover:bg-white/20 transition"
+                    >
+                      EDIT
+                    </button>
+                </div>
 
                 <div className="relative z-0 h-100 rounded-md overflow-hidden">
                   <img

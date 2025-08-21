@@ -8,56 +8,36 @@ import AssignRoleModal from "./ModalAssignRoleDialog.tsx";
 
 // Types & Mock Data
 interface Appointment {
-  id: string;
+  id: string
+  customerName: string;
   package: string;
-  date: string;
+  bookingDate: string;
+  transactionDate: string;
   time: string;
-  status: "Pending" | "Done";
+  subtotal: number;
+  balance: number;
+  price: number;
+  status: "Pending" | "Done" | "Cancelled";
   rating: number;
+  feedback: string;
 }
 
 interface User {
   id: string;
+  profilePicture: string;
   name: string;
   email: string;
+  username: string;
+  age: number;
+  birthday: string;
+  address: string;
+  contact: string;
   role: "Customer" | "Staff" | "Admin";
 }
 
 const roles = ["Customer", "Staff", "Admin"] as const;
 
-const mockUsers: User[] = Array.from({ length: 55 }, (_, i) => ({
-  id: `202412${i.toString().padStart(3, "0")}`,
-  name: "Ian Conception",
-  email: "ian_concep27@gmail.com",
-  role: "Customer",
-}));
-
-const mockAppointments: Appointment[] = [
-  {
-    id: "APT-001",
-    package: "Graduation Package",
-    date: "2024-06-01",
-    time: "10:00 AM",
-    status: "Done",
-    rating: 5,
-  },
-  {
-    id: "APT-002",
-    package: "Prenup Package",
-    date: "2024-06-10",
-    time: "3:00 PM",
-    status: "Pending",
-    rating: 0,
-  },
-  {
-    id: "APT-003",
-    package: "Wedding Package",
-    date: "2024-06-15",
-    time: "1:00 PM",
-    status: "Done",
-    rating: 4,
-  },
-];
+const API_URL = import.meta.env.VITE_API_URL;
 
 // Main Component
 const AdminUsersContent: React.FC = () => {
@@ -69,15 +49,47 @@ const AdminUsersContent: React.FC = () => {
   const [showAssignModal, setShowAssignModal] = useState(false);
   const pageSize = 10;
 
+    const [users, setUsers] = useState<User[]>([]);
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const response = await fetch(`${API_URL}/api/users`);
+        const rawData = await response.json();
+
+        //for mapping, so that there will be no conflict here with the ones in the database!!!
+        const mappedUsers: User[] = rawData.map((user: any) => ({
+          id: user.userID.toString(),
+          name: user.name,
+          email: user.email,
+          username: user.username,
+          role: user.userType,
+          address: user.address,
+          contact: user.contactNo,
+          birthday: user.birthday,
+          age: user.age,
+          profilePicture: user.profilePicture
+        }));
+
+        setUsers(mappedUsers);
+      } catch (error) {
+        console.error("Failed to fetch users:", error);
+      }
+    };
+
+    fetchUsers();
+  }, []);
+
+
   const filtered = useMemo(() => {
-    const byRole = mockUsers.filter((u) => u.role === activeRole);
+    const byRole = users.filter((u) => u.role === activeRole);
     if (!query) return byRole;
     return byRole.filter(
       (u) =>
         u.id.includes(query) ||
         u.name.toLowerCase().includes(query.toLowerCase())
     );
-  }, [activeRole, query]);
+  }, [activeRole, query, users]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const current = filtered.slice((page - 1) * pageSize, page * pageSize);
@@ -86,14 +98,32 @@ const AdminUsersContent: React.FC = () => {
     if (page > totalPages) setPage(1);
   }, [page, totalPages]);
 
+  const [userAppointments, setUserAppointments] = useState<Record<string, Appointment[]>>({});
+
+  useEffect(() => {
+    if (!selected) return;
+
+    const fetchAppointments = async () => {
+      try {
+        const res = await fetch(
+          `${API_URL}/api/user-appointments/${selected.id}`
+        );
+        const data = await res.json();
+        setUserAppointments((prev) => ({ ...prev, [selected.id]: data }));
+      } catch (error) {
+        console.error("Failed to fetch appointments:", error);
+      }
+    };
+
+    fetchAppointments();
+  }, [selected]);
+
+
   return (
     <div className="relative flex flex-col gap-6 p-4 md:p-6">
       {/* Header */}
       <div className="flex items-center justify-between gap-4">
         <h1 className="text-2xl font-semibold">User Management</h1>
-        <button className="px-4 py-2 bg-black text-white text-xs rounded-md hover:opacity-80 transition">
-          Export Data
-        </button>
       </div>
 
       {/* Tabs + Controls in a single row */}
@@ -224,14 +254,15 @@ const AdminUsersContent: React.FC = () => {
             key={selected.id}
             isOpen={true}
             user={{
+              profilePicture: selected.profilePicture,
               name: selected.name,
-              username: selected.name.toLowerCase().replace(/\s+/g, "_"),
-              age: 25,
-              birthday: "1999-01-01",
-              address: "123 Main St, City",
+              username: selected.username,
+              age: selected.age, //need sa db ng age at bday
+              birthday: selected.birthday, 
+              address: selected.address,
               email: selected.email,
-              contact: "09123456789",
-              appointments: mockAppointments,
+              contact: selected.contact,
+              appointments: userAppointments[selected.id] || [],
             }}
             onClose={() => setSelected(null)}
           />

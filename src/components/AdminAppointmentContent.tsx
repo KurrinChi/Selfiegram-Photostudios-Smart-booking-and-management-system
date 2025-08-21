@@ -1,9 +1,11 @@
-import React, { useState } from "react";
+import React, { useCallback, useState } from "react";
 import AdminAppointmentSidebar from "./AdminAppointmentSidebar";
 import DayView from "./CalendarViews/DayView";
 import WeekView from "./CalendarViews/WeekView";
 import TransactionModal from "./ModalAppointmentInfoDialog";
 import type { TransactionModalProps } from "./ModalAppointmentInfoDialog";
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 const AdminAppointmentContent: React.FC = () => {
   const [view, setView] = useState<"week" | "day">("week");
@@ -18,6 +20,11 @@ const AdminAppointmentContent: React.FC = () => {
     setSelectedAppointment(appt);
     setIsModalOpen(true);
   };
+
+  const [refreshAppointments, setRefreshAppointments] = useState<() => void>(() => () => {});
+  const handleOnReady = useCallback((refreshFn: () => void) => {
+    setRefreshAppointments(() => refreshFn);
+  }, []);
 
   return (
     <div className="flex flex-col h-full w-full">
@@ -52,11 +59,13 @@ const AdminAppointmentContent: React.FC = () => {
             <WeekView
               currentDate={currentDate}
               onEventClick={handleEventClick}
+              onReady={handleOnReady}
             />
           ) : (
             <DayView
               currentDate={currentDate}
               onEventClick={handleEventClick}
+              onReady={handleOnReady}
             />
           )}
         </div>
@@ -75,7 +84,10 @@ const AdminAppointmentContent: React.FC = () => {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         data={selectedAppointment}
+        refreshAppointments={refreshAppointments}
       />
+
+       <ToastContainer position="bottom-right" />
     </div>
   );
 };

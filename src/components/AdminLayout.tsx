@@ -11,6 +11,22 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
     return saved === "true";
   });
 
+  const [username, setUsername] = useState<string>("");
+  const [profilePicture, setProfilePicture] = useState<string>("");
+
+  useEffect(() => {
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      try {
+        const user = JSON.parse(storedUser);
+        setUsername(user.username);
+        setProfilePicture(user.profilePicture || null);
+      } catch (e) {
+        console.error("Failed to parse user from localStorage:", e);
+      }
+    }
+  }, []);
+
   const toggleSidebar = () => {
     setCollapsed((prev) => {
       const next = !prev;
@@ -23,7 +39,8 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
     <div className="flex min-h-screen font-sf">
       {/* Sidebar */}
       <AdminSidebar
-        username="hi"
+        username={username}
+        profilePicture={profilePicture}
         collapsed={collapsed}
         toggle={toggleSidebar}
       />
