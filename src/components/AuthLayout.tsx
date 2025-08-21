@@ -1,6 +1,8 @@
 import React from "react";
 import { motion } from "framer-motion";
 import ImageCard from "./ImageCard";
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 interface AuthLayoutProps {
   children: React.ReactNode;
@@ -93,6 +95,7 @@ const AuthLayout = ({
           {children}
         </motion.div>
       </div>
+      <ToastContainer position="bottom-right" />
     </div>
   );
 };

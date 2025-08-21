@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import { toast } from "react-toastify";
 
 const RegisterForm = () => {
   const [formData, setFormData] = useState({
@@ -9,22 +10,61 @@ const RegisterForm = () => {
   });
 
   const navigate = useNavigate();
+  const API_URL = import.meta.env.VITE_API_URL;
+
+
+    // Load saved data from localStorage when component mounts
+  useEffect(() => {
+    const savedData = localStorage.getItem("registerStep1");
+    if (savedData) {
+      setFormData(JSON.parse(savedData));
+    }
+  }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const newData = { ...formData, [e.target.name]: e.target.value };
+    setFormData(newData);
+    localStorage.setItem("registerStep1", JSON.stringify(newData)); // save live while typing
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
 
-    // Simple password match check
-    if (formData.password !== formData.confirmPassword) {
-      alert("Passwords do not match!");
+    // Check if username exists in the database
+    try {
+      const res = await fetch(
+        `${API_URL}/api/check-username?username=${encodeURIComponent(
+          formData.username
+        )}`
+      );
+      const data = await res.json();
+
+      if (data.exists) {
+        toast.error("Username already taken. Please choose another one.");
+        return;
+      }
+    } catch (error) {
+      console.error("Error checking username:", error);
+      toast.error("Could not check username. Please try again.");
       return;
     }
 
-    console.log("Register Data:", formData);
-    navigate("/register-info"); // ✅ navigate after validation
+  // Password strength regex: At least 8 chars, 1 uppercase, 1 number, 1 special char
+    const passwordRegex = /^(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$/;
+
+    if (!passwordRegex.test(formData.password)) {
+      toast.error(
+        "Password must be at least 8 characters long and contain at least 1 uppercase letter, 1 number, and 1 special character."
+      );
+      return;
+    }
+
+    if (formData.password !== formData.confirmPassword) {
+      toast.error("Passwords do not match!");
+      return;
+    }
+    
+  navigate("/register-info");
   };
 
   return (
@@ -78,6 +118,10 @@ const RegisterForm = () => {
         <Link
           to="/login"
           className="text-[#111] font-semibold underline hover:text-[#333]"
+          onClick={() => {
+            localStorage.removeItem("registerStep1");
+            localStorage.removeItem("registerStep2");
+          }}
         >
           Login
         </Link>

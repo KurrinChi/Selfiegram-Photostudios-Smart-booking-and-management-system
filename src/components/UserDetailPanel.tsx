@@ -1,15 +1,21 @@
 import React, { useState } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Star } from "lucide-react";
-import TransactionModal from "./ModalTransactionDialog"; // Ensure this is the correct path
+import TransactionModal from "./AdminModalTransactionDialog"; 
 
 interface Appointment {
+  id: string;
+  customerName: string;
   package: string;
-  date: string;
+  bookingDate: string;
+  transactionDate: string;
   time: string;
-  status: "Pending" | "Done";
+  subtotal: number;
+  balance: number;
+  price: number;
+  status: "Pending" | "Done" | "Cancelled";
   rating: number;
+  feedback: string;
 }
 
 interface UserDetailPanelProps {
@@ -17,6 +23,7 @@ interface UserDetailPanelProps {
   onClose: () => void;
   onExited?: () => void;
   user: {
+    profilePicture: string;
     name: string;
     username: string;
     age: number;
@@ -40,19 +47,25 @@ const UserDetailPanel: React.FC<UserDetailPanelProps> = ({
   const transactionData =
     selectedTransaction && user
       ? {
-          id: user.username + "-" + selectedTransaction.package,
-          customerName: user.name,
-          email: user.email,
-          address: user.address,
-          contact: user.contact,
-          package: selectedTransaction.package,
-          date: selectedTransaction.date,
-          time: selectedTransaction.time,
-          subtotal: 399,
-          paidAmount: 399,
-          feedback: "Thank you! Will book again.",
-          rating: selectedTransaction.rating,
-        }
+        id: selectedTransaction.id,
+        customerName: selectedTransaction.customerName,
+        email: user.email,
+        address: user.address,
+        contact: user.contact,
+        package: selectedTransaction.package,
+        bookingDate: selectedTransaction.bookingDate,      // ✅
+        transactionDate: selectedTransaction.transactionDate, // ✅
+        time: selectedTransaction.time,
+        subtotal: Number(selectedTransaction.subtotal),
+        price: Number(selectedTransaction.price),
+        balance: Number(selectedTransaction.balance), // or selectedTransaction.balance if available
+        feedback: selectedTransaction.feedback,
+        rating: Number(selectedTransaction.rating),   // ✅ Add missing fields below
+        paidAmount:  Number(selectedTransaction.price) - Number(selectedTransaction.balance),
+        pendingBalance: Number(selectedTransaction.balance),
+        status: Number(selectedTransaction.status),
+        paymentStatus: selectedTransaction.balance === 0 ? 1 : 0,
+      }
       : null;
 
   return createPortal(
@@ -93,8 +106,15 @@ const UserDetailPanel: React.FC<UserDetailPanelProps> = ({
 
             <div className="px-6 py-6 space-y-8">
               <div className="flex flex-col items-center gap-3">
-                <div className="w-24 h-24 rounded-full bg-zinc-700 flex items-center justify-center text-4xl select-none">
-                  🧑🏻
+                <div className="w-24 h-24 rounded-full bg-zinc-700 overflow-hidden flex items-center justify-center text-4xl select-none">
+                  {user?.profilePicture ? (
+                    <img
+                      src={user.profilePicture}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <span>🧑🏻</span>
+                  )}
                 </div>
                 <div className="text-center">
                   <p className="text-base font-medium">{user?.name}</p>
@@ -110,7 +130,7 @@ const UserDetailPanel: React.FC<UserDetailPanelProps> = ({
                 <StatBox
                   label="Cancellations"
                   value={
-                    user?.appointments.filter((a) => a.status === "Pending")
+                    user?.appointments.filter((a) => a.status === "Cancelled")
                       .length || 0
                   }
                 />
@@ -119,7 +139,7 @@ const UserDetailPanel: React.FC<UserDetailPanelProps> = ({
               <div className="space-y-3">
                 <InfoRow label="Username" value={`@${user?.username}`} />
                 <div className="grid grid-cols-2 gap-3">
-                  <InfoRow label="Age" value={user?.age.toString() || "-"} />
+                  <InfoRow label="Age" value={user?.age?.toString() ?? "-"} />
                   <InfoRow label="Birthday" value={user?.birthday || "-"} />
                 </div>
                 <InfoRow label="Address" value={user?.address || "-"} />
@@ -143,16 +163,17 @@ const UserDetailPanel: React.FC<UserDetailPanelProps> = ({
                       <div className="space-y-0.5">
                         <p className="font-medium text-white">{appt.package}</p>
                         <p className="text-zinc-400">
-                          {appt.date} | {appt.time}
+                          {appt.bookingDate} | {appt.time}
                         </p>
                       </div>
                       <div className="flex items-center gap-4">
                         <span
-                          className={`text-xs ${
-                            appt.status === "Done"
+                          className={`text-xs ${appt.status === "Done"
                               ? "text-green-400"
-                              : "text-yellow-400"
-                          }`}
+                              : appt.status === "Cancelled"
+                                ? "text-red-400"
+                                : "text-yellow-400" // this will apply for "Pending"
+                            }`}
                         >
                           {appt.status}
                         </span>
@@ -220,8 +241,15 @@ const RatingStars: React.FC<{ rating: number }> = ({ rating }) => (
     {rating === 0 ? (
       <span className="text-zinc-500">No Rating</span>
     ) : (
-      [...Array(rating)].map((_, i) => (
-        <Star key={i} className="w-4 h-4 text-yellow-400 fill-yellow-400" />
+      Array.from({ length: 5 }, (_, i) => (
+        <span
+            key={i}
+            className={`text-xl ${
+            i < rating ? "text-yellow-500" : "text-gray-500"
+            }`}
+        >
+          ★
+        </span>
       ))
     )}
   </div>

@@ -1,34 +1,107 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import type { ChangeEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
+const API_URL = import.meta.env.VITE_API_URL;
+
 const ProfileContents: React.FC = () => {
   const navigate = useNavigate();
+  const localUser = JSON.parse(localStorage.getItem("user") || "{}");
 
   const [photo, setPhoto] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(localUser.photoUrl || null);
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [formData, setFormData] = useState({
-    username: "user01",
-    firstName: "",
-    lastName: "",
-    email: "",
-    phone: "",
-    birthdate: "",
-    gender: "Male",
+    username: localUser.username || "",
+    firstName: localUser.fname || "",
+    lastName: localUser.lname || "",
+    email: localUser.email || "",
+    phone: localUser.contactNo || "",
+    birthday: localUser.birthday || "",
+    gender: localUser.gender || "",
   });
 
-  const handlePhotoChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setPhoto(file);
-      const reader = new FileReader();
-      reader.onloadend = () => setPreviewUrl(reader.result as string);
-      reader.readAsDataURL(file);
-    }
-  };
+  useEffect(() => {
+    const fetchUser = async () => {
+      const userID = localStorage.getItem("userID");
+      if (!userID) {
+        toast.error("User not logged in");
+        return;
+      }
 
+      try {
+        const response = await fetch(`${API_URL}/api/users/${userID}`);
+        const data = await response.json();
+
+        if (!response.ok || !data || data.message === "User not found") {
+          throw new Error("Invalid user data");
+        }
+        setFormData({
+          username: data.username || "",
+          firstName: data.fname || "",
+          lastName: data.lname || "",
+          email: data.email || "",
+          phone: data.contactNo || "",
+          birthday: data.birthday || "",
+          gender: data.gender || "",
+        });
+          console.log("profilePicture", data.profilePicture);
+      
+        localStorage.setItem("user", JSON.stringify(data));
+
+        
+          if (data.profilePicture) {
+          setPreviewUrl(data.profilePicture);
+        }
+      } catch (error) {
+        console.error("Error fetching user:", error);
+        toast.error("Failed to load user profile");
+      }
+    };
+
+    fetchUser();
+  }, []);
+
+  useEffect(() => {
+  console.log("previewUrl:", previewUrl);
+}, [previewUrl]);
+
+  const handlePhotoChange = (e: ChangeEvent<HTMLInputElement>) => {
+   const file = e.target.files?.[0];
+  if (file) {
+    setPhoto(file);
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setPreviewUrl(reader.result as string);  
+    };
+    reader.readAsDataURL(file);
+  }
+};
+  const validateForm = () => {
+  const newErrors: { [key: string]: string } = {};
+
+  if (!formData.firstName.trim()) newErrors.firstName = "First name is required";
+  if (!formData.lastName.trim()) newErrors.lastName = "Last name is required";
+  if (!formData.email.trim()) {
+    newErrors.email = "Email is required";
+  } else if (!/^[\w-.]+@[\w-]+\.[a-z]{2,4}$/i.test(formData.email)) {
+    newErrors.email = "Email must be valid";
+  }
+
+  if (!formData.phone.trim()) {
+    newErrors.phone = "Contact number is required";
+  } else if (!/^\d{11}$/.test(formData.phone)) {
+    newErrors.phone = "Enter valid contact number";
+  }
+
+  if (!formData.birthday.trim()) newErrors.birthday = "Date of birth is required";
+  if (!formData.gender.trim()) newErrors.gender = "Gender is required";
+
+  setErrors(newErrors);
+  return Object.keys(newErrors).length === 0;
+};
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
@@ -36,15 +109,59 @@ const ProfileContents: React.FC = () => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
+  const userID = localStorage.getItem("userID");
+    if (!validateForm()) {
+    toast.error("Please fill the correct details.");
+    return;
+  }
+   if (!userID) {
+    toast.error("User not logged in.");
+    return;
+  }
+
+  const form = new FormData();
+  form.append("fname", formData.firstName);
+  form.append("lname", formData.lastName);
+  form.append("email", formData.email);
+  form.append("contactNo", formData.phone);
+  form.append("birthday", formData.birthday);
+  form.append("gender", formData.gender);
+  if (photo) {
+    form.append("photo", photo); // attach file
+  }
+
+  // Spoof method for Laravel
+  form.append("_method", "PUT");
+
+  try {
+    const response = await fetch(`${API_URL}/api/users/${userID}`, {
+      method: "POST", // Laravel will treat this as PUT
+      body: form,
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || "Failed to update profile.");
+    }
+
+    localStorage.setItem("user", JSON.stringify(data.user));
     toast.success("Profile updated successfully!");
-  };
+  } catch (error) {
+    console.error("Update error:", error);
+    toast.error("Error updating profile.");
+  }
+};
 
   const handleLogout = () => {
     localStorage.clear();
     sessionStorage.clear();
     navigate("/login");
   };
+
+ console.log("previewUrl:", previewUrl);
+
 
   return (
     <div className="p-10 transition-all duration-300">
@@ -58,14 +175,14 @@ const ProfileContents: React.FC = () => {
             className="w-24 h-24 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden mb-3 border-2 border-dashed border-gray-300 hover:border-black transition-all duration-300 cursor-pointer"
           >
             {previewUrl ? (
-              <img
-                src={previewUrl}
-                alt="Preview"
-                className="object-cover w-full h-full"
-              />
-            ) : (
-              <i className="fas fa-camera text-gray-400 text-xl" />
-            )}
+          <img
+            src={previewUrl}
+            alt="Preview"
+            className="object-cover w-full h-full"
+          />
+        ) : (
+          <span className="text-gray-400 text-sm"></span>
+        )}
           </label>
           <input
             id="photoUpload"
@@ -104,6 +221,7 @@ const ProfileContents: React.FC = () => {
             placeholder="Enter your first name"
             className="w-full rounded-lg border border-gray-300 bg-gray-50 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black transition"
           />
+          {errors.firstName && <p className="text-red-500 text-xs mt-1">{errors.firstName}</p>}
         </div>
 
         {/* Last Name */}
@@ -118,21 +236,39 @@ const ProfileContents: React.FC = () => {
             placeholder="Enter your last name"
             className="w-full rounded-lg border border-gray-300 bg-gray-50 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black transition"
           />
+          {errors.lastName && <p className="text-red-500 text-xs mt-1">{errors.lastName}</p>}
         </div>
 
-        {/* Email */}
-        <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-1">
-            Your Email
+      {/* Email */}
+      <div className="flex items-start gap-2">
+        <div className="flex-1">
+          <label htmlFor="email" className="text-sm font-medium text-gray-700">
+            Email
           </label>
           <input
+            type="email"
             name="email"
             value={formData.email}
             onChange={handleChange}
             placeholder="Enter your email"
-            className="w-full rounded-lg border border-gray-300 bg-gray-50 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black transition"
+            className="w-full rounded-lg border border-gray-300 bg-gray-50 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black"
           />
+          <div className="h-4 mt-1">
+            {errors.email ? (
+              <p className="text-red-500 text-xs">{errors.email}</p>
+            ) : (
+              <p className="text-xs invisible">No error</p> // Reserve space
+            )}
+          </div>
         </div>
+
+        <button
+          type="button"
+          className="mt-6 text-xs px-6 py-2.5 rounded-md bg-black text-white hover:bg-gray-800 transition"
+        >
+          <b>VERIFY</b>
+        </button>
+      </div>
 
         {/* Phone */}
         <div>
@@ -146,6 +282,7 @@ const ProfileContents: React.FC = () => {
             placeholder="Enter your phone number"
             className="w-full rounded-lg border border-gray-300 bg-gray-50 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black transition"
           />
+          {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone}</p>}
         </div>
 
         {/* Birthdate */}
@@ -154,8 +291,8 @@ const ProfileContents: React.FC = () => {
             Date of Birth
           </label>
           <input
-            name="birthdate"
-            value={formData.birthdate}
+            name="birthday"
+            value={formData.birthday}
             onChange={handleChange}
             type="date"
             className="w-full rounded-lg border border-gray-300 bg-gray-50 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black transition"

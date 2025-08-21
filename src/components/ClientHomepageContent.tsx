@@ -1,7 +1,6 @@
 // page/client/HomePage.tsx
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import mockPackages from "../data/mockPackages.json";
 import { AnimatePresence, motion } from "framer-motion";
 import { Star } from "lucide-react";
 
@@ -9,7 +8,7 @@ interface Package {
   id: string;
   title: string;
   price: number;
-  images: string[];
+    image: string | null;
   rating: number;
 }
 
@@ -43,12 +42,25 @@ const ClientHomepageContent = () => {
   const SLIDE_INTERVAL = 10000;
 
   useEffect(() => {
-    setPackages(
-      (mockPackages as any[]).slice(0, 3).map((pkg) => ({
-        ...pkg,
-        rating: 5,
-      }))
-    );
+    const fetchTopPackages = async () => {
+    try {
+      const res = await fetch("http://localhost:8000/api/top-selling-packages");
+      const data = await res.json();
+      setPackages(
+        data.map((pkg: any) => ({
+          id: pkg.id,
+          title: pkg.title,
+          price: parseFloat(pkg.price),
+         image: pkg.image, 
+          rating: Math.round(pkg.rating || 0), 
+        }))
+      );
+    } catch (err) {
+      console.error("Failed to fetch top packages:", err);
+    }
+  };
+
+  fetchTopPackages();
   }, []);
 
   const paginate = (newIndex: number) => {
@@ -152,11 +164,17 @@ const ClientHomepageContent = () => {
               onClick={() => navigate(`/client/packages/select/${pkg.id}`)}
             >
               <div className="relative">
-                <img
-                  src={pkg.images[0]}
-                  className="rounded-lg w-full h-60 object-cover"
-                  alt={pkg.title}
-                />
+           {pkg.image ? (
+            <img
+              src={`http://localhost:8000/storage/${pkg.image?.split("storage/")[1]}`}
+              alt={pkg.title}
+              className="w-full h-60 object-cover rounded-lg mb-3"
+            />
+          ) : (
+            <div className="w-full h-60 bg-gray-200 rounded-lg mb-3 flex items-center justify-center text-gray-500">
+              No Image
+            </div>
+          )}
               </div>
               <div className="mt-4 space-y-2">
                 <h4 className="text-sm font-semibold">{pkg.title}</h4>
