@@ -116,7 +116,7 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
 
       {/* ─── User Info Link ───────────────────────────── */}
       <NavLink
-      to="/profile"
+      to="/admin/profile"
       className={({ isActive }) =>
         `relative block group ${
           isActive

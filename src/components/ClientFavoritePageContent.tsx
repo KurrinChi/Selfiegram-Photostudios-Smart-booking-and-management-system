@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Heart } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { fetchWithAuth } from "../utils/fetchWithAuth";
 
 interface Package {
   id: number;
@@ -12,10 +13,12 @@ interface Package {
   images: string[];
 }
 
+const API_URL = import.meta.env.VITE_API_URL;
+
 const ClientFavoritePageContent: React.FC = () => {
 
   const fullImagePath = (path: string) =>
-  path.startsWith("http") ? path : `http://127.0.0.1:8000/${path}`;
+  path.startsWith("http") ? path : `${API_URL}/${path}`;
   
   const navigate = useNavigate();
   const [favorites, setFavorites] = useState<Package[]>([]);
@@ -29,7 +32,7 @@ const ClientFavoritePageContent: React.FC = () => {
   useEffect(() => {
     if (!userId) return;
 
-  fetch(`http://127.0.0.1:8000/api/favorites/${userId}`)
+  fetchWithAuth(`http://127.0.0.1:8000/api/favorites/${userId}`)
     .then((res) => {
       if (!res.ok) throw new Error(`Server error: ${res.status}`);
       return res.json();
@@ -66,7 +69,7 @@ const ClientFavoritePageContent: React.FC = () => {
     const removeFavorite = async (packageId: number) => {
       setFavorites((prev) => prev.filter((pkg) => pkg.id !== packageId));
 
-      fetch(`http://127.0.0.1:8000/api/favorites/remove`, {
+      fetchWithAuth(`http://127.0.0.1:8000/api/favorites/remove`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

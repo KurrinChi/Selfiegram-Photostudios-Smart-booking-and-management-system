@@ -5,6 +5,7 @@ import { isToday, isSameDay } from "date-fns";
 import "react-day-picker/dist/style.css";
 import { toast} from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { fetchWithAuth } from "../utils/fetchWithAuth";
 
 export interface TransactionModalProps {
   isOpen: boolean;
@@ -59,7 +60,7 @@ const timeSlots = [
   "7:30 PM",
   "8:00 PM",
 ];
-
+const API_URL = import.meta.env.VITE_API_URL;
 const TransactionModal: React.FC<TransactionModalProps> = ({
   isOpen,
   onClose,
@@ -85,7 +86,7 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
 
   const handleDelete = async () => {
     try {
-      const response = await fetch("http://localhost:8000/api/appointments/cancel", {
+      const response = await fetchWithAuth(`${API_URL}/api/appointments/cancel`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -111,7 +112,7 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
 
   const markAsDone = async () => {
     try {
-      const response = await fetch("http://localhost:8000/api/appointments/completed", {
+      const response = await fetchWithAuth(`${API_URL}/api/appointments/completed`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -159,7 +160,7 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
     const endTime = `${String(endHour).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
 
     try {
-      const response = await fetch("http://localhost:8000/api/appointments/reschedule", {
+      const response = await fetchWithAuth(`${API_URL}/api/appointments/reschedule`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

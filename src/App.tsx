@@ -1,5 +1,6 @@
 // Updated App.tsx with Client Routes and Admin Routes
 import { Routes, Route, useLocation } from "react-router-dom";
+import ProtectedRoute from "./ProtectedRoute";
 import { AnimatePresence } from "framer-motion";
 
 import Login from "./page/Login";
@@ -43,17 +44,16 @@ const App = () => {
         <Route path="/register" element={<Register />} />
         <Route path="/register-info" element={<RegisterInfoForm />} />
         <Route path="/register-success" element={<RegisterSuccess />} />
-        <Route path="/profile" element={<AdminProfilePage />} />
 
         {/* Admin routes */}
-        <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
-        <Route path="/admin/users" element={<AdminUsersPage />} />
-        <Route path="/admin/appointments" element={<AdminAppointmentsPage />} />
-        <Route path="/admin/sales" element={<AdminSalesPage />} />
-        <Route path="/admin/messages" element={<AdminMessagesPage />} />
-        <Route path="/admin/profile" element={<AdminProfilePage />} />
+        <Route path="/admin/dashboard" element={<ProtectedRoute allowedRoles={["Admin"]}><AdminDashboardPage /></ProtectedRoute>} />
+        <Route path="/admin/users" element={<ProtectedRoute allowedRoles={["Admin"]}><AdminUsersPage /></ProtectedRoute>} />
+        <Route path="/admin/appointments" element={<ProtectedRoute allowedRoles={["Admin"]}><AdminAppointmentsPage /></ProtectedRoute>} />
+        <Route path="/admin/sales" element={<ProtectedRoute allowedRoles={["Admin"]}><AdminSalesPage /></ProtectedRoute>} />
+        <Route path="/admin/messages" element={<ProtectedRoute allowedRoles={["Admin"]}><AdminMessagesPage /></ProtectedRoute>} />
+        <Route path="/admin/profile" element={<ProtectedRoute allowedRoles={["Admin"]}><AdminProfilePage /></ProtectedRoute>} />
 
-        <Route path="/admin/packages" element={<AdminPackagesPage />}>
+        <Route path="/admin/packages" element={<ProtectedRoute allowedRoles={["Admin"]}><AdminPackagesPage /></ProtectedRoute>}>
           <Route index element={<AdminPackageContent />} />
           <Route path="add" element={<AddPackagePage />} />
           <Route path="edit/:id" element={<EditPackagePage />} />
@@ -61,24 +61,25 @@ const App = () => {
         </Route>
 
         {/* Client Routes */}
-        <Route path="/client/home" element={<ClientHomePage />} />
-        <Route path="/client/packages" element={<ClientPackagesPage />}>
+        <Route path="/client/home" element={<ProtectedRoute allowedRoles={["Customer"]}><ClientHomePage /></ProtectedRoute>} />
+        <Route path="/client/packages" element={<ProtectedRoute allowedRoles={["Customer"]}><ClientPackagesPage /></ProtectedRoute>}>
           <Route index element={<ClientPackagePageContent />} />
           <Route path="select/:id" element={<SelectPackagePage />} />
         </Route>
 
-        <Route path="/client/favorites" element={<ClientFavoritesPage />} />
-        <Route path="/client/gallery" element={<ClientGalleryPage />} />
-        <Route path="/client/inbox" element={<ClientInboxPage />} />
+        <Route path="/client/favorites" element={<ProtectedRoute allowedRoles={["Customer"]}><ClientFavoritesPage /></ProtectedRoute>} />
+        <Route path="/client/gallery" element={<ProtectedRoute allowedRoles={["Customer"]}><ClientGalleryPage /></ProtectedRoute>} />
+        <Route path="/client/inbox" element={<ProtectedRoute allowedRoles={["Customer"]}><ClientInboxPage /></ProtectedRoute>} />
         <Route
           path="/client/appointments"
-          element={<ClientAppointmentsPage />}
+          element={<ProtectedRoute allowedRoles={["Customer"]}><ClientAppointmentsPage /></ProtectedRoute>}
         />
-        <Route path="/client/history" element={<ClientHistoryPage />} />
-        <Route path="/client/profile" element={<ClientSettingsPage />} />
+        <Route path="/client/history" element={<ProtectedRoute allowedRoles={["Customer"]}><ClientHistoryPage /></ProtectedRoute>} />
+        <Route path="/client/profile" element={<ProtectedRoute allowedRoles={["Customer"]}><ClientSettingsPage /></ProtectedRoute>} />
 
-           <Route path="/receipt/booking/:bookingID" element={<ReceiptPage />} />
+        <Route path="/receipt/booking/:bookingID" element={<ReceiptPage />} />
         {/* Fallback */}
+        
         <Route path="*" element={<Login />} />
       </Routes>
     </AnimatePresence>

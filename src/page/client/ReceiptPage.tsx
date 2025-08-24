@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import axios from "axios";
+const API_URL = import.meta.env.VITE_API_URL;
 
 const ReceiptPage = () => {
   const { bookingID } = useParams();
@@ -10,7 +11,7 @@ const ReceiptPage = () => {
 
    useEffect(() => {
     axios
-      .get(`http://192.168.1.214:8000/api/receipt/${bookingID}`, { withCredentials: false })
+      .get(`${API_URL}/api/receipt/${bookingID}`, { withCredentials: false })
       .then((response) => {
         setData(response.data);
         setLoading(false);

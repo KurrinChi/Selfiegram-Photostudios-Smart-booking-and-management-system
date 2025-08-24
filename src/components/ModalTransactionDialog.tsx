@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { format, parse } from "date-fns";
 import QRCode from "react-qr-code";
+import { fetchWithAuth } from "../utils/fetchWithAuth";
 
 interface TransactionModalProps {
   isOpen: boolean;
@@ -25,7 +26,8 @@ interface TransactionModalProps {
   } | null;
     onSaved?: () => void;
 }
-
+const API_URL = import.meta.env.VITE_API_URL;
+const RECEIPT_URL = import.meta.env.VITE_URL;
 const TransactionModal: React.FC<TransactionModalProps> = ({
   isOpen,
   onClose,
@@ -52,7 +54,7 @@ const [hasSelectedRating, setHasSelectedRating] = useState(false);
     return;
   }
   try {
-    const response = await fetch(`http://localhost:8000/api/booking/${data?.id}`, {
+    const response = await fetchWithAuth(`${API_URL}/api/booking/${data?.id}`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
@@ -275,7 +277,7 @@ return (
               <div className="w-full aspect-square max-w-xs border-2 border-dashed border-gray-400 rounded-lg flex items-center justify-center">
                 <span className="text-gray-400 text-center text-sm p-4">
                    <QRCode
-                    value={`http://192.168.1.214:5173/receipt/booking/${data.id}`}
+                    value={`${RECEIPT_URL}/receipt/booking/${data.id}`}
                     size={256}
                   />
                 </span>

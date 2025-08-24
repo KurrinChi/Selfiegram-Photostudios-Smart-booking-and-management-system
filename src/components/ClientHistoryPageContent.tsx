@@ -4,6 +4,7 @@ import { Eye, Trash2 } from "lucide-react";
 import ModalTransactionDialog from "./ModalTransactionDialog"; // adjust path if needed
 
 const ITEMS_PER_PAGE = 5;
+const API_URL = import.meta.env.VITE_API_URL;
 
 const ClientHistoryPageContent = () => {
   const [historyData, setHistoryData] = useState<any[]>([]);
@@ -16,8 +17,15 @@ const ClientHistoryPageContent = () => {
   const fetchHistory = async () => {
     try {
       const user_id = localStorage.getItem("userID");
+      const token = localStorage.getItem("token");
+      console.log(user_id);
       const response = await axios.get(
-        `http://localhost:8000/api/booking/history/${user_id}`
+        `${API_URL}/api/booking/history/${user_id}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
       );
 
       const data = response.data as any[];
@@ -59,11 +67,17 @@ const ClientHistoryPageContent = () => {
     currentPage * ITEMS_PER_PAGE
   );
   const totalPages = Math.ceil(historyData.length / ITEMS_PER_PAGE);
+  const token = localStorage.getItem("token");
 
   const handleView = async (item: any) => {
        try {
         const response = await axios.get(
-          `http://localhost:8000/api/booking/${item.id}`
+          `${API_URL}/api/booking/${item.id}`,
+          {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
         );
 
         const fullData = response.data;
@@ -87,7 +101,11 @@ const ClientHistoryPageContent = () => {
 
   const confirmDelete = async () => {
     try {
-        await axios.delete(`http://localhost:8000/api/booking/${itemToDelete.id}`);
+        await axios.delete(`${API_URL}/api/booking/${itemToDelete.id}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
         setHistoryData((prev) => prev.filter((item) => item.id !== itemToDelete.id));
 
         setItemToDelete(null);
