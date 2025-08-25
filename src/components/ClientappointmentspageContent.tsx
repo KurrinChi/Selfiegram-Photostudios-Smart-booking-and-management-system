@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Menu, Plus, X, Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import ModalTransactionDialog from "../components/ModalTransactionDialog";
-import axios from "axios";
+import { fetchWithAuth } from "../utils/fetchWithAuth";
 
 interface Appointment {
   id: string;
@@ -24,6 +24,8 @@ interface Appointment {
   paymentStatus: number; 
   rawStatus: number;
 }
+
+const API_URL = import.meta.env.VITE_API_URL;
 
 const ClientAppointmentsPageContent = () => {
   const [selectedAppointment, setSelectedAppointment] =
@@ -57,9 +59,9 @@ const ClientAppointmentsPageContent = () => {
         return;
       }
 
-      const response = await axios.get(`http://localhost:8000/api/appointments/${userID}`);
+      const response = await fetchWithAuth(`${API_URL}/api/appointments/${userID}`);
 
-      const data = response.data as any[];
+      const data = await response.json() as any[];
 
       const formatted = data.map((item: any) => ({
         id: String(item.bookingID),
@@ -260,7 +262,7 @@ const ClientAppointmentsPageContent = () => {
             >
               {a.image ? (
               <img
-                src={`http://localhost:8000/storage/${a.image?.split('storage/')[1]}`}
+                src={`${API_URL}/storage/${a.image?.split('storage/')[1]}`}
                 alt={a.package}
                 className="w-full h-48 object-cover rounded-lg mb-3"
               />

@@ -5,6 +5,7 @@ import { faChevronRight, faSearch } from "@fortawesome/free-solid-svg-icons";
 import { AnimatePresence, motion } from "framer-motion";
 import UserDetailPanel from "./UserDetailPanel";
 import AssignRoleModal from "./ModalAssignRoleDialog.tsx";
+import { fetchWithAuth } from "../utils/fetchWithAuth";
 
 // Types & Mock Data
 interface Appointment {
@@ -54,7 +55,7 @@ const AdminUsersContent: React.FC = () => {
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const response = await fetch(`${API_URL}/api/users`);
+        const response = await fetchWithAuth(`${API_URL}/api/admin/users`);
         const rawData = await response.json();
 
         //for mapping, so that there will be no conflict here with the ones in the database!!!
@@ -105,7 +106,7 @@ const AdminUsersContent: React.FC = () => {
 
     const fetchAppointments = async () => {
       try {
-        const res = await fetch(
+        const res = await fetchWithAuth(
           `${API_URL}/api/user-appointments/${selected.id}`
         );
         const data = await res.json();

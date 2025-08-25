@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom"; // 👈 Link and useNavigate imported here
+import { useParams, Link, useNavigate } from "react-router-dom"; // Link and useNavigate imported here
 import { DayPicker } from "react-day-picker";
 import "react-day-picker/dist/style.css";
 import { isToday, isSameDay } from "date-fns";
+import { fetchWithAuth } from "../../utils/fetchWithAuth";
 
 interface Package {
   id: string;
@@ -13,7 +14,7 @@ interface Package {
   tags: string[];
   images: string[];
 }
-
+const API_URL = import.meta.env.VITE_API_URL;
 const SelectPackagePage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -30,7 +31,7 @@ const SelectPackagePage = () => {
 useEffect(() => {
   const fetchPackage = async () => {
     try {
-      const response = await fetch(`http://localhost:8000/api/packages/${id}`);
+      const response = await fetchWithAuth(`${API_URL}/api/packages/${id}`);
       const data = await response.json();
       setPkg(data);
     } catch (error) {

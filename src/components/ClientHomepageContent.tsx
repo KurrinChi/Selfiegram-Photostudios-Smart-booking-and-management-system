@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { Star } from "lucide-react";
+import { fetchWithAuth } from "../utils/fetchWithAuth";
 
 interface Package {
   id: string;
@@ -11,6 +12,8 @@ interface Package {
     image: string | null;
   rating: number;
 }
+
+const API_URL = import.meta.env.VITE_API_URL;
 
 const slides = [
   {
@@ -44,7 +47,7 @@ const ClientHomepageContent = () => {
   useEffect(() => {
     const fetchTopPackages = async () => {
     try {
-      const res = await fetch("http://localhost:8000/api/top-selling-packages");
+      const res = await fetchWithAuth(`${API_URL}/api/top-selling-packages`);
       const data = await res.json();
       setPackages(
         data.map((pkg: any) => ({
@@ -166,7 +169,7 @@ const ClientHomepageContent = () => {
               <div className="relative">
            {pkg.image ? (
             <img
-              src={`http://localhost:8000/storage/${pkg.image?.split("storage/")[1]}`}
+              src={`${API_URL}/storage/${pkg.image?.split("storage/")[1]}`}
               alt={pkg.title}
               className="w-full h-60 object-cover rounded-lg mb-3"
             />
