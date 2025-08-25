@@ -33,6 +33,8 @@ import ClientSettingsPage from "./page/client/SettingsPage.tsx";
 import ClientPackagePageContent from "./components/ClientPackagePageContent.tsx";
 import ReceiptPage from "./page/client/ReceiptPage.tsx";
 
+import LandingPage from "./components/LandingPage.tsx";
+
 const App = () => {
   const location = useLocation();
 
@@ -44,6 +46,9 @@ const App = () => {
         <Route path="/register" element={<Register />} />
         <Route path="/register-info" element={<RegisterInfoForm />} />
         <Route path="/register-success" element={<RegisterSuccess />} />
+        <Route path="/profile" element={<AdminProfilePage />} />
+        <Route path="/LandingPage" element={<LandingPage />} />
+
 
         {/* Admin routes */}
         <Route path="/admin/dashboard" element={<ProtectedRoute allowedRoles={["Admin"]}><AdminDashboardPage /></ProtectedRoute>} />
