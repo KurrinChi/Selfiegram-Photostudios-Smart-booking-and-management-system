@@ -4,6 +4,7 @@ import { ChevronDown, Heart } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faSearch } from "@fortawesome/free-solid-svg-icons";
+import { fetchWithAuth } from "../utils/fetchWithAuth";
 
 interface Package {
   id: string;
@@ -12,6 +13,8 @@ interface Package {
   tags: string[];
   images?: string[];
 }
+
+const API_URL = import.meta.env.VITE_API_URL;
 
 const ClientPackagePageContent: React.FC = () => {
   const [allPackages, setAllPackages] = useState<Package[]>([]);
@@ -36,7 +39,7 @@ const ClientPackagePageContent: React.FC = () => {
     }
 
     try {
-      const res = await fetch(`http://localhost:8000/api/favorites/user/${userId}`);
+      const res = await fetchWithAuth(`${API_URL}/api/favorites/user/${userId}`);
       const data = await res.json();
       console.log("Fetched favorites from backend:", data);
 
@@ -55,7 +58,7 @@ const ClientPackagePageContent: React.FC = () => {
   useEffect(() => {
     const fetchPackages = async () => {
       try {
-        const response = await fetch("http://localhost:8000/api/packages");
+        const response = await fetchWithAuth(`${API_URL}/api/packages`);
         const data = await response.json();
         setAllPackages(data);
       } catch (error) {
@@ -88,11 +91,11 @@ const ClientPackagePageContent: React.FC = () => {
   const isAlreadyFavorite = favoriteIds.has(idStr);
 
   const url = isAlreadyFavorite
-    ? "http://localhost:8000/api/favorites/remove"
-    : "http://localhost:8000/api/favorites/add";
+    ? `${API_URL}/api/favorites/remove`
+    : `${API_URL}/api/favorites/add`;
 
   try {
-    const response = await fetch(url, {
+    const response = await fetchWithAuth(url, {
       method: "POST", // keep it POST for both add/remove if backend expects it
       headers: {
         "Content-Type": "application/json",

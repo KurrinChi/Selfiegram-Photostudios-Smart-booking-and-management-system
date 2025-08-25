@@ -9,6 +9,7 @@ import {
   parseISO,
 } from "date-fns";
 import type { TransactionModalProps } from "../ModalAppointmentInfoDialog";
+import { fetchWithAuth } from "../../utils/fetchWithAuth";
 
 interface Appointment {
   id: number;
@@ -43,7 +44,7 @@ const WeekView: React.FC<WeekViewProps> = ({ currentDate, onEventClick, onReady 
 
     const fetchAppointments = async () => {
     try {
-      const res = await fetch(`${API_URL}/api/appointments`);
+      const res = await fetchWithAuth(`${API_URL}/api/appointments`);
       const data = await res.json();
 
       const formatted = data.map((item: any) => ({

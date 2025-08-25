@@ -167,31 +167,45 @@ const AdminDashboardContents: React.FC = () => {
   const { startDate, endDate } = range[0];
   const start = format(startDate, "yyyy-MM-dd");
   const end   = format(endDate,   "yyyy-MM-dd");
-
+  
 useEffect(() => {
-//Axios for outputting sumamry cards data from JSON in DashboradController.php
+  const token = localStorage.getItem("token");
+
+  // Summary cards
   axios
     .get<SummaryData>(`${API_URL}/api/admin/summary`, {
       params: { startDate: start, endDate: end },
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
     })
     .then((r) => setSummaryData(r.data))
     .catch((e) => console.error(e));
 
-//Axios for outputting graph data from JSON in DashboradController.php
-   axios
-    .get<WeeklyIncome[]>(`${API_URL}/api/admin/gross-income-weekly`)
+  // Weekly gross income graph
+  axios
+    .get<WeeklyIncome[]>(`${API_URL}/api/admin/gross-income-weekly`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
     .then((res) => setGrossIncomeWeeklyData(res.data))
-    .catch(console.error);  
+    .catch(console.error);
 }, [range]);
 
-//Use Effect for Package Details data from JSON in DashboradController.php
 useEffect(() => {
+  const token = localStorage.getItem("token");
+
+  // Package details
   axios
     .get<PackageRow[]>(`${API_URL}/api/admin/packages`, {
       params: { startDate: start, endDate: end },
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
     })
     .then((r) => {
-      console.log(r.data); // Log the response
+      console.log(r.data);
       setPackageRows(r.data);
     })
     .catch(console.error);

@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { format, parseISO } from "date-fns";
 import type { TransactionModalProps } from "../ModalAppointmentInfoDialog";
+import { fetchWithAuth } from "../../utils/fetchWithAuth";
 
 interface Appointment {
   id: number;
@@ -29,7 +30,7 @@ const DayView: React.FC<DayViewProps> = ({ currentDate, onEventClick, onReady })
 
   const fetchAppointments = async () => {
     try {
-      const res = await fetch(`${API_URL}/api/appointments`);
+      const res = await fetchWithAuth(`${API_URL}/api/appointments`);
       const json = await res.json();
 
       const filtered = json.filter((item: any) => {

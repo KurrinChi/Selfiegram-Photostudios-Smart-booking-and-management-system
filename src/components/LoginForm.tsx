@@ -44,8 +44,10 @@ const LoginForm = () => {
         console.log("Login successful:", data.user);
         
         //store userid
+        localStorage.setItem("token", data.token);
         localStorage.setItem("userID", data.user.userID);
         localStorage.setItem("user", JSON.stringify(data.user));
+        localStorage.setItem("userType", JSON.stringify(data.user.userType));
         console.log("Saving user to localStorage:", data.user);
         console.log("saving userID to localStorage:", data.user.userID);
 

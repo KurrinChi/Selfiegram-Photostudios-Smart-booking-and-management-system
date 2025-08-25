@@ -6,6 +6,7 @@ import "react-date-range/dist/theme/default.css";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faSearch } from "@fortawesome/free-solid-svg-icons";
 import TransactionModal from "../components/AdminModalTransactionDialog";
+import { fetchWithAuth } from "../utils/fetchWithAuth";
 
 interface Sale {
   transactionID: number;
@@ -55,7 +56,7 @@ const AdminSalesContent: React.FC = () => {
   const API_URL = import.meta.env.VITE_API_URL;
 
   useEffect(() => {
-    fetch(`${API_URL}/api/sales`)
+    fetchWithAuth(`${API_URL}/api/sales`)
       .then((res) => res.json())
       .then((data) => {
         const parsedData: Sale[] = data.map((item: any) => ({

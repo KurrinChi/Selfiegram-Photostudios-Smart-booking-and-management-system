@@ -3,6 +3,7 @@ import type { ChangeEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { fetchWithAuth } from "../utils/fetchWithAuth";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -28,11 +29,12 @@ const ProfileContents: React.FC = () => {
       const userID = localStorage.getItem("userID");
       if (!userID) {
         toast.error("User not logged in");
+        window.location.href = "/login";
         return;
       }
 
       try {
-        const response = await fetch(`${API_URL}/api/users/${userID}`);
+        const response = await fetchWithAuth(`${API_URL}/api/users/${userID}`);
         const data = await response.json();
 
         if (!response.ok || !data || data.message === "User not found") {
@@ -135,7 +137,7 @@ const ProfileContents: React.FC = () => {
   form.append("_method", "PUT");
 
   try {
-    const response = await fetch(`${API_URL}/api/users/${userID}`, {
+    const response = await fetchWithAuth(`${API_URL}/api/users/${userID}`, {
       method: "POST", // Laravel will treat this as PUT
       body: form,
     });
@@ -154,11 +156,20 @@ const ProfileContents: React.FC = () => {
   }
 };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+  try {
+    await fetchWithAuth(`${API_URL}/api/logout`, {
+      method: "POST",
+    });
+  } catch (error) {
+    console.error("Logout request failed:", error);
+  } finally {
+    // Always clear frontend storage
     localStorage.clear();
     sessionStorage.clear();
     navigate("/login");
-  };
+  }
+};
 
  console.log("previewUrl:", previewUrl);
 
