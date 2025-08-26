@@ -13,11 +13,6 @@
     use App\Http\Controllers\ReceiptController;
     use App\Http\Controllers\HomeController;
 
-    // Public routes (no login required)
-    Route::post('/login', [AuthController::class, 'login']);
-    Route::post('/register', [AuthController::class, 'register']);
-    Route::middleware('auth:sanctum')->post('/logout', [AuthController::class, 'logout']);
-
     // Just for testing
     Route::middleware('api')->get('/test', function (Request $request) {
         return response()->json([
@@ -26,9 +21,18 @@
         ]);
     });
 
+    // Public routes (no login required)
+    Route::post('/login', [AuthController::class, 'login']);
+    Route::post('/register', [AuthController::class, 'register']);
+    Route::get('/check-username', function (Request $request) {
+        $username = $request->query('username');
+        $exists = DB::table('users')->where('username', $username)->exists();
+        return response()->json(['exists' => $exists]);
+    });
+    Route::middleware('auth:sanctum')->post('/logout', [AuthController::class, 'logout']);
     
+    //user profile settings
     Route::middleware('auth:sanctum')->group(function () {
-        //user profile
         Route::get('/users/{id}', [UserController::class, 'show']);
         Route::put('/users/{id}', [UserController::class, 'update']);
     });
@@ -65,12 +69,10 @@
         //Client Favorite Page
         Route::post('/favorites/add', [FavoriteController::class, 'add']);
         Route::post('/favorites/remove', [FavoriteController::class, 'remove']);
+        Route::post('/favorites/remove', [FavoriteController::class, 'removeFavorite']);
+        Route::get('/favorites/{userID}', [FavoriteController::class, 'getByUser']);
         Route::get('/favorites/{userID}', [FavoriteController::class, 'getFavoritesWithPackages']);
         Route::get('/favorites/user/{id}', [FavoriteController::class, 'getFavorites']);
-
-        //Client Header
-        Route::get('/user/{id}', [UserController::class, 'show']);
-        Route::put('/user/{id}', [UserController::class, 'update']);
 
         //Client History Page
         Route::get('/booking/history/{userID}', [HistoryController::class, 'getHistory']);
