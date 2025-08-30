@@ -12,6 +12,7 @@
     use App\Http\Controllers\AppointmentController;
     use App\Http\Controllers\ReceiptController;
     use App\Http\Controllers\HomeController;
+    use App\Http\Controllers\ForgotPasswordController;
 
     // Just for testing
     Route::middleware('api')->get('/test', function (Request $request) {
@@ -29,6 +30,11 @@
         $exists = DB::table('users')->where('username', $username)->exists();
         return response()->json(['exists' => $exists]);
     });
+    Route::post('/forgot-password', [ForgotPasswordController::class, 'forgotPassword']);
+    Route::post('/verify-otp', [ForgotPasswordController::class, 'verifyOtp']);
+    Route::post('/reset-password', [ForgotPasswordController::class, 'resetPassword']);
+
+    //logout
     Route::middleware('auth:sanctum')->post('/logout', [AuthController::class, 'logout']);
     
     //user profile settings

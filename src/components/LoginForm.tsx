@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import ModalDialog from "./ModalForgetPasswordDialog";
+import { toast } from "react-toastify";
 
 const LoginForm = () => {
   const navigate = useNavigate();
@@ -16,6 +17,9 @@ const LoginForm = () => {
   const [showModal, setShowModal] = useState(false); // For OTP modal
   const [showPasswordModal, setShowPasswordModal] = useState(false); // For new password modal
   const [newPassword, setNewPassword] = useState("");
+
+  const [otp, setOtp] = useState(["", "", "", ""]); // 4-digit OTP state
+  const [resetEmail, setResetEmail] = useState(""); // track which email reset belongs to
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -70,11 +74,84 @@ const LoginForm = () => {
             navigate("/"); // fallback
         }
       } else {
-        alert(data.message || "Invalid email or password");
+        toast.error(data.message || "Invalid email or password");
       }
     } catch (error) {
       console.error("Login error:", error);
-      alert("Something went wrong. Please try again.");
+      toast.error("Something went wrong. Please try again.");
+    }
+  };
+
+  // Request OTP
+  const handleForgotPassword = async () => {
+  if (!formData.email.trim()) {
+      toast.warning("Please enter your email");
+      return; // Stop execution if email is empty
+    }
+
+    try {
+      const res = await fetch(`${API_URL}/api/forgot-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Accept": "application/json" },
+        body: JSON.stringify({ email: formData.email }),
+      });
+      const data = await res.json();
+
+      if (res.ok) {
+        setResetEmail(formData.email);
+        setShowModal(true);
+      } else {
+        toast.error(data.message || "Email not found");
+      }
+    } catch (err) {
+      console.error("Error requesting OTP:", err);
+      toast.error("Something went wrong");
+    }
+  };
+
+  // Verify OTP
+  const handleVerifyOtp = async () => {
+    try {
+      const code = otp.join("");
+      const res = await fetch(`${API_URL}/api/verify-otp`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Accept": "application/json" },
+        body: JSON.stringify({ email: resetEmail, otp: code }),
+      });
+      const data = await res.json();
+
+      if (res.ok) {
+        setShowModal(false);
+        setShowPasswordModal(true);
+      } else {
+        toast.error(data.message || "Invalid OTP");
+      }
+    } catch (err) {
+      console.error("Error verifying OTP:", err);
+      toast.error("Something went wrong");
+    }
+  };
+
+  // Reset password
+  const handleResetPassword = async () => {
+    try {
+      const code = otp.join("");
+      const res = await fetch(`${API_URL}/api/reset-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Accept": "application/json" },
+        body: JSON.stringify({ email: resetEmail , otp: code, password: newPassword }),
+      });
+      const data = await res.json();
+
+      if (res.ok) {
+        alert("Password reset successful, please login");
+        setShowPasswordModal(false);
+      } else {
+        toast.error(data.message || "Failed to reset password");
+      }
+    } catch (err) {
+      console.error("Error resetting password:", err);
+      toast.error("Something went wrong");
     }
   };
 
@@ -122,7 +199,7 @@ const LoginForm = () => {
         </div>
 
         <div
-          onClick={() => setShowModal(true)}
+          onClick={handleForgotPassword}
           className="text-left ml-2 text-sm text-gray-500 hover:underline cursor-pointer"
         >
           Forgot Password?
@@ -154,27 +231,27 @@ const LoginForm = () => {
           </div>
           <h2 className="font-bold text-lg">Forgot Password.</h2>
           <p className="text-sm text-gray-500 mt-1">
-            We’ve sent a code to <strong>example@email.com</strong>
+            We’ve sent a code to <strong>{resetEmail}</strong>
           </p>
         </div>
 
         {/* OTP inputs */}
         <div className="flex justify-center gap-2 mt-6">
-          {[0, 1, 2, 3].map((_, i) => (
+          {otp.map((digit, i) => (
             <input
               key={i}
               maxLength={1}
               className="w-12 h-12 text-center text-xl border border-gray-300 rounded-lg"
-              placeholder="-"
+              placeholder=""
+              value={digit}
+              onChange={(e) => {
+                const val = e.target.value.replace(/[^0-9]/g, "");
+                const newOtp = [...otp];
+                newOtp[i] = val;
+                setOtp(newOtp);
+              }}
             />
           ))}
-        </div>
-
-        <div className="text-center mt-3 text-xs text-gray-500">
-          Didn’t get a code?{" "}
-          <button className="text-blue-500 hover:underline">
-            Click to resend.
-          </button>
         </div>
 
         <div className="flex justify-between mt-6">
@@ -185,10 +262,7 @@ const LoginForm = () => {
             Cancel
           </button>
           <button
-            onClick={() => {
-              setShowModal(false);
-              setShowPasswordModal(true);
-            }}
+            onClick={handleVerifyOtp}
             className="px-6 py-2 bg-[#212121] text-white text-sm rounded-md hover:bg-gray-400"
           >
             Confirm
@@ -196,6 +270,7 @@ const LoginForm = () => {
         </div>
       </ModalDialog>
 
+      {/* Reset Password Modal */}
       <ModalDialog
         isOpen={showPasswordModal}
         onClose={() => setShowPasswordModal(false)}
@@ -204,16 +279,16 @@ const LoginForm = () => {
           <div className="text-2xl mb-4">
             <i className="fas fa-sign-in-alt" />
           </div>
-          <h2 className="font-bold text-lg">Log in to your account</h2>
+          <h2 className="font-bold text-lg">Set New Password</h2>
           <p className="text-sm text-gray-500 mt-1">
-            Welcome back! Please enter your new password.
+            Enter your new password below.
           </p>
 
           {/* New Password Input with Eye Toggle */}
           <div className="relative mt-4">
             <input
               type={showNewPassword ? "text" : "password"}
-              placeholder="********"
+              placeholder="Enter New Password"
               className="w-full px-4 py-3 rounded-xl bg-[#f7f7f7] border border-gray-300 pr-12"
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
@@ -237,10 +312,7 @@ const LoginForm = () => {
               Cancel
             </button>
             <button
-              onClick={() => {
-                console.log("New password set:", newPassword);
-                setShowPasswordModal(false);
-              }}
+              onClick={handleResetPassword}
               className="px-6 py-2 bg-[#212121] text-white text-sm rounded-md hover:bg-gray-400"
             >
               Confirm
