@@ -1,0 +1,97 @@
+[
+  {
+    "name": "Selfie for ONE",
+    "description": "PHP 379 · Good for 1 person · 10 mins unlimited self shoot · 1 backdrop · 6 digital copies · 1 printed copy",
+    "image": "../storage/packages/selfieforone/sone1.png"
+  },
+  {
+    "name": "Selfie for TWO",
+    "description": "PHP 479 · Good for 2 persons · 10 mins unlimited self shoot · 1 backdrop · 7 digital copies · 2 printed copies",
+    "image": "../storage/packages/selfiefortwo/stwo1.png"
+  },
+  {
+    "name": "Squad Groupie",
+    "description": "PHP 699 · Good for 4 persons · 20 mins unlimited self shoot · 1 backdrop · 8 digital copies · 2 printed copies",
+    "image": "../storage/packages/squadgroupie/squad1.jpg"
+  },
+  {
+    "name": "Barkada Groupie",
+    "description": "PHP 899 · Good for 8 persons · 20 mins unlimited self shoot · 1 backdrop · 10 digital copies · 2 printed copies",
+    "image": "../storage/packages/barkadagroupie/barkada1.jpg"
+  },
+  {
+    "name": "Concept Studio",
+    "description": "PHP 749 · Good for 2 persons · 20 mins unlimited self shoot · 1 plain backdrop + 1 concept backdrop (Bohemian Dream or Chingu Pink)",
+    "image": "../storage/packages/conceptstudio/cstudio1.jpg"
+  },
+  {
+    "name": "Graduation PREMIUM",
+    "description": "PHP 1,199 · 15 mins shoot w/ photographer · Toga backdrop · 4 enhanced photos · Prints: A4, frame, 5R, wallets",
+    "image": "../storage/packages/graduationpremium/premium3.jpg"
+  },
+  {
+    "name": "Graduation ELITE",
+    "description": "PHP 1,499 · 30 mins shoot w/ photographer · Toga + plain backdrop · 8 enhanced photos · Prints included",
+    "image": "../storage/packages/graduationelite/elite1.jpg"
+  },
+  {
+    "name": "Studio Rental",
+    "description": "PHP 1,499 · 1–4 pax · 1 hr unlimited self shoot · All plain backdrops + 1 concept · Digital copies & equipment use",
+    "image": "../storage/packages/studiorental/studio1.jpg"
+  },
+  {
+    "name": "Vogue Photoshoot",
+    "description": "Now PHP 2,999 (20% OFF) · 1 hr shoot w/ Senior Photographer · All backdrops + concepts · Edited soft copies · 2 prints",
+    "image": "../storage/packages/vogue/vogue1.jpg"
+  },
+  {
+    "name": "Kiddie Photoshoot",
+    "description": "PHP 2,499 · 30 mins celebrant + family · 1 theme backdrop + 1 plain · 10 digital + raw copies · 2 prints · Free props/costume",
+    "image": "../storage/packages/kiddie/kiddie1.jpg"
+  },
+  {
+    "name": "Maternity Photoshoot",
+    "description": "PHP 3,999 · 1 hr w/ photographer · All backdrops & concepts · Enhanced digital copies · Free maternity costumes/props · Family shoot included",
+    "image": "../storage/packages/maternity/maternity1.png"
+  },
+  {
+    "name": "Newborn Baby Photoshoot",
+    "description": "PHP 3,999 · 1 newborn + 2 family members · 1 hr shoot · 2 homy sets w/ props · Enhanced digital · Family photos · Printed copy",
+    "image": "../storage/packages/newbornbaby/newborn1.jpg"
+  },
+  {
+    "name": "Intimate Gender Reveal",
+    "description": "PHP 4,499 · 1 hr shoot w/ photographer + static video + 1 min edited video · Props (paint, balloons, poppers) · Enhanced digital · Printed copy",
+    "image": "../storage/packages/intimategenderreveal/gender1.jpg"
+  },
+  {
+    "name": "Birthday Package",
+    "description": "Now PHP 749 (20% OFF) · 20 mins self shoot + 5 mins photographer shoot · 7 digital · 2 prints · Free sash, headband & balloons",
+    "image": "../storage/packages/birthday/birthday1.jpg"
+  },
+  {
+    "name": "Family Photoshoot",
+    "description": "Now PHP 2,999 (20% OFF) · Good for 5 members (can add more) · 1 hr shoot · All backdrops + 1 concept · Enhanced digital · Printed copies",
+    "image": "../storage/packages/family/fam1.jpg"
+  },
+  {
+    "name": "Pre Nup Photoshoot",
+    "description": "Now PHP 2,999 · For couples · 1 hr shoot · All backdrops + 1 concept · Enhanced digital copies · Printed copies included",
+    "image": "../storage/packages/prenup/prenup1.jpg"
+  },
+  {
+    "name": "Student Groupie",
+    "description": "Now PHP 1,499 (25% OFF) · Good for 10 pax · 50 mins self shoot · 1 backdrop · 10 digital · 4 printed copies (3 portrait + 1 band)",
+    "image": "../storage/packages/studentgroupie/studentgroupie1.png"
+  },
+  {
+    "name": "Solo Graduation Package",
+    "description": "PHP 1,749 · Good for 1 pax · 20 mins self shoot · Toga set or Barong/Filipiniana · 7 digital · 2 printed copies",
+    "image": "../storage/packages/solograduation/solo1.jpg"
+  },
+  {
+    "name": "Barkada Graduation Package",
+    "description": "PHP 1,999 · Good for 4 pax · 30 mins self shoot · Graduation + plain backdrop · Toga set/Barong/Filipiniana · 7 digital · 4 prints",
+    "image": "../storage/packages/barkadagraduation/Barkada Graduation Package.jpg"
+  }
+]

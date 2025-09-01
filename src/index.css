@@ -1,8 +1,33 @@
 @import "tailwindcss";
 
+/* Existing SF Pro Display */
 @font-face {
   font-family: "SF Pro Display";
-  src: url("./src/assets/fonts/SFPRODISPLAYREGULAR.OTF") format("truetype");
+  src: url("./src/assets/fonts/SFPRODISPLAYREGULAR.OTF") format("opentype");
+  font-weight: normal;
+  font-style: normal;
+}
+
+/* ✅ Add Poppins */
+@font-face {
+  font-family: "Poppins";
+  src: url("./src/assets/fonts/Poppins-Regular.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: "Poppins";
+  src: url("./src/assets/fonts/Poppins-Medium.ttf") format("truetype");
+  font-weight: 500;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: "Poppins";
+  src: url("./src/assets/fonts/Poppins-Bold.ttf") format("truetype");
+  font-weight: 700;
+  font-style: normal;
 }
 
 body {
@@ -15,7 +40,8 @@ body {
     visibility: hidden !important;
   }
 
-  .printable, .printable * {
+  .printable,
+  .printable * {
     visibility: visible !important;
   }
 
