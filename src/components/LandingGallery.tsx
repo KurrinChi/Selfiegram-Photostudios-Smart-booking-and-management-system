@@ -1,39 +1,24 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { motion, useMotionValue } from "framer-motion";
+import { motion, useMotionValue, useTransform, animate } from "framer-motion";
+import packagesData from "../data/packages.json";
 
-/**
- * InfiniteParallaxGallery (single-file component)
- * - Static image array for now (replace with DB later)
- * - Mouse drag left/right
- * - Seamless infinite loop (wraps when hitting ends)
- * - Responsive
- * - 3D-ish parallax (scale + rotateY + elevation) with center focus
- */
+export default function SimpleParallaxGallery() {
+  // ⚙️ Config
+  const MAX_SCALE = 1.35;
+  const MIN_SCALE = 0.32;
+  const MAX_ROTATE_Y = 42;
+  const ELEVATE = 30;
+  const BASE_HEIGHT = 320;
+  const DIAGONAL_FACTOR = 0.6;
 
-export default function InfiniteParallaxGallery() {
-  // ⚙️ Config — tweak freely
-  const GAP = 24; // px between cards
-  const MAX_SCALE = 1.15; // scale at center
-  const MIN_SCALE = 0.72; // scale at far edges
-  const MAX_ROTATE_Y = 22; // deg tilt at edges
-  const ELEVATE = 24; // px lift at center
-  const BASE_HEIGHT = 320; // ideal card height (will clamp to viewport)
+  // 📦 Data
+  const packages = packagesData;
+  const images = useMemo(() => packages.map((p) => p.image), [packages]);
 
-  // 🔗 Static demo images — replace with your DB data later
-  const images = useMemo(
-    () =>
-      Array.from(
-        { length: 19 },
-        (_, i) => `https://picsum.photos/seed/parallax-${i + 1}/800/600`
-      ),
-    []
-  );
-
-  // 📏 Responsive container measurements
+  // viewport
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const [vw, setVw] = useState(0);
   const [vh, setVh] = useState(0);
-
   useEffect(() => {
     if (!viewportRef.current) return;
     const el = viewportRef.current;
@@ -47,79 +32,98 @@ export default function InfiniteParallaxGallery() {
     return () => ro.disconnect();
   }, []);
 
-  // 🧮 Card sizing (responsive)
-  const cardHeight = Math.min(BASE_HEIGHT, Math.max(220, vh * 0.85));
-  const cardWidth = Math.max(220, Math.min(520, vw * 0.42));
+  // responsive sizing
+  const GAP = vw < 600 ? 30 : 60;
+  const cardHeight = Math.min(
+    BASE_HEIGHT,
+    Math.max(180, vh * (vw < 600 ? 0.7 : 0.85))
+  );
+  const cardWidth = Math.max(200, Math.min(vw < 600 ? 320 : 520, vw * 0.42));
 
-  // 🛤️ Track metrics
-  const unit = cardWidth + GAP; // one card + gap
+  // metrics
+  const unit = cardWidth + GAP;
   const count = images.length;
-  const loopSpan = unit * count; // width of one logical set
+  const totalWidth = unit * count;
 
-  // 🧲 Drag position (MotionValue)
+  // motion
   const x = useMotionValue(0);
-  const [xRender, setXRender] = useState(0); // mirrors x for React-driven math
-
-  // Keep React in sync with motion value for per-card transforms
+  const progress = useTransform(x, [-totalWidth + vw, 0], [1, 0], {
+    clamp: true,
+  });
+  const [xRender, setXRender] = useState(0);
   useEffect(() => {
     const unsub = x.on("change", (v) => setXRender(v));
     return () => unsub();
   }, [x]);
 
-  // ♾️ Wrap logic to create the seamless loop
-  const wrapIfNeeded = (current: number) => {
-    // Shift within [-loopSpan, 0] so we can set dragConstraints comfortably
-    if (current <= -loopSpan) return current + loopSpan;
-    if (current >= 0) return current - loopSpan;
-    return current;
-  };
-
-  // Ensure the value is wrapped on each drag change subtly (prevents hard edges)
-  useEffect(() => {
-    const unsub = x.on("change", (v) => {
-      const wrapped = wrapIfNeeded(v);
-      if (wrapped !== v) x.set(wrapped);
-    });
-    return () => unsub();
-  }, [x, loopSpan]);
-
-  // Double the list for continuity rendering (visual only)
-  const renderImages = useMemo(() => [...images, ...images], [images]);
-
-  // 🔢 Helper: shortest distance from the visual center line
-  const centerX = vw / 2;
+  const centerX = vw / 5;
   const distanceFromCenter = (index: number) => {
-    // Physical x-position of this card's center within the doubled list
-    const base = index * unit + cardWidth / 2; // position in doubled track
-    // Account for dragging offset; normalize to the nearest equivalent within one loop
-    // We want the nearest representation of this card relative to current x
-    // Convert xRender into a positive offset within [0, loopSpan)
-    const offset = ((xRender % loopSpan) + loopSpan) % loopSpan; // 0..loopSpan
-    // Visual position on screen (0 at left edge of viewport ref)
-    const screenX = base + -offset; // shift by drag
-
-    // Because we have two sets, there are multiple visual copies spaced by loopSpan.
-    // Choose the one closest to the viewport center by testing +/- loopSpan shifts.
-    let candidate = screenX;
-    const alt1 = screenX - loopSpan;
-    const alt2 = screenX + loopSpan;
-    if (Math.abs(alt1 - centerX) < Math.abs(candidate - centerX))
-      candidate = alt1;
-    if (Math.abs(alt2 - centerX) < Math.abs(candidate - centerX))
-      candidate = alt2;
-
-    return candidate - centerX; // signed distance (px)
+    const base = index * unit + cardWidth / 2;
+    const screenX = base + xRender;
+    return screenX - centerX;
   };
 
-  // 🔮 Derive transform props from distance
   const deriveStyle = (dx: number) => {
-    const norm = Math.min(1, Math.abs(dx) / (vw * 0.6 || 1)); // 0..1 by ~60% viewport width
-    const scale = MAX_SCALE - (MAX_SCALE - MIN_SCALE) * norm; // bigger at center
-    const rotateY = (dx / (vw || 1)) * MAX_ROTATE_Y; // tilt toward sides
-    const translateY = -ELEVATE * (1 - norm); // lift at center
-    const zIndex = Math.round(1000 - norm * 1000); // center on top
-    const opacity = 0.9 - 0.3 * norm; // subtle fade on edges
+    const norm = Math.min(1, Math.abs(dx) / (vw * 0.6 || 1));
+    const scale = MAX_SCALE - (MAX_SCALE - MIN_SCALE) * norm;
+    const rotateY = (dx / (vw || 1)) * MAX_ROTATE_Y;
+    const translateY = -ELEVATE * (1 - norm);
+    const zIndex = Math.round(1000 - norm * 1000);
+    const opacity = 0.9 - 0.3 * norm;
     return { scale, rotateY, translateY, zIndex, opacity };
+  };
+
+  // active card
+  const [activeIndex, setActiveIndex] = useState(0);
+  const ACTIVATE_RANGE = Math.max(60, vw * 0.12);
+  const HYSTERESIS = Math.max(30, vw * 0.04);
+
+  useEffect(() => {
+    let nearest = 0;
+    let nearestDx = Infinity;
+    for (let i = 0; i < count; i++) {
+      const dx = distanceFromCenter(i);
+      const adx = Math.abs(dx);
+      if (adx < nearestDx) {
+        nearestDx = adx;
+        nearest = i;
+      }
+    }
+    const dxActive = Math.abs(distanceFromCenter(activeIndex));
+    const withinCurrent = dxActive <= ACTIVATE_RANGE + HYSTERESIS;
+    const withinNearest = nearestDx <= ACTIVATE_RANGE;
+    if (!withinCurrent && withinNearest && nearest !== activeIndex) {
+      setActiveIndex(nearest);
+    } else if (dxActive > nearestDx && nearestDx < ACTIVATE_RANGE / 2) {
+      setActiveIndex(nearest);
+    }
+  }, [xRender, vw, count]);
+
+  // alignment
+  const centerToIndex = (i: number) => -(i * unit + cardWidth / 2 - centerX);
+  const gentlyAlignToIndex = (i: number) => {
+    const target = centerToIndex(i);
+    const current = x.get();
+    const nudgedTarget = current + (target - current) * 0.1;
+    animate(x, nudgedTarget, {
+      type: "spring",
+      stiffness: 120,
+      damping: 24,
+      mass: 0.3,
+    });
+  };
+
+  // responsive
+  const isTablet = vw < 900;
+  const isMobile = vw < 600;
+
+  const textVariants = {
+    hidden: { opacity: 0, y: 12 },
+    show: {
+      opacity: 1,
+      y: 0,
+      transition: { stiffness: 320, damping: 28, type: "spring" as const },
+    },
   };
 
   return (
@@ -127,129 +131,173 @@ export default function InfiniteParallaxGallery() {
       ref={viewportRef}
       style={{
         width: "100%",
-        height: "min(80vh, 680px)",
-        display: "grid",
-        placeItems: "center",
+        height: isMobile ? "88vh" : "min(80vh, 680px)",
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
         overflow: "hidden",
-        background: "linear-gradient(180deg, #0f1115, #0b0d10)",
         color: "white",
+        position: "relative",
+        padding: isMobile ? "0 6px" : 0,
       }}
     >
-      <div
-        style={{
-          width: "100%",
-          height: "100%",
-          perspective: 1200, // enables 3D
-          position: "relative",
-        }}
-      >
-        {/* Track */}
-        <motion.div
-          drag="x"
-          dragConstraints={{ left: -loopSpan, right: 0 }}
-          dragElastic={0.2}
-          dragMomentum={true}
-          onDragEnd={() => {
-            // Snap back into wrapped window after momentum settles
-            const v = x.get();
-            const wrapped = wrapIfNeeded(v);
-            if (wrapped !== v) x.set(wrapped);
-          }}
-          style={{
-            x,
-            display: "flex",
-            alignItems: "center",
-            gap: GAP,
-            position: "absolute",
-            left: 0,
-            top: "50%",
-            transform: "translateY(-50%)",
-            willChange: "transform",
-            padding: `0 ${loopSpan}px`, // side padding so first/last have room during wrap
-          }}
-        >
-          {renderImages.map((src, i) => {
-            const dx = distanceFromCenter(i);
-            const { scale, rotateY, translateY, zIndex, opacity } =
-              deriveStyle(dx);
-            return (
-              <motion.div
-                key={`${i}-${src}`}
-                style={{
-                  width: cardWidth,
-                  height: cardHeight,
-                  borderRadius: 18,
-                  overflow: "hidden",
-                  flex: "0 0 auto",
-                  boxShadow:
-                    "0 10px 30px rgba(0,0,0,0.35), inset 0 0 0 1px rgba(255,255,255,0.06)",
-                  transformStyle: "preserve-3d",
-                  scale,
-                  rotateY,
-                  y: translateY,
-                  zIndex,
-                  opacity,
-                  cursor: "grab",
-                  userSelect: "none",
-                  background: "#0f131a",
-                }}
-                whileTap={{ cursor: "grabbing" }}
-              >
-                <img
-                  src={src}
-                  alt={`gallery-${i}`}
-                  style={{
-                    width: "100%",
-                    height: "100%",
-                    objectFit: "cover",
-                    display: "block",
-                  }}
-                  draggable={false}
-                />
-              </motion.div>
-            );
-          })}
-        </motion.div>
-
-        {/* Subtle center indicator (optional) */}
-        <div
-          style={{
-            position: "absolute",
-            left: "50%",
-            top: 0,
-            bottom: 0,
-            width: 1,
-            transform: "translateX(-0.5px)",
-            background:
-              "linear-gradient(180deg, transparent, rgba(255,255,255,0.12), transparent)",
-            pointerEvents: "none",
-          }}
-        />
-      </div>
-
-      {/* Header / instructions */}
+      {/* text container */}
       <div
         style={{
           position: "absolute",
-          top: 16,
-          left: 16,
-          right: 16,
           display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          gap: 12,
-          fontSize: 14,
-          opacity: 0.8,
+          flexDirection: isMobile ? "column" : "column",
+          alignItems: isMobile ? "center" : "flex-start",
+          gap: "0.5rem",
+          left: isMobile ? "50%" : isTablet ? "6%" : "3%",
+          bottom: isMobile ? "18%" : "14%",
+          transform: isMobile ? "translateX(-50%)" : "none",
+          textAlign: isMobile ? "center" : "left",
+          maxWidth: isMobile ? "90%" : isTablet ? "85%" : "420px",
+          zIndex: 2000,
+          pointerEvents: "none",
+          mixBlendMode: "difference",
+          filter: "invert(1) contrast(1.2)",
+          color: "white", // base color → will invert against bg
         }}
       >
-        <div>
-          <strong>Infinite Parallax Gallery</strong>
-          <span style={{ opacity: 0.7 }}> — drag horizontally</span>
-        </div>
-        <div style={{ opacity: 0.7 }}>
-          Items: {count} • Loop width: {Math.round(loopSpan)}px
-        </div>
+        {/* title */}
+        <motion.div
+          key={`title-${activeIndex}`}
+          initial="hidden"
+          animate="show"
+          variants={textVariants}
+          style={{
+            fontStyle: "bold",
+            fontWeight: 700,
+            lineHeight: 1,
+            letterSpacing: "-0.02em",
+            fontSize: Math.max(20, Math.min(48, vw * 0.06)),
+            fontFamily: "'Poppins', sans-serif",
+            color: "#212121",
+          }}
+        >
+          {packages[activeIndex]?.name}
+        </motion.div>
+
+        {/* description */}
+        <motion.div
+          key={`desc-${activeIndex}`}
+          initial="hidden"
+          animate="show"
+          variants={textVariants}
+          style={{
+            lineHeight: 1.4,
+            fontSize: isMobile ? 13 : isTablet ? 14 : 16,
+            color: "#212121",
+            textShadow: "0 1px 2px rgba(0,0,0,0.35)",
+          }}
+        >
+          {packages[activeIndex]?.description}
+        </motion.div>
       </div>
+
+      {/* gallery */}
+      <motion.div
+        drag="x"
+        dragConstraints={{
+          left: -(totalWidth - cardWidth - GAP / 2 - centerX),
+          right: centerX - cardWidth / 2,
+        }}
+        dragElastic={isMobile ? 0.25 : 0.15}
+        dragMomentum={true}
+        onDragEnd={() => gentlyAlignToIndex(activeIndex)}
+        style={{
+          x,
+          display: "flex",
+          alignItems: "center",
+          gap: GAP,
+          position: "absolute",
+          left: 0,
+          transform: "translateY(-50%)",
+          willChange: "transform",
+          padding: `0 ${Math.max(0, (vw - cardWidth) / 2)}px`,
+        }}
+      >
+        {images.map((src, i) => {
+          const dx = distanceFromCenter(i);
+          const { scale, rotateY, translateY, zIndex, opacity } =
+            deriveStyle(dx);
+          const diagonalY = (dx / (vw || 1)) * (vh * DIAGONAL_FACTOR);
+
+          return (
+            <motion.div
+              key={`${i}-${src}`}
+              style={{
+                width: cardWidth,
+                height: "360px",
+                borderRadius: 14,
+                overflow: "hidden",
+                flex: "0 0 auto",
+                boxShadow:
+                  "0 6px 20px rgba(0,0,0,0.35), inset 0 0 0 1px rgba(255,255,255,0.06)",
+                transformStyle: "preserve-3d",
+                scale,
+                rotateY,
+                y: translateY + diagonalY,
+                opacity,
+                zIndex,
+                cursor: "grab",
+                userSelect: "none",
+                background: "#0f131a",
+                willChange: "transform, opacity",
+              }}
+              whileTap={{ cursor: "grabbing" }}
+              onPointerUp={() => gentlyAlignToIndex(activeIndex)}
+            >
+              <img
+                src={src}
+                alt={`gallery-${i}`}
+                onError={(e) =>
+                  ((e.currentTarget as HTMLImageElement).src =
+                    "/slfg-placeholder.png")
+                }
+                loading="lazy"
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "cover", // 🔥 show full image without cropping
+                  objectPosition: "center", // make sure it’s centered
+                  backgroundColor: "#000", // fill empty spaces if aspect ratio differs
+                  display: "block",
+                  pointerEvents: "none",
+                }}
+                draggable={false}
+              />
+            </motion.div>
+          );
+        })}
+      </motion.div>
+
+      {/* scrubber */}
+      <motion.div
+        className="relative mt-140 h-2 bg-neutral-700 rounded-full cursor-pointer overflow-hidden"
+        style={{
+          width: isMobile ? "90%" : isTablet ? "75%" : "60%",
+          bottom: isMobile ? "2%" : "auto",
+          position: isMobile ? "absolute" : "static",
+        }}
+        onPointerDown={(e) => {
+          const rect = e.currentTarget.getBoundingClientRect();
+          const pct = (e.clientX - rect.left) / rect.width;
+          x.set(-pct * (totalWidth - vw));
+        }}
+        onPointerUp={() => gentlyAlignToIndex(activeIndex)}
+      >
+        <motion.div
+          className="h-full bg-gray-200 rounded-full"
+          style={{ scaleX: progress, originX: 0 }}
+          drag="x"
+          dragConstraints={{ left: 0, right: 0 }}
+          dragElastic={0}
+          dragMomentum={false}
+        />
+      </motion.div>
     </div>
   );
 }

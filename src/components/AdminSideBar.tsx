@@ -25,6 +25,7 @@ const navItems = [
   { label: "Sales", path: "/admin/sales", icon: "fas fa-dollar-sign" },
   { label: "Packages", path: "/admin/packages", icon: "fas fa-box" },
   { label: "Messages", path: "/admin/messages", icon: "fas fa-envelope" },
+  { label: "Gallery", path: "/admin/gallery", icon: "fas fa-image" },
 ];
 
 const AdminSidebar: React.FC<AdminSidebarProps> = ({
@@ -116,55 +117,55 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
 
       {/* ─── User Info Link ───────────────────────────── */}
       <NavLink
-      to="/admin/profile"
-      className={({ isActive }) =>
-        `relative block group ${
-          isActive
-            ? "bg-[rgba(238,238,225,0.13)] text-white scale-[1.02]"
-            : "hover:bg-gray-700 text-gray-400"
-        }`
-      }
-    >
-      <div
-        className={`relative flex items-center gap-2 text-[10px] px-3 py-4 rounded-md cursor-pointer 
-                    transition-all duration-300 ease-in-out group`}
+        to="/admin/profile"
+        className={({ isActive }) =>
+          `relative block group ${
+            isActive
+              ? "bg-[rgba(238,238,225,0.13)] text-white scale-[1.02]"
+              : "hover:bg-gray-700 text-gray-400"
+          }`
+        }
       >
-        <span
-          className={`absolute left-0 top-0 h-full w-1 rounded-tr-md rounded-br-md
+        <div
+          className={`relative flex items-center gap-2 text-[10px] px-3 py-4 rounded-md cursor-pointer 
+                    transition-all duration-300 ease-in-out group`}
+        >
+          <span
+            className={`absolute left-0 top-0 h-full w-1 rounded-tr-md rounded-br-md
                       transition-opacity duration-300 ease-in-out
                       ${
                         isProfileActive
                           ? "opacity-100"
                           : "opacity-0 group-hover:opacity-30"
                       }`}
-        />
+          />
 
-        <div
-          className={`absolute inset-0 z-0 rounded-md transition-all duration-300 ease-in-out 
+          <div
+            className={`absolute inset-0 z-0 rounded-md transition-all duration-300 ease-in-out 
                       ${collapsed ? "" : "group-hover:bg-gray-700"}`}
-        />
+          />
 
-        {/* Profile Picture or First Letter */}
-        <div className="z-10 w-8 h-8 rounded-full overflow-hidden flex items-center justify-center bg-white text-black font-semibold">
-          {profilePicture ? (
-            <img
-              src={profilePicture}
-              alt="Profile"
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            username.charAt(0).toUpperCase()
+          {/* Profile Picture or First Letter */}
+          <div className="z-10 w-8 h-8 rounded-full overflow-hidden flex items-center justify-center bg-white text-black font-semibold">
+            {profilePicture ? (
+              <img
+                src={profilePicture}
+                alt="Profile"
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              username.charAt(0).toUpperCase()
+            )}
+          </div>
+
+          {!collapsed && (
+            <div className="z-10 transition-opacity duration-300">
+              <div className="text-white font-medium text-xs">{username}</div>
+              <div className="text-gray-400">Admin</div>
+            </div>
           )}
         </div>
-
-        {!collapsed && (
-          <div className="z-10 transition-opacity duration-300">
-            <div className="text-white font-medium text-xs">{username}</div>
-            <div className="text-gray-400">Admin</div>
-          </div>
-        )}
-      </div>
-    </NavLink>
+      </NavLink>
     </aside>
   );
 };
