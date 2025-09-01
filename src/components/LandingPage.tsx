@@ -1,7 +1,8 @@
 // HomePage.tsx
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import { motion, useScroll, useTransform, useInView } from "framer-motion";
 import type { Variants } from "framer-motion";
+import InfiniteParallaxGallery from "../components/LandingGallery.tsx";
 
 const fadeUp: Variants = {
   hidden: { opacity: 0, y: 24 },
@@ -32,20 +33,45 @@ export default function HomePage(): React.JSX.Element {
   React.useEffect(() => {
     const el = carouselRef.current;
     if (!el) return;
-    // estimate drag width (content - container)
     const total = el.scrollWidth - el.offsetWidth;
     setCarouselWidth(total > 0 ? -total : 0);
   }, []);
 
+  // 🔥 Navbar show/hide on scroll
+  const [showHeader, setShowHeader] = useState(true);
+  const [lastScrollY, setLastScrollY] = useState(0);
+
+  const controlHeader = () => {
+    if (typeof window === "undefined") return;
+    if (window.scrollY > lastScrollY) {
+      setShowHeader(false); // scrolling down → hide
+    } else {
+      setShowHeader(true); // scrolling up → show
+    }
+    setLastScrollY(window.scrollY);
+  };
+
+  useEffect(() => {
+    window.addEventListener("scroll", controlHeader);
+    return () => window.removeEventListener("scroll", controlHeader);
+  }, [lastScrollY]);
+
   return (
-    <div ref={pageRef} className=" text-gray-800">
+    <div ref={pageRef} className="text-gray-800">
       {/* ---------- NAVBAR ---------- */}
-      <header className="fixed top-0 left-0 w-full z-50 bg-white/60 backdrop-blur-sm">
+      <header
+        className={`fixed top-0 left-0 w-full z-50 bg-white/60 backdrop-blur-sm transition-transform duration-300 ${
+          showHeader ? "translate-y-0" : "-translate-y-full"
+        }`}
+      >
         <div className="max-w-7xl mx-auto flex items-center justify-between p-4">
           <div className="flex items-center gap-4">
             <img src="slfg.svg" alt="logo" className="w-10 h-10" />
 
-            <div className="text-sm font-medium tracking-wider text-gray-700">
+            <div
+              className="text-sm font-bold tracking-wider text-gray-700"
+              style={{ fontFamily: "Poppins, sans-serif" }}
+            >
               SELFIEGRAM PHOTOSTUDIOS MALOLOS
             </div>
           </div>
@@ -58,7 +84,7 @@ export default function HomePage(): React.JSX.Element {
               Home
             </a>
             <a
-              href="#gallery"
+              href="#services"
               className="uppercase tracking-widest text-gray-700 transition-all duration-300 hover:text-black hover:-translate-y-0.5"
             >
               Services
@@ -98,11 +124,27 @@ export default function HomePage(): React.JSX.Element {
           id="home"
           className="min-h-screen relative overflow-hidden bg-gradient-to-b from-white to-gray-200"
         >
+          <h1
+            className="absolute inset-0 flex items-center justify-center 
+             font-extrabold tracking-tight text-gray-300 
+             select-none pointer-events-none z-0 mb-70"
+            style={{
+              fontSize: "27vw", // scales with screen width
+              lineHeight: "1",
+              whiteSpace: "nowrap",
+              width: "100vw",
+              textAlign: "center",
+            }}
+          >
+            selfigram
+          </h1>
+
           {/* soft background blur / gradient */}
-          <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute inset-0 pointer-events-none z-0">
             <div className="absolute -left-40 -top-40 w-[600px] h-[600px] bg-gradient-to-tr from-pink-200/30 to-purple-200/20 rounded-full blur-3xl opacity-60" />
           </div>
 
+          {/* Foreground content */}
           <div className="max-w-7xl mx-auto px-6 lg:px-20 py-24 relative z-10">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
               {/* LEFT: Polaroid art */}
@@ -115,7 +157,7 @@ export default function HomePage(): React.JSX.Element {
                 {/* polaroid 1 */}
                 <motion.img
                   ref={polaroidRefs[0] as any}
-                  src="/slfg-placeholder.png"
+                  src="../storage\packages\conceptstudio\cstudio4.jpg"
                   alt="Polaroid 1"
                   initial={{ opacity: 0, y: -60, rotate: -12, scale: 1.05 }}
                   animate={polaroidInViews[0] ? { opacity: 1, y: 0 } : {}}
@@ -123,7 +165,7 @@ export default function HomePage(): React.JSX.Element {
                   whileHover={{ scale: 1.03, y: -4 }}
                   className="absolute w-56 sm:w-72 rounded-xl shadow-[0_30px_60px_rgba(0,0,0,0.12)]"
                   style={{
-                    left: "4%",
+                    left: "0%",
                     top: "12%",
                     transformOrigin: "left center",
                   }}
@@ -132,7 +174,7 @@ export default function HomePage(): React.JSX.Element {
                 {/* polaroid 2 rotated */}
                 <motion.img
                   ref={polaroidRefs[1] as any}
-                  src="/slfg-placeholder.png"
+                  src="../storage\packages\selfieforone\sone1.png"
                   alt="Polaroid 2"
                   initial={{ opacity: 0, y: -30, rotate: 8, scale: 1 }}
                   animate={polaroidInViews[1] ? { opacity: 1, y: 0 } : {}}
@@ -140,8 +182,8 @@ export default function HomePage(): React.JSX.Element {
                   whileHover={{ scale: 1.02, y: -6 }}
                   className="absolute w-60 sm:w-80 rounded-xl shadow-[0_40px_80px_rgba(0,0,0,0.12)]"
                   style={{
-                    left: "28%",
-                    top: "4%",
+                    left: "38%",
+                    top: "6%",
                     transformOrigin: "center center",
                   }}
                 />
@@ -163,7 +205,7 @@ export default function HomePage(): React.JSX.Element {
               {/* RIGHT: Text block */}
               <motion.div
                 style={{ y: heroY }}
-                className="max-w-xl mx-auto lg:mx-0 text-left"
+                className="max-w-xl mx-auto lg:mx-0 text-left relative z-10"
                 initial="hidden"
                 whileInView="show"
                 viewport={{ once: true, amount: 0.25 }}
@@ -181,12 +223,7 @@ export default function HomePage(): React.JSX.Element {
                   className="mt-6 text-gray-600 leading-relaxed"
                 >
                   Where creativity meets quality! Step into a world of themed
-                  studios. Each thoughtfully designed to inspire and bring out
-                  your best. Whether you’re here for a solo shoot or capturing
-                  moments with loved ones, you have the freedom to choose
-                  between self-shooting or working with a skilled photographer.
-                  Our studio is dedicated to delivering high-quality images that
-                  turn your vision into reality.
+                  studios...
                 </motion.p>
 
                 <motion.div variants={fadeUp} className="mt-8">
@@ -236,7 +273,7 @@ export default function HomePage(): React.JSX.Element {
               >
                 <div className="relative w-full max-w-[360px]">
                   <img
-                    src="/slfg-placeholder.png"
+                    src="../storage\packages\studiorental\studio3.jpg"
                     alt="story-main"
                     className="rounded-xl shadow-xl w-full"
                     style={{ transform: "translateY(-6px)" }}
@@ -253,7 +290,7 @@ export default function HomePage(): React.JSX.Element {
               >
                 <div className="relative w-full max-w-[360px]">
                   <img
-                    src="/slfg-placeholder.png"
+                    src="../storage\packages\studiorental\studio2.jpg"
                     alt="vision-main"
                     className="rounded-xl shadow-xl w-full"
                   />
@@ -302,31 +339,31 @@ export default function HomePage(): React.JSX.Element {
             {/* Left: layered floating images */}
             <div className="relative h-96 flex items-center justify-center">
               <motion.img
-                src="/slfg-placeholder.png"
+                src="/storage\packages\selfiefortwo\stwo3.png"
                 alt="svc-1"
                 initial={{ rotate: -8, y: 40, opacity: 0 }}
                 whileInView={{ rotate: -8, y: 0, opacity: 1 }}
                 transition={{ duration: 0.7 }}
                 className="absolute w-64 rounded-lg shadow-2xl"
-                style={{ left: "8%", top: "12%" }}
+                style={{ left: "-10%", top: "12%" }}
               />
               <motion.img
-                src="/slfg-placeholder.png"
+                src="/storage\packages\selfiefortwo\stwo5.png"
                 alt="svc-2"
                 initial={{ rotate: 6, y: 40, opacity: 0 }}
                 whileInView={{ rotate: 6, y: 0, opacity: 1 }}
                 transition={{ duration: 0.8, delay: 0.1 }}
                 className="absolute w-64 rounded-lg shadow-2xl"
-                style={{ left: "30%", top: "28%" }}
+                style={{ left: "20%", top: "39%" }}
               />
               <motion.img
-                src="/slfg-placeholder.png"
+                src="/storage\packages\conceptstudio\cstudio3.jpg"
                 alt="svc-3"
                 initial={{ rotate: -2, y: 50, opacity: 0 }}
                 whileInView={{ rotate: -2, y: 0, opacity: 1 }}
                 transition={{ duration: 0.9, delay: 0.18 }}
                 className="absolute w-56 rounded-lg shadow-2xl"
-                style={{ left: "50%", top: "8%" }}
+                style={{ left: "55%", top: "3%" }}
               />
             </div>
 
@@ -430,69 +467,10 @@ export default function HomePage(): React.JSX.Element {
         </section>
 
         {/* ---------- PHOTO GALLERY ---------- */}
-        <section
-          id="gallery"
-          className="min-h-screen max-w-7xl mx-auto px-6 lg:px-20 py-14"
-        >
-          <h3 className="text-3xl font-bold mb-8">Photo Gallery</h3>
+        <section id="gallery" className="min-h-screen  mx-auto lg: py-14">
+          <h3 className="text-3xl text-center font-bold mb-8">Photo Gallery</h3>
 
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-            <motion.div
-              className="md:col-span-5 row-span-2 relative rounded-xl overflow-hidden"
-              initial={{ opacity: 0, y: 24 }}
-              whileInView={{ opacity: 1, y: 0 }}
-            >
-              <img
-                src="/slfg-placeholder.png"
-                alt="packages"
-                className="w-full h-full object-cover"
-              />
-              <div className="absolute inset-0 bg-black/45 flex flex-col justify-center items-start p-8">
-                <div className="text-white text-3xl font-bold leading-tight">
-                  Photo Packages
-                </div>
-                <div className="text-white/80 mt-2 text-sm">View More</div>
-              </div>
-            </motion.div>
-
-            <motion.img
-              src="/slfg-placeholder.png"
-              alt="g1"
-              className="md:col-span-7 rounded-xl h-48 object-cover"
-              initial={{ opacity: 0, y: 24 }}
-              whileInView={{ opacity: 1, y: 0 }}
-            />
-
-            <motion.img
-              src="/slfg-placeholder.png"
-              alt="g2"
-              className="md:col-span-4 rounded-xl h-40 object-cover"
-              initial={{ opacity: 0, y: 24 }}
-              whileInView={{ opacity: 1, y: 0 }}
-            />
-
-            <motion.img
-              src="/slfg-placeholder.png"
-              alt="g3"
-              className="md:col-span-4 rounded-xl h-40 object-cover"
-              initial={{ opacity: 0, y: 24 }}
-              whileInView={{ opacity: 1, y: 0 }}
-            />
-
-            <motion.img
-              src="/slfg-placeholder.png"
-              alt="g4"
-              className="md:col-span-4 rounded-xl h-40 object-cover"
-              initial={{ opacity: 0, y: 24 }}
-              whileInView={{ opacity: 1, y: 0 }}
-            />
-          </div>
-
-          <div className="mt-8 text-right">
-            <button className="px-6 py-3 rounded-full bg-black text-white hover:opacity-90 transition">
-              Gallery →
-            </button>
-          </div>
+          <InfiniteParallaxGallery />
         </section>
 
         {/* ---------- FOOTER ---------- */}

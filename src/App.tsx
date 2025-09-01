@@ -48,19 +48,69 @@ const App = () => {
         <Route path="/register-success" element={<PublicRoute><RegisterSuccess /></PublicRoute>} />
         <Route path="/LandingPage" element={<PublicRoute><LandingPage /></PublicRoute>} />
 
+
         {/* Routes that are not found */}
         <Route path="*" element={<ProtectedRoute><div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh" }}>404 Not Found</div></ProtectedRoute>} />
         <Route path="/" element={<ProtectedRoute><div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh" }}>Already Logged In</div></ProtectedRoute>} />
 
         {/* Admin routes */}
-        <Route path="/admin/dashboard" element={<ProtectedRoute allowedRoles={["Admin"]}><AdminDashboardPage /></ProtectedRoute>} />
-        <Route path="/admin/users" element={<ProtectedRoute allowedRoles={["Admin"]}><AdminUsersPage /></ProtectedRoute>} />
-        <Route path="/admin/appointments" element={<ProtectedRoute allowedRoles={["Admin"]}><AdminAppointmentsPage /></ProtectedRoute>} />
-        <Route path="/admin/sales" element={<ProtectedRoute allowedRoles={["Admin"]}><AdminSalesPage /></ProtectedRoute>} />
-        <Route path="/admin/messages" element={<ProtectedRoute allowedRoles={["Admin"]}><AdminMessagesPage /></ProtectedRoute>} />
-        <Route path="/admin/profile" element={<ProtectedRoute allowedRoles={["Admin"]}><AdminProfilePage /></ProtectedRoute>} />
+        <Route
+          path="/admin/dashboard"
+          element={
+            <ProtectedRoute allowedRoles={["Admin"]}>
+              <AdminDashboardPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/users"
+          element={
+            <ProtectedRoute allowedRoles={["Admin"]}>
+              <AdminUsersPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/appointments"
+          element={
+            <ProtectedRoute allowedRoles={["Admin"]}>
+              <AdminAppointmentsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/sales"
+          element={
+            <ProtectedRoute allowedRoles={["Admin"]}>
+              <AdminSalesPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/messages"
+          element={
+            <ProtectedRoute allowedRoles={["Admin"]}>
+              <AdminMessagesPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/profile"
+          element={
+            <ProtectedRoute allowedRoles={["Admin"]}>
+              <AdminProfilePage />
+            </ProtectedRoute>
+          }
+        />
 
-        <Route path="/admin/packages" element={<ProtectedRoute allowedRoles={["Admin"]}><AdminPackagesPage /></ProtectedRoute>}>
+        <Route
+          path="/admin/packages"
+          element={
+            <ProtectedRoute allowedRoles={["Admin"]}>
+              <AdminPackagesPage />
+            </ProtectedRoute>
+          }
+        >
           <Route index element={<AdminPackageContent />} />
           <Route path="add" element={<AddPackagePage />} />
           <Route path="edit/:id" element={<EditPackagePage />} />
@@ -68,26 +118,79 @@ const App = () => {
         </Route>
 
         {/* Client Routes */}
-        <Route path="/client/home" element={<ProtectedRoute allowedRoles={["Customer"]}><ClientHomePage /></ProtectedRoute>} />
-        <Route path="/client/packages" element={<ProtectedRoute allowedRoles={["Customer"]}><ClientPackagesPage /></ProtectedRoute>}>
+        <Route
+          path="/client/home"
+          element={
+            <ProtectedRoute allowedRoles={["Customer"]}>
+              <ClientHomePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/client/packages"
+          element={
+            <ProtectedRoute allowedRoles={["Customer"]}>
+              <ClientPackagesPage />
+            </ProtectedRoute>
+          }
+        >
           <Route index element={<ClientPackagePageContent />} />
           <Route path="select/:id" element={<SelectPackagePage />} />
         </Route>
 
-        <Route path="/client/favorites" element={<ProtectedRoute allowedRoles={["Customer"]}><ClientFavoritesPage /></ProtectedRoute>} />
-        <Route path="/client/gallery" element={<ProtectedRoute allowedRoles={["Customer"]}><ClientGalleryPage /></ProtectedRoute>} />
-        <Route path="/client/inbox" element={<ProtectedRoute allowedRoles={["Customer"]}><ClientInboxPage /></ProtectedRoute>} />
+        <Route
+          path="/client/favorites"
+          element={
+            <ProtectedRoute allowedRoles={["Customer"]}>
+              <ClientFavoritesPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/client/gallery"
+          element={
+            <ProtectedRoute allowedRoles={["Customer"]}>
+              <ClientGalleryPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/client/inbox"
+          element={
+            <ProtectedRoute allowedRoles={["Customer"]}>
+              <ClientInboxPage />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="/client/appointments"
-          element={<ProtectedRoute allowedRoles={["Customer"]}><ClientAppointmentsPage /></ProtectedRoute>}
+          element={
+            <ProtectedRoute allowedRoles={["Customer"]}>
+              <ClientAppointmentsPage />
+            </ProtectedRoute>
+          }
         />
-        <Route path="/client/history" element={<ProtectedRoute allowedRoles={["Customer"]}><ClientHistoryPage /></ProtectedRoute>} />
-        <Route path="/client/profile" element={<ProtectedRoute allowedRoles={["Customer"]}><ClientSettingsPage /></ProtectedRoute>} />
+        <Route
+          path="/client/history"
+          element={
+            <ProtectedRoute allowedRoles={["Customer"]}>
+              <ClientHistoryPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/client/profile"
+          element={
+            <ProtectedRoute allowedRoles={["Customer"]}>
+              <ClientSettingsPage />
+            </ProtectedRoute>
+          }
+        />
 
         <Route path="/receipt/booking/:bookingID" element={<ReceiptPage />} />
         {/* Fallback */}
-        
-        <Route path="*" element={<Login />} />
+
+        <Route path="*" element={<LandingPage />} />
       </Routes>
     </AnimatePresence>
   );
