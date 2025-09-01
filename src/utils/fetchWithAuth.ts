@@ -1,27 +1,28 @@
 export async function fetchWithAuth(url: string, options: RequestInit = {}) {
   const token = localStorage.getItem("token");
 
-  // No token at all
   if (!token) {
-    window.location.href = "/login"; // force redirect
+    window.location.href = "/login";
     throw new Error("No authentication token found");
   }
 
-  const headers = {
-    ...(options.headers || {}),
-    Authorization: token ? `Bearer ${token}` : "",
-    "Content-Type": "application/json",
-  };
+  const headers = new Headers(options.headers || {});
+  headers.set("Authorization", `Bearer ${token}`);
+
+  // Only set Content-Type if body is not FormData
+  const isFormData = options.body instanceof FormData;
+  if (!isFormData && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
+  }
 
   const response = await fetch(url, {
     ...options,
     headers,
   });
 
-  // If token expired or user not logged in
   if (response.status === 401) {
     localStorage.removeItem("token");
-    window.location.href = "/login"; // force redirect
+    window.location.href = "/login";
     throw new Error("Unauthorized - redirected to login");
   }
 
