@@ -14,6 +14,7 @@ import AdminAppointmentsPage from "./page/admin/AppointmentsPage.tsx";
 import AdminSalesPage from "./page/admin/SalesPage.tsx";
 import AdminMessagesPage from "./page/admin/MessagesPage.tsx";
 import AdminProfilePage from "./page/admin/ProfilePage.tsx";
+import AdminGalleryPage from "./page/admin/GalleryPage.tsx";
 
 import AdminPackagesPage from "./page/admin/PackagesPage.tsx";
 import AdminPackageContent from "../src/components/AdminPackageContent.tsx";
@@ -112,6 +113,15 @@ const App = () => {
           <Route path="edit/:id" element={<EditPackagePage />} />
           <Route path="select/:id" element={<SelectPackagePage />} />
         </Route>
+
+        <Route
+          path="/admin/gallery"
+          element={
+            <ProtectedRoute allowedRoles={["Admin"]}>
+              <AdminGalleryPage />
+            </ProtectedRoute>
+          }
+        />
 
         {/* Client Routes */}
         <Route
