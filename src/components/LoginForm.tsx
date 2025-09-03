@@ -41,6 +41,17 @@ const LoginForm = () => {
           password: formData.password,
         }),
       });
+      const url = `${API_URL}/api/login`;
+const res = await fetch(url, {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    "Accept": "application/json", // forces JSON error instead of HTML
+  },
+  body: JSON.stringify({ email: formData.email, password: formData.password }),
+});
+const raw = await res.text();
+console.log("HTTP", res.status, res.statusText, raw);
 
       const data = await response.json();
 
@@ -78,6 +89,7 @@ const LoginForm = () => {
       }
     } catch (error) {
       console.error("Login error:", error);
+      console.log("API_URL =", API_URL);
       toast.error("Something went wrong. Please try again.");
     }
   };
