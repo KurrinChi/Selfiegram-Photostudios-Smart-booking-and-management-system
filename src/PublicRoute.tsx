@@ -1,23 +1,15 @@
 import { Navigate } from "react-router-dom";
 
-interface ProtectedRouteProps {
+interface PublicRouteProps {
   children: React.ReactNode;
-  allowedRoles?: string[];
 }
 
-const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowedRoles }) => {
+const PublicRoute: React.FC<PublicRouteProps> = ({ children }) => {
   const token = localStorage.getItem("token");
   let userType = localStorage.getItem("userType") || "";
   userType = userType.replace(/"/g, "").trim();
-  console.log("token:", token, "userType:", userType, "allowedRoles:", allowedRoles);
 
-  if (!token) {
-    return <Navigate to="/login" replace />;
-  }
-
-  // checker of role for redirect
-  if (allowedRoles && !allowedRoles.includes(userType || "")) {
-    // redirect based on userType
+  if (token) {
     switch (userType) {
       case "Admin":
         return <Navigate to="/admin/dashboard" replace />;
@@ -31,4 +23,4 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowedRoles 
   return <>{children}</>;
 };
 
-export default ProtectedRoute;
+export default PublicRoute;

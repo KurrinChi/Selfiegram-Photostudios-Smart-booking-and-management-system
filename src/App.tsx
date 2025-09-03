@@ -1,6 +1,6 @@
-// Updated App.tsx with Client Routes and Admin Routes
 import { Routes, Route, useLocation } from "react-router-dom";
 import ProtectedRoute from "./ProtectedRoute";
+import PublicRoute from "./PublicRoute";
 import { AnimatePresence } from "framer-motion";
 
 import Login from "./page/Login";
@@ -43,12 +43,16 @@ const App = () => {
     <AnimatePresence mode="wait">
       <Routes location={location} key={location.pathname}>
         {/* Public routes */}
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-        <Route path="/register-info" element={<RegisterInfoForm />} />
-        <Route path="/register-success" element={<RegisterSuccess />} />
-        <Route path="/profile" element={<AdminProfilePage />} />
-        <Route path="/LandingPage" element={<LandingPage />} />
+        <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+        <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
+        <Route path="/register-info" element={<PublicRoute><RegisterInfoForm /></PublicRoute>} />
+        <Route path="/register-success" element={<PublicRoute><RegisterSuccess /></PublicRoute>} />
+        <Route path="/LandingPage" element={<PublicRoute><LandingPage /></PublicRoute>} />
+
+
+        {/* Routes that are not found */}
+        <Route path="*" element={<ProtectedRoute><div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh" }}>404 Not Found</div></ProtectedRoute>} />
+        <Route path="/" element={<ProtectedRoute><div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh" }}>Already Logged In</div></ProtectedRoute>} />
 
         {/* Admin routes */}
         <Route

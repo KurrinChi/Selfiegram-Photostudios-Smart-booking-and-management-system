@@ -29,10 +29,12 @@ class User extends Authenticatable
         'status',
         'profilePicture',
         'archive',
+        'reset_otp',
     ];
 
     protected $hidden = [
         'password',
+        'reset_otp',
     ];
 
     protected function casts(): array

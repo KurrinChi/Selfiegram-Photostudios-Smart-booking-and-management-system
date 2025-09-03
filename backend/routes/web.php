@@ -22,3 +22,20 @@ Route::get('/test-upload', function () {
 
     return $stored ? 'Stored successfully' : 'Failed to store';
 });
+
+
+use Illuminate\Support\Facades\Mail;
+use App\Mail\ForgotPassword;
+use App\Models\User;
+
+//test
+Route::get('/test-mail', function () {
+    $otp = 1234;
+
+    // Example: get a user (replace with actual logged-in user if needed)
+    $user = User::first();
+
+    Mail::to('demoprojectsystemuse@gmail.com')->send(new ForgotPassword($otp, $user));
+
+    return 'Mail sent!';
+});
