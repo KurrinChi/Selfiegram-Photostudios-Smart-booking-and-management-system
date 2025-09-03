@@ -50,8 +50,8 @@ const App = () => {
 
 
         {/* Routes that are not found */}
-               <Route path="*" element={<PublicRoute><div>404 Not Found</div></PublicRoute>} />
-        <Route path="/" element={<PublicRoute><div>Already Logged In</div></PublicRoute>} />
+          <Route path="*" element={<ProtectedRoute><div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh" }}>404 Not Found</div></ProtectedRoute>} />
+          <Route path="/" element={<ProtectedRoute><div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh" }}>Already Logged In</div></ProtectedRoute>} />
         {/* Admin routes */}
         <Route
           path="/admin/dashboard"
