@@ -70,7 +70,7 @@ class TransactionController extends Controller
                 'rem' => $remainingBalance,
                 'paymentMethod' => $request->payment_mode,
                 'paymentStatus' => $paymentStatus,
-                'status' => 0, // 0 = pending, 1 = completed, 2 = confirmed
+                'status' => 2, // 2 = pending (0 = cancelled, 1 = done, 2 = pending)
                 'date' => Carbon::now()->toDateString()
             ]);
 
