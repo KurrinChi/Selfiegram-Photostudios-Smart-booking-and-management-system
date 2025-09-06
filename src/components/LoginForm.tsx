@@ -37,27 +37,16 @@ const LoginForm = () => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          email: formData.email, 
+          email: formData.email,
           password: formData.password,
         }),
       });
-      const url = `${API_URL}/api/login`;
-const res = await fetch(url, {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-    "Accept": "application/json", // forces JSON error instead of HTML
-  },
-  body: JSON.stringify({ email: formData.email, password: formData.password }),
-});
-const raw = await res.text();
-console.log("HTTP", res.status, res.statusText, raw);
 
       const data = await response.json();
 
       if (data.status === "success") {
         console.log("Login successful:", data.user);
-        
+
         //store userid
         localStorage.setItem("token", data.token);
         localStorage.setItem("userID", data.user.userID);
@@ -96,7 +85,7 @@ console.log("HTTP", res.status, res.statusText, raw);
 
   // Request OTP
   const handleForgotPassword = async () => {
-  if (!formData.email.trim()) {
+    if (!formData.email.trim()) {
       toast.warning("Please enter your email");
       return; // Stop execution if email is empty
     }
@@ -151,7 +140,7 @@ console.log("HTTP", res.status, res.statusText, raw);
       const res = await fetch(`${API_URL}/api/reset-password`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "Accept": "application/json" },
-        body: JSON.stringify({ email: resetEmail , otp: code, password: newPassword }),
+        body: JSON.stringify({ email: resetEmail, otp: code, password: newPassword }),
       });
       const data = await res.json();
 
