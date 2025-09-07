@@ -37,6 +37,7 @@
     // Public routes (no login required)
     Route::post('/login', [AuthController::class, 'login']);
     Route::post('/register', [AuthController::class, 'register']);
+    Route::get('/verify-email/{token}', [AuthController::class, 'verifyEmail']);
     Route::get('/check-username', function (Request $request) {
         $username = $request->query('username');
         $exists = DB::table('users')->where('username', $username)->exists();

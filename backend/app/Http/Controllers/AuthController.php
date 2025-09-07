@@ -6,6 +6,9 @@
     use Illuminate\Http\Request;
     use Illuminate\Support\Facades\DB;
     use Illuminate\Support\Facades\Hash;
+    use Illuminate\Support\Str;
+    use Illuminate\Support\Facades\Mail;
+    use App\Mail\VerifyEmail;
 
     class AuthController extends Controller
     {
@@ -23,6 +26,27 @@
 
             // Retrieve user by email
             $user = User::where('email', $email)->first();
+
+            if (!$user) {
+                return response()->json([
+                    'status' => 'failed',
+                    'message' => 'Invalid email or password'
+                ], 401);
+            }
+
+
+            if ($user->email_verification !== null) {
+                return response()->json([
+                    'status' => 'failed',
+                    'message' => 'Please verify your email before logging in.'
+                ], 400);
+            }
+            if ($user->archive === 0) {
+                return response()->json([
+                    'status' => 'failed',
+                    'message' => 'Your account is inactive. Please contact support.'
+                ], 403);
+            }
 
             if ($user && Hash::check($password, $user->password)) {
                 $token = $user->createToken('auth_token')->plainTextToken;
@@ -54,10 +78,8 @@
                 'birthday' => 'required|string|max:40'
             ]);
 
-            // Hash the password
             $registerFields['password'] = bcrypt($registerFields['password']);
 
-            // Create the user directly with provided fname and lname
             $user = User::create([
                 'username' => $registerFields['username'],
                 'password' => $registerFields['password'],
@@ -71,15 +93,37 @@
                 'profilePicture' => '',
                 'archive' => '1',
                 'gender' => $registerFields['gender'],
-                'birthday' => $registerFields['birthday']
+                'birthday' => $registerFields['birthday'],
+                'email_verification' => Str::random(64), 
             ]);
+
+            Mail::to($user->email)->send(new VerifyEmail($user));
 
             return response()->json([
                 'status' => 'success',
-                'message' => 'User registered successfully!',
+                'message' => 'User registered successfully! Please check your email to verify your account.',
                 'user' => $user
             ], 201);
         }
+
+        public function verifyEmail($token)
+        {
+            $user = User::where('email_verification', $token)->first();
+
+            if (!$user) {
+                return response()->json(['status' => 'failed', 'message' => 'Invalid or expired verification link'], 400);
+            }
+
+            $user->email_verification = null;
+            $user->save();
+
+            return redirect(config('app.frontend_url') . '/')
+            ->with('toast', [
+                'type' => 'success',
+                'message' => 'Your email has been successfully verified. You can now log in.'
+            ]);
+        }
+
 
         public function logout(Request $request)
         {
