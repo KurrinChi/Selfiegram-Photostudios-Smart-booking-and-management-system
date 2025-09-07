@@ -2,7 +2,7 @@ export async function fetchWithAuth(url: string, options: RequestInit = {}) {
   const token = localStorage.getItem("token");
 
   if (!token) {
-    window.location.href = "/login";
+    window.location.href = "/";
     throw new Error("No authentication token found");
   }
 
@@ -22,7 +22,7 @@ export async function fetchWithAuth(url: string, options: RequestInit = {}) {
 
   if (response.status === 401) {
     localStorage.removeItem("token");
-    window.location.href = "/login";
+    window.location.href = "/";
     throw new Error("Unauthorized - redirected to login");
   }
 
