@@ -37,7 +37,7 @@ const LoginForm = () => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          email: formData.email, 
+          email: formData.email,
           password: formData.password,
         }),
       });
@@ -46,7 +46,7 @@ const LoginForm = () => {
 
       if (data.status === "success") {
         console.log("Login successful:", data.user);
-        
+
         //store userid
         localStorage.setItem("token", data.token);
         localStorage.setItem("userID", data.user.userID);
@@ -78,13 +78,14 @@ const LoginForm = () => {
       }
     } catch (error) {
       console.error("Login error:", error);
+      console.log("API_URL =", API_URL);
       toast.error("Something went wrong. Please try again.");
     }
   };
 
   // Request OTP
   const handleForgotPassword = async () => {
-  if (!formData.email.trim()) {
+    if (!formData.email.trim()) {
       toast.warning("Please enter your email");
       return; // Stop execution if email is empty
     }
@@ -139,7 +140,7 @@ const LoginForm = () => {
       const res = await fetch(`${API_URL}/api/reset-password`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "Accept": "application/json" },
-        body: JSON.stringify({ email: resetEmail , otp: code, password: newPassword }),
+        body: JSON.stringify({ email: resetEmail, otp: code, password: newPassword }),
       });
       const data = await res.json();
 

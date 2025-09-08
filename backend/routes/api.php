@@ -12,6 +12,7 @@
     use App\Http\Controllers\AppointmentController;
     use App\Http\Controllers\ReceiptController;
     use App\Http\Controllers\HomeController;
+    use App\Http\Controllers\TransactionController;
     use App\Http\Controllers\ForgotPasswordController;
 
     // Just for testing
@@ -22,9 +23,21 @@
         ]);
     });
 
+    // Debug route for testing booking creation
+    Route::middleware(['auth:sanctum'])->post('/test-booking', function (Request $request) {
+        $user = auth('sanctum')->user();
+        return response()->json([
+            'user' => $user,
+            'user_type' => $user ? $user->userType : null,
+            'request_data' => $request->all(),
+            'headers' => $request->headers->all()
+        ]);
+    });
+
     // Public routes (no login required)
     Route::post('/login', [AuthController::class, 'login']);
     Route::post('/register', [AuthController::class, 'register']);
+    Route::get('/verify-email/{token}', [AuthController::class, 'verifyEmail']);
     Route::get('/check-username', function (Request $request) {
         $username = $request->query('username');
         $exists = DB::table('users')->where('username', $username)->exists();
@@ -91,6 +104,11 @@
 
         //Client Home Page
         Route::get('/top-selling-packages', [HomeController::class, 'getTopSellingPackages']);
+
+        //Client Booking/Transaction
+        Route::post('/bookings', [TransactionController::class, 'createBooking']);
+        Route::get('/bookings/{id}', [TransactionController::class, 'showBooking']);
+        Route::get('/booked-slots', [TransactionController::class, 'getBookedTimeSlots']);
     });
 
     //receipt

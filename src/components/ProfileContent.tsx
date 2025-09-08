@@ -29,7 +29,7 @@ const ProfileContents: React.FC = () => {
       const userID = localStorage.getItem("userID");
       if (!userID) {
         toast.error("User not logged in");
-        window.location.href = "/login";
+        window.location.href = "/";
         return;
       }
 
@@ -164,10 +164,9 @@ const ProfileContents: React.FC = () => {
   } catch (error) {
     console.error("Logout request failed:", error);
   } finally {
-    // Always clear frontend storage
     localStorage.clear();
     sessionStorage.clear();
-    navigate("/login");
+    navigate("/");
   }
 };
 

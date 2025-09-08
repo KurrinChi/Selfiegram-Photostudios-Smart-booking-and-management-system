@@ -77,8 +77,7 @@ const RegisterInfoForm = () => {
         toast.success(
           "Registered successfully! Please check your email to proceed with log in.",
           {
-            position: "top-center",
-            autoClose: 5000, // time in ms before toast closes
+            autoClose: 7000, 
             onClose: () => {
               localStorage.removeItem("registerStep1");
               localStorage.removeItem("registerStep2");

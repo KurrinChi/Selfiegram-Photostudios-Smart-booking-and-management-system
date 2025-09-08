@@ -43,7 +43,7 @@ const App = () => {
     <AnimatePresence mode="wait">
       <Routes location={location} key={location.pathname}>
         {/* Public routes */}
-        <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+        <Route path="/" element={<PublicRoute><Login /></PublicRoute>} />
         <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
         <Route path="/register-info" element={<PublicRoute><RegisterInfoForm /></PublicRoute>} />
         <Route path="/register-success" element={<PublicRoute><RegisterSuccess /></PublicRoute>} />
@@ -51,9 +51,8 @@ const App = () => {
 
 
         {/* Routes that are not found */}
-        <Route path="*" element={<ProtectedRoute><div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh" }}>404 Not Found</div></ProtectedRoute>} />
-        <Route path="/" element={<ProtectedRoute><div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh" }}>Already Logged In</div></ProtectedRoute>} />
-
+          <Route path="*" element={<PublicRoute><div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh" }}>404 Not Found</div></PublicRoute>} />
+          {/* <Route path="/" element={<ProtectedRoute><div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh" }}>Already Logged In</div></ProtectedRoute>} /> */}
         {/* Admin routes */}
         <Route
           path="/admin/dashboard"
