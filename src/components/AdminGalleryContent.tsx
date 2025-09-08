@@ -19,16 +19,6 @@ const AdminGalleryContent = () => {
   // Removed unused rawBookingMap state
   const [search, setSearch] = useState(""); // Added search state
   const [statusFilter, setStatusFilter] = useState("All");
-  const [packageFilter, setPackageFilter] = useState("All");
-  const packages = ["Basic", "Premium", "Deluxe"]; // Example package names, replace with your actual package list
-  const [pickerOpen, setPickerOpen] = useState(false);
-  const [range, setRange] = useState([
-    {
-      startDate: new Date(),
-      endDate: new Date(),
-      key: "selection",
-    },
-  ]);
 
   const fetchHistory = async () => {
     try {
