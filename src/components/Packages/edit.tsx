@@ -6,11 +6,16 @@ interface Package {
   id: string;
   title: string;
   price: number;
-  duration: string;
+  duration: number;
   description: string;
   tags: string[];
-  images: string[]; 
+  images: string[];
   status: number; // 1 for active, 0 for archived
+}
+
+interface PackageType {
+  id: string | number;
+  name: string;
 }
 
 const API_URL = import.meta.env.VITE_API_URL;
@@ -19,36 +24,63 @@ const EditPackagePage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [pkg, setPkg] = useState<Package | null>(null);
+
   const [title, setTitle] = useState("");
-  const [price, setPrice] = useState(0);
-  const [duration, setDuration] = useState("");
+  const [price, setPrice] = useState<number | "">("");
+  const [duration, setDuration] = useState<number | "">("");
   const [description, setDescription] = useState("");
   const [tags, setTags] = useState<string[]>([]);
-  const [newTag, setNewTag] = useState("");
   const [coverImage, setCoverImage] = useState<string>("");
   const [carouselImages, setCarouselImages] = useState<string[]>([]);
+
+  // package types (from DB)
+  const [packageTypes, setPackageTypes] = useState<PackageType[]>([]);
+  const [typesLoading, setTypesLoading] = useState(false);
+  const [typesError, setTypesError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchPackage = async () => {
       try {
-        const response = await fetchWithAuth(`${API_URL}/api/admin/packages/${id}`);
+        const response = await fetchWithAuth(
+          `${API_URL}/api/admin/packages/${id}`
+        );
         const data = await response.json();
         setPkg(data);
         setTitle(data.title);
         setPrice(data.price);
         setDuration(data.duration);
         setDescription(data.description);
-        setTags(data.tags);
+        setTags(data.tags || []);
         setCoverImage(data.images[0] || "");
         setCarouselImages(data.images || []);
       } catch (error) {
         console.error("Failed to fetch package:", error);
-        setPkg(null); // Ensure the state is cleared if the fetch fails
+        setPkg(null);
       }
     };
 
     if (id) fetchPackage();
   }, [id]);
+
+  useEffect(() => {
+    const fetchTypes = async () => {
+      setTypesLoading(true);
+      setTypesError(null);
+      try {
+        const res = await fetchWithAuth(`${API_URL}/api/package_types`);
+        if (!res.ok) throw new Error(`Failed to fetch types: ${res.status}`);
+        const data = await res.json();
+        setPackageTypes(Array.isArray(data) ? data : []);
+      } catch (err) {
+        console.error(err);
+        setTypesError("Failed to load package types.");
+      } finally {
+        setTypesLoading(false);
+      }
+    };
+
+    fetchTypes();
+  }, []);
 
   const handleCarouselImageChange = (index: number, file: File) => {
     const reader = new FileReader();
@@ -60,25 +92,18 @@ const EditPackagePage = () => {
     reader.readAsDataURL(file);
   };
 
-  const addNewTag = () => {
-    if (newTag.trim() && !tags.includes(newTag.trim())) {
-      setTags([...tags, newTag.trim()]);
-      setNewTag("");
-    }
-  };
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const updatedPackage = {
       ...pkg!,
-      title,
-      price,
+      title: title.trim(),
+      price: price === "" ? 0 : price,
       duration,
-      description,
+      description: description.trim(),
       tags,
       images: carouselImages,
     };
-    // Send the updated package to the server (implement API call here)
+
     console.log("Updated Package:", updatedPackage);
     alert("Package updated successfully!");
     navigate("/admin/packages");
@@ -110,7 +135,9 @@ const EditPackagePage = () => {
                 <li key={idx} className="flex items-center gap-2 text-gray-600">
                   <div
                     className="relative cursor-pointer"
-                    onClick={() => document.getElementById(`file-input-${idx}`)?.click()}
+                    onClick={() =>
+                      document.getElementById(`file-input-${idx}`)?.click()
+                    }
                   >
                     <img
                       src={img}
@@ -118,14 +145,17 @@ const EditPackagePage = () => {
                       className="w-30 h-25 object-cover rounded-md"
                     />
                     <div className="absolute inset-0 bg-black opacity-0 hover:opacity-70 flex items-center justify-center rounded-md transition">
-                      <span className="text-white text-sm">Change Image {idx + 1}</span>
+                      <span className="text-white text-sm">
+                        Change Image {idx + 1}
+                      </span>
                     </div>
                   </div>
                   <input
                     id={`file-input-${idx}`}
                     type="file"
                     onChange={(e) =>
-                      e.target.files && handleCarouselImageChange(idx, e.target.files[0])
+                      e.target.files &&
+                      handleCarouselImageChange(idx, e.target.files[0])
                     }
                     className="hidden"
                   />
@@ -142,35 +172,48 @@ const EditPackagePage = () => {
             <input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
+              maxLength={100}
               className="w-full px-3 py-2 border rounded-md text-sm"
+              placeholder="e.g., Premium Wedding Package"
             />
           </div>
-          <div className="flex gap-3">
-            <div className="flex-1">
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
               <label className="block text-sm font-bold">
-                Category Label
+                Duration (minutes)*
               </label>
               <input
-                value={tags[0]}
-                onChange={(e) => setTags([e.target.value, ...tags.slice(1)])}
-                className="w-full px-3 py-2 border rounded-md text-sm"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-bold">Duration</label>
-              <input
+                type="number"
+                min={30}
+                max={300}
+                step={30}
                 value={duration}
-                onChange={(e) => setDuration(e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (/^\d*$/.test(val)) {
+                    setDuration(val === "" ? "" : Number(val));
+                  }
+                }}
                 className="w-full px-3 py-2 border rounded-md text-sm"
+                placeholder="e.g., 60"
               />
             </div>
+
             <div>
               <label className="block text-sm font-bold">Price</label>
               <input
                 type="number"
+                min={1}
                 value={price}
-                onChange={(e) => setPrice(Number(e.target.value))}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (/^\d*$/.test(val)) {
+                    setPrice(val === "" ? "" : Number(val));
+                  }
+                }}
                 className="w-full px-3 py-2 border rounded-md text-sm"
+                placeholder="e.g., 1500"
               />
             </div>
           </div>
@@ -181,37 +224,44 @@ const EditPackagePage = () => {
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={6}
+              maxLength={500}
               className="w-full px-3 py-2 border rounded-md text-sm"
+              placeholder="Describe the package details..."
             />
           </div>
 
+          {/* Tags from package_types */}
           <div>
-            <label className="block text-sm font-bold">Tags</label>
-            <div className="flex flex-wrap gap-2 mt-2">
-              {tags.map((tag) => (
-                <span
-                  key={tag}
-                  className="px-2 py-1 bg-gray-200 text-xs rounded-full"
-                >
-                  {tag}
-                </span>
-              ))}
-            </div>
-            <div className="mt-2 flex gap-2">
-              <input
-                value={newTag}
-                onChange={(e) => setNewTag(e.target.value)}
-                placeholder="Add new tag"
-                className="px-3 py-2 border rounded-md text-sm"
-              />
-              <button
-                type="button"
-                onClick={addNewTag}
-                className="px-4 py-2 bg-gray-800 text-white text-sm rounded-md"
-              >
-                Add Tag
-              </button>
-            </div>
+            <label className="block text-sm font-medium">Package Types *</label>
+            {typesLoading ? (
+              <p className="text-xs text-gray-500 mt-1">Loading...</p>
+            ) : typesError ? (
+              <p className="text-xs text-red-500 mt-1">{typesError}</p>
+            ) : (
+              <div className="flex flex-wrap gap-2 mt-1">
+                {packageTypes.map((type) => (
+                  <button
+                    type="button"
+                    key={type.id}
+                    onClick={() =>
+                      setTags((prev) =>
+                        prev.includes(type.name)
+                          ? prev.filter((t) => t !== type.name)
+                          : [...prev, type.name]
+                      )
+                    }
+                    className={`px-3 py-1 rounded-md text-sm border transition-all duration-200
+                      ${
+                        tags.includes(type.name)
+                          ? "bg-[#212121] text-white border-[#212121]"
+                          : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"
+                      }`}
+                  >
+                    {type.name}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="flex justify-end gap-3 mt-auto">

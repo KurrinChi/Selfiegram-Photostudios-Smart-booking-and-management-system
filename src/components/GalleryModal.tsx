@@ -2,9 +2,20 @@
 import React, { useState, useRef, useEffect } from "react";
 import { X, Upload, Trash2 } from "lucide-react";
 
+// 👇 Add this type (adjust fields as needed for your API)
+export interface BookingSummary {
+  id: number | string;
+  packageName: string;
+  customerName?: string | null;
+  dateTime?: string; // ISO string, e.g. "2025-01-24T10:00:00Z"
+  bookingStartTime?: string; // e.g. "10:00:00"
+  bookingEndTime?: string; // e.g. "12:00:00"
+}
+
 interface GalleryModalProps {
   isOpen: boolean;
   onClose: () => void;
+  booking?: BookingSummary; // 👈 NEW
 }
 
 interface ImageItem {
@@ -12,7 +23,11 @@ interface ImageItem {
   url: string;
 }
 
-const GalleryModal: React.FC<GalleryModalProps> = ({ isOpen, onClose }) => {
+const GalleryModal: React.FC<GalleryModalProps> = ({
+  isOpen,
+  onClose,
+  booking,
+}) => {
   const [images, setImages] = useState<ImageItem[]>([]);
   const [multiSelectMode, setMultiSelectMode] = useState(false);
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
@@ -62,7 +77,18 @@ const GalleryModal: React.FC<GalleryModalProps> = ({ isOpen, onClose }) => {
       <div className="relative bg-white rounded-lg shadow-lg w-full max-w-4xl h-[90vh] flex flex-col">
         {/* Header */}
         <div className="flex justify-between items-center p-4 border-b">
-          <h2 className="text-lg font-semibold">Gallery</h2>
+          <h2 className="text-lg font-semibold">
+            Gallery {booking ? `– ${booking.customerName}` : ""}
+          </h2>
+          {booking && (
+            <p className="text-xs text-gray-500 mt-1">
+              ID: {booking.id} • {booking.packageName ?? "N/A"} •
+              {booking.dateTime
+                ? " " + new Date(booking.dateTime).toLocaleDateString("en-US")
+                : ""}
+            </p>
+          )}
+
           <button
             onClick={onClose}
             className="p-1 hover:bg-gray-100 rounded-full"

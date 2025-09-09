@@ -93,7 +93,10 @@ const LoginForm = () => {
     try {
       const res = await fetch(`${API_URL}/api/forgot-password`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", "Accept": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
         body: JSON.stringify({ email: formData.email }),
       });
       const data = await res.json();
@@ -116,7 +119,10 @@ const LoginForm = () => {
       const code = otp.join("");
       const res = await fetch(`${API_URL}/api/verify-otp`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", "Accept": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
         body: JSON.stringify({ email: resetEmail, otp: code }),
       });
       const data = await res.json();
@@ -139,8 +145,15 @@ const LoginForm = () => {
       const code = otp.join("");
       const res = await fetch(`${API_URL}/api/reset-password`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", "Accept": "application/json" },
-        body: JSON.stringify({ email: resetEmail, otp: code, password: newPassword }),
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({
+          email: resetEmail,
+          otp: code,
+          password: newPassword,
+        }),
       });
       const data = await res.json();
 
@@ -218,7 +231,7 @@ const LoginForm = () => {
           type="submit"
           className="w-full py-3 bg-[#E2E1E1] text-[#4E4E4E] rounded-xl font-semibold hover:bg-[#333] hover:text-[#E2E1E1] transition-colors"
         >
-          Login
+          Log in
         </button>
       </form>
 
