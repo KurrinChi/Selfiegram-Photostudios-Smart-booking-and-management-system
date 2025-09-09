@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
-import mockPackages from "../../data/mockPackages.json";
+import { fetchWithAuth } from "../../utils/fetchWithAuth";
 
 interface Package {
   id: string;
@@ -9,8 +9,11 @@ interface Package {
   duration: string;
   description: string;
   tags: string[];
-  images: string[];
+  images: string[]; 
+  status: number; // 1 for active, 0 for archived
 }
+
+const API_URL = import.meta.env.VITE_API_URL;
 
 const EditPackagePage = () => {
   const { id } = useParams();
@@ -26,18 +29,25 @@ const EditPackagePage = () => {
   const [carouselImages, setCarouselImages] = useState<string[]>([]);
 
   useEffect(() => {
-    if (!id) return;
-    const found = (mockPackages as Package[]).find((p) => p.id === id);
-    if (found) {
-      setPkg(found);
-      setTitle(found.title);
-      setPrice(found.price);
-      setDuration(found.duration);
-      setDescription(found.description);
-      setTags(found.tags);
-      setCoverImage(found.images[0]);
-      setCarouselImages(found.images);
-    }
+    const fetchPackage = async () => {
+      try {
+        const response = await fetchWithAuth(`${API_URL}/api/admin/packages/${id}`);
+        const data = await response.json();
+        setPkg(data);
+        setTitle(data.title);
+        setPrice(data.price);
+        setDuration(data.duration);
+        setDescription(data.description);
+        setTags(data.tags);
+        setCoverImage(data.images[0] || "");
+        setCarouselImages(data.images || []);
+      } catch (error) {
+        console.error("Failed to fetch package:", error);
+        setPkg(null); // Ensure the state is cleared if the fetch fails
+      }
+    };
+
+    if (id) fetchPackage();
   }, [id]);
 
   const handleCarouselImageChange = (index: number, file: File) => {
@@ -47,12 +57,6 @@ const EditPackagePage = () => {
       updated[index] = reader.result as string;
       setCarouselImages(updated);
     };
-    reader.readAsDataURL(file);
-  };
-
-  const handleCoverImageChange = (file: File) => {
-    const reader = new FileReader();
-    reader.onloadend = () => setCoverImage(reader.result as string);
     reader.readAsDataURL(file);
   };
 
@@ -74,7 +78,8 @@ const EditPackagePage = () => {
       tags,
       images: carouselImages,
     };
-    // Here you'd normally update state or save via API
+    // Send the updated package to the server (implement API call here)
+    console.log("Updated Package:", updatedPackage);
     alert("Package updated successfully!");
     navigate("/admin/packages");
   };
@@ -98,41 +103,42 @@ const EditPackagePage = () => {
             alt="Cover"
             className="rounded-md object-cover w-full mb-3"
           />
-          <input
-            type="file"
-            onChange={(e) =>
-              e.target.files && handleCoverImageChange(e.target.files[0])
-            }
-          />
-
           <div className="mt-4 bg-gray-50 p-3 rounded">
-            <h4 className="text-xs font-semibold mb-2">Carousel Images</h4>
-            <ul className="text-xs mb-2">
+            <h1 className="text-center font-semibold mb-5">Images</h1>
+            <ul className="flex flex-wrap gap-5 m-1">
               {carouselImages.map((img, idx) => (
-                <li key={idx} className="truncate text-gray-600 mb-1">
-                  Image {idx + 1}
+                <li key={idx} className="flex items-center gap-2 text-gray-600">
+                  <div
+                    className="relative cursor-pointer"
+                    onClick={() => document.getElementById(`file-input-${idx}`)?.click()}
+                  >
+                    <img
+                      src={img}
+                      alt={`Image ${idx + 1}`}
+                      className="w-30 h-25 object-cover rounded-md"
+                    />
+                    <div className="absolute inset-0 bg-black opacity-0 hover:opacity-70 flex items-center justify-center rounded-md transition">
+                      <span className="text-white text-sm">Change Image {idx + 1}</span>
+                    </div>
+                  </div>
+                  <input
+                    id={`file-input-${idx}`}
+                    type="file"
+                    onChange={(e) =>
+                      e.target.files && handleCarouselImageChange(idx, e.target.files[0])
+                    }
+                    className="hidden"
+                  />
                 </li>
               ))}
             </ul>
-            <div className="space-y-2">
-              {carouselImages.map((_, idx) => (
-                <input
-                  key={idx}
-                  type="file"
-                  onChange={(e) =>
-                    e.target.files &&
-                    handleCarouselImageChange(idx, e.target.files[0])
-                  }
-                />
-              ))}
-            </div>
           </div>
         </div>
 
         {/* Right - Form */}
         <form onSubmit={handleSubmit} className="flex-1 space-y-4">
           <div>
-            <label className="block text-sm font-medium">Package Name</label>
+            <label className="block text-sm font-bold">Package Name</label>
             <input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
@@ -141,7 +147,7 @@ const EditPackagePage = () => {
           </div>
           <div className="flex gap-3">
             <div className="flex-1">
-              <label className="block text-sm font-medium">
+              <label className="block text-sm font-bold">
                 Category Label
               </label>
               <input
@@ -151,7 +157,7 @@ const EditPackagePage = () => {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium">Duration</label>
+              <label className="block text-sm font-bold">Duration</label>
               <input
                 value={duration}
                 onChange={(e) => setDuration(e.target.value)}
@@ -159,7 +165,7 @@ const EditPackagePage = () => {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium">Price</label>
+              <label className="block text-sm font-bold">Price</label>
               <input
                 type="number"
                 value={price}
@@ -170,7 +176,7 @@ const EditPackagePage = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium">Description</label>
+            <label className="block text-sm font-bold">Description</label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
@@ -180,7 +186,7 @@ const EditPackagePage = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium">Tags</label>
+            <label className="block text-sm font-bold">Tags</label>
             <div className="flex flex-wrap gap-2 mt-2">
               {tags.map((tag) => (
                 <span
@@ -208,17 +214,17 @@ const EditPackagePage = () => {
             </div>
           </div>
 
-          <div className="flex justify-end gap-3 mt-6">
+          <div className="flex justify-end gap-3 mt-auto">
             <button
               type="button"
               onClick={() => navigate("/admin/packages")}
-              className="px-4 py-2 border rounded-md text-sm"
+              className="px-4 py-2 border rounded-md text-sm hover:bg-gray-200 transition"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-6 py-2 bg-black text-white rounded-md text-sm"
+              className="px-6 py-2 bg-black text-white rounded-md text-sm hover:opacity-80 transition"
             >
               Confirm
             </button>

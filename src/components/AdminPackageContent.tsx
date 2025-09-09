@@ -3,29 +3,50 @@ import { useNavigate } from "react-router-dom";
 import { ChevronDown } from "lucide-react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faSearch } from "@fortawesome/free-solid-svg-icons";
-import mockPackages from "../data/mockPackages.json";
+import { fetchWithAuth } from "../utils/fetchWithAuth";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import { Archive, Pen, RefreshCw } from "lucide-react";
 
 interface Package {
   id: string;
   title: string;
   price: number;
   tags: string[];
-  images: string[];
+  images?: string[];
+  status: number; // 1 for active, 0 for archived
 }
 
-const allPackages: Package[] = mockPackages as Package[];
-
-const allTags = Array.from(new Set(allPackages.flatMap((pkg) => pkg.tags)));
+const API_URL = import.meta.env.VITE_API_URL;
 
 const AdminPackageContent: React.FC = () => {
+  const [allPackages, setAllPackages] = useState<Package[]>([]);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState<string>("");
-  const [imageIndexMap, setImageIndexMap] = useState<Record<string, number>>(
-    {}
-  );
+  const [imageIndexMap, setImageIndexMap] = useState<Record<string, number>>({});
   const [fadingImages, setFadingImages] = useState<Record<string, boolean>>({});
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+
+
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const fetchPackages = async () => {
+      try {
+        const response = await fetchWithAuth(`${API_URL}/api/admin/packages-all`);
+        const data = await response.json();
+        setAllPackages(data);
+      } catch (error) {
+        console.error("Failed to fetch packages:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPackages();
+  }, []);
 
   const toggleTag = (tag: string) => {
     setSelectedTags((prev) =>
@@ -33,14 +54,16 @@ const AdminPackageContent: React.FC = () => {
     );
   };
 
+  const allTags = Array.from(new Set(allPackages.flatMap((pkg) => pkg.tags)));
+
   const filtered = allPackages.filter((pkg) => {
     const matchesTags =
       selectedTags.length === 0 ||
-      selectedTags.every((tag) => pkg.tags.includes(tag));
+      selectedTags.every((tag) => pkg.tags?.includes(tag));
     const lowerQuery = searchQuery.toLowerCase();
     const matchesSearch =
       pkg.title.toLowerCase().includes(lowerQuery) ||
-      pkg.tags.some((tag) => tag.toLowerCase().includes(lowerQuery)) ||
+      pkg.tags?.some((tag) => tag.toLowerCase().includes(lowerQuery)) ||
       pkg.price.toString() === searchQuery;
 
     return matchesTags && matchesSearch;
@@ -54,7 +77,8 @@ const AdminPackageContent: React.FC = () => {
         setTimeout(() => {
           setImageIndexMap((prev) => {
             const current = prev[pkg.id] ?? 0;
-            const next = (current + 1) % pkg.images.length;
+            const images = pkg.images ?? [];
+            const next = (current + 1) % images.length;
             return { ...prev, [pkg.id]: next };
           });
           setFadingImages((prev) => ({ ...prev, [pkg.id]: false }));
@@ -87,13 +111,43 @@ const AdminPackageContent: React.FC = () => {
     return colorMap[tag] || "bg-gray-100 text-gray-700";
   };
 
+  const toggleArchive = async (pkg: Package) => {
+    if (!pkg) return;
+
+    const newStatus = pkg.status === 1 ? 0 : 1;
+
+    try {
+      const response = await fetchWithAuth(`${API_URL}/api/admin/packages/${pkg.id}/archive`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ status: newStatus }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setAllPackages((prevPackages) =>
+          prevPackages.map((p) =>
+            p.id === pkg.id ? { ...p, status: data.newStatus } : p
+          )
+        );
+        toast.success(data.message); 
+      } else {
+        toast.error(data.message || "Failed to update package status.");
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error("Something went wrong while updating package status.");
+    }
+  }
+
   return (
-    <div className="p-4">
-      {/* Header */}
+    <div className="p-4 overflow-y-auto max-h-230 rounded-3xl transition-all duration-300">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-        <h1 className="text-2xl font-semibold">Packages</h1>
+        <h1 className="text-2xl font-semibold">Available Packages</h1>
         <div className="flex flex-wrap gap-3 items-center text-xs">
-          {/* Search Bar */}
           <div className="relative">
             <FontAwesomeIcon
               icon={faSearch}
@@ -106,6 +160,7 @@ const AdminPackageContent: React.FC = () => {
               className="pl-7 pr-3 py-2 border rounded-md w-48 text-sm"
             />
           </div>
+
           <div className="relative text-sm z-50">
             <button
               onClick={() => setDropdownOpen(!dropdownOpen)}
@@ -139,8 +194,9 @@ const AdminPackageContent: React.FC = () => {
         </div>
       </div>
 
-      {/* Grid */}
-      {filtered.length > 0 ? (
+      {loading ? (
+        <div className="text-center py-20 text-gray-400">Loading packages...</div>
+      ) : filtered.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {filtered.map((pkg) => {
             const currentImgIdx = imageIndexMap[pkg.id] ?? 0;
@@ -149,68 +205,77 @@ const AdminPackageContent: React.FC = () => {
             return (
               <div
                 key={pkg.id}
-                className="relative bg-white rounded-xl shadow-sm transition-all duration-300 transform hover:-translate-y-2 hover:scale-105 hover:shadow-xl p-2 overflow-hidden group"
+                className="relative bg-white rounded-xl shadow-sm transition-all duration-300 transform hover:-translate-y-2 hover:scale-102 hover:shadow-xl p-2 overflow-hidden group"
               >
-                <div className="absolute top-4 right-4 flex gap-2">
-                    <button
-                      onClick={() => navigate(`edit/${pkg.id}`)}
-                      className=" top-5 right-5 px-3 py-1 text-xs z-30 rounded-md text-black font-bold backdrop-blur-md bg-white/10 border border-white/20 shadow-md hover:bg-white/20 transition"
-                    >
-                      ARCHIVE
-                    </button>
-                    <button
-                      onClick={() => navigate(`edit/${pkg.id}`)}
-                      className=" top-5 right-5 px-3 py-1 text-xs z-30 rounded-md text-black font-bold backdrop-blur-md bg-white/10 border border-white/20 shadow-md hover:bg-white/20 transition"
-                    >
-                      EDIT
-                    </button>
-                </div>
 
-                <div className="relative z-0 h-100 rounded-md overflow-hidden">
+                <div className="relative z-0 h-100 rounded-md overflow-hidden bg-gray-100">
                   <img
-                    src={pkg.images[currentImgIdx]}
-                    className={`w-full h-full object-cover transition-opacity duration-500 ease-in-out ${
-                      isFading ? "opacity-0" : "opacity-100"
-                    }`}
+                    src={
+                      pkg.images && pkg.images.length > 0
+                        ? pkg.images[currentImgIdx]
+                        : "/slfg-placeholder 2.png"
+                    }
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = "/slfg-placeholder 2.png";
+                    }}
+                    className={`w-full h-full object-cover transition-opacity duration-500 ease-in-out ${isFading ? "opacity-0" : "opacity-100"
+                      }`}
                     alt="Package"
                   />
-                  <div className="absolute bottom-2 w-full flex justify-center gap-1">
-                    {pkg.images.map((_, i) => (
-                      <div
-                        key={i}
-                        className={`h-2 w-2 rounded-full ${
-                          i === currentImgIdx
-                            ? "bg-black"
-                            : "bg-gray-300 scale-60"
-                        }`}
-                      />
-                    ))}
+                  <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1 bg-white/60 px-2 py-1 rounded-full backdrop-blur-sm">
+                    {(pkg.images?.length ? pkg.images : ["/slfg-placeholder 2.png"]).map(
+                      (img, i) => (
+                        <img
+                          key={i}
+                          src={img}
+                          onClick={() =>
+                            setImageIndexMap((prev) => ({ ...prev, [pkg.id]: i }))
+                          }
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = "/slfg-placeholder 2.png";
+                          }}
+                          className={`w-6 h-6 object-cover rounded-full border-2 cursor-pointer transition ${i === currentImgIdx
+                            ? "border-black"
+                            : "border-transparent opacity-60"
+                            }`}
+                          alt={`Thumb ${i + 1}`}
+                        />
+                      )
+                    )}
                   </div>
                 </div>
 
                 <div className="p-3 space-y-2">
                   <div className="font-medium text-sm">{pkg.title}</div>
                   <div className="text-gray-500 text-xs">
-                    ₱{pkg.price.toFixed(2)}
+                    ₱{Number(pkg.price).toFixed(2)}
                   </div>
                   <div className="flex flex-wrap gap-1">
-                    {pkg.tags.map((tag) => (
+                    {(pkg.tags ?? []).map((tag) => (
                       <span
                         key={tag}
-                        className={`px-2 py-0.5 rounded-full text-[10px] ${getTagPillClass(
-                          tag
-                        )}`}
+                        className={`px-2 py-0.5 rounded-full text-[10px] ${getTagPillClass(tag)}`}
                       >
                         {tag}
                       </span>
                     ))}
                   </div>
-                  <button
-                    onClick={() => navigate(`select/${pkg.id}`)}
-                    className="mt-2 w-full py-2 text-xs bg-gray-100 rounded-md hover:bg-gray-200 transition"
-                  >
-                    SELECT
-                  </button>
+                  <div className="absolute top-4 right-4 flex gap-3 ">
+                    <button
+                      onClick={() => toggleArchive(pkg)}
+                      className=" p-2 rounded-md font-bold backdrop-blur-md bg-gray-100 border border-white/20 shadow-md hover:bg-gray-200 transition"
+                      title={pkg.status === 1 ? "Archive Package" : "Unarchive Package"}
+                    >
+                      {pkg.status === 1 ? <Archive className="text-red-400" /> : <RefreshCw className="text-green-400" />}
+                    </button>
+                    <button
+                      onClick={() => navigate(`edit/${pkg.id}`)}
+                      className=" p-2 rounded-md  font-bold backdrop-blur-md bg-gray-100 border border-white/20 shadow-md hover:bg-gray-200 transition"
+                      title="Edit Package"
+                    >
+                      <Pen className="text-black-700" />
+                    </button>
+                  </div>
                 </div>
               </div>
             );
@@ -221,8 +286,10 @@ const AdminPackageContent: React.FC = () => {
           No packages found with the selected filters or search query.
         </div>
       )}
+      <ToastContainer position="bottom-right" />
     </div>
   );
 };
 
 export default AdminPackageContent;
+

@@ -76,6 +76,11 @@
         Route::post('/appointments/cancel', [AppointmentController::class, 'cancelAppointment']);
         Route::post('/appointments/reschedule', [AppointmentController::class, 'rescheduleAppointment']);
         Route::post('/appointments/completed', [AppointmentController::class, 'markAsCompleted']);
+
+        //admin package management
+        Route::get('/admin/packages-all', [PackageController::class, 'adminShowAll']);
+        Route::get('/admin/packages/{id}', [PackageController::class, 'adminShow']);
+        Route::post('/admin/packages/{id}/archive', [PackageController::class, 'archivePackage']);
     });
 
     // Protected routes (user must be logged in) CUSTOMER
