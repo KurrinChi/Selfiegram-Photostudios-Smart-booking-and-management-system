@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom"; // Link and useNavigate imported here
+import { useParams, useNavigate } from "react-router-dom"; // Link and useNavigate imported here
 import { DayPicker } from "react-day-picker";
 import "react-day-picker/dist/style.css";
 import { isToday, isSameDay } from "date-fns";
@@ -28,20 +28,20 @@ const SelectPackagePage = () => {
   const [paymentMode, setPaymentMode] = useState("");
   const [agreed, setAgreed] = useState(false);
 
-useEffect(() => {
-  const fetchPackage = async () => {
-    try {
-      const response = await fetchWithAuth(`${API_URL}/api/packages/${id}`);
-      const data = await response.json();
-      setPkg(data);
-    } catch (error) {
-      console.error("Failed to fetch package:", error);
-      setPkg(null);
-    }
-  };
+  useEffect(() => {
+    const fetchPackage = async () => {
+      try {
+        const response = await fetchWithAuth(`${API_URL}/api/packages/${id}`);
+        const data = await response.json();
+        setPkg(data);
+      } catch (error) {
+        console.error("Failed to fetch package:", error);
+        setPkg(null);
+      }
+    };
 
-  if (id) fetchPackage();
-}, [id]);
+    if (id) fetchPackage();
+  }, [id]);
 
   if (!pkg)
     return <div className="p-4 text-sm text-gray-500">Package not found.</div>;
@@ -151,6 +151,12 @@ useEffect(() => {
             </div>
           </div>
         </div>
+      </div>
+
+      <div className="bg-neutral-900 text-white rounded-xl p-5 ">
+        <h3 className="text-lg font-semibold">Add Ons</h3>
+
+        <div className="grid grid-cols-3 md:grid-cols-2 gap-4"></div>
       </div>
 
       {/* Personal Details Section */}

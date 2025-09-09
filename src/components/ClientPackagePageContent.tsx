@@ -20,7 +20,9 @@ const ClientPackagePageContent: React.FC = () => {
   const [allPackages, setAllPackages] = useState<Package[]>([]);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState<string>("");
-  const [imageIndexMap, setImageIndexMap] = useState<Record<string, number>>({});
+  const [imageIndexMap, setImageIndexMap] = useState<Record<string, number>>(
+    {}
+  );
   const [fadingImages, setFadingImages] = useState<Record<string, boolean>>({});
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
@@ -29,7 +31,7 @@ const ClientPackagePageContent: React.FC = () => {
   const navigate = useNavigate();
 
   const fetchFavorites = async () => {
-   const user = JSON.parse(localStorage.getItem("user") || "{}");
+    const user = JSON.parse(localStorage.getItem("user") || "{}");
     const userId = user?.userID;
     console.log("LocalStorage user:", user);
 
@@ -39,7 +41,9 @@ const ClientPackagePageContent: React.FC = () => {
     }
 
     try {
-      const res = await fetchWithAuth(`${API_URL}/api/favorites/user/${userId}`);
+      const res = await fetchWithAuth(
+        `${API_URL}/api/favorites/user/${userId}`
+      );
       const data = await res.json();
       console.log("Fetched favorites from backend:", data);
 
@@ -79,54 +83,53 @@ const ClientPackagePageContent: React.FC = () => {
   };
 
   const toggleFavorite = async (packageId: string) => {
-  const user = JSON.parse(localStorage.getItem("user") || "{}");
-  const userId = user?.userID;
+    const user = JSON.parse(localStorage.getItem("user") || "{}");
+    const userId = user?.userID;
 
-  if (!userId) {
-    alert("Please log in to favorite packages.");
-    return;
-  }
-
-  const idStr = packageId.toString();
-  const isAlreadyFavorite = favoriteIds.has(idStr);
-
-  const url = isAlreadyFavorite
-    ? `${API_URL}/api/favorites/remove`
-    : `${API_URL}/api/favorites/add`;
-
-  try {
-    const response = await fetchWithAuth(url, {
-      method: "POST", // keep it POST for both add/remove if backend expects it
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        userID: userId,
-        packageID: packageId,
-      }),
-    });
-
-    const data = await response.json();
-    console.log("Favorite toggle response:", data);
-
-    if (data.success) {
-      setFavoriteIds((prev) => {
-        const newSet = new Set(prev);
-        if (isAlreadyFavorite) {
-          newSet.delete(idStr); 
-        } else {
-          newSet.add(idStr); 
-        }
-        return newSet;
-      });
-    } else {
-      console.error("Favorite update failed:", data.message);
+    if (!userId) {
+      alert("Please log in to favorite packages.");
+      return;
     }
-  } catch (error) {
-    console.error("Error in toggleFavorite:", error);
-  }
-};
 
+    const idStr = packageId.toString();
+    const isAlreadyFavorite = favoriteIds.has(idStr);
+
+    const url = isAlreadyFavorite
+      ? `${API_URL}/api/favorites/remove`
+      : `${API_URL}/api/favorites/add`;
+
+    try {
+      const response = await fetchWithAuth(url, {
+        method: "POST", // keep it POST for both add/remove if backend expects it
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          userID: userId,
+          packageID: packageId,
+        }),
+      });
+
+      const data = await response.json();
+      console.log("Favorite toggle response:", data);
+
+      if (data.success) {
+        setFavoriteIds((prev) => {
+          const newSet = new Set(prev);
+          if (isAlreadyFavorite) {
+            newSet.delete(idStr);
+          } else {
+            newSet.add(idStr);
+          }
+          return newSet;
+        });
+      } else {
+        console.error("Favorite update failed:", data.message);
+      }
+    } catch (error) {
+      console.error("Error in toggleFavorite:", error);
+    }
+  };
 
   const allTags = Array.from(new Set(allPackages.flatMap((pkg) => pkg.tags)));
 
@@ -231,67 +234,70 @@ const ClientPackagePageContent: React.FC = () => {
       </div>
 
       {loading ? (
-        <div className="text-center py-20 text-gray-400">Loading packages...</div>
+        <div className="text-center py-20 text-gray-400">
+          Loading packages...
+        </div>
       ) : filtered.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {filtered.map((pkg) => {
             const currentImgIdx = imageIndexMap[pkg.id] ?? 0;
             const isFading = fadingImages[pkg.id];
             const isFav = favoriteIds.has(pkg.id.toString());
-            
+
             return (
               <div
                 key={pkg.id}
                 className="relative bg-white rounded-xl shadow-sm transition-all duration-300 transform hover:-translate-y-2 hover:scale-102 hover:shadow-xl p-2 overflow-hidden group"
               >
                 <motion.button
-  onClick={() => toggleFavorite(pkg.id)}
-  whileTap={{ scale: 5 }}
-  className="absolute top-3 right-3 z-20 w-8 h-8 rounded-full backdrop-blur-sm flex items-center justify-center transition"
->
-  <Heart
-    className={`w-5 h-5 transition-colors ${
-      isFav ? "text-red-500 fill-red-500" : "text-gray-600"
-    }`}
-  />
-  <AnimatePresence>
-    {isFav && (
-      <motion.div
-        key="burst"
-        initial={{ scale: 0, opacity: 0 }}
-        animate={{ scale: 1.6, opacity: 0 }}
-        exit={{ opacity: 0 }}
-        transition={{ duration: 0.4 }}
-        className="absolute inset-0"
-      >
-        <svg
-          viewBox="0 0 100 100"
-          className="w-full h-full text-red-400"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-        >
-          {Array.from({ length: 8 }).map((_, i) => {
-            const angle = (i * 360) / 8;
-            const x1 = 50 + 20 * Math.cos((angle * Math.PI) / 180);
-            const y1 = 50 + 20 * Math.sin((angle * Math.PI) / 180);
-            return (
-              <line
-                key={i}
-                x1="50"
-                y1="50"
-                x2={x1}
-                y2={y1}
-                strokeLinecap="round"
-              />
-            );
-          })}
-        </svg>
-      </motion.div>
-    )}
-  </AnimatePresence>
-</motion.button>
-
+                  onClick={() => toggleFavorite(pkg.id)}
+                  whileTap={{ scale: 5 }}
+                  className="absolute top-3 right-3 z-20 w-8 h-8 rounded-full backdrop-blur-sm flex items-center justify-center transition"
+                >
+                  <Heart
+                    className={`w-5 h-5 transition-colors ${
+                      isFav ? "text-red-500 fill-red-500" : "text-gray-600"
+                    }`}
+                  />
+                  <AnimatePresence>
+                    {isFav && (
+                      <motion.div
+                        key="burst"
+                        initial={{ scale: 0, opacity: 0 }}
+                        animate={{ scale: 1.6, opacity: 0 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.4 }}
+                        className="absolute inset-0"
+                      >
+                        <svg
+                          viewBox="0 0 100 100"
+                          className="w-full h-full text-red-400"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                        >
+                          {Array.from({ length: 8 }).map((_, i) => {
+                            const angle = (i * 360) / 8;
+                            const x1 =
+                              50 + 20 * Math.cos((angle * Math.PI) / 180);
+                            const y1 =
+                              50 + 20 * Math.sin((angle * Math.PI) / 180);
+                            return (
+                              <line
+                                key={i}
+                                x1="50"
+                                y1="50"
+                                x2={x1}
+                                y2={y1}
+                                strokeLinecap="round"
+                              />
+                            );
+                          })}
+                        </svg>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </motion.button>
 
                 <div className="relative z-0 h-100 rounded-md overflow-hidden bg-gray-100">
                   <img
@@ -301,7 +307,8 @@ const ClientPackagePageContent: React.FC = () => {
                         : "/slfg-placeholder 2.png"
                     }
                     onError={(e) => {
-                      (e.target as HTMLImageElement).src = "/slfg-placeholder 2.png";
+                      (e.target as HTMLImageElement).src =
+                        "/slfg-placeholder 2.png";
                     }}
                     className={`w-full h-full object-cover transition-opacity duration-500 ease-in-out ${
                       isFading ? "opacity-0" : "opacity-100"
@@ -309,26 +316,28 @@ const ClientPackagePageContent: React.FC = () => {
                     alt="Package"
                   />
                   <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1 bg-white/60 px-2 py-1 rounded-full backdrop-blur-sm">
-                    {(pkg.images?.length ? pkg.images : ["/slfg-placeholder 2.png"]).map(
-                      (img, i) => (
-                        <img
-                          key={i}
-                          src={img}
-                          onClick={() =>
-                            setImageIndexMap((prev) => ({ ...prev, [pkg.id]: i }))
-                          }
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).src = "/slfg-placeholder 2.png";
-                          }}
-                          className={`w-6 h-6 object-cover rounded-full border-2 cursor-pointer transition ${
-                            i === currentImgIdx
-                              ? "border-black"
-                              : "border-transparent opacity-60"
-                          }`}
-                          alt={`Thumb ${i + 1}`}
-                        />
-                      )
-                    )}
+                    {(pkg.images?.length
+                      ? pkg.images
+                      : ["/slfg-placeholder 2.png"]
+                    ).map((img, i) => (
+                      <img
+                        key={i}
+                        src={img}
+                        onClick={() =>
+                          setImageIndexMap((prev) => ({ ...prev, [pkg.id]: i }))
+                        }
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src =
+                            "/slfg-placeholder 2.png";
+                        }}
+                        className={`w-6 h-6 object-cover rounded-full border-2 cursor-pointer transition ${
+                          i === currentImgIdx
+                            ? "border-black"
+                            : "border-transparent opacity-60"
+                        }`}
+                        alt={`Thumb ${i + 1}`}
+                      />
+                    ))}
                   </div>
                 </div>
 
@@ -341,7 +350,9 @@ const ClientPackagePageContent: React.FC = () => {
                     {(pkg.tags ?? []).map((tag) => (
                       <span
                         key={tag}
-                        className={`px-2 py-0.5 rounded-full text-[10px] ${getTagPillClass(tag)}`}
+                        className={`px-2 py-0.5 rounded-full text-[10px] ${getTagPillClass(
+                          tag
+                        )}`}
                       >
                         {tag}
                       </span>
