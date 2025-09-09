@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import axios from "axios";
 import { Eye, Trash2 } from "lucide-react";
 import ModalTransactionDialog from "./ModalTransactionDialog"; // adjust path if needed
+import GalleryModal from "./GalleryModal"; // adjust path if needed
 import "react-date-range/dist/styles.css";
 import "react-date-range/dist/theme/default.css";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -192,7 +193,7 @@ const AdminGalleryContent = () => {
       setSelectedItem(mergedItem);
       setShowModal(true);
     } catch (error) {
-      console.error("Failed to fetch full transaction data:", error);
+      console.error("Failed to fetch full booking data:", error);
     }
   };
 
@@ -265,7 +266,7 @@ const AdminGalleryContent = () => {
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
-          className="px-2 py-2 border rounded-md"
+          className="px-2 pr-4 py-2 border rounded-md"
         >
           <option>Filter By:</option>
           <option>Most Recent</option>
@@ -278,11 +279,11 @@ const AdminGalleryContent = () => {
         <table className="min-w-full table-auto text-left text-sm">
           <thead className="bg-gray-50 text-gray-700 font-semibold">
             <tr>
-              <th className="p-4">Package Name</th>
-              <th className="p-4">Transaction Date</th>
-              <th className="p-4">Price</th>
               <th className="p-4">ID</th>
-              <th className="p-4">Feedback</th>
+              <th className="p-4">Package Name</th>
+              <th className="p-4">Date</th>
+              <th className="p-4">Time</th>
+              <th className="p-4">Customer Name</th>
               <th className="p-4 text-center">Action</th>
             </tr>
           </thead>
@@ -292,24 +293,39 @@ const AdminGalleryContent = () => {
                 key={idx}
                 className="border-t border-gray-100 hover:bg-gray-50 transition-all"
               >
-                <td className="p-4 flex items-center gap-3">
-                  {item.packageName}
-                </td>
-                <td className="p-4">{formatDate(item.dateTime)}</td>
-                <td className="p-4">{item.price}</td>
+                {/* ID */}
                 <td className="p-4">
                   {getBookingLabel(item.id, item.packageName)}
                 </td>
+
+                {/* Package Name */}
+                <td className="p-4">{item.packageName}</td>
+
+                {/* Date */}
+                <td className="p-4">{formatDate(item.dateTime)}</td>
+
+                {/* Time */}
                 <td className="p-4">
-                  {item.rating === null || item.rating === 0 ? (
-                    <em className="text-gray-400">No Rating Yet</em>
+                  {item.bookingStartTime && item.bookingEndTime
+                    ? `${formatTime(item.bookingStartTime)} - ${formatTime(
+                        item.bookingEndTime
+                      )}`
+                    : "N/A"}
+                </td>
+
+                {/* Customer Name */}
+                <td className="p-4">
+                  {item.customerName ? (
+                    item.customerName
                   ) : (
-                    <StarRating rating={item.rating} />
+                    <em className="text-gray-400">N/A</em>
                   )}
                 </td>
+
+                {/* Action buttons */}
                 <td className="p-4 text-center flex gap-2 justify-center">
                   <button
-                    className="text-gray-600 hover:text-gray-300 transition"
+                    className="text-gray-600 hover:text-blue-700 transition"
                     onClick={() => handleView(item)}
                   >
                     <Eye className="w-5 h-5" />
@@ -345,41 +361,9 @@ const AdminGalleryContent = () => {
         </div>
       </div>
 
-      {/* View Modal */}
-      {showModal && selectedItem && (
-        <ModalTransactionDialog
-          isOpen={showModal}
-          data={{
-            id: selectedItem.id,
-            customerName: selectedItem.customerName || "N/A",
-            email: selectedItem.customerEmail || "N/A",
-            address: selectedItem.customerAddress || "N/A",
-            contact: selectedItem.customerContactNo || "N/A",
-            package: selectedItem.packageName,
-            bookingDate: selectedItem.bookingDate.split(" ")[0] || "",
-            transactionDate: formatDate(
-              selectedItem.dateTime.split(" ")[0] || ""
-            ),
-            time:
-              `${formatTime(selectedItem.bookingStartTime)} - ${formatTime(
-                selectedItem.bookingEndTime
-              )}` || "",
-            subtotal: Number(selectedItem.subTotal.replace(/[^\d.]/g, "")) || 0,
-            paidAmount:
-              Number(selectedItem.receivedAmount.replace(/[^\d.]/g, "")) || 0,
-            pendingBalance:
-              Number(selectedItem.rem.replace(/[^\d.]/g, "")) || 0,
-            feedback:
-              selectedItem.feedback !== null
-                ? String(selectedItem.feedback)
-                : "",
-            rating: selectedItem.rating ?? 0,
-            status: selectedItem.status,
-            paymentStatus: selectedItem.paymentStatus,
-          }}
-          onClose={() => setShowModal(false)}
-          onSaved={fetchHistory}
-        />
+      {/* Gallery Modal */}
+      {showModal && (
+        <GalleryModal isOpen={showModal} onClose={() => setShowModal(false)} />
       )}
 
       {/* Delete Modal */}
@@ -411,19 +395,3 @@ const AdminGalleryContent = () => {
 };
 
 export default AdminGalleryContent;
-
-const StarRating: React.FC<{ rating: number }> = ({ rating }) => {
-  const stars = Array(5)
-    .fill(null)
-    .map((_, i) => (
-      <span
-        key={i}
-        className={`text-xl ${
-          i < rating ? "text-yellow-400" : "text-gray-300"
-        } hover:scale-110 transition-transform`}
-      >
-        ★
-      </span>
-    ));
-  return <div className="flex">{stars}</div>;
-};
