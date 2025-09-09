@@ -7,6 +7,65 @@ import { fetchWithAuth } from "../../utils/fetchWithAuth";
 import TransactionModal from "../ModalTransactionDialog";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { motion, AnimatePresence } from "framer-motion";
+
+interface AddOn {
+  id: string;
+  label: string;
+  price: number;
+  type: "spinner" | "checkbox" | "dropdown";
+  options?: string[]; // for dropdown only
+}
+
+const addOns: AddOn[] = [
+  { id: "pax", label: "Addl pax", price: 129, type: "spinner" },
+  {
+    id: "portrait",
+    label: "Addl Portrait Picture",
+    price: 49,
+    type: "spinner",
+  },
+  { id: "grid", label: "Addl Grid Picture", price: 69, type: "spinner" },
+  { id: "a4", label: "Addl A4 Picture", price: 129, type: "spinner" },
+  {
+    id: "backdrop",
+    label: "Addl Backdrop",
+    price: 129,
+    type: "dropdown",
+    options: ["Floral", "Modern", "Classic"],
+  },
+
+  {
+    id: "photo20",
+    label: "Photographer service for 20mins",
+    price: 599,
+    type: "checkbox",
+  },
+  {
+    id: "photo60",
+    label: "Photographer service for 1hr",
+    price: 1699,
+    type: "checkbox",
+  },
+  {
+    id: "makeup",
+    label: "Professional Hair & Make up",
+    price: 1699,
+    type: "checkbox",
+  },
+
+  { id: "digital", label: "All digital copies", price: 199, type: "checkbox" },
+  { id: "extra5", label: "Addl 5 mins", price: 129, type: "checkbox" },
+];
+
+const colorOptions = [
+  { id: "white", hex: "#f4f6f1", label: "WHITE" },
+  { id: "gray", hex: "#cccbcb", label: "GRAY" },
+  { id: "black", hex: "#272323", label: "BLACK" },
+  { id: "pink", hex: "#facfd7", label: "PINK" },
+  { id: "beige", hex: "#cfb5a4", label: "BEIGE" },
+  { id: "lavender", hex: "#8d84be", label: "LAVENDER" },
+];
 
 interface Package {
   id: string;
@@ -48,7 +107,7 @@ interface PreviewBookingData {
   subtotal: number;
   paidAmount: number;
   pendingBalance: number;
-  paymentType: 'deposit' | 'full';
+  paymentType: "deposit" | "full";
   paymentMode: string;
   packageId: string;
 }
@@ -68,23 +127,52 @@ const SelectPackagePage = () => {
   const [paymentMode, setPaymentMode] = useState("");
   const [agreed, setAgreed] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [previewData, setPreviewData] = useState<PreviewBookingData | null>(null);
+  const [previewData, setPreviewData] = useState<PreviewBookingData | null>(
+    null
+  );
   const [bookedTimeSlots, setBookedTimeSlots] = useState<string[]>([]);
+  const [activeAddOns, setActiveAddOns] = useState<Record<string, boolean>>({});
+  const [selectedColors, setSelectedColors] = useState<
+    Record<string, { id: string; hex: string; label: string }>
+  >({});
+  const [showingColors, setShowingColors] = useState<Record<string, boolean>>(
+    {}
+  );
+
+  const toggleAddOn = (id: string, active?: boolean) => {
+    setActiveAddOns((prev) => ({
+      ...prev,
+      [id]: typeof active === "boolean" ? active : !prev[id],
+    }));
+  };
+
+  const [quantities, setQuantities] = useState<{ [id: string]: number }>({});
+
+  // ✅ Initialize spinners with qty=1 but NOT active
+  useEffect(() => {
+    const initial: { [id: string]: number } = {};
+    addOns.forEach((item) => {
+      if (item.type === "spinner") {
+        initial[item.id] = 1;
+      }
+    });
+    setQuantities(initial);
+  }, []);
 
   // Helper function to get current Philippine time
   const getPhilippineTime = () => {
     // Create a new date in Philippine timezone (UTC+8)
     const now = new Date();
-    const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
-    const philippineTime = new Date(utc + (8 * 3600000)); // UTC+8
+    const utc = now.getTime() + now.getTimezoneOffset() * 60000;
+    const philippineTime = new Date(utc + 8 * 3600000); // UTC+8
     return philippineTime;
   };
 
   // Helper function to format date for database (YYYY-MM-DD in Philippine timezone)
   const formatDateForDatabase = (date: Date) => {
     const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
     return `${year}-${month}-${day}`;
   };
 
@@ -110,25 +198,25 @@ const SelectPackagePage = () => {
   // Check if time slot is in the past for today
   const isTimeSlotInPast = (timeSlot: string, date: Date) => {
     if (!isToday(date)) return false;
-    
+
     const currentTime = getPhilippineTime();
     const currentHour = currentTime.getHours();
     const currentMinute = currentTime.getMinutes();
-    
+
     // Parse time slot (e.g., "09:00 AM")
-    const [time, period] = timeSlot.split(' ');
-    const [hour, minute] = time.split(':').map(Number);
+    const [time, period] = timeSlot.split(" ");
+    const [hour, minute] = time.split(":").map(Number);
     let slotHour = hour;
-    
-    if (period === 'PM' && hour !== 12) {
+
+    if (period === "PM" && hour !== 12) {
       slotHour += 12;
-    } else if (period === 'AM' && hour === 12) {
+    } else if (period === "AM" && hour === 12) {
       slotHour = 0;
     }
-    
+
     const slotTotalMinutes = slotHour * 60 + minute;
     const currentTotalMinutes = currentHour * 60 + currentMinute;
-    
+
     return slotTotalMinutes <= currentTotalMinutes;
   };
 
@@ -136,9 +224,11 @@ const SelectPackagePage = () => {
   const fetchBookedTimeSlots = async (date: Date) => {
     try {
       const formattedDate = formatDateForDatabase(date);
-      const response = await fetchWithAuth(`${API_URL}/api/booked-slots?date=${formattedDate}`);
+      const response = await fetchWithAuth(
+        `${API_URL}/api/booked-slots?date=${formattedDate}`
+      );
       const data = await response.json();
-      
+
       if (response.ok) {
         setBookedTimeSlots(data.bookedSlots || []);
       } else {
@@ -196,7 +286,9 @@ const SelectPackagePage = () => {
 
     // Validate phone number
     if (!validatePhoneNumber(contact)) {
-      toast.error("Contact number must start with 09 and have exactly 11 digits");
+      toast.error(
+        "Contact number must start with 09 and have exactly 11 digits"
+      );
       return;
     }
 
@@ -214,12 +306,14 @@ const SelectPackagePage = () => {
 
     // Check if time slot is already booked
     if (bookedTimeSlots.includes(selectedTime)) {
-      toast.error("This time slot is already booked. Please select another time.");
+      toast.error(
+        "This time slot is already booked. Please select another time."
+      );
       return;
     }
 
     const subtotal = pkg.price;
-    const paidAmount = paymentType === 'full' ? subtotal : 200;
+    const paidAmount = paymentType === "full" ? subtotal : 200;
     const pendingBalance = subtotal - paidAmount;
 
     const preview: PreviewBookingData = {
@@ -235,7 +329,7 @@ const SelectPackagePage = () => {
       pendingBalance: pendingBalance,
       paymentType: paymentType,
       paymentMode: paymentMode,
-      packageId: id!
+      packageId: id!,
     };
 
     setPreviewData(preview);
@@ -251,10 +345,10 @@ const SelectPackagePage = () => {
     // Booking was successfully created
     setIsModalOpen(false);
     setPreviewData(null);
-    
+
     // Show success toast message
     toast.success("Booking successful! Your appointment has been confirmed.");
-    
+
     // Add a small delay before navigation to ensure toast is visible
     setTimeout(() => {
       navigate("/client/packages");
@@ -308,9 +402,7 @@ const SelectPackagePage = () => {
             <h2 className="text-3xl font-semibold text-gray-800">
               {pkg.title}
             </h2>
-            <p className="text-lg text-gray-600 font-medium">
-              PHP {pkg.price}
-            </p>
+            <p className="text-lg text-gray-600 font-medium">PHP {pkg.price}</p>
             <ul className="list-disc list-inside text-sm text-gray-700 mt-3 space-y-1">
               {pkg.description.split("\n").map((line, i) => (
                 <li key={i}>{line}</li>
@@ -368,9 +460,11 @@ const SelectPackagePage = () => {
               <div className="grid grid-cols-3 gap-2">
                 {timeSlots.map((slot) => {
                   const isBooked = bookedTimeSlots.includes(slot);
-                  const isPastTime = selectedDate ? isTimeSlotInPast(slot, selectedDate) : false;
+                  const isPastTime = selectedDate
+                    ? isTimeSlotInPast(slot, selectedDate)
+                    : false;
                   const isDisabled = isBooked || isPastTime;
-                  
+
                   return (
                     <button
                       key={slot}
@@ -384,22 +478,189 @@ const SelectPackagePage = () => {
                           : "bg-gray-100 hover:bg-gray-200"
                       }`}
                       title={
-                        isBooked 
-                          ? "This time slot is already booked" 
-                          : isPastTime 
-                          ? "This time slot has passed" 
+                        isBooked
+                          ? "This time slot is already booked"
+                          : isPastTime
+                          ? "This time slot has passed"
                           : ""
                       }
                     >
                       {slot}
                       {isBooked && (
-                        <span className="block text-xs text-red-500">Booked</span>
+                        <span className="block text-xs text-red-500">
+                          Booked
+                        </span>
                       )}
                     </button>
                   );
                 })}
               </div>
             </div>
+          </div>
+        </div>
+
+        {/* Add Ons Section */}
+        <div className="bg-white text-gray-900 rounded-xl shadow p-6 px-25 space-y-4">
+          <h3 className="text-lg font-semibold">Add Ons</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {addOns.map((item) => {
+              const isActive = !!activeAddOns[item.id];
+              const qty = quantities[item.id] || 0;
+              const totalPrice =
+                item.type === "spinner" ? item.price * qty : item.price;
+
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => {
+                    // ✅ toggle only when button clicked, not spinner
+                    toggleAddOn(item.id);
+                  }}
+                  className={`group relative flex flex-col gap-2 p-3 rounded-lg border transition-all duration-200
+                  ${
+                    isActive
+                      ? "bg-neutral-900 border-neutral-700 text-white shadow-lg"
+                      : "bg-white border-gray-300 text-gray-900 hover:bg-gray-100 hover:border-gray-400"
+                  }`}
+                >
+                  {/* ✅ Added badge for ALL active items (including spinner) */}
+                  {isActive && (
+                    <span className="absolute top-2 right-2 text-xs font-medium px-2 py-0.5 rounded-full bg-indigo-600 text-white shadow-sm">
+                      Added
+                    </span>
+                  )}
+
+                  {/* Label + Price */}
+                  <div className="flex justify-between items-center w-full">
+                    <span
+                      className={`text-sm font-medium ${
+                        isActive ? "text-white" : "text-gray-900"
+                      }`}
+                    >
+                      {item.label}
+                    </span>
+                    <span
+                      className={`text-xs ${
+                        isActive ? "text-gray-200" : "text-gray-600"
+                      }`}
+                    >
+                      ₱{totalPrice}
+                    </span>
+                  </div>
+
+                  {/* Control Area */}
+                  {item.type === "spinner" && (
+                    <div className="flex items-center justify-between gap-2">
+                      {/* Quantity Input */}
+                      <input
+                        type="number"
+                        min={1}
+                        value={qty}
+                        onChange={(e) => {
+                          const value = Number(e.target.value);
+                          setQuantities((prev) => ({
+                            ...prev,
+                            [item.id]: value > 0 ? value : 1, // minimum 1
+                          }));
+                        }}
+                        className={`w-14 px-2 py-1 text-sm rounded-md border text-center
+                          ${
+                            isActive
+                              ? "border-gray-600 bg-neutral-800 text-white"
+                              : "border-gray-300 bg-white text-gray-900"
+                          } focus:ring-1 focus:ring-indigo-400 focus:outline-none`}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+
+                      {/* Total Price beside input */}
+                      {isActive && (
+                        <span
+                          className={`justify-self-end self-end text-sm font-medium ${
+                            isActive ? "text-gray-200" : "text-gray-600"
+                          }`}
+                        >
+                          ₱{totalPrice}
+                        </span>
+                      )}
+                    </div>
+                  )}
+
+                  {item.type === "dropdown" && (
+                    <div className="relative w-full">
+                      {/* Color swatches popup */}
+                      <AnimatePresence>
+                        {showingColors[item.id] && (
+                          <motion.div
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: 10 }}
+                            className="absolute -top-12 left-1/2 -translate-x-1/2 flex gap-2"
+                          >
+                            {colorOptions.map((color) => (
+                              <button
+                                key={color.id}
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  // ✅ Save selection
+                                  setSelectedColors((prev) => ({
+                                    ...prev,
+                                    [item.id]: color,
+                                  }));
+                                  // ✅ Activate this add-on
+                                  toggleAddOn(item.id, true);
+                                  // ✅ Close swatches after selecting
+                                  setShowingColors((prev) => ({
+                                    ...prev,
+                                    [item.id]: false,
+                                  }));
+                                }}
+                                className="w-6 h-6 rounded-full border border-gray-400 shadow-sm hover:scale-110 transition"
+                                style={{ backgroundColor: color.hex }}
+                              />
+                            ))}
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+
+                      {/* Button that opens color picker */}
+                      <div
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setShowingColors((prev) => ({
+                            ...prev,
+                            [item.id]: !prev[item.id], // toggle popup
+                          }));
+                        }}
+                        className={`w-full h-8 rounded-md border text-xs flex items-center justify-center cursor-pointer transition ${
+                          isActive ? "border-gray-600" : "border-gray-300"
+                        }`}
+                        style={{
+                          backgroundColor:
+                            selectedColors?.[item.id]?.hex ||
+                            (isActive ? "#272727" : "#ffffff"),
+                          color: (() => {
+                            const hex = selectedColors?.[item.id]?.hex;
+                            if (!hex) return isActive ? "#fff" : "#000"; // default
+                            // convert hex → RGB
+                            const r = parseInt(hex.slice(1, 3), 16);
+                            const g = parseInt(hex.slice(3, 5), 16);
+                            const b = parseInt(hex.slice(5, 7), 16);
+                            // calculate luminance
+                            const brightness =
+                              (r * 299 + g * 587 + b * 114) / 1000;
+                            return brightness > 150 ? "#000" : "#fff"; // light bg → black text, dark bg → white text
+                          })(),
+                        }}
+                      >
+                        {selectedColors?.[item.id]?.label || "Select Color"}
+                      </div>
+                    </div>
+                  )}
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -416,8 +677,9 @@ const SelectPackagePage = () => {
             <input
               value={contact}
               onChange={(e) => {
-                const value = e.target.value.replace(/[^\d]/g, ''); // Only allow digits
-                if (value.length <= 11) { // Limit to 11 digits
+                const value = e.target.value.replace(/[^\d]/g, ""); // Only allow digits
+                if (value.length <= 11) {
+                  // Limit to 11 digits
                   setContact(value);
                 }
               }}
@@ -461,8 +723,8 @@ const SelectPackagePage = () => {
               />
               <span>
                 <strong>I agree</strong> to pay PHP 200 down payment to confirm
-                booking. The remaining balance is due on the day of the photoshoot
-                or service.
+                booking. The remaining balance is due on the day of the
+                photoshoot or service.
               </span>
             </label>
 
