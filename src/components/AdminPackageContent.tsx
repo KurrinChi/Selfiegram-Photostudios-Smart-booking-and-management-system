@@ -133,7 +133,7 @@ const AdminPackageContent: React.FC = () => {
             p.id === pkg.id ? { ...p, status: data.newStatus } : p
           )
         );
-        toast.success(data.message); 
+        toast.success(data.message);
       } else {
         toast.error(data.message || "Failed to update package status.");
       }
@@ -143,10 +143,18 @@ const AdminPackageContent: React.FC = () => {
     }
   }
 
+  const [showDialog, setShowDialog] = useState(false);
+  const [currentPackageToArchive, setCurrentPackageToArchive] = useState<Package | null>(null);
+  const handleArchiveClick = (pkg: Package) => {
+    setCurrentPackageToArchive(pkg);
+    setShowDialog(true);
+  };
+
+
   return (
     <div className="p-4 overflow-y-auto max-h-230 rounded-3xl transition-all duration-300">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-        <h1 className="text-2xl font-semibold">Available Packages</h1>
+        <h1 className="text-2xl font-semibold ml-1">Package Management</h1>
         <div className="flex flex-wrap gap-3 items-center text-xs">
           <div className="relative">
             <FontAwesomeIcon
@@ -262,7 +270,7 @@ const AdminPackageContent: React.FC = () => {
                   </div>
                   <div className="absolute top-4 right-4 flex gap-3 ">
                     <button
-                      onClick={() => toggleArchive(pkg)}
+                      onClick={() => handleArchiveClick(pkg)}
                       className=" p-2 rounded-md font-bold backdrop-blur-md bg-gray-100 border border-white/20 shadow-md hover:bg-gray-200 transition"
                       title={pkg.status === 1 ? "Archive Package" : "Unarchive Package"}
                     >
@@ -284,6 +292,39 @@ const AdminPackageContent: React.FC = () => {
       ) : (
         <div className="w-full py-20 text-center text-gray-500 border border-dashed border-gray-300 rounded-md">
           No packages found with the selected filters or search query.
+        </div>
+      )}
+      {showDialog && currentPackageToArchive && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full">
+            <div className="text-center space-y-6">
+              <div className="mx-auto bg-gray-100 w-12 h-12 flex items-center justify-center rounded-full">
+                {currentPackageToArchive.status === 1 ? <Archive className="text-red-600" /> : <RefreshCw className="text-green-600" />}
+              </div>
+              <h2 className="text-lg font-semibold">Archive Package</h2>
+              <p className="text-sm text-gray-700">
+                Are you sure you want to {currentPackageToArchive.status === 1 ? "archive" : "unarchive"} this package?
+                This package will {currentPackageToArchive.status === 1 ? "no longer be available to customers" : "be available to customers again"}.
+              </p>
+              <div className="flex justify-between gap-4 pt-4">
+                <button
+                  onClick={() => setShowDialog(false)}
+                  className="w-full py-2 border rounded-md text-sm hover:bg-gray-100 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    toggleArchive(currentPackageToArchive);
+                    setShowDialog(false);
+                  }}
+                  className="w-full py-2 bg-black text-white rounded-md text-sm hover:opacity-80 transition"
+                >
+                  {currentPackageToArchive.status === 1 ? "Archive" : "Unarchive"}
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
       <ToastContainer position="bottom-right" />

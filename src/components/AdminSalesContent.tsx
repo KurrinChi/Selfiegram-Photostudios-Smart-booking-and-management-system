@@ -198,7 +198,7 @@ const AdminSalesContent: React.FC = () => {
   return (
     <div className="p-4 space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <h1 className="text-2xl font-semibold">Sales</h1>
+        <h1 className="text-2xl font-semibold ml-1">Sales</h1>
         <button
           onClick={handleExport}
           className="px-4 py-2 bg-black text-white text-sm rounded-md hover:opacity-80 transition"

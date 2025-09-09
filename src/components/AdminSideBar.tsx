@@ -22,7 +22,7 @@ const navItems = [
     path: "/admin/appointments",
     icon: "fas fa-calendar-alt",
   },
-  { label: "Sales", path: "/admin/sales", icon: "fas fa-dollar-sign" },
+  { label: "Sales", path: "/admin/sales", icon: "fas fa-peso-sign" },
   { label: "Packages", path: "/admin/packages", icon: "fas fa-box" },
   { label: "Messages", path: "/admin/messages", icon: "fas fa-envelope" },
   { label: "Gallery", path: "/admin/gallery", icon: "fas fa-image" },
