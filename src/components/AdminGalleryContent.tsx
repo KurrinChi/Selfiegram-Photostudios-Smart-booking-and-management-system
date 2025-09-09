@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { Eye, Trash2 } from "lucide-react";
-import ModalTransactionDialog from "./ModalTransactionDialog"; // adjust path if needed
 import GalleryModal from "./GalleryModal"; // adjust path if needed
 import "react-date-range/dist/styles.css";
 import "react-date-range/dist/theme/default.css";
@@ -17,50 +16,8 @@ const AdminGalleryContent = () => {
   const [showModal, setShowModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState<any | null>(null);
   const [itemToDelete, setItemToDelete] = useState<any | null>(null);
-  // Removed unused rawBookingMap state
   const [search, setSearch] = useState(""); // Added search state
   const [statusFilter, setStatusFilter] = useState("All");
-
-  const fetchHistory = async () => {
-    try {
-      const user_id = localStorage.getItem("userID");
-      const token = localStorage.getItem("token");
-      console.log(user_id);
-      const response = await axios.get(
-        `${API_URL}/api/booking/history/${user_id}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      const data = response.data as any[];
-
-      const formatted = data.map((item: any) => ({
-        id: item.bookingID,
-        packageName: item.packageName,
-        image: null,
-        dateTime: item.dateTime,
-        price: `₱${parseFloat(item.price).toFixed(2)}`,
-        feedback: item.feedback ?? null,
-        rating: item.rating ?? null,
-        status: item.status,
-        paymentStatus: item.paymentStatus,
-        paidAmount: item.paidAmount,
-        pendingBalance: item.pendingBalance,
-      }));
-
-      // Removed rawMap and setRawBookingMap since rawBookingMap is unused
-      setHistoryData(formatted);
-    } catch (error) {
-      console.error("Failed to fetch history:", error);
-    }
-  };
-
-  //useEffect(() => {
-  //  fetchHistory();
-  //}, []);
 
   useEffect(() => {
     const fetchHistory = async () => {
@@ -168,33 +125,40 @@ const AdminGalleryContent = () => {
     fetchHistory();
   }, []);
 
-  const paginatedData = historyData.slice(
+  // 🔎 Filter all history data first
+  const filteredData = historyData
+    .filter((item) => {
+      if (!search) return true;
+      const query = search.toLowerCase();
+      return Object.values(item).some((val) =>
+        String(val).toLowerCase().includes(query)
+      );
+    })
+    .sort((a, b) => {
+      if (statusFilter === "Most Recent") {
+        return new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime();
+      }
+      if (statusFilter === "Package") {
+        return a.packageName.localeCompare(b.packageName);
+      }
+      if (statusFilter === "Client") {
+        return (a.customerName || "").localeCompare(b.customerName || "");
+      }
+      return 0;
+    });
+
+  // 📄 Apply pagination AFTER filtering
+  const paginatedData = filteredData.slice(
     (currentPage - 1) * ITEMS_PER_PAGE,
     currentPage * ITEMS_PER_PAGE
   );
-  const totalPages = Math.ceil(historyData.length / ITEMS_PER_PAGE);
+  const totalPages = Math.ceil(filteredData.length / ITEMS_PER_PAGE);
+
   const token = localStorage.getItem("token");
 
-  const handleView = async (item: any) => {
-    try {
-      const response = await axios.get(`${API_URL}/api/booking/${item.id}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      const fullData = response.data;
-
-      const mergedItem = {
-        ...item,
-        ...(typeof fullData === "object" && fullData !== null ? fullData : {}),
-      };
-
-      setSelectedItem(mergedItem);
-      setShowModal(true);
-    } catch (error) {
-      console.error("Failed to fetch full booking data:", error);
-    }
+  const handleView = (item: any) => {
+    setSelectedItem(item); // 👈 Save the clicked row
+    setShowModal(true); // 👈 Open the modal
   };
 
   const handleDelete = (item: any) => {
@@ -246,7 +210,7 @@ const AdminGalleryContent = () => {
 
   return (
     <div className="p-4 animate-fadeIn">
-      <h1 className="text-2xl font-semibold mb-4 ml-5">History</h1>
+      <h1 className="text-2xl font-semibold mb-4 ml-5">Customer Gallery</h1>
 
       {/* Filters */}
       <div className="flex flex-wrap gap-3 text-xs items-center">
@@ -281,9 +245,9 @@ const AdminGalleryContent = () => {
             <tr>
               <th className="p-4">ID</th>
               <th className="p-4">Package Name</th>
+              <th className="p-4">Customer Name</th>
               <th className="p-4">Date</th>
               <th className="p-4">Time</th>
-              <th className="p-4">Customer Name</th>
               <th className="p-4 text-center">Action</th>
             </tr>
           </thead>
@@ -301,6 +265,15 @@ const AdminGalleryContent = () => {
                 {/* Package Name */}
                 <td className="p-4">{item.packageName}</td>
 
+                {/* Customer Name */}
+                <td className="p-4">
+                  {item.customerName ? (
+                    item.customerName
+                  ) : (
+                    <em className="text-gray-400">N/A</em>
+                  )}
+                </td>
+
                 {/* Date */}
                 <td className="p-4">{formatDate(item.dateTime)}</td>
 
@@ -313,23 +286,15 @@ const AdminGalleryContent = () => {
                     : "N/A"}
                 </td>
 
-                {/* Customer Name */}
-                <td className="p-4">
-                  {item.customerName ? (
-                    item.customerName
-                  ) : (
-                    <em className="text-gray-400">N/A</em>
-                  )}
-                </td>
-
                 {/* Action buttons */}
                 <td className="p-4 text-center flex gap-2 justify-center">
                   <button
-                    className="text-gray-600 hover:text-blue-700 transition"
-                    onClick={() => handleView(item)}
+                    onClick={() => handleView(item)} // 👈 Make sure this exists
+                    className="p-2 text-gray-600 hover:text-blue-800"
                   >
-                    <Eye className="w-5 h-5" />
+                    <Eye className="w-4 h-4" />
                   </button>
+
                   <button
                     className="text-gray-600 hover:text-red-500 transition"
                     onClick={() => handleDelete(item)}
@@ -362,8 +327,12 @@ const AdminGalleryContent = () => {
       </div>
 
       {/* Gallery Modal */}
-      {showModal && (
-        <GalleryModal isOpen={showModal} onClose={() => setShowModal(false)} />
+      {showModal && selectedItem && (
+        <GalleryModal
+          isOpen={showModal}
+          onClose={() => setShowModal(false)}
+          booking={selectedItem} // 👈 pass the booking/item here
+        />
       )}
 
       {/* Delete Modal */}
