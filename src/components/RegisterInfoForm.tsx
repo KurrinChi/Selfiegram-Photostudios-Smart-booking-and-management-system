@@ -96,13 +96,14 @@ const RegisterInfoForm = () => {
 
   return (
     <div className="relative w-full max-w-md mx-auto text-[#111] font-sf px-4 py-6">
-      <button
-        type="button"
-        onClick={() => navigate(-1)}
-        className="absolute top-4 left-4 text-[#4E4E4E] font-semibold hover:underline"
-      >
-        <i className="fas fa-left-long"></i>
-      </button>
+      {/* Back Button */}
+    <button
+      type="button"
+      onClick={() => navigate(-1)}
+      className="absolute top-4 left-4 w-10 h-10 flex items-center justify-center rounded-full bg-gray-200 hover:bg-gray-300 shadow-md"
+    >
+      <i className="fas fa-arrow-left" />
+    </button>
 
       <div className="mt-12">
         <h2 className="text-2xl font-bold mb-2 text-left">Create an account</h2>

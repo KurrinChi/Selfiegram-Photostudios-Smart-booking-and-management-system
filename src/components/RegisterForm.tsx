@@ -116,7 +116,7 @@ const RegisterForm = () => {
       <p className="text-sm mt-6 text-center text-gray-600">
         Already have an account?{" "}
         <Link
-          to="/"
+          to="/login"
           className="text-[#111] font-semibold underline hover:text-[#333]"
           onClick={() => {
             localStorage.removeItem("registerStep1");

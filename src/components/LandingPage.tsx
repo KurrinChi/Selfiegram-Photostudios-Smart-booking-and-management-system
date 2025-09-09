@@ -3,7 +3,7 @@ import React, { useRef, useState, useEffect } from "react";
 import { motion, useScroll, useTransform, useInView } from "framer-motion";
 import type { Variants } from "framer-motion";
 import InfiniteParallaxGallery from "../components/LandingGallery.tsx";
-
+import TagEmbedWidget from "./Embed/TagEmbedWidget.tsx";
 const fadeUp: Variants = {
   hidden: { opacity: 0, y: 24 },
   show: { opacity: 1, y: 0 },
@@ -44,7 +44,7 @@ export default function HomePage(): React.JSX.Element {
   const controlHeader = () => {
     if (typeof window === "undefined") return;
     if (window.scrollY > lastScrollY) {
-      setShowHeader(false); // scrolling down → hide
+      setShowHeader(true); // scrolling down → hide
     } else {
       setShowHeader(true); // scrolling up → show
     }
@@ -56,6 +56,20 @@ export default function HomePage(): React.JSX.Element {
     return () => window.removeEventListener("scroll", controlHeader);
   }, [lastScrollY]);
 
+  const scrollToSection = (id: string) => {
+  const el = document.getElementById(id);
+  if (!el) return;
+
+  const headerOffset = 80; // height of your fixed header
+  const elementPosition = el.getBoundingClientRect().top;
+  const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+
+  window.scrollTo({
+    top: offsetPosition,
+    behavior: "smooth",
+  });
+};
+  
   return (
     <div ref={pageRef} className="text-gray-800">
       {/* ---------- NAVBAR ---------- */}
@@ -73,32 +87,20 @@ export default function HomePage(): React.JSX.Element {
             </div>
           </div>
 
-          <nav className="hidden md:flex gap-8 items-center text-sm">
-            <a
-              href="#home"
-              className="uppercase tracking-widest text-gray-700 transition-all duration-300 hover:text-black hover:-translate-y-0.5"
-            >
-              Home
-            </a>
-            <a
-              href="#services"
-              className="uppercase tracking-widest text-gray-700 transition-all duration-300 hover:text-black hover:-translate-y-0.5"
-            >
-              Services
-            </a>
-            <a
-              href="#gallery"
-              className="uppercase tracking-widest text-gray-700 transition-all duration-300 hover:text-black hover:-translate-y-0.5"
-            >
-              Gallery
-            </a>
-            <a
-              href="#contacts"
-              className="uppercase tracking-widest text-gray-700 transition-all duration-300 hover:text-black hover:-translate-y-0.5"
-            >
-              Contacts
-            </a>
-          </nav>
+         <nav className="hidden md:flex gap-8 items-center text-sm">
+          <button onClick={() => scrollToSection("home")} className="uppercase tracking-widest text-gray-700 transition-all duration-300 hover:text-black hover:-translate-y-0.5">
+            Home
+          </button>
+          <button onClick={() => scrollToSection("services")} className="uppercase tracking-widest text-gray-700 transition-all duration-300 hover:text-black hover:-translate-y-0.5">
+            Services
+          </button>
+          <button onClick={() => scrollToSection("gallery")} className="uppercase tracking-widest text-gray-700 transition-all duration-300 hover:text-black hover:-translate-y-0.5">
+            Gallery
+          </button>
+          <button onClick={() => scrollToSection("contacts")} className="uppercase tracking-widest text-gray-700 transition-all duration-300 hover:text-black hover:-translate-y-0.5">
+            Contacts
+          </button>
+        </nav>
 
           <div className="hidden md:flex items-center gap-4">
             <button
@@ -124,7 +126,7 @@ export default function HomePage(): React.JSX.Element {
       <main className="pt-20">
         <section
           id="home"
-          className="min-h-screen relative overflow-hidden bg-gradient-to-b from-white to-gray-200"
+          className="scroll-mt-32 min-h-screen relative overflow-hidden bg-gradient-to-b from-white to-gray-200 "
         >
           <h1
             className="absolute inset-0 flex items-center justify-center 
@@ -243,100 +245,101 @@ export default function HomePage(): React.JSX.Element {
           </div>
         </section>
 
-        {/* ---------- STORY + VISION ---------- */}
-        <section className=" min-h-screen mx-auto px-6 lg:px-20 pb-14 bg-gray-200">
-          <div className="grid gap-8">
-            <div className="bg-white rounded-2xl shadow-lg p-8 px-20 grid md:grid-cols-2 items-center">
-              {/* Story text */}
-              <motion.div
-                initial="hidden"
-                whileInView="show"
-                viewport={{ once: true, amount: 0.25 }}
-                variants={staggerContainer}
-                className="p-2"
-              >
-                <motion.h3
-                  variants={fadeUp}
-                  className="text-2xl font-bold mb-3 text-right"
-                >
+    {/* ---------- STORY + VISION + PLACEHOLDER ---------- */}
+        <section className="min-h-screen mx-auto px-6 lg:px-20 pb-14 bg-gray-200">
+          <div className="grid gap-8 lg:grid-cols-2 lg:grid-rows-2 lg:gap-6">
+            
+            {/* Story card (1) */}
+            <motion.div
+              initial="hidden"
+              whileInView="show"
+              viewport={{ once: true, amount: 0.25 }}
+              variants={staggerContainer}
+              className="bg-white rounded-2xl shadow-lg p-8 flex flex-col lg:flex-row gap-4 lg:col-start-1  lg:row-start-1"
+            >
+              {/* Text */}
+              <div className="flex-1 flex flex-col justify-center">
+                <motion.h3 variants={fadeUp} className="text-2xl font-bold mb-3">
                   Our Story
                 </motion.h3>
-                <motion.p
-                  variants={fadeUp}
-                  className="text-gray-600 leading-relaxed text-right"
-                >
-                  SelfieGram was established in December 2022 by Elizabeth
-                  Ortega with a vision to transform photography in Bulacan. We
-                  are proud to be the largest, most creatively themed photo
-                  studio in the area, offering a unique and immersive experience
-                  for capturing memories.
+                <motion.p variants={fadeUp} className="text-gray-600 leading-relaxed">
+                  SelfieGram was established in December 2022 by Elizabeth Ortega with a vision to transform photography in Bulacan. We are proud to be the largest, most creatively themed photo studio in the area, offering a unique and immersive experience for capturing memories.
                 </motion.p>
-              </motion.div>
+              </div>
 
-              {/* images cluster */}
-              <motion.div
-                className="p-2 flex items-center justify-center relative"
-                variants={fadeUp as any}
-              >
-                <div className="relative w-full max-w-[360px]">
-                  <img
-                    src="../storage\packages\studiorental\studio3.jpg"
-                    alt="story-main"
-                    className="rounded-xl shadow-xl w-full"
-                    style={{ transform: "translateY(-6px)" }}
-                  />
-                </div>
+              {/* Image */}
+              <motion.div className="flex-1 flex items-center justify-center" variants={fadeUp as any}>
+                <img
+                  src="../storage/packages/studiorental/studio3.jpg"
+                  alt="story-main"
+                  className="rounded-xl shadow-xl w-full max-w-[360px]"
+                />
               </motion.div>
-            </div>
+            </motion.div>
 
-            <div className="bg-white rounded-2xl shadow-lg p-8 px-20 grid md:grid-cols-2 items-center">
-              {/* images cluster */}
-              <motion.div
-                className="p-2 flex items-center justify-center relative"
-                variants={fadeUp as any}
-              >
-                <div className="relative w-full max-w-[360px]">
-                  <img
-                    src="../storage\packages\studiorental\studio2.jpg"
-                    alt="vision-main"
-                    className="rounded-xl shadow-xl w-full"
-                  />
-                </div>
-              </motion.div>
-
-              {/* Vision text */}
-              <motion.div
-                initial="hidden"
-                whileInView="show"
-                viewport={{ once: true, amount: 0.25 }}
-                variants={staggerContainer}
-                className="p-2"
-              >
-                <motion.h3
-                  variants={fadeUp}
-                  className="text-2xl font-bold mb-3"
-                >
+            {/* Vision card (2) */}
+            <motion.div
+              initial="hidden"
+              whileInView="show"
+              viewport={{ once: true, amount: 0.25 }}
+              variants={staggerContainer}
+              className="bg-white rounded-2xl shadow-lg p-8 flex flex-col lg:flex-row-reverse gap-4 lg:col-start-1 lg:row-start-2"
+            >
+              {/* Text */}
+              <div className="flex-1 flex flex-col justify-center">
+                <motion.h3 variants={fadeUp} className="text-2xl font-bold mb-3">
                   Our Vision
                 </motion.h3>
-                <motion.p
-                  variants={fadeUp}
-                  className="text-gray-600 leading-relaxed"
-                >
-                  At SelfieGram, our mission is to create a welcoming and
-                  inspiring space where clients feel free to express themselves.
-                  We believe that each photo session should be as memorable as
-                  the images it produces. Our goal is to make every session a
-                  reflection of our clients’ personalities and moments.
+                <motion.p variants={fadeUp} className="text-gray-600 leading-relaxed">
+                  At SelfieGram, our mission is to create a welcoming and inspiring space where clients feel free to express themselves. We believe that each photo session should be as memorable as the images it produces. Our goal is to make every session a reflection of our clients’ personalities and moments.
                 </motion.p>
+              </div>
+
+              {/* Image */}
+              <motion.div className="flex-1 flex items-center justify-center" variants={fadeUp as any}>
+                <img
+                  src="../storage/packages/studiorental/studio2.jpg"
+                  alt="vision-main"
+                  className="rounded-xl shadow-xl w-full max-w-[360px]"
+                />
               </motion.div>
-            </div>
+            </motion.div>
+
+            {/* Placeholder card (3) spanning 2 rows */}
+                    
+            <motion.div
+              initial="hidden"
+              whileInView="show"
+              viewport={{ once: true, amount: 0.25 }}
+              variants={staggerContainer}
+              className="bg-white rounded-2xl shadow-lg p-8 lg:col-start-2 lg:col-span-2 lg:row-start-1 lg:row-span-2 flex flex-col items-center justify-start gap-4"
+            >
+               {/* Header */}
+              <motion.div className="w-full flex justify-center" variants={fadeUp}>
+                <motion.h3
+                variants={fadeUp}
+                className="text-2xl font-bold mb-4"
+              >
+                Announcements
+              </motion.h3>
+                        </motion.div>
+
+
+              <motion.div className="w-full max-w-[700px]">
+              {/*<motion.p variants={fadeUp} className="text-gray-400 text-center">*/}
+               <TagEmbedWidget height={700}/>
+             {/* </motion.p>*/}
+             </motion.div>
+            </motion.div>
           </div>
         </section>
+
+
 
         {/* ---------- SERVICES ---------- */}
         <section
           id="services"
-          className="min-h-screen max-w-7xl mx-auto px-6 lg:px-20 py-14"
+          className="scroll-mt-32 min-h-screen max-w-7xl mx-auto px-6 lg:px-20 py-14"
         >
           <div className="text-center mb-10">
             <h3 className="text-3xl font-bold">Our Services</h3>
@@ -474,7 +477,7 @@ export default function HomePage(): React.JSX.Element {
         </section>
 
         {/* ---------- PHOTO GALLERY ---------- */}
-        <section id="gallery" className="min-h-screen  mx-auto lg: py-14">
+        <section id="gallery" className="scroll-mt-20 min-h-screen  mx-auto lg: py-14">
           <h3 className="text-3xl text-center font-bold mb-8">Photo Gallery</h3>
 
           <InfiniteParallaxGallery />

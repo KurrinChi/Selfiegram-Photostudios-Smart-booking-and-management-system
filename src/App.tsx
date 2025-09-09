@@ -43,11 +43,11 @@ const App = () => {
     <AnimatePresence mode="wait">
       <Routes location={location} key={location.pathname}>
         {/* Public routes */}
-        <Route path="/" element={<PublicRoute><Login /></PublicRoute>} />
+        <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
         <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
         <Route path="/register-info" element={<PublicRoute><RegisterInfoForm /></PublicRoute>} />
         <Route path="/register-success" element={<PublicRoute><RegisterSuccess /></PublicRoute>} />
-        <Route path="/LandingPage" element={<PublicRoute><LandingPage /></PublicRoute>} />
+        <Route path="/" element={<PublicRoute><LandingPage /></PublicRoute>} />
 
 
         {/* Routes that are not found */}
