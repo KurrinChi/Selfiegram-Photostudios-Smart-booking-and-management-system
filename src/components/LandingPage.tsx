@@ -68,10 +68,7 @@ export default function HomePage(): React.JSX.Element {
           <div className="flex items-center gap-4">
             <img src="slfg.svg" alt="logo" className="w-10 h-10" />
 
-            <div
-              className="text-sm font-bold tracking-wider text-gray-700"
-              style={{ fontFamily: "Poppins, sans-serif" }}
-            >
+            <div className="text-sm font-bold tracking-wider text-gray-700">
               SELFIEGRAM PHOTOSTUDIOS MALOLOS
             </div>
           </div>
@@ -104,7 +101,12 @@ export default function HomePage(): React.JSX.Element {
           </nav>
 
           <div className="hidden md:flex items-center gap-4">
-            <button className="px-4 py-2 rounded-full bg-black text-white text-sm font-medium hover:scale-[1.02] transform transition shadow-sm hover:shadow-lg">
+            <button
+              className="px-4 py-2 rounded-full bg-black text-white text-sm font-medium hover:scale-[1.02] transform transition shadow-sm hover:shadow-lg"
+              onClick={() => {
+                window.location.href = "/login";
+              }}
+            >
               Sign In
             </button>
           </div>
@@ -227,7 +229,12 @@ export default function HomePage(): React.JSX.Element {
                 </motion.p>
 
                 <motion.div variants={fadeUp} className="mt-8">
-                  <button className="inline-flex items-center gap-3 px-6 py-3 rounded-full bg-white text-gray-800 shadow-md hover:shadow-2xl border border-gray-100 transition transform hover:-translate-y-0.5">
+                  <button
+                    onClick={() => {
+                      window.location.href = "/login";
+                    }}
+                    className="inline-flex items-center gap-3 px-6 py-3 rounded-full bg-white text-gray-800 shadow-md hover:shadow-2xl border border-gray-100 transition transform hover:-translate-y-0.5"
+                  >
                     Book Now →
                   </button>
                 </motion.div>
