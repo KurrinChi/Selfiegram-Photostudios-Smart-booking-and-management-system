@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { ChevronDown, ChevronUp, Download, Edit, X, Heart } from "lucide-react";
+import GalleryModal from "./GalleryModal";
 
 const groupImagesByDate = (
   images: { id: string; url: string; date: string; edited?: boolean }[]

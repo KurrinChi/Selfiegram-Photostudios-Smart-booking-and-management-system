@@ -28,13 +28,13 @@ interface Sale {
 }
 
 const getBookingLabel = (transactionID: number, packageName: string) => {
-    const acronym = packageName
-      .split(" ")
-      .map((word) => word[0])
-      .join("")
-      .toUpperCase();
-    return `${acronym}#${transactionID}`;
-  };
+  const acronym = packageName
+    .split(" ")
+    .map((word) => word[0])
+    .join("")
+    .toUpperCase();
+  return `${acronym}#${transactionID}`;
+};
 
 const AdminSalesContent: React.FC = () => {
   const [sales, setSales] = useState<Sale[]>([]);
@@ -45,7 +45,9 @@ const AdminSalesContent: React.FC = () => {
   const [pageSize, setPageSize] = useState(10);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [selectedSale, setSelectedSale] = useState<any>(null);
-  const [range, setRange] = useState<[{ startDate: Date; endDate: Date; key: string }]>([
+  const [range, setRange] = useState<
+    [{ startDate: Date; endDate: Date; key: string }]
+  >([
     {
       startDate: new Date("2025-01-01"),
       endDate: new Date("2025-12-31"),
@@ -86,15 +88,19 @@ const AdminSalesContent: React.FC = () => {
   const filtered = useMemo(() => {
     return sales.filter((s) => {
       const matchesSearch =
-        s.transactionID.toString().toLowerCase().includes(search.toLowerCase()) ||
+        s.transactionID
+          .toString()
+          .toLowerCase()
+          .includes(search.toLowerCase()) ||
         s.customerName.toLowerCase().includes(search.toLowerCase()) ||
         s.package.toLowerCase().includes(search.toLowerCase());
 
       const matchesStatus =
-        statusFilter === "All" || s.paymentStatus === statusFilter;
+        statusFilter === "Booking Status: All" ||
+        s.paymentStatus === statusFilter;
 
       const matchesPackage =
-        packageFilter === "All" || s.package === packageFilter;
+        packageFilter === "Package: All" || s.package === packageFilter;
 
       const saleDate = parse(s.transactionDate, "yyyy-MM-dd", new Date());
       const matchesDate = isWithinInterval(saleDate, {
@@ -110,15 +116,21 @@ const AdminSalesContent: React.FC = () => {
   const paginated = filtered.slice((page - 1) * pageSize, page * pageSize);
 
   const handleExport = () => {
-  const printWindow = window.open("", "_blank");
-  if (!printWindow) return;
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) return;
 
-  const totalPayment = filtered.reduce((acc, s) => acc + s.downPayment, 0);
-  const pendingCount = filtered.filter((s) => s.paymentStatus === "Pending").length;
-  const completedCount = filtered.filter((s) => s.paymentStatus === "Completed").length
-  const cancelledCount = filtered.filter((s) => s.paymentStatus === "Cancelled").length
+    const totalPayment = filtered.reduce((acc, s) => acc + s.downPayment, 0);
+    const pendingCount = filtered.filter(
+      (s) => s.paymentStatus === "Pending"
+    ).length;
+    const completedCount = filtered.filter(
+      (s) => s.paymentStatus === "Completed"
+    ).length;
+    const cancelledCount = filtered.filter(
+      (s) => s.paymentStatus === "Cancelled"
+    ).length;
 
-  const htmlContent = `
+    const htmlContent = `
     <html>
       <head>
         <title>Sales Report</title>
@@ -136,7 +148,10 @@ const AdminSalesContent: React.FC = () => {
       </head>
       <body>
         <h2>Sales Report</h2>
-        <h5>${format(range[0].startDate, "MMM dd yyyy")} - ${format(range[0].endDate, "MMM dd yyyy")}</h5>
+        <h5>${format(range[0].startDate, "MMM dd yyyy")} - ${format(
+      range[0].endDate,
+      "MMM dd yyyy"
+    )}</h5>
         <div class="summary">
           <p><strong>Completed:</strong> ${completedCount}</p>
           <p><strong>Pending:</strong> ${pendingCount}</p>
@@ -167,7 +182,10 @@ const AdminSalesContent: React.FC = () => {
                 <td>${s.email || "-"}</td>
                 <td>${s.contactNo || "-"}</td>
                 <td>${s.package}</td>
-                <td>${format(parse(s.transactionDate, "yyyy-MM-dd", new Date()), "MMMM d, yyyy")}</td>
+                <td>${format(
+                  parse(s.transactionDate, "yyyy-MM-dd", new Date()),
+                  "MMMM d, yyyy"
+                )}</td>
                 <td>${s.downPayment.toFixed(2)}</td>
                 <td>${s.balance.toFixed(2)}</td>
                 <td>${s.totalAmount.toFixed(2)}</td>
@@ -187,13 +205,12 @@ const AdminSalesContent: React.FC = () => {
     </html>
   `;
 
-  printWindow.document.write(htmlContent);
-  printWindow.document.close();
-  printWindow.focus();
-  printWindow.print();
-  printWindow.close();
-};
-
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
+    printWindow.close();
+  };
 
   return (
     <div className="p-4 space-y-4">
@@ -227,7 +244,7 @@ const AdminSalesContent: React.FC = () => {
           onChange={(e) => setStatusFilter(e.target.value)}
           className="px-2 py-2 border rounded-md"
         >
-          <option>All</option>
+          <option>Booking Status: All</option>
           <option>Completed</option>
           <option>Pending</option>
           <option>Cancelled</option>
@@ -238,7 +255,7 @@ const AdminSalesContent: React.FC = () => {
           onChange={(e) => setPackageFilter(e.target.value)}
           className="px-2 py-2 border rounded-md"
         >
-          <option>All</option>
+          <option>Package: All</option>
           {packages.map((p) => (
             <option key={p}>{p}</option>
           ))}
@@ -314,26 +331,35 @@ const AdminSalesContent: React.FC = () => {
                   })
                 }
               >
-                <td className="px-4 py-2 whitespace-nowrap">{getBookingLabel(s.transactionID, s.package)}</td>
+                <td className="px-4 py-2 whitespace-nowrap">
+                  {getBookingLabel(s.transactionID, s.package)}
+                </td>
                 <td className="px-4 py-2">{s.customerName}</td>
                 <td className="px-4 py-2">{s.package}</td>
                 <td className="px-4 py-2 whitespace-nowrap">
                   <br />
-                  {format(parse(s.transactionDate, "yyyy-MM-dd", new Date()), "MMMM d, yyyy")}
+                  {format(
+                    parse(s.transactionDate, "yyyy-MM-dd", new Date()),
+                    "MMMM d, yyyy"
+                  )}
                   <br />
                   <br />
                 </td>
-                <td className="px-4 py-2">{Number(s.downPayment).toFixed(2)}</td>
+                <td className="px-4 py-2">
+                  {Number(s.downPayment).toFixed(2)}
+                </td>
                 <td className="px-4 py-2">{Number(s.balance).toFixed(2)}</td>
-                <td className="px-4 py-2">{Number(s.totalAmount).toFixed(2)}</td>
+                <td className="px-4 py-2">
+                  {Number(s.totalAmount).toFixed(2)}
+                </td>
                 <td className="px-4 py-2">
                   <span
                     className={`px-2 py-1 rounded-md text-xs font-medium ${
                       s.paymentStatus === "Completed"
                         ? "bg-green-100 text-green-600"
                         : s.paymentStatus === "Cancelled"
-                          ? "bg-red-100 text-red-600"
-                          : "bg-yellow-100 text-yellow-600"
+                        ? "bg-red-100 text-red-600"
+                        : "bg-yellow-100 text-yellow-600"
                     }`}
                   >
                     {s.paymentStatus}

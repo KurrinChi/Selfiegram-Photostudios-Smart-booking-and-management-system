@@ -1,7 +1,7 @@
 // components/UserManagement.tsx
 import React, { useMemo, useState, useEffect } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faChevronRight, faSearch } from "@fortawesome/free-solid-svg-icons";
+import { faEye, faSearch } from "@fortawesome/free-solid-svg-icons";
 import { AnimatePresence, motion } from "framer-motion";
 import UserDetailPanel from "./UserDetailPanel";
 import AssignRoleModal from "./ModalAssignRoleDialog.tsx";
@@ -9,7 +9,7 @@ import { fetchWithAuth } from "../utils/fetchWithAuth";
 
 // Types & Mock Data
 interface Appointment {
-  id: string
+  id: string;
   customerName: string;
   package: string;
   bookingDate: string;
@@ -33,10 +33,10 @@ interface User {
   birthday: string;
   address: string;
   contact: string;
-  role: "Customer" | "Staff" | "Admin";
+  role: "Customer" | "Staff";
 }
 
-const roles = ["Customer", "Staff", "Admin"] as const;
+const roles = ["Customer", "Staff"] as const;
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -50,7 +50,7 @@ const AdminUsersContent: React.FC = () => {
   const [showAssignModal, setShowAssignModal] = useState(false);
   const pageSize = 10;
 
-    const [users, setUsers] = useState<User[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -69,7 +69,7 @@ const AdminUsersContent: React.FC = () => {
           contact: user.contactNo,
           birthday: user.birthday,
           age: user.age,
-          profilePicture: user.profilePicture
+          profilePicture: user.profilePicture,
         }));
 
         setUsers(mappedUsers);
@@ -81,10 +81,17 @@ const AdminUsersContent: React.FC = () => {
     fetchUsers();
   }, []);
 
-
   const filtered = useMemo(() => {
-    const byRole = users.filter((u) => u.role === activeRole);
+    let byRole: User[] = [];
+
+    if (activeRole === "Staff") {
+      byRole = users.filter((u) => u.role === "Staff");
+    } else {
+      byRole = users.filter((u) => u.role === activeRole);
+    }
+
     if (!query) return byRole;
+
     return byRole.filter(
       (u) =>
         u.id.includes(query) ||
@@ -99,7 +106,9 @@ const AdminUsersContent: React.FC = () => {
     if (page > totalPages) setPage(1);
   }, [page, totalPages]);
 
-  const [userAppointments, setUserAppointments] = useState<Record<string, Appointment[]>>({});
+  const [userAppointments, setUserAppointments] = useState<
+    Record<string, Appointment[]>
+  >({});
 
   useEffect(() => {
     if (!selected) return;
@@ -119,7 +128,6 @@ const AdminUsersContent: React.FC = () => {
     fetchAppointments();
   }, [selected]);
 
-
   return (
     <div className="relative flex flex-col gap-6 p-4 md:p-6">
       {/* Header */}
@@ -128,9 +136,9 @@ const AdminUsersContent: React.FC = () => {
       </div>
 
       {/* Tabs + Controls in a single row */}
-      <div className="flex flex-wrap items-center justify-between gap-4 min-w-0">
+      <div className="flex flex-wrap items-center justify-between gap-4 p-2 min-w-0">
         {/* Tabs */}
-        <div className="relative flex-shrink-0 flex gap-8 text-sm font-medium border-b border-gray-300 overflow-visible">
+        <div className="relative flex-shrink-0 flex gap-4 text-center px-2 text-sm font-medium border-b border-gray-300 overflow-visible">
           {roles.map((r) => (
             <button
               key={r}
@@ -149,7 +157,7 @@ const AdminUsersContent: React.FC = () => {
             className="absolute bottom-0 h-0.5 bg-black rounded-full"
             initial={false}
             animate={{
-              width: "33.333%",
+              width: "50%",
               x: `${roles.indexOf(activeRole) * 100}%`,
             }}
             transition={{ type: "spring", stiffness: 300, damping: 30 }}
@@ -189,7 +197,7 @@ const AdminUsersContent: React.FC = () => {
               <th className="px-4 py-3 font-medium">Name</th>
               <th className="px-4 py-3 font-medium">Email Address</th>
               <th className="px-4 py-3 font-medium">Role</th>
-              <th className="px-4 py-3 font-medium text-right">View</th>
+              <th className="px-4 py-3 font-medium text-right"></th>
             </tr>
           </thead>
           <tbody>
@@ -204,7 +212,7 @@ const AdminUsersContent: React.FC = () => {
                 <td className="px-4 py-3">{u.email}</td>
                 <td className="px-4 py-3">{u.role}</td>
                 <td className="px-4 py-3 text-right">
-                  <FontAwesomeIcon icon={faChevronRight} />
+                  <FontAwesomeIcon icon={faEye} />
                 </td>
               </tr>
             ))}
@@ -259,7 +267,7 @@ const AdminUsersContent: React.FC = () => {
               name: selected.name,
               username: selected.username,
               age: selected.age, //need sa db ng age at bday
-              birthday: selected.birthday, 
+              birthday: selected.birthday,
               address: selected.address,
               email: selected.email,
               contact: selected.contact,

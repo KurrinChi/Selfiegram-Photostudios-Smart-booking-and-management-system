@@ -102,6 +102,7 @@ class PackageController extends Controller
             return [
                 'id' => $id,
                 'title' => $first->title,
+                
                 'price' => (float) $first->price,
                 'images' => $items->pluck('imagePath')->filter()->unique()->map(fn($path) => url($path))->values(),
                 'tags' => $items->pluck('tag')->filter()->unique()->values(),
