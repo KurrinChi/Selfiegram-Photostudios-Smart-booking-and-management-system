@@ -138,6 +138,16 @@ const SelectPackagePage = () => {
   const [showingColors, setShowingColors] = useState<Record<string, boolean>>(
     {}
   );
+  const [studioFlipped, setStudioFlipped] = useState(false);
+  const [studioBFlipped, setStudioBFlipped] = useState(false);
+  const [selectedStudioB, setSelectedStudioB] = useState<number | null>(null);
+  const [selectedStudioA, setSelectedStudioA] = useState<number | null>(null);
+  // For Studio A (colors)
+  const [selectedColorA, setSelectedColorA] = useState<string | null>(null);
+
+  // For Studio B (images)
+  const [selectedStudioBImage, setSelectedStudioBImage] = useState<number | null>(null);
+
 
   const toggleAddOn = (id: string, active?: boolean) => {
     setActiveAddOns((prev) => ({
@@ -404,100 +414,147 @@ const SelectPackagePage = () => {
             </h2>
             <p className="text-lg text-gray-600 font-medium">PHP {pkg.price}</p>
             <ul className="list-disc list-inside text-sm text-gray-700 mt-3 space-y-1">
-              {pkg.description.split("\n").map((line, i) => (
-                <li key={i}>{line}</li>
-              ))}
+              {pkg.description}
             </ul>
           </div>
         </div>
 
-        {/* Date & Time Section */}
-        <div className="bg-white rounded-xl shadow p-6 space-y-6">
-          <div className="flex flex-col lg:flex-row justify-center ml-20 mr-20">
-            <div className="lg:w-1/2">
-              <div
-                className="hidden md:block bg-white p-4 rounded-xl"
-                style={{ filter: "grayscale(100%)" }}
-              >
-                <DayPicker
-                  mode="single"
-                  selected={selectedDate}
-                  onSelect={(date) => {
-                    if (date && !isDateInPast(date)) {
-                      setSelectedDate(date);
-                      setSelectedTime(""); // Reset time selection when date changes
-                    }
-                  }}
-                  disabled={(date) => isDateInPast(date)}
-                  captionLayout="label"
-                  modifiers={{
-                    selected: (d) =>
-                      !!selectedDate && isSameDay(d, selectedDate!),
-                    today: (d) => isToday(d),
-                    disabled: (d) => isDateInPast(d),
-                  }}
-                  modifiersClassNames={{
-                    selected: "bg-gray-800 text-white",
-                    today: "font-bold text-black bg-gray-100 rounded-xl",
-                    disabled: "text-gray-400 cursor-not-allowed",
-                  }}
-                  classNames={{
-                    caption: "text-sm text-black",
-                    dropdown: "text-black z-30",
-                    day: "text-sm",
-                    nav_button: "text-black hover:bg-gray-100 p-1 rounded",
-                    nav_icon: "stroke-black fill-black w-4 h-4",
-                  }}
-                />
-              </div>
-            </div>
 
-            {/* Timeslots */}
-            <div className="lg:w-1/2">
-              <h4 className="text-sm text-gray-700 mb-2 font-medium">
-                Available Time Slots
-              </h4>
-              <div className="grid grid-cols-3 gap-2">
-                {timeSlots.map((slot) => {
-                  const isBooked = bookedTimeSlots.includes(slot);
-                  const isPastTime = selectedDate
-                    ? isTimeSlotInPast(slot, selectedDate)
-                    : false;
-                  const isDisabled = isBooked || isPastTime;
+        
+             {/* Studio Options Section */}
+<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+  {/* Studio A - clickable card that flips to reveal colors */}
+   <div className="w-full">
+  <div
+    onClick={() => setStudioFlipped((s) => !s)}
+    className="w-full h-25 bg-white rounded-xl shadow-lg flex items-center justify-center p-4 cursor-pointer relative"
+  >
+    <AnimatePresence mode="wait">
+      {!studioFlipped ? (
+        // FRONT SIDE
+        <motion.div
+          key="front"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.4 }}
+          className="absolute inset-0 flex items-center justify-center rounded-md hover:bg-gray-200 transition-colors duration-500 ease-in-out"
+        >
+          <span className="text-lg font-semibold text-gray-800">
+            Aesthetic Backdrop
+          </span>
+        </motion.div>
+      ) : (
+        // BACK SIDE
+       // BACK SIDE for Studio A
+        <motion.div
+          key="back"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.4 }}
+          className="absolute inset-0 bg-gray-100 rounded-xl shadow-lg flex flex-wrap items-center justify-center gap-9 p-3"
+        >
+          {colorOptions.map((color) => {
+            const isSelected = selectedColorA === color.id; // note: use separate state for Studio A
 
-                  return (
-                    <button
-                      key={slot}
-                      onClick={() => !isDisabled && setSelectedTime(slot)}
-                      disabled={isDisabled}
-                      className={`py-2 px-3 text-sm rounded-md transition text-center ${
-                        selectedTime === slot
-                          ? "bg-black text-white"
-                          : isDisabled
-                          ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                          : "bg-gray-100 hover:bg-gray-200"
-                      }`}
-                      title={
-                        isBooked
-                          ? "This time slot is already booked"
-                          : isPastTime
-                          ? "This time slot has passed"
-                          : ""
-                      }
-                    >
-                      {slot}
-                      {isBooked && (
-                        <span className="block text-xs text-red-500">
-                          Booked
-                        </span>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
+            return (
+              <motion.div
+                key={color.id}
+                whileHover={{ scale: 1.08 }}
+                animate={{ scale: isSelected ? 1.25 : 1 }} // enlarge if selected
+                transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                className="w-10 h-10 rounded-lg shadow-md cursor-pointer"
+                style={{ backgroundColor: color.hex }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSelectedColorA(color.id); // separate setter for Studio A
+                }}
+              />
+            );
+          })}
+        </motion.div>
+
+
+      )}
+    </AnimatePresence>
+  </div>
+      </div>
+
+{/* Studio B */}
+<div className="w-full">
+  <div
+    onClick={() => setStudioBFlipped((s) => !s)}
+    className="w-full h-25 bg-white rounded-xl shadow-lg flex items-center justify-center p-4 cursor-pointer relative"
+  >
+    <AnimatePresence mode="wait">
+      {!studioBFlipped ? (
+        // FRONT SIDE
+        <motion.div
+          key="front"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.4 }}
+        className="absolute inset-0 flex items-center justify-center rounded-md hover:bg-gray-200 transition-colors duration-500 ease-in-out"
+        >
+          <span className="text-lg font-semibold text-gray-800">
+            Concept Studio
+          </span>
+        </motion.div>
+      ) : (
+        // BACK SIDE with 4 rectangles and hover text
+        <motion.div
+  key="back"
+  initial={{ opacity: 0 }}
+  animate={{ opacity: 1 }}
+  exit={{ opacity: 0 }}
+  transition={{ duration: 0.4 }}
+  className="absolute inset-0 bg-gray-100 rounded-xl shadow-lg flex flex-wrap items-center justify-center gap-6 p-3"
+>
+  {[
+    { img: "/3.png", label: "BOHEMIAN DREAM" },
+    { img: "/4.png", label: "CHINGU PINK" },
+    { img: "/5.png", label: "SPOTLIGHT" },
+    { img: "/2.png", label: "GRADUATION" },
+  ].map((item, i) => {
+    const isSelected = selectedStudioB === i;
+
+    return (
+      <motion.div
+        key={i}
+        whileHover={{ scale: isSelected ? 1.1 : 1.05 }}
+        animate={{ scale: isSelected ? 1.2 : 1 }}
+        transition={{ type: "spring", stiffness: 300, damping: 20 }}
+        className="relative w-25 h-12 rounded-lg shadow-md bg-cover bg-center overflow-hidden cursor-pointer"
+        style={{ backgroundImage: `url(${item.img})` }}
+        onClick={(e) => {
+          e.stopPropagation();
+          setSelectedStudioB(i);
+        }}
+      >
+        {/* Label overlay */}
+        <div
+          className={`absolute inset-0 flex items-center justify-center rounded-lg
+            bg-gray-800 bg-opacity-20 text-white text-xs font-medium
+            opacity-0 hover:opacity-100 transition-opacity duration-500
+            text-center px-1 break-words
+          `}
+        >
+          {item.label}
         </div>
+
+        
+      </motion.div>
+    );
+  })}
+</motion.div>
+
+      )}
+    </AnimatePresence>
+  </div>
+</div>
+          </div>
 
         {/* Add Ons Section */}
         <div className="bg-white text-gray-900 rounded-xl shadow p-6 px-25 space-y-4">
@@ -590,39 +647,36 @@ const SelectPackagePage = () => {
                     <div className="relative w-full">
                       {/* Color swatches popup */}
                       <AnimatePresence>
-                        {showingColors[item.id] && (
-                          <motion.div
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: 10 }}
-                            className="absolute -top-12 left-1/2 -translate-x-1/2 flex gap-2"
-                          >
-                            {colorOptions.map((color) => (
-                              <button
-                                key={color.id}
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  // ✅ Save selection
-                                  setSelectedColors((prev) => ({
-                                    ...prev,
-                                    [item.id]: color,
-                                  }));
-                                  // ✅ Activate this add-on
-                                  toggleAddOn(item.id, true);
-                                  // ✅ Close swatches after selecting
-                                  setShowingColors((prev) => ({
-                                    ...prev,
-                                    [item.id]: false,
-                                  }));
-                                }}
-                                className="w-6 h-6 rounded-full border border-gray-400 shadow-sm hover:scale-110 transition"
-                                style={{ backgroundColor: color.hex }}
-                              />
-                            ))}
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
+                      {showingColors[item.id] && (
+                        <motion.div
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: 10 }}
+                          className="absolute -top-14 left-1/2 -translate-x-1/2 p-3 bg-white rounded-lg shadow-lg flex gap-2"
+                        >
+                          {colorOptions.map((color) => (
+                            <button
+                              key={color.id}
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedColors((prev) => ({
+                                  ...prev,
+                                  [item.id]: color,
+                                }));
+                                toggleAddOn(item.id, true);
+                                setShowingColors((prev) => ({
+                                  ...prev,
+                                  [item.id]: false,
+                                }));
+                              }}
+                              className="w-6 h-6 rounded-full border border-gray-400 shadow-sm hover:scale-110 transition"
+                              style={{ backgroundColor: color.hex }}
+                            />
+                          ))}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
 
                       {/* Button that opens color picker */}
                       <div
@@ -664,6 +718,94 @@ const SelectPackagePage = () => {
           </div>
         </div>
 
+        {/* Date & Time Section */}
+        <div className="bg-white rounded-xl shadow p-6 space-y-6">
+          <div className="flex flex-col lg:flex-row justify-center ml-20 mr-20">
+            <div className="lg:w-1/2">
+              <div
+                className="hidden md:block bg-white p-4 rounded-xl"
+                style={{ filter: "grayscale(100%)" }}
+              >
+                <DayPicker
+                  mode="single"
+                  selected={selectedDate}
+                  onSelect={(date) => {
+                    if (date && !isDateInPast(date)) {
+                      setSelectedDate(date);
+                      setSelectedTime(""); // Reset time selection when date changes
+                    }
+                  }}
+                  disabled={(date) => isDateInPast(date)}
+                  captionLayout="label"
+                  modifiers={{
+                    selected: (d) =>
+                      !!selectedDate && isSameDay(d, selectedDate!),
+                    today: (d) => isToday(d),
+                    disabled: (d) => isDateInPast(d),
+                  }}
+                  modifiersClassNames={{
+                    selected: "bg-gray-800 text-white",
+                    today: "font-bold text-black bg-gray-100 rounded-xl",
+                    disabled: "text-gray-400 cursor-not-allowed",
+                  }}
+                  classNames={{
+                    caption: "text-sm text-black",
+                    dropdown: "text-black z-30",
+                    day: "text-sm",
+                    nav_button: "text-black hover:bg-gray-100 p-1 rounded",
+                    nav_icon: "stroke-black fill-black w-4 h-4",
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Timeslots */}
+            <div className="lg:w-1/2">
+              <h4 className="text-sm text-gray-700 mb-2 font-medium">
+                Available Time Slots
+              </h4>
+              <div className="grid grid-cols-3 gap-2">
+                {timeSlots.map((slot) => {
+                  const isBooked = bookedTimeSlots.includes(slot);
+                  const isPastTime = selectedDate
+                    ? isTimeSlotInPast(slot, selectedDate)
+                    : false;
+                  const isDisabled = isBooked || isPastTime;
+
+                  return (
+                    <button
+                      key={slot}
+                      onClick={() => !isDisabled && setSelectedTime(slot)}
+                      disabled={isDisabled}
+                      className={`py-2 px-3 text-sm rounded-md transition text-center ${
+                        selectedTime === slot
+                          ? "bg-black text-white"
+                          : isDisabled
+                          ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                          : "bg-gray-100 hover:bg-gray-200"
+                      }`}
+                      title={
+                        isBooked
+                          ? "This time slot is already booked"
+                          : isPastTime
+                          ? "This time slot has passed"
+                          : ""
+                      }
+                    >
+                      {slot}
+                      {isBooked && (
+                        <span className="block text-xs text-red-500">
+                          Booked
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Personal Details Section */}
         <div className="bg-neutral-900 text-white rounded-xl shadow p-6 space-y-6">
           <h3 className="text-lg font-semibold">Personal Details</h3>
@@ -702,15 +844,6 @@ const SelectPackagePage = () => {
               placeholder="Address"
               className="w-full px-4 py-3 rounded bg-neutral-800 border border-neutral-700 text-sm placeholder-gray-400"
             />
-            <select
-              value={paymentMode}
-              onChange={(e) => setPaymentMode(e.target.value)}
-              className="col-span-1 md:col-span-2 w-full px-4 py-3 rounded bg-neutral-800 border border-neutral-700 text-sm text-white"
-            >
-              <option value="">Select Mode of Payment</option>
-              <option value="GCash">GCash</option>
-              <option value="Cash">Cash</option>
-            </select>
           </div>
 
           <div className="text-sm space-y-4">
