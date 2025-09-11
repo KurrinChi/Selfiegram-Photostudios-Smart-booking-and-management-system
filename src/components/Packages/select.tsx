@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { DayPicker } from "react-day-picker";
 import "react-day-picker/dist/style.css";
 import { isToday, isSameDay, startOfDay } from "date-fns";
@@ -124,7 +124,7 @@ const SelectPackagePage = () => {
   const [contact, setContact] = useState("");
   const [email, setEmail] = useState("");
   const [address, setAddress] = useState("");
-  const [paymentMode, setPaymentMode] = useState("");
+  const [paymentMode] = useState("");
   const [agreed, setAgreed] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [previewData, setPreviewData] = useState<PreviewBookingData | null>(
@@ -141,13 +141,9 @@ const SelectPackagePage = () => {
   const [studioFlipped, setStudioFlipped] = useState(false);
   const [studioBFlipped, setStudioBFlipped] = useState(false);
   const [selectedStudioB, setSelectedStudioB] = useState<number | null>(null);
-  const [selectedStudioA, setSelectedStudioA] = useState<number | null>(null);
+
   // For Studio A (colors)
   const [selectedColorA, setSelectedColorA] = useState<string | null>(null);
-
-  // For Studio B (images)
-  const [selectedStudioBImage, setSelectedStudioBImage] = useState<number | null>(null);
-
 
   const toggleAddOn = (id: string, active?: boolean) => {
     setActiveAddOns((prev) => ({
@@ -419,142 +415,143 @@ const SelectPackagePage = () => {
           </div>
         </div>
 
+        {/* Studio Options Section */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Studio A - clickable card that flips to reveal colors */}
+          <div className="w-full">
+            <div
+              onClick={() => setStudioFlipped((s) => !s)}
+              className="w-full h-25 bg-white rounded-xl shadow-lg flex items-center justify-center p-4 cursor-pointer relative"
+            >
+              <AnimatePresence mode="wait">
+                {!studioFlipped ? (
+                  // FRONT SIDE
+                  <motion.div
+                    key="front"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.4 }}
+                    className="absolute inset-0 flex items-center justify-center rounded-md hover:bg-gray-200 transition-colors duration-500 ease-in-out"
+                  >
+                    <span className="text-lg font-semibold text-gray-800">
+                      Aesthetic Backdrop
+                    </span>
+                  </motion.div>
+                ) : (
+                  // BACK SIDE
+                  // BACK SIDE for Studio A
+                  <motion.div
+                    key="back"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.4 }}
+                    className="absolute inset-0 bg-gray-100 rounded-xl shadow-lg flex flex-wrap items-center justify-center gap-9 p-3"
+                  >
+                    {colorOptions.map((color) => {
+                      const isSelected = selectedColorA === color.id; // note: use separate state for Studio A
 
-        
-             {/* Studio Options Section */}
-<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-  {/* Studio A - clickable card that flips to reveal colors */}
-   <div className="w-full">
-  <div
-    onClick={() => setStudioFlipped((s) => !s)}
-    className="w-full h-25 bg-white rounded-xl shadow-lg flex items-center justify-center p-4 cursor-pointer relative"
-  >
-    <AnimatePresence mode="wait">
-      {!studioFlipped ? (
-        // FRONT SIDE
-        <motion.div
-          key="front"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.4 }}
-          className="absolute inset-0 flex items-center justify-center rounded-md hover:bg-gray-200 transition-colors duration-500 ease-in-out"
-        >
-          <span className="text-lg font-semibold text-gray-800">
-            Aesthetic Backdrop
-          </span>
-        </motion.div>
-      ) : (
-        // BACK SIDE
-       // BACK SIDE for Studio A
-        <motion.div
-          key="back"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.4 }}
-          className="absolute inset-0 bg-gray-100 rounded-xl shadow-lg flex flex-wrap items-center justify-center gap-9 p-3"
-        >
-          {colorOptions.map((color) => {
-            const isSelected = selectedColorA === color.id; // note: use separate state for Studio A
+                      return (
+                        <motion.div
+                          key={color.id}
+                          whileHover={{ scale: 1.08 }}
+                          animate={{ scale: isSelected ? 1.25 : 1 }} // enlarge if selected
+                          transition={{
+                            type: "spring",
+                            stiffness: 300,
+                            damping: 20,
+                          }}
+                          className="w-10 h-10 rounded-lg shadow-md cursor-pointer"
+                          style={{ backgroundColor: color.hex }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedColorA(color.id); // separate setter for Studio A
+                          }}
+                        />
+                      );
+                    })}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          </div>
 
-            return (
-              <motion.div
-                key={color.id}
-                whileHover={{ scale: 1.08 }}
-                animate={{ scale: isSelected ? 1.25 : 1 }} // enlarge if selected
-                transition={{ type: "spring", stiffness: 300, damping: 20 }}
-                className="w-10 h-10 rounded-lg shadow-md cursor-pointer"
-                style={{ backgroundColor: color.hex }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setSelectedColorA(color.id); // separate setter for Studio A
-                }}
-              />
-            );
-          })}
-        </motion.div>
+          {/* Studio B */}
+          <div className="w-full">
+            <div
+              onClick={() => setStudioBFlipped((s) => !s)}
+              className="w-full h-25 bg-white rounded-xl shadow-lg flex items-center justify-center p-4 cursor-pointer relative"
+            >
+              <AnimatePresence mode="wait">
+                {!studioBFlipped ? (
+                  // FRONT SIDE
+                  <motion.div
+                    key="front"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.4 }}
+                    className="absolute inset-0 flex items-center justify-center rounded-md hover:bg-gray-200 transition-colors duration-500 ease-in-out"
+                  >
+                    <span className="text-lg font-semibold text-gray-800">
+                      Concept Studio
+                    </span>
+                  </motion.div>
+                ) : (
+                  // BACK SIDE with 4 rectangles and hover text
+                  <motion.div
+                    key="back"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.4 }}
+                    className="absolute inset-0 bg-gray-100 rounded-xl shadow-lg flex flex-wrap items-center justify-center gap-6 p-3"
+                  >
+                    {[
+                      { img: "/3.png", label: "BOHEMIAN DREAM" },
+                      { img: "/4.png", label: "CHINGU PINK" },
+                      { img: "/5.png", label: "SPOTLIGHT" },
+                      { img: "/2.png", label: "GRADUATION" },
+                    ].map((item, i) => {
+                      const isSelected = selectedStudioB === i;
 
-
-      )}
-    </AnimatePresence>
-  </div>
-      </div>
-
-{/* Studio B */}
-<div className="w-full">
-  <div
-    onClick={() => setStudioBFlipped((s) => !s)}
-    className="w-full h-25 bg-white rounded-xl shadow-lg flex items-center justify-center p-4 cursor-pointer relative"
-  >
-    <AnimatePresence mode="wait">
-      {!studioBFlipped ? (
-        // FRONT SIDE
-        <motion.div
-          key="front"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.4 }}
-        className="absolute inset-0 flex items-center justify-center rounded-md hover:bg-gray-200 transition-colors duration-500 ease-in-out"
-        >
-          <span className="text-lg font-semibold text-gray-800">
-            Concept Studio
-          </span>
-        </motion.div>
-      ) : (
-        // BACK SIDE with 4 rectangles and hover text
-        <motion.div
-  key="back"
-  initial={{ opacity: 0 }}
-  animate={{ opacity: 1 }}
-  exit={{ opacity: 0 }}
-  transition={{ duration: 0.4 }}
-  className="absolute inset-0 bg-gray-100 rounded-xl shadow-lg flex flex-wrap items-center justify-center gap-6 p-3"
->
-  {[
-    { img: "/3.png", label: "BOHEMIAN DREAM" },
-    { img: "/4.png", label: "CHINGU PINK" },
-    { img: "/5.png", label: "SPOTLIGHT" },
-    { img: "/2.png", label: "GRADUATION" },
-  ].map((item, i) => {
-    const isSelected = selectedStudioB === i;
-
-    return (
-      <motion.div
-        key={i}
-        whileHover={{ scale: isSelected ? 1.1 : 1.05 }}
-        animate={{ scale: isSelected ? 1.2 : 1 }}
-        transition={{ type: "spring", stiffness: 300, damping: 20 }}
-        className="relative w-25 h-12 rounded-lg shadow-md bg-cover bg-center overflow-hidden cursor-pointer"
-        style={{ backgroundImage: `url(${item.img})` }}
-        onClick={(e) => {
-          e.stopPropagation();
-          setSelectedStudioB(i);
-        }}
-      >
-        {/* Label overlay */}
-        <div
-          className={`absolute inset-0 flex items-center justify-center rounded-lg
+                      return (
+                        <motion.div
+                          key={i}
+                          whileHover={{ scale: isSelected ? 1.1 : 1.05 }}
+                          animate={{ scale: isSelected ? 1.2 : 1 }}
+                          transition={{
+                            type: "spring",
+                            stiffness: 300,
+                            damping: 20,
+                          }}
+                          className="relative w-25 h-12 rounded-lg shadow-md bg-cover bg-center overflow-hidden cursor-pointer"
+                          style={{ backgroundImage: `url(${item.img})` }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedStudioB(i);
+                          }}
+                        >
+                          {/* Label overlay */}
+                          <div
+                            className={`absolute inset-0 flex items-center justify-center rounded-lg
             bg-gray-800 bg-opacity-20 text-white text-xs font-medium
             opacity-0 hover:opacity-100 transition-opacity duration-500
             text-center px-1 break-words
           `}
-        >
-          {item.label}
-        </div>
-
-        
-      </motion.div>
-    );
-  })}
-</motion.div>
-
-      )}
-    </AnimatePresence>
-  </div>
-</div>
+                          >
+                            {item.label}
+                          </div>
+                        </motion.div>
+                      );
+                    })}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           </div>
+        </div>
 
         {/* Add Ons Section */}
         <div className="bg-white text-gray-900 rounded-xl shadow p-6 px-25 space-y-4">
@@ -647,36 +644,36 @@ const SelectPackagePage = () => {
                     <div className="relative w-full">
                       {/* Color swatches popup */}
                       <AnimatePresence>
-                      {showingColors[item.id] && (
-                        <motion.div
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, y: 10 }}
-                          className="absolute -top-14 left-1/2 -translate-x-1/2 p-3 bg-white rounded-lg shadow-lg flex gap-2"
-                        >
-                          {colorOptions.map((color) => (
-                            <button
-                              key={color.id}
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setSelectedColors((prev) => ({
-                                  ...prev,
-                                  [item.id]: color,
-                                }));
-                                toggleAddOn(item.id, true);
-                                setShowingColors((prev) => ({
-                                  ...prev,
-                                  [item.id]: false,
-                                }));
-                              }}
-                              className="w-6 h-6 rounded-full border border-gray-400 shadow-sm hover:scale-110 transition"
-                              style={{ backgroundColor: color.hex }}
-                            />
-                          ))}
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
+                        {showingColors[item.id] && (
+                          <motion.div
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: 10 }}
+                            className="absolute -top-14 left-1/2 -translate-x-1/2 p-3 bg-white rounded-lg shadow-lg flex gap-2"
+                          >
+                            {colorOptions.map((color) => (
+                              <button
+                                key={color.id}
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedColors((prev) => ({
+                                    ...prev,
+                                    [item.id]: color,
+                                  }));
+                                  toggleAddOn(item.id, true);
+                                  setShowingColors((prev) => ({
+                                    ...prev,
+                                    [item.id]: false,
+                                  }));
+                                }}
+                                className="w-6 h-6 rounded-full border border-gray-400 shadow-sm hover:scale-110 transition"
+                                style={{ backgroundColor: color.hex }}
+                              />
+                            ))}
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
 
                       {/* Button that opens color picker */}
                       <div
