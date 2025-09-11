@@ -1,4 +1,3 @@
-import axios from "axios";
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { DayPicker } from "react-day-picker";
@@ -22,13 +21,17 @@ interface Concept {
   label: string;
   type: string; // "plain" | "concept"
 }
-
+type FetchedAddOn = {
+  addOnID: number;
+  addOn: string;
+  addOnPrice: string;
+};
 interface PackageSet {
   setId: string;
   setName: string;
   concepts: Concept[];
 }
-const addOns: AddOn[] = [
+/*const addOns: AddOn[] = [
   { id: "pax", label: "Addl pax", price: 129, type: "spinner" },
   {
     id: "portrait",
@@ -67,7 +70,7 @@ const addOns: AddOn[] = [
 
   { id: "digital", label: "All digital copies", price: 199, type: "checkbox" },
   { id: "extra5", label: "Addl 5 mins", price: 129, type: "checkbox" },
-];
+];*/
 
 const colorOptions = [
   { id: "white", hex: "#f4f6f1", label: "WHITE" },
@@ -204,25 +207,42 @@ useEffect(() => {
   }
 }, [id]);
 
+const addOnsMap: Record<number, AddOn> = {
+  20: { id: "pax", label: "Addl pax", price: 129, type: "spinner" },
+  10: { id: "portrait", label: "Addl Portrait Picture", price: 49, type: "spinner" },
+  30: { id: "grid", label: "Addl Grid Picture", price: 69, type: "spinner" },
+  40: { id: "a4", label: "Addl A4 Picture", price: 129, type: "spinner" },
+  50: { id: "backdrop", label: "Addl Backdrop", price: 129, type: "dropdown", options: ["Floral", "Modern", "Classic"] },
+  60: { id: "digital", label: "All digital copies", price: 199, type: "checkbox" },
+  70: { id: "extra5", label: "Addl 5 mins", price: 129, type: "checkbox" },
+  80: { id: "photo20", label: "Photographer service for 20mins", price: 599, type: "checkbox" },
+  90: { id: "photo60", label: "Photographer service for 1hr", price: 1699, type: "checkbox" },
+  100: { id: "makeup", label: "Professional Hair & Make up", price: 1699, type: "checkbox" },
+};
+
 useEffect(() => {
   const fetchAddOns = async () => {
     try {
       const res = await fetchWithAuth(`${API_URL}/api/packages/${id}/addons`);
       if (!res.ok) throw new Error("Failed to fetch add-ons");
 
-      const json = await res.json();
-      // Extract the array from json.data
-      const addonsArray: AddOn[] = (json.data || []).map((item: any) => ({
-        id: item.addOnID.toString(),
-        label: item.addOn,
-        price: Number(item.addOnPrice),
-        type: "spinner", // or customize per your rules
-      }));
+      const result = await res.json();
 
-      setAddOns(addonsArray);
+      // Ensure result.data is an array
+      const arrayData: FetchedAddOn[] = Array.isArray(result.data) ? result.data : [];
+
+      // Merge fetched add-ons with static definitions
+      const mergedAddOns: AddOn[] = arrayData
+        .map((dbItem) => {
+          const staticDef = addOnsMap[dbItem.addOnID];
+          if (!staticDef) return null; // ignore unknown IDs
+          return { ...staticDef, price: Number(dbItem.addOnPrice) };
+        })
+        .filter((item): item is AddOn => Boolean(item)); // type-safe filter
+
+      setAddOns(mergedAddOns);
     } catch (error) {
       console.error("Error fetching add-ons:", error);
-      setAddOns([]); // avoid undefined
     }
   };
 
@@ -236,13 +256,13 @@ useEffect(() => {
   }));
 };
 
-// 4️⃣ Update quantity for spinner AddOns
+/*// 4️⃣ Update quantity for spinner AddOns
 const handleQuantityChange = (id: string, value: number) => {
   setQuantities(prev => ({
     ...prev,
     [id]: value > 0 ? value : 1,
   }));
-};
+};*/
 
   /*const toggleAddOn = (id: string, active?: boolean) => {
     setActiveAddOns((prev) => ({
@@ -784,74 +804,72 @@ const handleQuantityChange = (id: string, value: number) => {
                   )}
 
                   {item.type === "dropdown" && (
-                    <div className="relative w-full">
-                      {/* Color swatches popup */}
-                      <AnimatePresence>
-                        {showingColors[item.id] && (
-                          <motion.div
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: 10 }}
-                            className="absolute -top-14 left-1/2 -translate-x-1/2 p-3 bg-white rounded-lg shadow-lg flex gap-2"
-                          >
-                            {colorOptions.map((color) => (
-                              <button
-                                key={color.id}
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setSelectedColors((prev) => ({
-                                    ...prev,
-                                    [item.id]: color,
-                                  }));
-                                  toggleAddOn(item.id, true);
-                                  setShowingColors((prev) => ({
-                                    ...prev,
-                                    [item.id]: false,
-                                  }));
-                                }}
-                                className="w-6 h-6 rounded-full border border-gray-400 shadow-sm hover:scale-110 transition"
-                                style={{ backgroundColor: color.hex }}
-                              />
-                            ))}
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
+  <div className="relative w-full">
+    {/* Color swatches popup */}
+    <AnimatePresence>
+      {showingColors[item.id] && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 10 }}
+          className="absolute -top-14 left-1/2 -translate-x-1/2 p-3 bg-white rounded-lg shadow-lg flex gap-2"
+        >
+          {colorOptions.map((color) => (
+            <button
+              key={color.id}
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setSelectedColors((prev) => ({
+                  ...prev,
+                  [item.id]: color,
+                }));
+                toggleAddOn(item.id, true);
+                setShowingColors((prev) => ({
+                  ...prev,
+                  [item.id]: false,
+                }));
+              }}
+              className="w-6 h-6 rounded-full border border-gray-400 shadow-sm hover:scale-110 transition"
+              style={{ backgroundColor: color.hex }}
+            />
+          ))}
+        </motion.div>
+      )}
+    </AnimatePresence>
 
-                      {/* Button that opens color picker */}
-                      <div
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setShowingColors((prev) => ({
-                            ...prev,
-                            [item.id]: !prev[item.id], // toggle popup
-                          }));
-                        }}
-                        className={`w-full h-8 rounded-md border text-xs flex items-center justify-center cursor-pointer transition ${
-                          isActive ? "border-gray-600" : "border-gray-300"
-                        }`}
-                        style={{
-                          backgroundColor:
-                            selectedColors?.[item.id]?.hex ||
-                            (isActive ? "#272727" : "#ffffff"),
-                          color: (() => {
-                            const hex = selectedColors?.[item.id]?.hex;
-                            if (!hex) return isActive ? "#fff" : "#000"; // default
-                            // convert hex → RGB
-                            const r = parseInt(hex.slice(1, 3), 16);
-                            const g = parseInt(hex.slice(3, 5), 16);
-                            const b = parseInt(hex.slice(5, 7), 16);
-                            // calculate luminance
-                            const brightness =
-                              (r * 299 + g * 587 + b * 114) / 1000;
-                            return brightness > 150 ? "#000" : "#fff"; // light bg → black text, dark bg → white text
-                          })(),
-                        }}
-                      >
-                        {selectedColors?.[item.id]?.label || "Select Color"}
-                      </div>
-                    </div>
-                  )}
+    {/* Button that opens color picker */}
+    <div
+      onClick={(e) => {
+        e.stopPropagation();
+        setShowingColors((prev) => ({
+          ...prev,
+          [item.id]: !prev[item.id], // toggle popup
+        }));
+      }}
+      className={`w-full h-8 rounded-md border text-xs flex items-center justify-center cursor-pointer transition ${
+        isActive ? "border-gray-600" : "border-gray-300"
+      }`}
+      style={{
+        backgroundColor:
+          selectedColors?.[item.id]?.hex ||
+          (isActive ? "#272727" : "#ffffff"),
+        color: (() => {
+          const hex = selectedColors?.[item.id]?.hex;
+          if (!hex) return isActive ? "#fff" : "#000"; // default
+          const r = parseInt(hex.slice(1, 3), 16);
+          const g = parseInt(hex.slice(3, 5), 16);
+          const b = parseInt(hex.slice(5, 7), 16);
+          const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+          return brightness > 150 ? "#000" : "#fff"; // light bg → black text, dark bg → white text
+        })(),
+      }}
+    >
+      {selectedColors?.[item.id]?.label || "Select Color"}
+    </div>
+  </div>
+)}
+
                 </button>
               );
             })}
