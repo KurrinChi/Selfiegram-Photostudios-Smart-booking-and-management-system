@@ -16,7 +16,17 @@ interface AddOn {
   type: "spinner" | "checkbox" | "dropdown";
   options?: string[]; // for dropdown only
 }
+interface Concept {
+  id: string;
+  label: string;
+  type: string; // "plain" | "concept"
+}
 
+interface PackageSet {
+  setId: string;
+  setName: string;
+  concepts: Concept[];
+}
 const addOns: AddOn[] = [
   { id: "pax", label: "Addl pax", price: 129, type: "spinner" },
   {
@@ -115,6 +125,7 @@ interface PreviewBookingData {
 const API_URL = import.meta.env.VITE_API_URL;
 
 const SelectPackagePage = () => {
+  
   const { id } = useParams();
   const navigate = useNavigate();
   const [pkg, setPkg] = useState<Package | null>(null);
@@ -144,6 +155,50 @@ const SelectPackagePage = () => {
 
   // For Studio A (colors)
   const [selectedColorA, setSelectedColorA] = useState<string | null>(null);
+
+  const [setData, setSetData] = useState<PackageSet | null>(null);
+  const hasPlain = !!setData?.concepts?.some(
+    (c) => (c.type || "").toString().toLowerCase() === "plain"
+  );
+  const hasConcept = !!setData?.concepts?.some(
+    (c) => (c.type || "").toString().toLowerCase() === "concept"
+  );
+
+  // convert setId to number safely (handles strings like "1")
+  const setIdNum = setData?.setId ? Number(setData.setId) : null;
+  const showStudioA = setIdNum !== 3; // hide Studio A only if set 3
+const enableStudioB = setIdNum === 2 || setIdNum === 4; // show B only for set 2 or 4
+const hideBothStudios = setIdNum === 3; // for completeness
+
+
+
+  // rule: setId === 1 => plain-only (disable concept studio)
+  const isPlainOnlySet = setIdNum === 1;
+
+// final flags used by the UI
+//const showStudioA = isPlainOnlySet || hasPlain;       // render Studio A
+//const enableStudioB = !isPlainOnlySet && hasConcept; // concept studio
+
+/*const showStudioA =
+  isPlainOnlySet ||
+  setData?.concepts?.some(
+    (c) => (c.type || "").toString().toLowerCase() === "plain"
+  );
+
+// Studio B: only disabled if plain-only; otherwise enabled if API has concepts
+const enableStudioB =
+  !isPlainOnlySet &&
+  setData?.concepts?.some(
+    (c) => (c.type || "").toString().toLowerCase() === "studio"
+  );*/
+useEffect(() => {
+  if (id) {
+    fetchWithAuth(`${API_URL}/api/packages/${id}/set-concepts`)
+      .then((res) => res.json())
+      .then((data) => setSetData(data))
+      .catch((err) => console.error("Failed to fetch set concepts:", err));
+  }
+}, [id]);
 
   const toggleAddOn = (id: string, active?: boolean) => {
     setActiveAddOns((prev) => ({
@@ -362,7 +417,7 @@ const SelectPackagePage = () => {
   };
 
   if (!pkg)
-    return <div className="p-4 text-sm text-gray-500">Package not found.</div>;
+    return <div className="p-4 text-sm text-gray-500">Loading package...</div>;
 
   const timeSlots = Array.from({ length: 23 }, (_, i) => {
     const hour = 9 + Math.floor(i / 2);
@@ -376,6 +431,17 @@ const SelectPackagePage = () => {
       meridian;
     return formatted;
   });
+
+
+  const conceptImages: Record<string, string> = {
+  "BOHEMIAN DREAM": "/3.png",
+  "CHINGU PINK": "/4.png",
+  "SPOTLIGHT": "/5.png",
+  "GRADUATION": "/2.png",
+};
+
+
+
 
   return (
     <>
@@ -415,143 +481,178 @@ const SelectPackagePage = () => {
           </div>
         </div>
 
-        {/* Studio Options Section */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Studio A - clickable card that flips to reveal colors */}
-          <div className="w-full">
-            <div
-              onClick={() => setStudioFlipped((s) => !s)}
-              className="w-full h-25 bg-white rounded-xl shadow-lg flex items-center justify-center p-4 cursor-pointer relative"
-            >
-              <AnimatePresence mode="wait">
-                {!studioFlipped ? (
-                  // FRONT SIDE
-                  <motion.div
-                    key="front"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.4 }}
-                    className="absolute inset-0 flex items-center justify-center rounded-md hover:bg-gray-200 transition-colors duration-500 ease-in-out"
-                  >
-                    <span className="text-lg font-semibold text-gray-800">
-                      Aesthetic Backdrop
-                    </span>
-                  </motion.div>
-                ) : (
-                  // BACK SIDE
-                  // BACK SIDE for Studio A
-                  <motion.div
-                    key="back"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.4 }}
-                    className="absolute inset-0 bg-gray-100 rounded-xl shadow-lg flex flex-wrap items-center justify-center gap-9 p-3"
-                  >
-                    {colorOptions.map((color) => {
-                      const isSelected = selectedColorA === color.id; // note: use separate state for Studio A
+   {/* Studio Options Section */}
+{setData && (
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    {/* Determine visibility and interactivity */}
+    {(() => {
+      const setIdNum = Number(setData.setId);
+      const showStudioA = setIdNum !== 5;
+      const enableStudioB = setIdNum === 2 || setIdNum === 4 || setIdNum === 3;
 
-                      return (
-                        <motion.div
-                          key={color.id}
-                          whileHover={{ scale: 1.08 }}
-                          animate={{ scale: isSelected ? 1.25 : 1 }} // enlarge if selected
-                          transition={{
-                            type: "spring",
-                            stiffness: 300,
-                            damping: 20,
-                          }}
-                          className="w-10 h-10 rounded-lg shadow-md cursor-pointer"
-                          style={{ backgroundColor: color.hex }}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedColorA(color.id); // separate setter for Studio A
-                          }}
-                        />
-                      );
-                    })}
-                  </motion.div>
-                )}
-              </AnimatePresence>
+      // Helper for mutual exclusivity if set 2
+      const handleStudioASelect = () => {
+        setStudioFlipped((s) => !s);
+        if (setIdNum === 2) setStudioBFlipped(false);
+      };
+      const handleStudioBSelect = () => {
+        if (!enableStudioB) return;
+        setStudioBFlipped((s) => !s);
+        if (setIdNum === 2) setStudioFlipped(false);
+      };
+
+      return (
+        <>
+          {/* Studio A - Plain Backdrop */}
+          {showStudioA && (
+            <div className="w-full">
+              <div
+                onClick={handleStudioASelect}
+                className="w-full h-25 bg-white rounded-xl shadow-lg flex items-center justify-center p-4 cursor-pointer relative"
+              >
+                <AnimatePresence mode="wait">
+                  {!studioFlipped ? (
+                    <motion.div
+                      key="front"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.4 }}
+                      className="absolute inset-0 flex items-center justify-center rounded-md hover:bg-gray-200 transition-colors"
+                    >
+                      <span className="text-lg font-semibold text-gray-800">
+                        Plain Backdrop
+                      </span>
+                    </motion.div>
+                  ) : (
+                    <motion.div
+                      key="back"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.4 }}
+                      className="absolute inset-0 bg-gray-100 rounded-xl shadow-lg flex flex-wrap items-center justify-center gap-6 p-3"
+                    >
+                      {colorOptions.map((color) => {
+                        const isSelected = selectedColorA === color.id;
+                        return (
+                          <motion.div
+                            key={color.id}
+                            whileHover={{ scale: 1.08 }}
+                            animate={{ scale: isSelected ? 1.25 : 1 }}
+                            transition={{
+                              type: "spring",
+                              stiffness: 300,
+                              damping: 20,
+                            }}
+                            className="w-10 h-10 rounded-lg shadow-md cursor-pointer"
+                            style={{ backgroundColor: color.hex }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedColorA(color.id);
+                            }}
+                          />
+                        );
+                      })}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
             </div>
-          </div>
+          )}
 
-          {/* Studio B */}
-          <div className="w-full">
-            <div
-              onClick={() => setStudioBFlipped((s) => !s)}
-              className="w-full h-25 bg-white rounded-xl shadow-lg flex items-center justify-center p-4 cursor-pointer relative"
+
+{/* Studio B - Concept Studio */}
+{/* Studio B - Concept Studio */}
+{setIdNum !== 5 && (
+  <div className="w-full">
+    <div
+      onClick={enableStudioB ? handleStudioBSelect : undefined}
+      className={`w-full h-25 rounded-xl shadow-lg flex items-center justify-center p-4 relative ${
+        enableStudioB
+          ? "bg-white cursor-pointer"
+          : "bg-gray-200 cursor-not-allowed"
+      }`}
+    >
+      <AnimatePresence mode="wait">
+        {!studioBFlipped ? (
+          <motion.div
+            key="front"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.4 }}
+            className="absolute inset-0 flex items-center justify-center rounded-md transition-colors duration-500 ease-in-out"
+          >
+            <span
+              className={`text-lg font-semibold ${
+                enableStudioB ? "text-gray-800" : "text-gray-400"
+              }`}
             >
-              <AnimatePresence mode="wait">
-                {!studioBFlipped ? (
-                  // FRONT SIDE
-                  <motion.div
-                    key="front"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.4 }}
-                    className="absolute inset-0 flex items-center justify-center rounded-md hover:bg-gray-200 transition-colors duration-500 ease-in-out"
-                  >
-                    <span className="text-lg font-semibold text-gray-800">
-                      Concept Studio
-                    </span>
-                  </motion.div>
-                ) : (
-                  // BACK SIDE with 4 rectangles and hover text
-                  <motion.div
-                    key="back"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.4 }}
-                    className="absolute inset-0 bg-gray-100 rounded-xl shadow-lg flex flex-wrap items-center justify-center gap-6 p-3"
-                  >
-                    {[
-                      { img: "/3.png", label: "BOHEMIAN DREAM" },
-                      { img: "/4.png", label: "CHINGU PINK" },
-                      { img: "/5.png", label: "SPOTLIGHT" },
-                      { img: "/2.png", label: "GRADUATION" },
-                    ].map((item, i) => {
-                      const isSelected = selectedStudioB === i;
+              Concept Studio
+            </span>
+           
+          </motion.div>
+        ) : (
+          <motion.div
+            key="back"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.4 }}
+            className="absolute inset-0 bg-gray-100 rounded-xl shadow-lg flex flex-wrap items-center justify-center gap-8 p-3 overflow-auto max-h-64"
+          >
+            {(setData?.concepts ?? [])
+              .filter((c) => (c.type || "").toLowerCase() === "studio")
+              .map((concept, i) => {
+                const isSelected = selectedStudioB === i;
+                const keyLabel = (concept.label || "").trim().toUpperCase();
+                const imgSrc = conceptImages[keyLabel] || "/default.png";
 
-                      return (
-                        <motion.div
-                          key={i}
-                          whileHover={{ scale: isSelected ? 1.1 : 1.05 }}
-                          animate={{ scale: isSelected ? 1.2 : 1 }}
-                          transition={{
-                            type: "spring",
-                            stiffness: 300,
-                            damping: 20,
-                          }}
-                          className="relative w-25 h-12 rounded-lg shadow-md bg-cover bg-center overflow-hidden cursor-pointer"
-                          style={{ backgroundImage: `url(${item.img})` }}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedStudioB(i);
-                          }}
-                        >
-                          {/* Label overlay */}
-                          <div
-                            className={`absolute inset-0 flex items-center justify-center rounded-lg
-            bg-gray-800 bg-opacity-20 text-white text-xs font-medium
-            opacity-0 hover:opacity-100 transition-opacity duration-500
-            text-center px-1 break-words
-          `}
-                          >
-                            {item.label}
-                          </div>
-                        </motion.div>
-                      );
-                    })}
+                return (
+                  <motion.div
+                    key={concept.id}
+                    whileHover={{ scale: isSelected ? 1.1 : 1.05 }}
+                    animate={{ scale: isSelected ? 1.2 : 1 }}
+                    transition={{
+                      type: "spring",
+                      stiffness: 300,
+                      damping: 20,
+                    }}
+                    className={`relative w-30 h-12 rounded-lg shadow-md bg-cover bg-center overflow-hidden cursor-pointer ${
+                      !enableStudioB ? "opacity-50" : ""
+                    }`}
+                    style={{ backgroundImage: `url(${imgSrc})` }}
+                    onClick={(e) => {
+                      if (!enableStudioB) return;
+                      e.stopPropagation();
+                      setSelectedStudioB(i);
+                    }}
+                  >
+                    <div className="absolute inset-0 flex items-center justify-center rounded-lg
+                      bg-gray-800 bg-opacity-20 text-white text-xs font-medium
+                      opacity-0 hover:opacity-100 transition-opacity duration-500 text-center px-1 break-words">
+                      {concept.label}
+                    </div>
                   </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          </div>
-        </div>
+                );
+              })}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  </div>
+)}
+
+
+
+        </>
+      );
+    })()}
+  </div>
+)}
+
+
 
         {/* Add Ons Section */}
         <div className="bg-white text-gray-900 rounded-xl shadow p-6 px-25 space-y-4">

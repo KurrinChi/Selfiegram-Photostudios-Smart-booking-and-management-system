@@ -89,6 +89,7 @@
         //Client Package
         Route::get('/packages', [PackageController::class, 'index']);
         Route::get('/packages/{id}', [PackageController::class, 'show']);
+        Route::get('/packages/{id}/set-concepts', [PackageController::class, 'getPackageSetAndConcepts']);
 
         //Client Favorite Page
         Route::post('/favorites/add', [FavoriteController::class, 'add']);

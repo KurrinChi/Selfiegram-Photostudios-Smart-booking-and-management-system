@@ -180,6 +180,42 @@ class PackageController extends Controller
             return response()->json(['message' => 'Package not found or no change made'], 404);
         }
     }
+    public function getPackageSetAndConcepts($id)
+        {
+            // 1. Get the setID for the package
+            $set = DB::table('packages')
+                ->where('packageID', $id)
+                ->join('package_sets', 'packages.setID', '=', 'package_sets.setID')
+                ->select('package_sets.setID', 'package_sets.setName')
+                ->first();
+
+            if (!$set) {
+                return response()->json(['message' => 'No set assigned for this package'], 404);
+            }
+
+            // 2. Get all concepts linked to this set
+            $concepts = DB::table('package_sets_mapping')
+                ->where('package_sets_mapping.setID', $set->setID)
+                ->join('package_concept', 'package_sets_mapping.conceptID', '=', 'package_concept.conceptID')
+                ->select(
+                    'package_concept.conceptID as id',
+                    'package_concept.backdrop as label',
+                    'package_concept.conceptType as type'
+                )
+                ->get();
+
+            return response()->json([
+                'setId' => $set->setID,
+                'setName' => $set->setName,
+                'concepts' => $concepts->map(function ($c) {
+                    return [
+                        'id' => $c->id,
+                        'label' => $c->label,
+                        'type' => $c->type,
+                    ];
+                })->values()
+            ]);
+        }
 
 }
 ?>
