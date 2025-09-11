@@ -1,3 +1,4 @@
+import axios from "axios";
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { DayPicker } from "react-day-picker";
@@ -141,6 +142,9 @@ const SelectPackagePage = () => {
   const [previewData, setPreviewData] = useState<PreviewBookingData | null>(
     null
   );
+
+
+   const [addOns, setAddOns] = useState<AddOn[]>([]);
   const [bookedTimeSlots, setBookedTimeSlots] = useState<string[]>([]);
   const [activeAddOns, setActiveAddOns] = useState<Record<string, boolean>>({});
   const [selectedColors, setSelectedColors] = useState<
@@ -157,23 +161,23 @@ const SelectPackagePage = () => {
   const [selectedColorA, setSelectedColorA] = useState<string | null>(null);
 
   const [setData, setSetData] = useState<PackageSet | null>(null);
-  const hasPlain = !!setData?.concepts?.some(
+  /*const hasPlain = !!setData?.concepts?.some(
     (c) => (c.type || "").toString().toLowerCase() === "plain"
-  );
-  const hasConcept = !!setData?.concepts?.some(
+  );*/
+  /*const hasConcept = !!setData?.concepts?.some(
     (c) => (c.type || "").toString().toLowerCase() === "concept"
-  );
+  );*/
 
   // convert setId to number safely (handles strings like "1")
-  const setIdNum = setData?.setId ? Number(setData.setId) : null;
-  const showStudioA = setIdNum !== 3; // hide Studio A only if set 3
-const enableStudioB = setIdNum === 2 || setIdNum === 4; // show B only for set 2 or 4
-const hideBothStudios = setIdNum === 3; // for completeness
+ // const setIdNum = setData?.setId ? Number(setData.setId) : null;
+  //const showStudioA = setIdNum !== 3; // hide Studio A only if set 3
+//const enableStudioB = setIdNum === 2 || setIdNum === 4; // show B only for set 2 or 4
+//const hideBothStudios = setIdNum === 3; // for completeness
 
 
 
   // rule: setId === 1 => plain-only (disable concept studio)
-  const isPlainOnlySet = setIdNum === 1;
+  //const isPlainOnlySet = setIdNum === 1;
 
 // final flags used by the UI
 //const showStudioA = isPlainOnlySet || hasPlain;       // render Studio A
@@ -200,12 +204,52 @@ useEffect(() => {
   }
 }, [id]);
 
-  const toggleAddOn = (id: string, active?: boolean) => {
+useEffect(() => {
+  const fetchAddOns = async () => {
+    try {
+      const res = await fetchWithAuth(`${API_URL}/api/packages/${id}/addons`);
+      if (!res.ok) throw new Error("Failed to fetch add-ons");
+
+      const json = await res.json();
+      // Extract the array from json.data
+      const addonsArray: AddOn[] = (json.data || []).map((item: any) => ({
+        id: item.addOnID.toString(),
+        label: item.addOn,
+        price: Number(item.addOnPrice),
+        type: "spinner", // or customize per your rules
+      }));
+
+      setAddOns(addonsArray);
+    } catch (error) {
+      console.error("Error fetching add-ons:", error);
+      setAddOns([]); // avoid undefined
+    }
+  };
+
+  if (id) fetchAddOns();
+}, [id]);
+
+ const toggleAddOn = (id: string, forceActive?: boolean) => {
+  setActiveAddOns(prev => ({
+    ...prev,
+    [id]: typeof forceActive === "boolean" ? forceActive : !prev[id],
+  }));
+};
+
+// 4️⃣ Update quantity for spinner AddOns
+const handleQuantityChange = (id: string, value: number) => {
+  setQuantities(prev => ({
+    ...prev,
+    [id]: value > 0 ? value : 1,
+  }));
+};
+
+  /*const toggleAddOn = (id: string, active?: boolean) => {
     setActiveAddOns((prev) => ({
       ...prev,
       [id]: typeof active === "boolean" ? active : !prev[id],
     }));
-  };
+  };*/
 
   const [quantities, setQuantities] = useState<{ [id: string]: number }>({});
 
@@ -561,8 +605,6 @@ useEffect(() => {
             </div>
           )}
 
-
-{/* Studio B - Concept Studio */}
 {/* Studio B - Concept Studio */}
 {setIdNum !== 5 && (
   <div className="w-full">

@@ -3,7 +3,6 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-
 class PackageController extends Controller
 {
     // 📦 Get all packages
@@ -216,6 +215,31 @@ class PackageController extends Controller
                 })->values()
             ]);
         }
+
+          public function getAddOns($id)
+                {
+                     try {
+                            // Make sure $id comes from the route: /api/packages/{id}/addons
+                            $addOns = DB::table('package_add_ons as pa')
+                                ->join('package_add_on_mapping as pam', 'pa.addOnID', '=', 'pam.addOnID')
+                                ->where('pam.packageID', $id)
+                                ->select('pa.addOnID', 'pa.addOn', 'pa.addOnPrice')
+                                ->get();
+
+                            return response()->json([
+                                'success' => true,
+                                'data' => $addOns
+                            ], 200);
+
+                        } catch (\Exception $e) {
+                            return response()->json([
+                                'success' => false,
+                                'message' => 'Failed to fetch add-ons',
+                                'error' => $e->getMessage()
+                            ], 500);
+                        }
+                }
+
 
 }
 ?>
