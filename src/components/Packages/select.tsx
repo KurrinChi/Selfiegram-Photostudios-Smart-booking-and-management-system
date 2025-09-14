@@ -536,10 +536,10 @@ import TransactionModalBooking from "../ModalTransactionDialogBooking";
         return;
       }
 
-      if (tags.length === 0) {
-        toast.error("Please select at least one backdrop before proceeding.");
-        return;}
-
+        if (setData && Number(setData.setId) !== 5 && tags.length === 0) {
+          toast.error("Please select at least one backdrop before proceeding.");
+          return;
+        }
       // Validate email
       if (!validateEmail(email)) {
         toast.error("Please enter a valid email address");
