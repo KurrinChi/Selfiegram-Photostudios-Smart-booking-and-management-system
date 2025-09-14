@@ -218,29 +218,32 @@ const ClientHistoryPageContent = () => {
       {showModal && selectedItem && (
 
         <ModalTransactionDialog
-          isOpen={showModal}
-          data={{
-            id: selectedItem.id,
-            customerName: selectedItem.customerName || "N/A",
-            email: selectedItem.customerEmail || "N/A",
-            address: selectedItem.customerAddress || "N/A",
-            contact: selectedItem.customerContactNo || "N/A",
-            package: selectedItem.packageName,
-            bookingDate: selectedItem.bookingDate.split(" ")[0] || "",
-            transactionDate: formatDate(selectedItem.dateTime.split(" ")[0] || ""),
-            time: `${formatTime(selectedItem.bookingStartTime)} - ${formatTime(selectedItem.bookingEndTime)}` || "",
-            subtotal: Number(selectedItem.subTotal.replace(/[^\d.]/g, "")) || 0,
-            paidAmount: Number(selectedItem.receivedAmount.replace(/[^\d.]/g, "")) || 0,
-            pendingBalance: Number(selectedItem.rem.replace(/[^\d.]/g, "")) || 0,
-            feedback: selectedItem.feedback !== null ? String(selectedItem.feedback) : "",
-            rating: selectedItem.rating ?? 0,
-            status: selectedItem.status,
-            paymentStatus: selectedItem.paymentStatus
-            
-          }}
-          onClose={() => setShowModal(false)}
-          onSaved={fetchHistory}
-        />
+        isOpen={showModal}
+        data={{
+          id: selectedItem.id,
+          customerName: selectedItem.customerName || "N/A",
+          email: selectedItem.customerEmail || "N/A",
+          address: selectedItem.customerAddress || "N/A",
+          contact: selectedItem.customerContactNo || "N/A",
+          package: selectedItem.packageName,
+          bookingDate: selectedItem.bookingDate.split(" ")[0] || "",
+          transactionDate: formatDate(selectedItem.dateTime.split(" ")[0] || ""),
+          time: `${formatTime(selectedItem.bookingStartTime)} - ${formatTime(selectedItem.bookingEndTime)}` || "",
+          subtotal: Number(selectedItem.subTotal.replace(/[^\d.]/g, "")) || 0,
+          paidAmount: Number(selectedItem.receivedAmount.replace(/[^\d.]/g, "")) || 0,
+          pendingBalance: Number(selectedItem.rem.replace(/[^\d.]/g, "")) || 0,
+          feedback: selectedItem.feedback !== null ? String(selectedItem.feedback) : "",
+          rating: selectedItem.rating ?? 0,
+          status: selectedItem.status,
+          paymentStatus: selectedItem.paymentStatus,
+          // <-- add this
+          selectedAddOns: selectedItem.selectedAddOns || [],   // <-- add this
+          selectedConcepts: selectedItem.selectedConcepts || [] // <-- add this
+        }}
+  onClose={() => setShowModal(false)}
+  onSaved={fetchHistory}
+/>
+
       )}
 
       {/* Delete Modal */}

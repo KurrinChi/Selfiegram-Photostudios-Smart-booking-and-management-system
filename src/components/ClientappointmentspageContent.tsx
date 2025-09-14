@@ -23,6 +23,11 @@ interface Appointment {
   tagColor: string;
   paymentStatus: number; 
   rawStatus: number;
+   selectedAddOns?: string[];      // or a more detailed type if needed
+  selectedConcepts?: string[];
+   feedback?: string;
+  rating?: number;
+    transactionDate?: string;
 }
 
 const API_URL = import.meta.env.VITE_API_URL;
@@ -64,25 +69,33 @@ const ClientAppointmentsPageContent = () => {
       const data = await response.json() as any[];
 
       const formatted = data.map((item: any) => ({
-        id: String(item.bookingID),
+        id: String(item.id),
         date: item.bookingDate,
         time: item.bookingStartTime,
-        package: item.name,
+        package: item.packageName,
         price: parseFloat(item.subTotal),
-        paidAmount: parseFloat(item.receivedAmount),
-        pendingBalance: parseFloat(item.rem),
+        paidAmount: parseFloat(item.total) - parseFloat(item.subTotal), // or however you calculate
+        pendingBalance: parseFloat(item.total) - parseFloat(item.subTotal),
         status: item.paymentStatus === 1 ? "FULLY PAID" : "PENDING",
-        image: item.imagePath,
-        location: item.customerAddress,
-        contact: item.customerContactNo,
-        email: item.customerEmail,
+        image: item.imagePath || null, // fetch from package images table if needed
+        location: item.address,
+        contact: item.contact,
+        email: item.email,
         name: item.customerName,
-         paymentStatus: item.paymentStatus,
-          rawStatus: item.status,
-          bookingStartTime: item.bookingStartTime,
-          bookingEndTime: item.bookingEndTime,
+        paymentStatus: item.paymentStatus,
+        rawStatus: item.status,
+        bookingStartTime: item.bookingStartTime,
+        bookingEndTime: item.bookingEndTime,
         tagColor: item.paymentStatus === 1 ? "bg-green-500" : "bg-yellow-500",
+        selectedAddOns: item.selectedAddOns,
+        selectedConcepts: item.selectedConcepts,
+        feedback: item.feedback,
+        rating: item.rating,
+        transactionDate: item.transactionDate
       }));
+
+        console.log("Formatted appointments:", formatted); // <-- verify here
+
 
       setAppointments(formatted);
     } catch (error) {
@@ -162,14 +175,16 @@ const ClientAppointmentsPageContent = () => {
   });
 };
 
-  const getBookingLabel = (bookingID: number, packageName: string) => {
-    const acronym = packageName
-      .split(" ")
-      .map((word) => word[0])
-      .join("")
-      .toUpperCase();
-    return `${acronym}#${bookingID}`;
-  };
+  const getBookingLabel = (bookingID: number, packageName?: string) => {
+  if (!packageName) return `#${bookingID}`; // fallback if packageName is missing
+  const acronym = packageName
+    .split(" ")
+    .map((word) => word[0])
+    .join("")
+    .toUpperCase();
+  return `${acronym}#${bookingID}`;
+};
+
 
   const filteredAppointments = appointments.filter(
     (a) =>
@@ -369,29 +384,31 @@ const ClientAppointmentsPageContent = () => {
 
       {/* Modal */}
       {selectedAppointment && (
-        <ModalTransactionDialog
-          isOpen={true}
-          onClose={() => setSelectedAppointment(null)}
-          data={{
-            id: selectedAppointment.id,
-            customerName: selectedAppointment.name,
-            email: selectedAppointment.email,
-            address: selectedAppointment.location,
-            contact: selectedAppointment.contact,
-            package: selectedAppointment.package,
-            bookingDate: selectedAppointment.date,
-            transactionDate: selectedAppointment.date, // or use another appropriate value
-            time: `${formatTime(selectedAppointment.bookingStartTime)} - ${formatTime(selectedAppointment.bookingEndTime)}` || "",
-            subtotal: selectedAppointment.price,
-            paidAmount: selectedAppointment.paidAmount,
-            pendingBalance: selectedAppointment.pendingBalance,
-            feedback: "N/A",
-            rating: 4,
-            status: selectedAppointment.rawStatus,
-            paymentStatus: selectedAppointment.paymentStatus
-          }}
-        />
-      )}
+      <ModalTransactionDialog
+        isOpen={true}
+        onClose={() => setSelectedAppointment(null)}
+        data={{
+          id: selectedAppointment.id,
+          customerName: selectedAppointment.name,
+          email: selectedAppointment.email,
+          address: selectedAppointment.location,
+          contact: selectedAppointment.contact,
+          package: selectedAppointment.package,
+          bookingDate: selectedAppointment.date,
+          transactionDate: selectedAppointment.transactionDate || selectedAppointment.date,
+          time: `${formatTime(selectedAppointment.bookingStartTime)} - ${formatTime(selectedAppointment.bookingEndTime)}`,
+          subtotal: selectedAppointment.price,
+          paidAmount: selectedAppointment.paidAmount,
+          pendingBalance: selectedAppointment.pendingBalance,
+           feedback: selectedAppointment.feedback || "",  // make sure this exists
+          rating: selectedAppointment.rating || 0,   
+          status: selectedAppointment.rawStatus,
+          paymentStatus: selectedAppointment.paymentStatus,
+          selectedAddOns: selectedAppointment.selectedAddOns || [],
+          selectedConcepts: selectedAppointment.selectedConcepts || [],
+        }}
+      />
+    )}
     </div>
   );
 };

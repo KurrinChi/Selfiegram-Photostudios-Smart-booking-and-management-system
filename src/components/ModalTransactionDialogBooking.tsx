@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import { format, parse } from "date-fns";
-import QRCode from "react-qr-code";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
 import { toast } from "react-toastify";
 import type { Tag } from "../types"; 

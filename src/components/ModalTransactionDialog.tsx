@@ -23,6 +23,8 @@ interface TransactionModalProps {
     rating: number;
     status: number;
     paymentStatus: number;
+     selectedAddOns?: string[];   // <-- added
+  selectedConcepts?: string[]; // <-- added
   } | null;
     onSaved?: () => void;
 }
@@ -154,6 +156,28 @@ return (
               </span>
             </div>
 
+
+                 {/* Add-ons and Concepts */}
+              {(data.selectedAddOns || data.selectedConcepts) && (
+                <div className="mb-4 text-sm">
+                  {data.selectedAddOns && (
+                    <p className="mb-2">
+                      <span className="font-semibold">Add-ons: </span>
+                      {data.selectedAddOns}
+                    </p>
+                  )}
+
+                  {data.selectedConcepts && (
+                    <p>
+                      <span className="font-semibold">Concepts: </span>
+                      {data.selectedConcepts}
+                    </p>
+                  )}
+                </div>
+              )}
+
+
+
             <div className="grid grid-cols-2 gap-4 text-sm mb-4">
               <div>
                 <label className="text-gray-500 block text-xs mb-1">
@@ -186,6 +210,10 @@ return (
                 />
               </div>
             </div>
+
+
+
+
 
             <div className="text-sm mb-4">
               <div className="flex justify-between">
@@ -316,6 +344,26 @@ return (
             </span>
           </div>
 
+                 {/* Add-ons and Concepts */}
+                {(data.selectedAddOns || data.selectedConcepts) && (
+                  <div className="mb-4 text-sm">
+                    {data.selectedAddOns && (
+                      <p className="mb-2">
+                        <span className="font-semibold">Add-ons: </span>
+                        {data.selectedAddOns}
+                      </p>
+                    )}
+
+                    {data.selectedConcepts && (
+                      <p>
+                        <span className="font-semibold">Concepts: </span>
+                        {data.selectedConcepts}
+                      </p>
+                    )}
+                  </div>
+                )}
+
+
           <div className="grid grid-cols-2 gap-4 text-sm mb-4">
             <div>
               <label className="text-gray-500 block text-xs mb-1">
@@ -366,6 +414,7 @@ return (
 
           {data.status === 1 ? (
             <>
+            
               <div className="mb-6 text-sm">
                 <label className="block font-medium mb-1" htmlFor="feedback">
                   Feedback

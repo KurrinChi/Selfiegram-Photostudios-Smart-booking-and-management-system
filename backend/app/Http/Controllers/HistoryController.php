@@ -35,44 +35,70 @@ class HistoryController extends Controller
         }
 
     }
-    public function deleteBooking($id)
-    {
-        try {
-            $deleted = DB::table('booking')->where('bookingID', $id)->delete();
+public function deleteBooking($id)
+{
+    try {
+        DB::transaction(function () use ($id) {
+            // Delete related add-ons
+            DB::table('booking_add_ons')->where('bookingID', $id)->delete();
 
-            if ($deleted) {
-                return response()->json(['message' => 'Booking deleted successfully.']);
-            } else {
-                return response()->json(['message' => 'Booking not found.'], 404);
-            }
-        } catch (\Exception $e) {
-            \Log::error('Failed to delete booking: ' . $e->getMessage());
-            return response()->json(['error' => 'Server error', 'message' => $e->getMessage()], 500);
-        }
+            // Delete related concepts
+            DB::table('booking_concepts')->where('bookingID', $id)->delete();
+
+            // Delete related transactions
+            DB::table('transaction')->where('bookingID', $id)->delete();
+
+            // Delete the main booking
+            DB::table('booking')->where('bookingID', $id)->delete();
+        });
+
+        return response()->json(['message' => 'Booking and all related data deleted successfully.']);
+    } catch (\Exception $e) {
+        \Log::error('Failed to delete booking: ' . $e->getMessage());
+        return response()->json(['error' => 'Server error', 'message' => $e->getMessage()], 500);
     }
+}
+
+
     public function getTransactionDetails($bookingID)
     {
         return DB::selectOne("
-            SELECT 
-                booking.bookingID,
-                packages.name AS packageName,
-                booking.customerName,
-                booking.customerEmail,
-                booking.customerAddress,
-                booking.customerContactNo,
-                booking.bookingDate,
-                booking.bookingStartTime,
-                booking.bookingEndTime,
-                booking.subTotal,
-                booking.rem,
-                booking.receivedAmount,
-                booking.feedback,
-                booking.rating,
-                booking.status,
-                booking.paymentStatus
-            FROM booking
-            JOIN packages ON booking.packageID = packages.packageID
-            WHERE booking.bookingID = ?
+           SELECT 
+            b.bookingID,
+            p.name AS packageName,
+            b.customerName,
+            b.customerEmail,
+            b.customerAddress,
+            b.customerContactNo,
+            b.bookingDate,
+            b.bookingStartTime,
+            b.bookingEndTime,
+            b.subTotal,
+            b.rem,
+            b.receivedAmount,
+            b.feedback,
+            b.rating,
+            b.status,
+            b.paymentStatus,
+            COALESCE(
+                GROUP_CONCAT(DISTINCT CONCAT(ao.addOn, ' x', ba.quantity, ' (₱', FORMAT(ba.quantity * ba.price, 2), ')') SEPARATOR ', '),
+                ''
+            ) AS selectedAddOns,
+            COALESCE(
+                GROUP_CONCAT(DISTINCT pc.backdrop SEPARATOR ', '),
+                ''
+            ) AS selectedConcepts
+        FROM booking AS b
+        JOIN packages AS p ON b.packageID = p.packageID
+        LEFT JOIN booking_add_ons AS ba ON b.bookingID = ba.bookingID
+        LEFT JOIN package_add_ons AS ao ON ba.addOnID = ao.addOnID
+        LEFT JOIN booking_concepts AS bc ON b.bookingID = bc.bookingID
+        LEFT JOIN package_concept AS pc ON bc.conceptID = pc.conceptID
+        WHERE b.bookingID = ? AND b.status = 1
+        GROUP BY 
+            b.bookingID, p.name, b.customerName, b.customerEmail, b.customerAddress, b.customerContactNo,
+            b.bookingDate, b.bookingStartTime, b.bookingEndTime, b.subTotal, b.rem, b.receivedAmount,
+            b.feedback, b.rating, b.status, b.paymentStatus
         ", [$bookingID]);
     }
     public function updateFeedback(Request $request, $id)
