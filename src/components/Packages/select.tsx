@@ -4,10 +4,12 @@
   import "react-day-picker/dist/style.css";
   import { isToday, isSameDay, startOfDay } from "date-fns";
   import { fetchWithAuth } from "../../utils/fetchWithAuth";
-  import TransactionModal from "../ModalTransactionDialog";
   import { toast, ToastContainer } from "react-toastify";
   import "react-toastify/dist/ReactToastify.css";
   import { motion, AnimatePresence } from "framer-motion";
+  import type { Tag } from "../../types"; 
+  import type { SelectedAddon } from "../../typeSelect"; 
+import TransactionModalBooking from "../ModalTransactionDialogBooking";
 
   interface AddOn {
     id: string;
@@ -16,6 +18,8 @@
     type: "spinner" | "checkbox" | "dropdown";
     options?: string[]; // for dropdown only
   }
+
+
   interface Concept {
     id: string;
     label: string;
@@ -31,12 +35,7 @@
     setName: string;
     concepts: Concept[];
   }
-  type Tag = {
-  id: string;
-  label: string;
-  type: string; // "studioA" | "studioB" | ...
-  hex?: string; // optional because only Studio A needs it
-};
+
 
 //const [tags, setTags] = useState<Tag[]>([]);
 
@@ -162,6 +161,8 @@
     const [previewData, setPreviewData] = useState<PreviewBookingData | null>(
       null
     );
+   
+
     
     const [tags, setTags] = useState<Tag[]>([]);
     const [addOns, setAddOns] = useState<AddOn[]>([]);
@@ -181,6 +182,8 @@
     const [selectedColorA, setSelectedColorA] = useState<string | null>(null);
 
     const [setData, setSetData] = useState<PackageSet | null>(null);
+    
+    
     /*const hasPlain = !!setData?.concepts?.some(
       (c) => (c.type || "").toString().toLowerCase() === "plain"
     );*/
@@ -236,7 +239,11 @@
     90: { id: "photo60", label: "Photographer service for 1hr", price: 1699, type: "checkbox" },
     100: { id: "makeup", label: "Professional Hair & Make up", price: 1699, type: "checkbox" },
   };
-
+  const addonArray: AddOn[] = addOns.map(a => ({
+    ...a,
+    value: 0,
+  }));
+  const [selectedAddons, setSelectedAddons] = useState<SelectedAddon[]>([]);
   useEffect(() => {
     const fetchAddOns = async () => {
       try {
@@ -266,12 +273,31 @@
     if (id) fetchAddOns();
   }, [id]);
 
-  const toggleAddOn = (id: string, forceActive?: boolean) => {
-    setActiveAddOns(prev => ({
-      ...prev,
-      [id]: typeof forceActive === "boolean" ? forceActive : !prev[id],
-    }));
-  };
+ const toggleAddOn = (id: string, forceActive?: boolean, type?: string) => {
+  setActiveAddOns(prev => {
+    const isActive = typeof forceActive === "boolean" ? forceActive : !prev[id];
+
+    // If activating a dropdown, set default color at index 0
+    if (isActive && type === "dropdown" && colorOptions.length > 0) {
+      const firstColor = colorOptions[0];
+      setSelectedColors(prevColors => ({ ...prevColors, [id]: firstColor }));
+      handleDropdownChange(id, firstColor.label); // store the label in selectedAddons
+    }
+
+    // If deactivating, remove selected color
+    if (!isActive) {
+      setSelectedColors(prevColors => {
+        const copy = { ...prevColors };
+        delete copy[id];
+        return copy;
+      });
+    }
+
+    return { ...prev, [id]: isActive };
+  });
+};
+
+
 
   /*// 4️⃣ Update quantity for spinner AddOns
   const handleQuantityChange = (id: string, value: number) => {
@@ -301,6 +327,97 @@
       setQuantities(initial);
     }, []);
 
+    useEffect(() => {
+      // Loop through your add-ons (if you have them as props or state)
+      addOns.forEach((item) => {
+        if (item.type === "dropdown") {
+          setSelectedColors((prev) => {
+            if (prev[item.id]) return prev; // don't override if already set
+            return {
+              ...prev,
+              [item.id]: { id: "white", label: "WHITE", hex: "#FFFFFF" },
+            };
+          });
+        }
+      });
+    }, [addOns]);
+    
+
+    useEffect(() => {
+  addOns.forEach((item) => {
+    if (item.type === "dropdown") {
+      setSelectedAddons((prev) => {
+        const alreadyExists = prev.some(a => a.id === item.id);
+        if (alreadyExists) return prev;
+
+        return [
+          ...prev,
+          {
+            id: item.id,
+            label: item.label,     // e.g., "Additional Backdrop"
+            price: item.price ?? 0,
+            value: 1,              // mark as active/selected
+            type: "dropdown",
+            option: "WHITE",       // default choice
+          } as SelectedAddon,
+        ];
+      });
+    }
+  });
+}, [addOns]);
+
+    const handleAddonChange = (id: string, value?: string | number) => {
+     setSelectedAddons((prev) =>
+    prev.map((addon) =>
+      addon.id === id
+        ? {
+            ...addon,
+            value: addon.type === "dropdown" ? 1 : (value as number), // dropdown always 1
+            option: addon.type === "dropdown" ? (value as string) : undefined,
+          }
+        : addon
+    )
+  );
+    };
+
+
+    
+  // For toggling checkboxes
+      const toggleCheckboxAddon = (id: string) => {
+   setActiveAddOns(prev => {
+    const newActive = !prev[id];
+
+    setSelectedAddons(prevAddons => {
+      const existing = prevAddons.find(a => a.id === id);
+      if (existing) {
+        return prevAddons.map(a =>
+          a.id === id ? { ...a, value: newActive ? 1 : 0 } : a
+        );
+      } else if (newActive) {
+        const newAddon = addOns.find(a => a.id === id);
+        if (!newAddon) return prevAddons;
+        return [...prevAddons, { ...newAddon, value: 1 }];
+      }
+      return prevAddons;
+    });
+
+    return { ...prev, [id]: newActive };
+  
+  });
+      };
+
+      // For spinners
+      const handleSpinnerChange = (id: string, qty: number) => {
+            setSelectedAddons(prev =>
+          prev.map(a => (a.id === id ? { ...a, value: qty } : a))
+        );
+      };
+
+      // For dropdowns
+      const handleDropdownChange = (id: string, selectedLabel: string) => {
+          handleAddonChange(id, selectedLabel);
+
+      };
     // Helper function to get current Philippine time
     const getPhilippineTime = () => {
       // Create a new date in Philippine timezone (UTC+8)
@@ -413,12 +530,15 @@
         !contact ||
         !email ||
         !address ||
-        !paymentMode ||
         !pkg
       ) {
         toast.error("Please fill in all required fields");
         return;
       }
+
+      if (tags.length === 0) {
+        toast.error("Please select at least one backdrop before proceeding.");
+        return;}
 
       // Validate email
       if (!validateEmail(email)) {
@@ -624,12 +744,14 @@
       // Helper for mutual exclusivity if set 2
       const handleStudioASelect = () => {
         setStudioAFlipped((s) => !s);
-        if (setIdNum === 2) setStudioBFlipped(false);
+        //if (setIdNum === 2) setStudioBFlipped(false);
+        setStudioBFlipped(false);              
       };
       const handleStudioBSelect = () => {
         if (!enableStudioB) return;
         setStudioBFlipped((s) => !s);
-        if (setIdNum === 2) setStudioAFlipped(false);
+        //if (setIdNum === 2) setStudioAFlipped(false);
+        setStudioAFlipped(false);
       };
 
       return (
@@ -750,7 +872,7 @@
                 const isSelected = selectedStudioB === i;
                 const keyLabel = (concept.label || "").trim().toUpperCase();
                 const imgSrc = conceptImages[keyLabel] || "/default.png";
-
+       
                 return (
                   <motion.div
                     key={concept.id}
@@ -820,8 +942,7 @@
                     key={item.id}
                     type="button"
                     onClick={() => {
-                      // ✅ toggle only when button clicked, not spinner
-                      toggleAddOn(item.id);
+                      toggleCheckboxAddon(item.id);
                     }}
                     className={`group relative flex flex-col gap-2 p-3 rounded-lg border transition-all duration-200
                     ${
@@ -851,113 +972,114 @@
                           isActive ? "text-gray-200" : "text-gray-600"
                         }`}
                       >
-                        ₱{totalPrice}
+                        ₱{item.price}
                       </span>
                     </div>
 
-                    {/* Control Area */}
+                   {/* Control Area */}
                     {item.type === "spinner" && (
                       <div className="flex items-center justify-between gap-2">
                         {/* Quantity Input */}
                         <input
                           type="number"
                           min={1}
-                          value={qty}
-                          onChange={(e) => {
-                            const value = Number(e.target.value);
-                            setQuantities((prev) => ({
-                              ...prev,
-                              [item.id]: value > 0 ? value : 1, // minimum 1
-                            }));
-                          }}
-                          className={`w-14 px-2 py-1 text-sm rounded-md border text-center
-                            ${
-                              isActive
-                                ? "border-gray-600 bg-neutral-800 text-white"
-                                : "border-gray-300 bg-white text-gray-900"
-                            } focus:ring-1 focus:ring-indigo-400 focus:outline-none`}
-                          onClick={(e) => e.stopPropagation()}
+                          max={5}
+                          value={selectedAddons.find(a => a.id === item.id)?.value || 1} // default 1
+                          onChange={(e) => handleAddonChange(item.id, parseInt(e.target.value))}
+                          onClick={(e) => e.stopPropagation()} // prevent toggling
+                          className="w-16 border rounded p-1"
                         />
 
                         {/* Total Price beside input */}
-                        {isActive && (
-                          <span
-                            className={`justify-self-end self-end text-sm font-medium ${
-                              isActive ? "text-gray-200" : "text-gray-600"
-                            }`}
-                          >
-                            ₱{totalPrice}
-                          </span>
-                        )}
-                      </div>
+                        {isActive ? (
+                      <span className="justify-self-end self-end text-sm font-medium text-white">
+                        ₱{item.price * (selectedAddons.find(a => a.id === item.id)?.value || 1)}
+                      </span>
+                    ):null}
+                    </div>
                     )}
 
-                    {item.type === "dropdown" && (
-    <div className="relative w-full">
-      {/* Color swatches popup */}
-      <AnimatePresence>
-        {showingColors[item.id] && (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 10 }}
-            className="absolute -top-14 left-1/2 -translate-x-1/2 p-3 bg-white rounded-lg shadow-lg flex gap-2"
-          >
-            {colorOptions.map((color) => (
-              <button
-                key={color.id}
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setSelectedColors((prev) => ({
-                    ...prev,
-                    [item.id]: color,
-                  }));
-                  toggleAddOn(item.id, true);
-                  setShowingColors((prev) => ({
-                    ...prev,
-                    [item.id]: false,
-                  }));
-                }}
-                className="w-6 h-6 rounded-full border border-gray-400 shadow-sm hover:scale-110 transition"
-                style={{ backgroundColor: color.hex }}
-              />
-            ))}
-          </motion.div>
-        )}
-      </AnimatePresence>
 
-      {/* Button that opens color picker */}
-      <div
-        onClick={(e) => {
-          e.stopPropagation();
-          setShowingColors((prev) => ({
-            ...prev,
-            [item.id]: !prev[item.id], // toggle popup
-          }));
-        }}
-        className={`w-full h-8 rounded-md border text-xs flex items-center justify-center cursor-pointer transition ${
-          isActive ? "border-gray-600" : "border-gray-300"
-        }`}
-        style={{
-          backgroundColor:
-            selectedColors?.[item.id]?.hex ||
-            (isActive ? "#272727" : "#ffffff"),
-          color: (() => {
-            const hex = selectedColors?.[item.id]?.hex;
-            if (!hex) return isActive ? "#fff" : "#000"; // default
-            const r = parseInt(hex.slice(1, 3), 16);
-            const g = parseInt(hex.slice(3, 5), 16);
-            const b = parseInt(hex.slice(5, 7), 16);
-            const brightness = (r * 299 + g * 587 + b * 114) / 1000;
-            return brightness > 150 ? "#000" : "#fff"; // light bg → black text, dark bg → white text
-          })(),
-        }}
-      >
-        {selectedColors?.[item.id]?.label || "Select Color"}
-      </div>
+ {item.type === "dropdown" && isActive && (  // only show if add-on is active
+  <div className="relative w-full">
+    {/* Color swatches popup */}
+    <AnimatePresence>
+      {showingColors[item.id] && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 10 }}
+          className="absolute -top-14 left-1/2 -translate-x-1/2 p-3 bg-white rounded-lg shadow-lg flex gap-2"
+        >
+          {colorOptions.map((color) => (
+            <button
+              key={color.id}
+              type="button"
+              onClick={(e) => {
+  e.stopPropagation();
+
+  // update UI swatch
+  setSelectedColors((prev) => ({ ...prev, [item.id]: color }));
+
+  // update selectedAddons array
+  setSelectedAddons((prev) => {
+    const filtered = prev.filter(a => a.id !== item.id);
+    return [
+      ...filtered,
+      {
+        id: item.id,
+        label: item.label,     // e.g. "Additional Backdrop"
+        price: item.price ?? 0,
+        value: 1,              // selected
+        type: "dropdown",
+        option: color.label,   // "WHITE", "BLACK", etc.
+      } as SelectedAddon,
+    ];
+  });
+
+  // keep rest of your logic
+  toggleAddOn(item.id, true);
+  setShowingColors((prev) => ({ ...prev, [item.id]: false }));
+  handleDropdownChange(item.id, color.label);
+  console.log("Selected color for", item.id, ":", color.label);
+}}
+
+              className="w-6 h-6 rounded-full border border-gray-400 shadow-sm hover:scale-110 transition"
+              style={{ backgroundColor: color.hex }}
+            />
+          ))}
+        </motion.div>
+      )}
+    </AnimatePresence>
+
+    {/* Button that opens color picker */}
+        <div
+      onClick={(e) => {
+        e.stopPropagation();
+        setShowingColors((prev) => ({
+          ...prev,
+          [item.id]: !prev[item.id],
+        }));
+      }}
+      className="w-full h-8 rounded-md border text-xs flex items-center justify-center cursor-pointer transition border-gray-600"
+      style={{
+        backgroundColor: selectedColors?.[item.id]?.hex || "#272727",
+        color: (() => {
+          const hex = selectedColors?.[item.id]?.hex || "#FFFFFF"; // fallback white
+          const r = parseInt(hex.slice(1, 3), 16);
+          const g = parseInt(hex.slice(3, 5), 16);
+          const b = parseInt(hex.slice(5, 7), 16);
+          const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+          return brightness > 150 ? "#000" : "#fff";
+        })(),
+      }}
+    >
+      {selectedColors?.[item.id]?.label || "WHITE"}
     </div>
-  )}
+
+  </div>
+
+)}
 
                   </button>
                 );
@@ -1129,11 +1251,14 @@
         </div>
 
         {/* Transaction Modal */}
-        <TransactionModal
+        <TransactionModalBooking
           isOpen={isModalOpen}
           onClose={handleModalClose}
           previewData={previewData}
           onBookingComplete={handleBookingComplete}
+          tags={tags}
+          addons={addOns} 
+          selectedAddons={selectedAddons}
         />
 
         {/* Toast Container */}
