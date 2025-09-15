@@ -8,7 +8,6 @@ export default function SimpleParallaxGallery() {
   const MIN_SCALE = 0.32;
   const MAX_ROTATE_Y = 42;
   const ELEVATE = 30;
-  const BASE_HEIGHT = 320;
   const DIAGONAL_FACTOR = 0.6;
 
   // 📦 Data
@@ -34,10 +33,6 @@ export default function SimpleParallaxGallery() {
 
   // responsive sizing
   const GAP = vw < 600 ? 30 : 60;
-  const cardHeight = Math.min(
-    BASE_HEIGHT,
-    Math.max(180, vh * (vw < 600 ? 0.7 : 0.85))
-  );
   const cardWidth = Math.max(200, Math.min(vw < 600 ? 320 : 520, vw * 0.42));
 
   // metrics

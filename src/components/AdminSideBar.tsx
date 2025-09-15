@@ -51,13 +51,12 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
           localStorage.setItem("sidebar-collapsed", String(!collapsed));
         }}
         className="absolute -right-4 top-4 w-8 h-8 flex items-center justify-center
-                   bg-[#1e1e1e] border border-gray-600 rounded-full
-                   text-white hover:scale-110 transition-transform duration-300"
+             bg-[#1e1e1e] border border-gray-600 rounded-full
+             text-white hover:scale-110 transition-transform duration-300"
       >
         <i
-          className={`fas ${
-            collapsed ? "fa-chevron-right" : "fa-chevron-left"
-          } text-xs`}
+          className={`fas fa-chevron-left text-xs transform transition-transform duration-300
+      ${collapsed ? "rotate-180" : "rotate-0"}`}
         />
       </button>
 

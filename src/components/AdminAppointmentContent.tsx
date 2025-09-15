@@ -21,7 +21,9 @@ const AdminAppointmentContent: React.FC = () => {
     setIsModalOpen(true);
   };
 
-  const [refreshAppointments, setRefreshAppointments] = useState<() => void>(() => () => {});
+  const [refreshAppointments, setRefreshAppointments] = useState<() => void>(
+    () => () => {}
+  );
   const handleOnReady = useCallback((refreshFn: () => void) => {
     setRefreshAppointments(() => refreshFn);
   }, []);
@@ -30,7 +32,9 @@ const AdminAppointmentContent: React.FC = () => {
     <div className="flex flex-col h-full w-full">
       {/* Header */}
       <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b bg-white">
-        <h2 className="text-lg sm:text-xl font-semibold">Appointments</h2>
+        <h2 className="text-lg sm:text-xl font-semibold pl-12 sm:pl-0">
+          Appointments
+        </h2>
 
         {/* View Toggle */}
         <div className="flex bg-gray-200 rounded-full overflow-hidden text-xs sm:text-sm">
@@ -87,7 +91,7 @@ const AdminAppointmentContent: React.FC = () => {
         refreshAppointments={refreshAppointments}
       />
 
-       <ToastContainer position="bottom-right" />
+      <ToastContainer position="bottom-right" />
     </div>
   );
 };

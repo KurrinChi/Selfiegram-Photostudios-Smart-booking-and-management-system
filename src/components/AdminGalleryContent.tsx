@@ -209,11 +209,13 @@ const AdminGalleryContent = () => {
   };
 
   return (
-    <div className="p-4 animate-fadeIn">
-      <h1 className="text-2xl font-semibold mb-4 ml-5">Customer Gallery</h1>
+    <div className="p-4 animate-fadeIn ">
+      <h1 className="text-lg sm:text-xl font-semibold pl-12 sm:pl-2 mb-5">
+        Customer Gallery
+      </h1>
 
       {/* Filters */}
-      <div className="flex flex-wrap gap-3 text-xs items-center">
+      <div className="flex flex-wrap gap-3 text-xs items-center ">
         <div className="relative">
           <FontAwesomeIcon
             icon={faSearch}

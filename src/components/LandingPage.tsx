@@ -222,7 +222,7 @@ export default function HomePage(): React.JSX.Element {
       </header>
 
       {/* ---------- HERO ---------- */}
-      <main className="pt-20 w-full min-h-screen">
+      <main className="pt-10 w-full min-h-screen">
         <section
           id="home"
           className="scroll-mt-32 min-h-screen relative w-full overflow-hidden bg-gradient-to-b from-white to-gray-200 max-w-[100vw]"

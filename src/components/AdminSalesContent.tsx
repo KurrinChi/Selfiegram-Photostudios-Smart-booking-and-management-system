@@ -7,6 +7,8 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faSearch } from "@fortawesome/free-solid-svg-icons";
 import TransactionModal from "../components/AdminModalTransactionDialog";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
+import { AnimatePresence, motion } from "framer-motion";
+import { ChevronDown } from "lucide-react"; // nice dropdown arrow
 
 interface Sale {
   transactionID: number;
@@ -54,6 +56,8 @@ const AdminSalesContent: React.FC = () => {
       key: "selection",
     },
   ]);
+  // Inside your component
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   const API_URL = import.meta.env.VITE_API_URL;
 
@@ -215,7 +219,9 @@ const AdminSalesContent: React.FC = () => {
   return (
     <div className="p-4 space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <h1 className="text-2xl font-semibold">Sales</h1>
+        <h1 className="text-lg sm:text-xl font-semibold pl-12 sm:pl-0">
+          Sales
+        </h1>
         <button
           onClick={handleExport}
           className="px-4 py-2 bg-black text-white text-sm rounded-md hover:opacity-80 transition"
@@ -225,8 +231,9 @@ const AdminSalesContent: React.FC = () => {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap gap-3 text-xs items-center">
-        <div className="relative">
+      <div className="space-y-3 sm:space-y-0 sm:flex sm:items-center sm:gap-3">
+        {/* Search always visible */}
+        <div className="relative w-full sm:w-64">
           <FontAwesomeIcon
             icon={faSearch}
             className="absolute left-2 top-2.5 text-gray-400 text-sm"
@@ -235,60 +242,96 @@ const AdminSalesContent: React.FC = () => {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search"
-            className="pl-7 pr-3 py-2 border rounded-md w-48"
+            className="pl-7 pr-3 py-2 border rounded-md w-full"
           />
         </div>
 
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          className="px-2 py-2 border rounded-md"
-        >
-          <option>Booking Status: All</option>
-          <option>Completed</option>
-          <option>Pending</option>
-          <option>Cancelled</option>
-        </select>
-
-        <select
-          value={packageFilter}
-          onChange={(e) => setPackageFilter(e.target.value)}
-          className="px-2 py-2 border rounded-md"
-        >
-          <option>Package: All</option>
-          {packages.map((p) => (
-            <option key={p}>{p}</option>
-          ))}
-        </select>
-
-        <div className="relative text-xs">
+        {/* Dropdown for rest of filters */}
+        <div className="w-full sm:w-auto">
+          {/* Toggle button */}
           <button
-            onClick={() => setPickerOpen((prev) => !prev)}
-            className="border px-3 py-2 rounded-md bg-white shadow-sm hover:bg-gray-100 transition"
+            onClick={() => setFiltersOpen((prev) => !prev)}
+            className="flex items-center justify-between w-full sm:w-auto border px-3 py-2 rounded-md bg-gray-50 hover:bg-gray-100 text-xs"
           >
-            {format(range[0].startDate, "MMM dd yyyy")} —{" "}
-            {format(range[0].endDate, "MMM dd yyyy")}
+            Filters
+            <motion.span
+              animate={{ rotate: filtersOpen ? 180 : 0 }}
+              transition={{ duration: 0.3 }}
+              className="ml-2"
+            >
+              <ChevronDown size={16} />
+            </motion.span>
           </button>
-          {pickerOpen && (
-            <div className="fixed z-20 mt-2 bg-white shadow-lg rounded-md p-3">
-              <DateRange
-                ranges={range}
-                onChange={(item) => {
-                  const { startDate, endDate, key } = item.selection;
-                  setRange([
-                    {
-                      startDate: startDate ?? new Date(),
-                      endDate: endDate ?? new Date(),
-                      key: key ?? "selection",
-                    },
-                  ]);
-                }}
-                moveRangeOnFirstSelection={false}
-                rangeColors={["#000"]}
-                maxDate={new Date("2025-12-31")}
-              />
-            </div>
-          )}
+
+          {/* Animated dropdown content */}
+          <AnimatePresence>
+            {filtersOpen && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.3, ease: "easeInOut" }}
+                className="overflow-hidden"
+              >
+                <div className="mt-2 space-y-2 sm:mt-0 sm:space-y-0 sm:flex sm:items-center sm:gap-3">
+                  {/* Status Filter */}
+                  <select
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value)}
+                    className="px-2 py-2 border rounded-md w-full sm:w-auto"
+                  >
+                    <option>Booking Status: All</option>
+                    <option>Completed</option>
+                    <option>Pending</option>
+                    <option>Cancelled</option>
+                  </select>
+
+                  {/* Package Filter */}
+                  <select
+                    value={packageFilter}
+                    onChange={(e) => setPackageFilter(e.target.value)}
+                    className="px-2 py-2 border rounded-md w-full sm:w-auto"
+                  >
+                    <option>Package: All</option>
+                    {packages.map((p) => (
+                      <option key={p}>{p}</option>
+                    ))}
+                  </select>
+
+                  {/* Date Picker */}
+                  <div className="relative w-full sm:w-auto">
+                    <button
+                      onClick={() => setPickerOpen((prev) => !prev)}
+                      className="w-full border px-3 py-2 rounded-md bg-white shadow-sm hover:bg-gray-100 transition text-left"
+                    >
+                      {format(range[0].startDate, "MMM dd yyyy")} —{" "}
+                      {format(range[0].endDate, "MMM dd yyyy")}
+                    </button>
+                    {pickerOpen && (
+                      <div className="absolute z-20 mt-2 bg-white shadow-lg rounded-md p-3">
+                        <DateRange
+                          ranges={range}
+                          onChange={(item) => {
+                            const { startDate, endDate, key } = item.selection;
+                            setRange([
+                              {
+                                startDate: startDate ?? new Date(),
+                                endDate: endDate ?? new Date(),
+                                key: key ?? "selection",
+                              },
+                            ]);
+                          }}
+                          moveRangeOnFirstSelection={false}
+                          rangeColors={["#000"]}
+                          maxDate={new Date("2025-12-31")}
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </div>
 
@@ -370,7 +413,6 @@ const AdminSalesContent: React.FC = () => {
           </tbody>
         </table>
       </div>
-
       {/* Pagination */}
       <div className="flex flex-wrap items-center justify-between text-xs mt-4">
         <span>
@@ -416,7 +458,6 @@ const AdminSalesContent: React.FC = () => {
           </select>
         </div>
       </div>
-
       {/* Transaction Modal */}
       <TransactionModal
         isOpen={selectedSale !== null}

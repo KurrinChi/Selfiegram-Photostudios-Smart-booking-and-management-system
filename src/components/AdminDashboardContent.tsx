@@ -275,46 +275,51 @@ const AdminDashboardContents: React.FC = () => {
     <div className="space-y-8 p-5">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 relative">
-        <h1 className="text-2xl font-semibold">Dashboard</h1>
+        <h1 className="text-lg sm:text-xl font-semibold pl-12 sm:pl-0">
+          Dashboard
+        </h1>
 
-        {/* Date Range Picker */}
-        <div className="relative text-xs">
+        {/* Date Range Picker + Export Button */}
+        <div className="flex items-center justify-between text-xs relative w-full">
+          {/* Date Picker (Left) */}
+          <div className="relative">
+            <button
+              onClick={() => setPickerOpen((prev) => !prev)}
+              className="border px-3 py-2 rounded-md bg-white shadow-sm hover:bg-gray-100 transition"
+            >
+              {format(range[0].startDate, "MMM dd yyyy")} —{" "}
+              {format(range[0].endDate, "MMM dd yyyy")}
+            </button>
+            {pickerOpen && (
+              <div className="absolute z-20 mt-2 bg-white shadow-lg rounded-md p-3">
+                <DateRange
+                  ranges={range}
+                  onChange={(item) => {
+                    const { startDate, endDate, key } = item.selection;
+                    setRange([
+                      {
+                        startDate: startDate ?? new Date(),
+                        endDate: endDate ?? new Date(),
+                        key: key ?? "selection",
+                      },
+                    ]);
+                  }}
+                  moveRangeOnFirstSelection={false}
+                  rangeColors={["#000"]}
+                  maxDate={new Date()}
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Export Button (Far Right) */}
           <button
-            onClick={() => setPickerOpen((prev) => !prev)}
-            className="border px-3 py-2 rounded-md bg-white shadow-sm hover:bg-gray-100 transition"
+            onClick={handleExport}
+            className="px-4 py-2 bg-black text-white rounded-md text-xs transition hover:bg-gray-800 hover:scale-[1.02] focus:outline-none"
           >
-            {format(range[0].startDate, "MMM dd yyyy")} —{" "}
-            {format(range[0].endDate, "MMM dd yyyy")}
+            Export Data
           </button>
-          {pickerOpen && (
-            <div className="absolute z-20 mt-2 bg-white shadow-lg rounded-md p-3">
-              <DateRange
-                ranges={range}
-                onChange={(item) => {
-                  const { startDate, endDate, key } = item.selection;
-                  setRange([
-                    {
-                      startDate: startDate ?? new Date(),
-                      endDate: endDate ?? new Date(),
-                      key: key ?? "selection",
-                    },
-                  ]);
-                }}
-                moveRangeOnFirstSelection={false}
-                rangeColors={["#000"]}
-                maxDate={new Date()}
-              />
-            </div>
-          )}
         </div>
-
-        {/* Export Button */}
-        <button
-          onClick={handleExport}
-          className="ml-auto px-4 py-2 bg-black text-white rounded-md text-xs transition hover:bg-gray-800 hover:scale-[1.02] focus:outline-none"
-        >
-          Export Data
-        </button>
       </div>
 
       {/* Summary Cards */}
