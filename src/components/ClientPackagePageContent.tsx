@@ -186,7 +186,7 @@ const ClientPackagePageContent: React.FC = () => {
   };
 
   return (
-    <div className="p-4 overflow-y-auto max-h-220 rounded-3xl transition-all duration-300">
+    <div className="p-4 overflow-y-auto max-h-300 rounded-3xl transition-all duration-300">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <h1 className="text-2xl font-semibold">Available Packages</h1>
         <div className="flex flex-wrap gap-3 items-center text-xs">

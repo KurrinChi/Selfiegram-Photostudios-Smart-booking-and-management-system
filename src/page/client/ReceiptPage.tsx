@@ -5,6 +5,7 @@ const API_URL = import.meta.env.VITE_API_URL;
 
 const ReceiptPage = () => {
   const { bookingID } = useParams();
+  console.log("Booking ID:", bookingID);
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -17,10 +18,17 @@ const ReceiptPage = () => {
         setLoading(false);
       })
       .catch((err) => {
-        console.error(err);
+        if (err.response) {
+          console.error("Backend responded with:", err.response.data);
+        } else if (err.request) {
+          console.error("No response received:", err.request);
+        } else {
+          console.error("Error setting up request:", err.message);
+        }
         setError(true);
         setLoading(false);
       });
+
   }, [bookingID]);
 
     const getBookingLabel = (bookingID: string, packageName: string) => {

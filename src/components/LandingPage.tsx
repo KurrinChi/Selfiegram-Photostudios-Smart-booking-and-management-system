@@ -113,7 +113,7 @@ export default function HomePage(): React.JSX.Element {
   };
 
   return (
-    <div ref={pageRef} className="text-gray-800">
+    <div ref={pageRef} className="text-gray-800 w-full">
       {/* ---------- NAVBAR ---------- */}
       <header
         className={`fixed top-0 left-0 w-full z-50 backdrop-blur-sm transition-transform duration-300 ${
@@ -222,10 +222,10 @@ export default function HomePage(): React.JSX.Element {
       </header>
 
       {/* ---------- HERO ---------- */}
-      <main className="pt-20">
+      <main className="pt-10 w-full min-h-screen">
         <section
           id="home"
-          className="scroll-mt-32 min-h-screen relative overflow-hidden bg-gradient-to-b from-white to-gray-200"
+          className="scroll-mt-32 min-h-screen relative w-full overflow-hidden bg-gradient-to-b from-white to-gray-200 max-w-[100vw]"
         >
           {/* Big background wordmark */}
           <h1
@@ -355,120 +355,122 @@ export default function HomePage(): React.JSX.Element {
         </section>
 
         {/* ---------- STORY + VISION + PLACEHOLDER ---------- */}
-        <section className=" bg-white ">
-          <div className="bg-gray-200 w-full rounded-b-[5rem] mx-auto px-6 lg:px-20 pb-20">
-            <div className="grid gap-8 lg:grid-cols-2 lg:grid-rows-2 lg:gap-6">
-              {/* Story card (1) */}
-              <motion.div
-                initial="hidden"
-                whileInView="show"
-                viewport={{ once: true, amount: 0.25 }}
-                variants={staggerContainer}
-                className="bg-white rounded-2xl shadow-lg p-8 flex flex-col lg:flex-row gap-4 lg:col-start-1  lg:row-start-1"
-              >
-                {/* Text */}
-                <div className="flex-1 flex flex-col justify-center">
-                  <motion.h3
-                    variants={fadeUp}
-                    className="text-2xl font-bold mb-3"
-                  >
-                    Our Story
-                  </motion.h3>
-                  <motion.p
-                    variants={fadeUp}
-                    className="text-gray-600 leading-relaxed"
-                  >
-                    SelfieGram was established in December 2022 by Elizabeth
-                    Ortega with a vision to transform photography in Bulacan. We
-                    are proud to be the largest, most creatively themed photo
-                    studio in the area, offering a unique and immersive
-                    experience for capturing memories.
-                  </motion.p>
-                </div>
-
-                {/* Image */}
+        <section className="bg-white">
+          <div className="bg-gray-200 w-full rounded-b-[5rem]">
+            <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-20 pb-20">
+              <div className="grid gap-8 lg:grid-cols-2 lg:grid-rows-2 lg:gap-6">
+                {/* Story card (1) */}
                 <motion.div
-                  className="flex-1 flex items-center justify-center"
-                  variants={fadeUp as any}
+                  initial="hidden"
+                  whileInView="show"
+                  viewport={{ once: true, amount: 0.25 }}
+                  variants={staggerContainer}
+                  className="bg-white rounded-2xl shadow-lg p-8 flex flex-col lg:flex-row gap-4 lg:col-start-1  lg:row-start-1"
                 >
-                  <img
-                    src="/storage/packages/studiorental/studio3.jpg"
-                    alt="story-main"
-                    className="rounded-xl shadow-xl w-full max-w-[360px]"
-                  />
-                </motion.div>
-              </motion.div>
+                  {/* Text */}
+                  <div className="flex-1 flex flex-col justify-center">
+                    <motion.h3
+                      variants={fadeUp}
+                      className="text-2xl font-bold mb-3"
+                    >
+                      Our Story
+                    </motion.h3>
+                    <motion.p
+                      variants={fadeUp}
+                      className="text-gray-600 leading-relaxed"
+                    >
+                      SelfieGram was established in December 2022 by Elizabeth
+                      Ortega with a vision to transform photography in Bulacan.
+                      We are proud to be the largest, most creatively themed
+                      photo studio in the area, offering a unique and immersive
+                      experience for capturing memories.
+                    </motion.p>
+                  </div>
 
-              {/* Vision card (2) */}
-              <motion.div
-                initial="hidden"
-                whileInView="show"
-                viewport={{ once: true, amount: 0.25 }}
-                variants={staggerContainer}
-                className="bg-white rounded-2xl shadow-lg p-8 flex flex-col lg:flex-row-reverse gap-4 lg:col-start-1 lg:row-start-2"
-              >
-                {/* Text */}
-                <div className="flex-1 flex flex-col justify-center">
-                  <motion.h3
-                    variants={fadeUp}
-                    className="text-2xl font-bold mb-3"
+                  {/* Image */}
+                  <motion.div
+                    className="flex-1 flex items-center justify-center"
+                    variants={fadeUp as any}
                   >
-                    Our Vision
-                  </motion.h3>
-                  <motion.p
-                    variants={fadeUp}
-                    className="text-gray-600 leading-relaxed"
-                  >
-                    At SelfieGram, our mission is to create a welcoming and
-                    inspiring space where clients feel free to express
-                    themselves. We believe that each photo session should be as
-                    memorable as the images it produces. Our goal is to make
-                    every session a reflection of our clients’ personalities and
-                    moments.
-                  </motion.p>
-                </div>
-
-                {/* Image */}
-                <motion.div
-                  className="flex-1 flex items-center justify-center"
-                  variants={fadeUp as any}
-                >
-                  <img
-                    src="/storage/packages/studiorental/studio2.jpg"
-                    alt="vision-main"
-                    className="rounded-xl shadow-xl w-full max-w-[360px]"
-                  />
-                </motion.div>
-              </motion.div>
-
-              {/* Placeholder card (3) spanning 2 rows */}
-              <motion.div
-                initial="hidden"
-                whileInView="show"
-                viewport={{ once: true, amount: 0.25 }}
-                variants={staggerContainer}
-                className="bg-white rounded-2xl shadow-lg p-8 lg:col-start-2 lg:col-span-2 lg:row-start-1 lg:row-span-2 flex flex-col items-center justify-start gap-4"
-              >
-                {/* Header */}
-                <motion.div
-                  className="w-full flex justify-center"
-                  variants={fadeUp}
-                >
-                  <motion.h3
-                    variants={fadeUp}
-                    className="text-2xl font-bold mb-4"
-                  >
-                    Announcements
-                  </motion.h3>
+                    <img
+                      src="/storage/packages/studiorental/studio3.jpg"
+                      alt="story-main"
+                      className="rounded-xl shadow-xl w-full max-w-[360px]"
+                    />
+                  </motion.div>
                 </motion.div>
 
+                {/* Vision card (2) */}
                 <motion.div
-                  className="w-full max-w-[700px] max-h-[700px] overflow-y-auto"
-                  variants={fadeUp}
+                  initial="hidden"
+                  whileInView="show"
+                  viewport={{ once: true, amount: 0.25 }}
+                  variants={staggerContainer}
+                  className="bg-white rounded-2xl shadow-lg p-8 flex flex-col lg:flex-row-reverse gap-4 lg:col-start-1 lg:row-start-2"
                 >
-                  <TagEmbedWidget height={700} />
+                  {/* Text */}
+                  <div className="flex-1 flex flex-col justify-center">
+                    <motion.h3
+                      variants={fadeUp}
+                      className="text-2xl font-bold mb-3"
+                    >
+                      Our Vision
+                    </motion.h3>
+                    <motion.p
+                      variants={fadeUp}
+                      className="text-gray-600 leading-relaxed"
+                    >
+                      At SelfieGram, our mission is to create a welcoming and
+                      inspiring space where clients feel free to express
+                      themselves. We believe that each photo session should be
+                      as memorable as the images it produces. Our goal is to
+                      make every session a reflection of our clients’
+                      personalities and moments.
+                    </motion.p>
+                  </div>
+
+                  {/* Image */}
+                  <motion.div
+                    className="flex-1 flex items-center justify-center"
+                    variants={fadeUp as any}
+                  >
+                    <img
+                      src="/storage/packages/studiorental/studio2.jpg"
+                      alt="vision-main"
+                      className="rounded-xl shadow-xl w-full max-w-[360px]"
+                    />
+                  </motion.div>
                 </motion.div>
-              </motion.div>
+
+                {/* Placeholder card (3) spanning 2 rows */}
+                <motion.div
+                  initial="hidden"
+                  whileInView="show"
+                  viewport={{ once: true, amount: 0.25 }}
+                  variants={staggerContainer}
+                  className="bg-white rounded-2xl shadow-lg p-8 lg:col-start-2 lg:col-span-2 lg:row-start-1 lg:row-span-2 flex flex-col items-center justify-start gap-4"
+                >
+                  {/* Header */}
+                  <motion.div
+                    className="w-full flex justify-center"
+                    variants={fadeUp}
+                  >
+                    <motion.h3
+                      variants={fadeUp}
+                      className="text-2xl font-bold mb-4"
+                    >
+                      Announcements
+                    </motion.h3>
+                  </motion.div>
+
+                  <motion.div
+                    className="w-full max-w-[700px] max-h-[700px] overflow-y-auto"
+                    variants={fadeUp}
+                  >
+                    <TagEmbedWidget height={700} />
+                  </motion.div>
+                </motion.div>
+              </div>
             </div>
           </div>
         </section>
@@ -476,7 +478,7 @@ export default function HomePage(): React.JSX.Element {
         {/* ---------- SERVICES ---------- */}
         <section
           id="services"
-          className="relative scroll-mt-32 min-h-screen py-14 overflow-hidden"
+          className="relative scroll-mt-32 min-h-screen py-14 overflow-hidden px-5"
         >
           {/* Background scattered static polaroids (full width) */}
           <div className="absolute inset-0 w-full h-full z-0 pointer-events-none">
@@ -627,7 +629,7 @@ export default function HomePage(): React.JSX.Element {
 
         {/* ---------- CONCEPT STUDIO (DRAG CAROUSEL) ---------- */}
         <section id="studio" className="bg-white">
-          <div className="min-h-screen max-w-7xl mx-auto px-6 lg:px-20">
+          <div className=" max-w-7xl mx-auto px-6 lg:px-20">
             <div className="text-center mb-8">
               <h3 className="text-3xl font-bold">Our Concept Studio</h3>
               <p className="text-gray-600 max-w-2xl mx-auto mt-3">
@@ -643,7 +645,7 @@ export default function HomePage(): React.JSX.Element {
                   ref={carouselRef as any}
                   drag="x"
                   dragConstraints={{ left: carouselWidth, right: 0 }}
-                  className="flex gap-6 py-6 px-6 items-center"
+                  className="flex gap-6 px-6 items-center"
                   whileTap={{ cursor: "grabbing" }}
                 >
                   {Array.from({ length: 6 }).map((_, i) => (
@@ -670,11 +672,10 @@ export default function HomePage(): React.JSX.Element {
         </section>
 
         {/* ---------- PHOTO GALLERY ---------- */}
-        <section
-          id="gallery"
-          className="scroll-mt-20 min-h-screen mx-auto py-14"
-        >
-          <h3 className="text-3xl text-center font-bold mb-8">Photo Gallery</h3>
+        <section id="gallery" className="mt-10 min-h-screen mx-auto">
+          <h3 className="text-3xl text-center font-bold -mb-20 md:-mb-2">
+            Photo Gallery
+          </h3>
 
           <InfiniteParallaxGallery />
         </section>

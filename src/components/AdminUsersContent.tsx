@@ -132,7 +132,9 @@ const AdminUsersContent: React.FC = () => {
     <div className="relative flex flex-col gap-6 p-4 md:p-6">
       {/* Header */}
       <div className="flex items-center justify-between gap-4">
-        <h1 className="text-2xl font-semibold">User Management</h1>
+        <h1 className="text-lg sm:text-xl font-semibold pl-12 sm:pl-0">
+          User Management
+        </h1>
       </div>
 
       {/* Tabs + Controls in a single row */}

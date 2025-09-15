@@ -35,7 +35,9 @@ const SidebarChatList: React.FC<Props> = ({
     <div className="w-100% bg-white h-full flex flex-col ">
       {/* Header */}
       <div className="p-4">
-        <h2 className="text-2xl font-bold mb-3">Messages</h2>
+        <h2 className="text-lg sm:text-xl font-semibold pl-12 sm:pl-0">
+          Messages
+        </h2>
         <div className="relative">
           <input
             type="text"
