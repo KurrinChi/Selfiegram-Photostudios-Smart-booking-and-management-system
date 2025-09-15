@@ -80,7 +80,9 @@
         //admin package management
         Route::get('/admin/packages-all', [PackageController::class, 'adminShowAll']);
         Route::get('/admin/packages/{id}', [PackageController::class, 'adminShow']);
+        Route::get('/admin/package-types', [PackageController::class, 'packageType']);
         Route::post('/admin/packages/{id}/archive', [PackageController::class, 'archivePackage']);
+        Route::put('/admin/update-package/{id}', [PackageController::class, 'updatePackage']);
     });
 
     // Protected routes (user must be logged in) CUSTOMER
@@ -90,7 +92,7 @@
         Route::get('/packages', [PackageController::class, 'index']);
         Route::get('/packages/{id}', [PackageController::class, 'show']);
         Route::get('/packages/{id}/set-concepts', [PackageController::class, 'getPackageSetAndConcepts']);
-       Route::get('/packages/{id}/addons', [PackageController::class, 'getAddOns']);
+        Route::get('/packages/{id}/addons', [PackageController::class, 'getAddOns']);
 
 
 

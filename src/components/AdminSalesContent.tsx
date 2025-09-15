@@ -96,11 +96,11 @@ const AdminSalesContent: React.FC = () => {
         s.package.toLowerCase().includes(search.toLowerCase());
 
       const matchesStatus =
-        statusFilter === "Booking Status: All" ||
+        statusFilter === "All" ||
         s.paymentStatus === statusFilter;
 
       const matchesPackage =
-        packageFilter === "Package: All" || s.package === packageFilter;
+        packageFilter === "All" || s.package === packageFilter;
 
       const saleDate = parse(s.transactionDate, "yyyy-MM-dd", new Date());
       const matchesDate = isWithinInterval(saleDate, {
@@ -215,7 +215,7 @@ const AdminSalesContent: React.FC = () => {
   return (
     <div className="p-4 space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <h1 className="text-2xl font-semibold">Sales</h1>
+        <h1 className="text-2xl font-semibold ml-1">Sales</h1>
         <button
           onClick={handleExport}
           className="px-4 py-2 bg-black text-white text-sm rounded-md hover:opacity-80 transition"
@@ -238,29 +238,29 @@ const AdminSalesContent: React.FC = () => {
             className="pl-7 pr-3 py-2 border rounded-md w-48"
           />
         </div>
-
+        <p className="text-black">Booking Status:</p>
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
           className="px-2 py-2 border rounded-md"
         >
-          <option>Booking Status: All</option>
+          <option>All</option>
           <option>Completed</option>
           <option>Pending</option>
           <option>Cancelled</option>
         </select>
-
+      <p className="text-black">Package:</p>
         <select
           value={packageFilter}
           onChange={(e) => setPackageFilter(e.target.value)}
           className="px-2 py-2 border rounded-md"
         >
-          <option>Package: All</option>
+          <option>All</option>
           {packages.map((p) => (
             <option key={p}>{p}</option>
           ))}
         </select>
-
+        <p className="text-black">Date:</p>
         <div className="relative text-xs">
           <button
             onClick={() => setPickerOpen((prev) => !prev)}

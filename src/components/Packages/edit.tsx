@@ -53,6 +53,7 @@ const EditPackagePage = () => {
         setTags(data.tags || []);
         setCoverImage(data.images[0] || "");
         setCarouselImages(data.images || []);
+        console.log("Fetched package:", data);
       } catch (error) {
         console.error("Failed to fetch package:", error);
         setPkg(null);
@@ -67,10 +68,11 @@ const EditPackagePage = () => {
       setTypesLoading(true);
       setTypesError(null);
       try {
-        const res = await fetchWithAuth(`${API_URL}/api/package_types`);
+        const res = await fetchWithAuth(`${API_URL}/api/admin/package-types`);
         if (!res.ok) throw new Error(`Failed to fetch types: ${res.status}`);
         const data = await res.json();
-        setPackageTypes(Array.isArray(data) ? data : []);
+        setPackageTypes(data);
+        console.log("Fetched package types:", data);
       } catch (err) {
         console.error(err);
         setTypesError("Failed to load package types.");
@@ -92,22 +94,43 @@ const EditPackagePage = () => {
     reader.readAsDataURL(file);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const updatedPackage = {
-      ...pkg!,
-      title: title.trim(),
-      price: price === "" ? 0 : price,
-      duration,
-      description: description.trim(),
-      tags,
-      images: carouselImages,
-    };
+  const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
 
-    console.log("Updated Package:", updatedPackage);
+  const updatedPackage = {
+    name: title.trim(),
+    price: price === "" ? 0 : Number(price),
+    duration,
+    description: description.trim(),
+    images: carouselImages.map((url) => ({ imagePath: url })),
+    tags
+  };
+
+  try {
+    const response = await fetchWithAuth(`${API_URL}/api/admin/update-package/${pkg?.id}`, {
+      method: "PUT",
+      body: JSON.stringify(updatedPackage),
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      console.error("Backend error:", result);
+      alert(`Failed to update package: ${result.message || 'Unknown error'}`);
+      return;
+    }
+
+    console.log("Success:", result);
+    console.log("Updated package:", updatedPackage);
     alert("Package updated successfully!");
     navigate("/admin/packages");
-  };
+
+  } catch (error) {
+    console.error("Network error:", error);
+    alert("An error occurred while updating the package.");
+  }
+};
+
 
   if (!pkg) return <div className="p-4">Loading...</div>;
 
@@ -181,7 +204,7 @@ const EditPackagePage = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-bold">
-                Duration (minutes)*
+                Duration (minutes)
               </label>
               <input
                 type="number"
@@ -232,17 +255,17 @@ const EditPackagePage = () => {
 
           {/* Tags from package_types */}
           <div>
-            <label className="block text-sm font-medium">Package Types *</label>
+            <label className="block text-sm font-medium">Package Types</label>
             {typesLoading ? (
               <p className="text-xs text-gray-500 mt-1">Loading...</p>
             ) : typesError ? (
               <p className="text-xs text-red-500 mt-1">{typesError}</p>
             ) : (
               <div className="flex flex-wrap gap-2 mt-1">
-                {packageTypes.map((type) => (
+                {packageTypes.map((type,id) => (
                   <button
                     type="button"
-                    key={type.id}
+                    key={id}
                     onClick={() =>
                       setTags((prev) =>
                         prev.includes(type.name)
