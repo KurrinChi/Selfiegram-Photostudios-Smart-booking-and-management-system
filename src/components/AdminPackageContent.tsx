@@ -23,19 +23,21 @@ const AdminPackageContent: React.FC = () => {
   const [allPackages, setAllPackages] = useState<Package[]>([]);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState<string>("");
-  const [imageIndexMap, setImageIndexMap] = useState<Record<string, number>>({});
+  const [imageIndexMap, setImageIndexMap] = useState<Record<string, number>>(
+    {}
+  );
   const [fadingImages, setFadingImages] = useState<Record<string, boolean>>({});
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [loading, setLoading] = useState(true);
-
-
 
   const navigate = useNavigate();
 
   useEffect(() => {
     const fetchPackages = async () => {
       try {
-        const response = await fetchWithAuth(`${API_URL}/api/admin/packages-all`);
+        const response = await fetchWithAuth(
+          `${API_URL}/api/admin/packages-all`
+        );
         const data = await response.json();
         setAllPackages(data);
       } catch (error) {
@@ -117,13 +119,16 @@ const AdminPackageContent: React.FC = () => {
     const newStatus = pkg.status === 1 ? 0 : 1;
 
     try {
-      const response = await fetchWithAuth(`${API_URL}/api/admin/packages/${pkg.id}/archive`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ status: newStatus }),
-      });
+      const response = await fetchWithAuth(
+        `${API_URL}/api/admin/packages/${pkg.id}/archive`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ status: newStatus }),
+        }
+      );
 
       const data = await response.json();
 
@@ -133,7 +138,7 @@ const AdminPackageContent: React.FC = () => {
             p.id === pkg.id ? { ...p, status: data.newStatus } : p
           )
         );
-        toast.success(data.message); 
+        toast.success(data.message);
       } else {
         toast.error(data.message || "Failed to update package status.");
       }
@@ -141,12 +146,14 @@ const AdminPackageContent: React.FC = () => {
       console.error(error);
       toast.error("Something went wrong while updating package status.");
     }
-  }
+  };
 
   return (
     <div className="p-4 overflow-y-auto max-h-230 rounded-3xl transition-all duration-300">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-        <h1 className="text-2xl font-semibold">Available Packages</h1>
+        <h1 className="text-lg sm:text-xl font-semibold pl-12 sm:pl-0">
+          Available Packages
+        </h1>
         <div className="flex flex-wrap gap-3 items-center text-xs">
           <div className="relative">
             <FontAwesomeIcon
@@ -195,7 +202,9 @@ const AdminPackageContent: React.FC = () => {
       </div>
 
       {loading ? (
-        <div className="text-center py-20 text-gray-400">Loading packages...</div>
+        <div className="text-center py-20 text-gray-400">
+          Loading packages...
+        </div>
       ) : filtered.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {filtered.map((pkg) => {
@@ -207,7 +216,6 @@ const AdminPackageContent: React.FC = () => {
                 key={pkg.id}
                 className="relative bg-white rounded-xl shadow-sm transition-all duration-300 transform hover:-translate-y-2 hover:scale-102 hover:shadow-xl p-2 overflow-hidden group"
               >
-
                 <div className="relative z-0 h-100 rounded-md overflow-hidden bg-gray-100">
                   <img
                     src={
@@ -216,32 +224,37 @@ const AdminPackageContent: React.FC = () => {
                         : "/slfg-placeholder 2.png"
                     }
                     onError={(e) => {
-                      (e.target as HTMLImageElement).src = "/slfg-placeholder 2.png";
+                      (e.target as HTMLImageElement).src =
+                        "/slfg-placeholder 2.png";
                     }}
-                    className={`w-full h-full object-cover transition-opacity duration-500 ease-in-out ${isFading ? "opacity-0" : "opacity-100"
-                      }`}
+                    className={`w-full h-full object-cover transition-opacity duration-500 ease-in-out ${
+                      isFading ? "opacity-0" : "opacity-100"
+                    }`}
                     alt="Package"
                   />
                   <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1 bg-white/60 px-2 py-1 rounded-full backdrop-blur-sm">
-                    {(pkg.images?.length ? pkg.images : ["/slfg-placeholder 2.png"]).map(
-                      (img, i) => (
-                        <img
-                          key={i}
-                          src={img}
-                          onClick={() =>
-                            setImageIndexMap((prev) => ({ ...prev, [pkg.id]: i }))
-                          }
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).src = "/slfg-placeholder 2.png";
-                          }}
-                          className={`w-6 h-6 object-cover rounded-full border-2 cursor-pointer transition ${i === currentImgIdx
+                    {(pkg.images?.length
+                      ? pkg.images
+                      : ["/slfg-placeholder 2.png"]
+                    ).map((img, i) => (
+                      <img
+                        key={i}
+                        src={img}
+                        onClick={() =>
+                          setImageIndexMap((prev) => ({ ...prev, [pkg.id]: i }))
+                        }
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src =
+                            "/slfg-placeholder 2.png";
+                        }}
+                        className={`w-6 h-6 object-cover rounded-full border-2 cursor-pointer transition ${
+                          i === currentImgIdx
                             ? "border-black"
                             : "border-transparent opacity-60"
-                            }`}
-                          alt={`Thumb ${i + 1}`}
-                        />
-                      )
-                    )}
+                        }`}
+                        alt={`Thumb ${i + 1}`}
+                      />
+                    ))}
                   </div>
                 </div>
 
@@ -254,7 +267,9 @@ const AdminPackageContent: React.FC = () => {
                     {(pkg.tags ?? []).map((tag) => (
                       <span
                         key={tag}
-                        className={`px-2 py-0.5 rounded-full text-[10px] ${getTagPillClass(tag)}`}
+                        className={`px-2 py-0.5 rounded-full text-[10px] ${getTagPillClass(
+                          tag
+                        )}`}
                       >
                         {tag}
                       </span>
@@ -264,9 +279,17 @@ const AdminPackageContent: React.FC = () => {
                     <button
                       onClick={() => toggleArchive(pkg)}
                       className=" p-2 rounded-md font-bold backdrop-blur-md bg-gray-100 border border-white/20 shadow-md hover:bg-gray-200 transition"
-                      title={pkg.status === 1 ? "Archive Package" : "Unarchive Package"}
+                      title={
+                        pkg.status === 1
+                          ? "Archive Package"
+                          : "Unarchive Package"
+                      }
                     >
-                      {pkg.status === 1 ? <Archive className="text-red-400" /> : <RefreshCw className="text-green-400" />}
+                      {pkg.status === 1 ? (
+                        <Archive className="text-red-400" />
+                      ) : (
+                        <RefreshCw className="text-green-400" />
+                      )}
                     </button>
                     <button
                       onClick={() => navigate(`edit/${pkg.id}`)}
@@ -292,4 +315,3 @@ const AdminPackageContent: React.FC = () => {
 };
 
 export default AdminPackageContent;
-
