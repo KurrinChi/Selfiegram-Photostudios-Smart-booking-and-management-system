@@ -128,57 +128,57 @@ class AppointmentController extends Controller
 
     
     $appointments = DB::select("
-   SELECT 
-    b.bookingID AS id,
-    b.customerName,
-    b.customerEmail AS email,
-    b.customerContactNo AS contact,
-    b.customerAddress AS address,
-    b.bookingDate,
-    b.bookingStartTime,
-    b.bookingEndTime,
-    p.packageID,
-    p.name AS packageName,
-    p.description AS packageDescription,
-    p.price AS basePrice,
-    COALESCE(
-        GROUP_CONCAT(DISTINCT CONCAT(ao.addOn, ' x', ba.quantity, ' (₱', FORMAT(ba.quantity * ba.price, 2), ')') SEPARATOR ', '),
-        ''
-    ) AS selectedAddOns,
-    COALESCE(
-        GROUP_CONCAT(DISTINCT pc.backdrop SEPARATOR ', '),
-        ''
-    ) AS selectedConcepts,
-    b.subTotal,
-    b.total,
-    b.status,
-    b.paymentStatus,
-    b.feedback,
-    b.rating,
-    t.date AS transactionDate,
-    (
-        SELECT pi.imagePath
-        FROM package_images pi
-        WHERE pi.packageID = p.packageID
-        LIMIT 1
-    ) AS imagePath
-FROM booking AS b
-JOIN packages AS p ON b.packageID = p.packageID
-LEFT JOIN booking_add_ons AS ba ON b.bookingID = ba.bookingID
-LEFT JOIN package_add_ons AS ao ON ba.addOnID = ao.addOnID
-LEFT JOIN booking_concepts AS bc ON b.bookingID = bc.bookingID
-LEFT JOIN package_concept AS pc ON bc.conceptID = pc.conceptID
-LEFT JOIN transaction AS t ON b.bookingID = t.bookingID
-WHERE b.userID = ?
-  AND b.status = 2
-GROUP BY 
-    b.bookingID, b.customerName, b.customerEmail, b.customerContactNo, b.customerAddress, 
-    b.bookingDate, b.bookingStartTime, b.bookingEndTime, 
-    p.packageID, p.name, p.description, p.price, 
-    b.subTotal, b.total, b.status, b.paymentStatus, b.feedback, b.rating, t.date;
-
-
-    ", [$userID]);
+        SELECT 
+            b.bookingID AS id,
+            b.customerName,
+            b.customerEmail AS email,
+            b.customerContactNo AS contact,
+            b.customerAddress AS address,
+            b.bookingDate,
+            b.bookingStartTime,
+            b.bookingEndTime,
+            p.packageID,
+            p.name AS packageName,
+            p.description AS packageDescription,
+            p.price AS basePrice,
+            COALESCE(
+                GROUP_CONCAT(DISTINCT CONCAT(ao.addOn, ' x', ba.quantity, ' (₱', FORMAT(ba.quantity * ba.price, 2), ')') SEPARATOR ', '),
+                ''
+            ) AS selectedAddOns,
+            COALESCE(
+                GROUP_CONCAT(DISTINCT pc.backdrop SEPARATOR ', '),
+                ''
+            ) AS selectedConcepts,
+            b.subTotal,
+            b.total,
+            b.rem,
+            b.receivedAmount, 
+            b.status,
+            b.paymentStatus,
+            b.feedback,
+            b.rating,
+            t.date AS transactionDate,
+            (
+                SELECT pi.imagePath
+                FROM package_images pi
+                WHERE pi.packageID = p.packageID
+                LIMIT 1
+            ) AS imagePath
+        FROM booking AS b
+        JOIN packages AS p ON b.packageID = p.packageID
+        LEFT JOIN booking_add_ons AS ba ON b.bookingID = ba.bookingID
+        LEFT JOIN package_add_ons AS ao ON ba.addOnID = ao.addOnID
+        LEFT JOIN booking_concepts AS bc ON b.bookingID = bc.bookingID
+        LEFT JOIN package_concept AS pc ON bc.conceptID = pc.conceptID
+        LEFT JOIN transaction AS t ON b.bookingID = t.bookingID
+        WHERE b.userID = ?
+        AND b.status = 2
+        GROUP BY 
+            b.bookingID, b.customerName, b.customerEmail, b.customerContactNo, b.customerAddress, 
+            b.bookingDate, b.bookingStartTime, b.bookingEndTime, 
+            p.packageID, p.name, p.description, p.price, 
+            b.subTotal, b.total, b.rem, b.receivedAmount, b.status, b.paymentStatus, b.feedback, b.rating, t.date;
+            ", [$userID]);
 
     return response()->json($appointments);
 }

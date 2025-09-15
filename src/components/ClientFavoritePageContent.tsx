@@ -88,7 +88,7 @@ const ClientFavoritePageContent: React.FC = () => {
   };
 
   return (
-    <div className="p-4 overflow-y-auto max-h-160 rounded-3xl transition-all duration-300">
+    <div className="p-4 overflow-y-auto max-h-300 rounded-3xl transition-all duration-300">
       <h1 className="text-2xl font-semibold mb-6">Your Favorite Packages</h1>
 
       {loading ? (

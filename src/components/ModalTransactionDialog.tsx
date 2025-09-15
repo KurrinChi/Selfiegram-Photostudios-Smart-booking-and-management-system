@@ -17,6 +17,7 @@ interface TransactionModalProps {
     transactionDate: string;
     time: string;
     subtotal: number;
+    total: number;
     paidAmount: number;
     pendingBalance: number;
     feedback: string;
@@ -45,6 +46,8 @@ const [hasSelectedRating, setHasSelectedRating] = useState(false);
  
   useEffect(() => {
     if (data) {
+          console.log("📌 TransactionModal received data:", data);
+
       setRating(data.rating);
       setFeedback(data.feedback);
     }
@@ -217,8 +220,8 @@ return (
 
             <div className="text-sm mb-4">
               <div className="flex justify-between">
-                <span>Subtotal</span>
-                <span>₱{data.subtotal.toFixed(2)}</span>
+                <span>Total</span>
+                <span>₱{typeof data.total === "number" ? data.total.toFixed(2) : "0.00"}</span>
               </div>
               <div className="flex justify-between">
                 <span>Paid Amount</span>
@@ -340,7 +343,7 @@ return (
           <div className="text-sm mb-2">
             {data.package}
             <span className="float-right font-semibold">
-              ₱{data.subtotal.toFixed(2)}
+             ₱{data.subtotal.toFixed(2)}
             </span>
           </div>
 
@@ -394,8 +397,8 @@ return (
 
           <div className="text-sm mb-4">
             <div className="flex justify-between">
-              <span>Subtotal</span>
-              <span>₱{data.subtotal.toFixed(2)}</span>
+              <span>Total</span>
+              <span>₱{data.total.toFixed(2)}</span>
             </div>
             <div className="flex justify-between">
               <span>Paid Amount</span>

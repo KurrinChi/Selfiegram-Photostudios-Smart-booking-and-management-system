@@ -12,6 +12,7 @@ interface Appointment {
   bookingEndTime: string;
   package: string;
   price: number;
+  total: number;
   paidAmount: number;
   pendingBalance: number;
   status: string;
@@ -74,8 +75,9 @@ const ClientAppointmentsPageContent = () => {
         time: item.bookingStartTime,
         package: item.packageName,
         price: parseFloat(item.subTotal),
-        paidAmount: parseFloat(item.total) - parseFloat(item.subTotal), // or however you calculate
-        pendingBalance: parseFloat(item.total) - parseFloat(item.subTotal),
+        paidAmount: Number(item.receivedAmount) || 0,
+        pendingBalance: Number(item.rem) || 0,
+        total: Number(item.total),
         status: item.paymentStatus === 1 ? "FULLY PAID" : "PENDING",
         image: item.imagePath || null, // fetch from package images table if needed
         location: item.address,
@@ -400,6 +402,7 @@ const ClientAppointmentsPageContent = () => {
           subtotal: selectedAppointment.price,
           paidAmount: selectedAppointment.paidAmount,
           pendingBalance: selectedAppointment.pendingBalance,
+           total: Number(selectedAppointment.total),
            feedback: selectedAppointment.feedback || "",  // make sure this exists
           rating: selectedAppointment.rating || 0,   
           status: selectedAppointment.rawStatus,

@@ -13,7 +13,7 @@ const ClientHistoryPageContent = () => {
   const [selectedItem, setSelectedItem] = useState<any | null>(null);
   const [itemToDelete, setItemToDelete] = useState<any | null>(null);
   const [rawBookingMap, setRawBookingMap] = useState<{ [id: number]: any }>({});
-
+  
   const fetchHistory = async () => {
     try {
       const user_id = localStorage.getItem("userID");
@@ -27,23 +27,34 @@ const ClientHistoryPageContent = () => {
           },
         }
       );
-
       const data = response.data as any[];
 
-      const formatted = data.map((item: any) => ({
-          id: item.bookingID,
-          packageName: item.packageName,
-          image: null,
-          dateTime: item.dateTime,
-          price: `₱${parseFloat(item.price).toFixed(2)}`,
-          feedback: item.feedback ?? null,
-          rating: item.rating ?? null,
-          status: item.status,
-          paymentStatus: item.paymentStatus,
-          paidAmount: item.paidAmount,
-          pendingBalance: item.pendingBalance,
-        }));
+    const formatted = data.map((item: any) => ({
+      id: item.bookingID,
+      packageName: item.packageName,
+      image: null,
+      dateTime: item.dateTime,
+      displayPrice: `₱${parseFloat(item.price).toFixed(2)}`, // for table only
+      feedback: item.feedback ?? null,
+      rating: item.rating ?? null,
+      status: item.status,
+      paymentStatus: item.paymentStatus,
+      subtotal: toNumber(item.subTotal),
+      total: toNumber(item.total),
+      paidAmount: toNumber(item.receivedAmount),
+      pendingBalance: toNumber(item.rem),
+      customerName: item.customerName,
+      customerEmail: item.customerEmail,
+      customerAddress: item.customerAddress,
+      customerContactNo: item.customerContactNo,
+      bookingDate: item.bookingDate,
+      bookingStartTime: item.bookingStartTime,
+      bookingEndTime: item.bookingEndTime,
+      selectedAddOns: item.selectedAddOns || [],
+      selectedConcepts: item.selectedConcepts || []
+    }));
 
+  
 
         const rawMap: { [id: number]: any } = {};
         data.forEach((item) => {
@@ -98,7 +109,7 @@ const ClientHistoryPageContent = () => {
   const handleDelete = (item: any) => {
     setItemToDelete(item);
   };
-
+  
   const confirmDelete = async () => {
     try {
         await axios.delete(`${API_URL}/api/booking/${itemToDelete.id}`, {
@@ -140,6 +151,11 @@ const ClientHistoryPageContent = () => {
     return `${acronym}#${bookingID}`;
   };
 
+const toNumber = (value: any): number => {
+  const num = Number(value);
+  return isNaN(num) ? 0 : num;
+};
+
 
   return (
     <div className="p-4 animate-fadeIn">
@@ -167,7 +183,7 @@ const ClientHistoryPageContent = () => {
                   {item.packageName}
                 </td>
                 <td className="p-4">{formatDate(item.dateTime)}</td>
-                <td className="p-4">{item.price}</td>
+                <td className="p-4">{item.displayPrice}</td>
                 <td className="p-4">{getBookingLabel(item.id, item.packageName)}</td>
               <td className="p-4">
               {item.rating === null || item.rating === 0 ? (
@@ -218,31 +234,32 @@ const ClientHistoryPageContent = () => {
       {showModal && selectedItem && (
 
         <ModalTransactionDialog
-        isOpen={showModal}
-        data={{
-          id: selectedItem.id,
-          customerName: selectedItem.customerName || "N/A",
-          email: selectedItem.customerEmail || "N/A",
-          address: selectedItem.customerAddress || "N/A",
-          contact: selectedItem.customerContactNo || "N/A",
-          package: selectedItem.packageName,
-          bookingDate: selectedItem.bookingDate.split(" ")[0] || "",
-          transactionDate: formatDate(selectedItem.dateTime.split(" ")[0] || ""),
-          time: `${formatTime(selectedItem.bookingStartTime)} - ${formatTime(selectedItem.bookingEndTime)}` || "",
-          subtotal: Number(selectedItem.subTotal.replace(/[^\d.]/g, "")) || 0,
-          paidAmount: Number(selectedItem.receivedAmount.replace(/[^\d.]/g, "")) || 0,
-          pendingBalance: Number(selectedItem.rem.replace(/[^\d.]/g, "")) || 0,
-          feedback: selectedItem.feedback !== null ? String(selectedItem.feedback) : "",
-          rating: selectedItem.rating ?? 0,
-          status: selectedItem.status,
-          paymentStatus: selectedItem.paymentStatus,
-          // <-- add this
-          selectedAddOns: selectedItem.selectedAddOns || [],   // <-- add this
-          selectedConcepts: selectedItem.selectedConcepts || [] // <-- add this
-        }}
+  isOpen={showModal}
+  data={{
+    id: selectedItem.id,
+    customerName: selectedItem.customerName || "N/A",
+    email: selectedItem.customerEmail || "N/A",
+    address: selectedItem.customerAddress || "N/A",
+    contact: selectedItem.customerContactNo || "N/A",
+    package: selectedItem.packageName,
+    bookingDate: selectedItem.bookingDate?.split(" ")[0] || "",
+    transactionDate: formatDate(selectedItem.dateTime?.split(" ")[0] || ""),
+    time: `${formatTime(selectedItem.bookingStartTime)} - ${formatTime(selectedItem.bookingEndTime)}` || "",
+    total: toNumber(selectedItem.total),
+    subtotal: toNumber(selectedItem.subTotal),
+    paidAmount: toNumber(selectedItem.receivedAmount),
+    pendingBalance: toNumber(selectedItem.rem),
+    feedback: selectedItem.feedback ?? "",
+    rating: selectedItem.rating ?? 0,
+    status: selectedItem.status,
+    paymentStatus: selectedItem.paymentStatus,
+    selectedAddOns: selectedItem.selectedAddOns || [],
+    selectedConcepts: selectedItem.selectedConcepts || []
+  }}
   onClose={() => setShowModal(false)}
   onSaved={fetchHistory}
-/>
+      />
+
 
       )}
 

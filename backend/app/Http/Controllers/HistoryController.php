@@ -58,8 +58,6 @@ public function deleteBooking($id)
         return response()->json(['error' => 'Server error', 'message' => $e->getMessage()], 500);
     }
 }
-
-
     public function getTransactionDetails($bookingID)
     {
         return DB::selectOne("
@@ -74,6 +72,7 @@ public function deleteBooking($id)
             b.bookingStartTime,
             b.bookingEndTime,
             b.subTotal,
+            b.total,
             b.rem,
             b.receivedAmount,
             b.feedback,
@@ -98,7 +97,7 @@ public function deleteBooking($id)
         GROUP BY 
             b.bookingID, p.name, b.customerName, b.customerEmail, b.customerAddress, b.customerContactNo,
             b.bookingDate, b.bookingStartTime, b.bookingEndTime, b.subTotal, b.rem, b.receivedAmount,
-            b.feedback, b.rating, b.status, b.paymentStatus
+            b.feedback, b.rating, b.status, b.paymentStatus, b.total
         ", [$bookingID]);
     }
     public function updateFeedback(Request $request, $id)
