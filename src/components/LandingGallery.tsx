@@ -150,7 +150,7 @@ export default function SimpleParallaxGallery() {
           alignItems: isMobile ? "center" : "flex-start",
           gap: "0.5rem",
           left: isMobile ? "50%" : isTablet ? "6%" : "3%",
-          bottom: isMobile ? "18%" : "14%",
+          bottom: isMobile ? "10%" : "14%",
           transform: isMobile ? "translateX(-50%)" : "none",
           textAlign: isMobile ? "center" : "left",
           maxWidth: isMobile ? "90%" : isTablet ? "85%" : "420px",

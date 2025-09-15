@@ -34,9 +34,9 @@ const AuthLayout = ({
           transition={{ type: "spring", duration: 0.6 }}
           className="w-full md:w-1/2 flex items-center justify-center bg-white p-3 sm:p-6 rounded-2xl overflow-hidden"
         >
-          {/* Inner gray padded panel */}
-          <div className="w-full h-full bg-[#212121] rounded-xl p-2 sm:p-4 flex items-center justify-center">
-            <div className="relative w-full max-w-[500px] h-[600px] mx-auto hidden sm:block">
+          {/* Gray padded panel - hidden on mobile */}
+          <div className="hidden sm:flex w-full h-full bg-[#212121] rounded-xl p-2 sm:p-4 items-center justify-center">
+            <div className="relative w-full max-w-[500px] h-[600px] mx-auto">
               {images.map((image, index) => (
                 <motion.div
                   key={index}
@@ -49,29 +49,6 @@ const AuthLayout = ({
                   }}
                   className={`absolute ${image.className} max-w-[60%] sm:max-w-[50%] md:max-w-[40%] lg:max-w-[35%] xl:max-w-[30%]`}
                   style={{ transformOrigin: "center" }}
-                >
-                  <ImageCard
-                    src={image.src}
-                    label={image.label}
-                    className="w-full h-auto object-contain"
-                  />
-                </motion.div>
-              ))}
-            </div>
-
-            {/* Mobile version */}
-            <div className="sm:hidden flex flex-col items-center justify-center gap-4">
-              {images.map((image, index) => (
-                <motion.div
-                  key={index}
-                  initial={{ y: 20, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  transition={{
-                    delay: 0.2 + index * 0.15,
-                    duration: 0.6,
-                    ease: "easeOut",
-                  }}
-                  className="w-[70%] max-w-xs"
                 >
                   <ImageCard
                     src={image.src}
