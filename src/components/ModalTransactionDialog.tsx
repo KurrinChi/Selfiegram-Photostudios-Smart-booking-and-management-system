@@ -46,8 +46,6 @@ const [hasSelectedRating, setHasSelectedRating] = useState(false);
  
   useEffect(() => {
     if (data) {
-          console.log("📌 TransactionModal received data:", data);
-
       setRating(data.rating);
       setFeedback(data.feedback);
     }
@@ -284,6 +282,30 @@ return (
               </div>
             ) : null}
 
+              {/*FOR DOWN PAYMWENT*/}
+                {/* Cancel & Reschedule Buttons */}
+              <div className="flex justify-between mb-4">
+                <button
+                  onClick={() => {
+                    // TODO: handle cancel appointment logic
+                    alert("Cancel Appointment clicked");
+                  }}
+                  className="w-1/2  bg-gray-800 border rounded-md px-4 text-white px-4 py-2 rounded hover:bg-gray-500 transition mr-2"
+                >
+                  Cancel Appointment
+                </button>
+
+                <button
+                  onClick={() => {
+                    // TODO: handle reschedule logic
+                    alert("Reschedule clicked");
+                  }}
+                  className="w-1/2 bg-gray-100 border rounded-md px-4 py-2 rounded  hover:bg-gray-200 transition ml-2"
+                >
+                  Reschedule
+                </button>
+              </div>
+              
             <div className="flex justify-between">
               <button
                 onClick={onClose}
@@ -414,6 +436,43 @@ return (
               </span>
             </div>
           </div>
+           {/* Cancel & Reschedule Buttons */}
+{Number(data.status) !== 1 && (
+  <div className="flex justify-between mb-4">
+    <button
+      onClick={() => {
+        // TODO: handle cancel appointment logic
+        alert("Cancel Appointment clicked");
+      }}
+      className="w-1/2 bg-gray-800 text-white px-4 py-2 rounded hover:bg-gray-700 transition mr-2"
+    >
+      Cancel Appointment
+    </button>
+
+    <button
+      onClick={() => {
+        // TODO: handle reschedule logic
+        alert("Reschedule clicked");
+      }}
+      className="w-1/2 bg-gray-100 border rounded-md px-4 py-2 rounded hover:bg-gray-200 transition ml-2"
+    >
+      Reschedule
+    </button>
+  </div>
+)}
+
+
+              <div className="flex justify-between">
+      
+                {(hasTypedFeedback || hasSelectedRating) && (
+                  <button
+                    onClick={handleSave}
+                    className="bg-gray-800 text-white px-4 py-2 rounded hover:bg-gray-600 transition"
+                  >
+                    Save
+                  </button>
+                )}
+              </div>
 
           {data.status === 1 ? (
             <>
@@ -461,6 +520,8 @@ return (
               </button>
             </div>
           ) : null}
+
+          
 
           <div className="flex justify-between">
             <button

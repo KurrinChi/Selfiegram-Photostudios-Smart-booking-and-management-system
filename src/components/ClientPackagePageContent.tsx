@@ -12,6 +12,7 @@ interface Package {
   price: number;
   tags: string[];
   images?: string[];
+    description?: string;
 }
 
 const API_URL = import.meta.env.VITE_API_URL;
@@ -337,6 +338,15 @@ const ClientPackagePageContent: React.FC = () => {
                   <div className="text-gray-500 text-xs">
                     ₱{Number(pkg.price).toFixed(2)}
                   </div>
+
+                    {/* Package description here */}
+                  {pkg.description && (
+                    <div className="text-gray-600 text-xs line-clamp-3">
+                      {pkg.description}
+                    </div>
+                  )}
+
+
                   <div className="flex flex-wrap gap-1">
                     {(pkg.tags ?? []).map((tag) => (
                       <span
