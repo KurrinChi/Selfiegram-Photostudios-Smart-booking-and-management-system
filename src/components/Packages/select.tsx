@@ -784,22 +784,19 @@ import TransactionModalBooking from "../ModalTransactionDialogBooking";
                       animate={{ opacity: 1 }}
                       exit={{ opacity: 0 }}
                       transition={{ duration: 0.4 }}
-                      className="absolute inset-0 bg-gray-100 rounded-xl shadow-lg flex flex-wrap items-center justify-center gap-6 p-3"
+                      className="absolute inset-0 bg-gray-100 rounded-xl shadow-lg flex flex-wrap items-center justify-center gap-3 p-3 overflow-auto"
                     >
+
                       {colorOptions.map((color) => {
                         const isSelected = selectedColorA === color.id;
                         return (
                           <motion.div
-                            key={color.id}
-                            whileHover={{ scale: 1.08 }}
-                            animate={{ scale: isSelected ? 1.25 : 1 }}
-                            transition={{
-                              type: "spring",
-                              stiffness: 300,
-                              damping: 20,
-                            }}
-                            className="w-10 h-10 rounded-lg shadow-md cursor-pointer"
-                            style={{ backgroundColor: color.hex }}
+                             key={color.id}
+                                whileHover={{ scale: isSelected ? 1.08 : 1.05 }}
+                                animate={{ scale: isSelected ? 1.25 : 1 }}
+                                transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                                className="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-lg shadow-md cursor-pointer"
+                                style={{ backgroundColor: color.hex }}
                             onClick={(e) => {
                               e.stopPropagation();
                               setSelectedColorA(color.id);
