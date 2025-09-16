@@ -1,6 +1,19 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { format, parse, isWithinInterval } from "date-fns";
-import { DateRange } from "react-date-range";
+// AdminSalesContent.tsx
+import React, {
+  createElement,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { createPortal } from "react-dom";
+import {
+  format,
+  parseISO,
+  isWithinInterval,
+  startOfMonth,
+  endOfMonth,
+} from "date-fns";
 import "react-date-range/dist/styles.css";
 import "react-date-range/dist/theme/default.css";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -8,7 +21,9 @@ import { faSearch } from "@fortawesome/free-solid-svg-icons";
 import TransactionModal from "../components/AdminModalTransactionDialog";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
 import { AnimatePresence, motion } from "framer-motion";
-import { ChevronDown } from "lucide-react"; // nice dropdown arrow
+import { ChevronDown } from "lucide-react";
+import { DateRange } from "react-date-range";
+import type { Range } from "react-date-range";
 
 interface Sale {
   transactionID: number;
@@ -30,12 +45,112 @@ interface Sale {
 }
 
 const getBookingLabel = (transactionID: number, packageName: string) => {
-  const acronym = packageName
+  const acronym = (packageName || "")
     .split(" ")
-    .map((word) => word[0])
+    .map((word) => word[0] ?? "")
     .join("")
     .toUpperCase();
   return `${acronym}#${transactionID}`;
+};
+
+/**
+ * PortalDateRangePicker
+ * - Renders DateRange into document.body so it's not clipped by parent overflow.
+ * - Positions itself under the anchor element.
+ */
+type PortalDateRangePickerProps = {
+  open: boolean;
+  anchorRef: React.RefObject<HTMLElement | null>;
+  ranges: Range[];
+  onChange: (item: any) => void;
+  onClose?: () => void;
+  maxDate?: Date;
+  months?: number;
+};
+
+const PortalDateRangePicker: React.FC<PortalDateRangePickerProps> = ({
+  open,
+  anchorRef,
+  ranges,
+  onChange,
+  onClose,
+  maxDate,
+  months = 1,
+}) => {
+  const [pos, setPos] = useState<{
+    top: number;
+    left: number;
+    width: number;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+
+    const updatePos = () => {
+      const anchor = anchorRef.current;
+      if (!anchor) return;
+      const rect = anchor.getBoundingClientRect();
+      const viewportWidth = document.documentElement.clientWidth;
+      const preferredWidth = Math.min(360, viewportWidth - 16); // keep margin
+      // keep left within viewport
+      let left = rect.left + window.scrollX;
+      if (left + preferredWidth > window.scrollX + viewportWidth - 8) {
+        left = window.scrollX + viewportWidth - preferredWidth - 8;
+      }
+      if (left < window.scrollX + 8) left = window.scrollX + 8;
+      const top = rect.bottom + window.scrollY + 8;
+      setPos({ top, left, width: preferredWidth });
+    };
+
+    updatePos();
+    window.addEventListener("resize", updatePos);
+    window.addEventListener("scroll", updatePos, { passive: true });
+
+    return () => {
+      window.removeEventListener("resize", updatePos);
+      window.removeEventListener("scroll", updatePos);
+    };
+  }, [open, anchorRef]);
+
+  if (typeof document === "undefined" || !open || !pos) return null;
+
+  return createPortal(
+    <div
+      style={{
+        position: "fixed",
+        top: pos.top,
+        left: pos.left,
+        width: pos.width,
+        zIndex: 99999,
+        boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
+        background: "white",
+        borderRadius: 8,
+        padding: 8,
+      }}
+      onMouseDown={(e) => e.stopPropagation()}
+    >
+      <DateRange
+        ranges={ranges}
+        onChange={onChange}
+        moveRangeOnFirstSelection={false}
+        rangeColors={["#000"]}
+        months={months}
+        direction="horizontal"
+        className="w-full"
+        maxDate={maxDate ?? new Date()}
+      />
+
+      <div className="mt-2 flex gap-2 justify-end">
+        <button
+          onClick={() => onClose && onClose()}
+          className="px-3 py-1 bg-black text-white rounded text-xs"
+        >
+          Done
+        </button>
+      </div>
+    </div>,
+    document.body
+  );
 };
 
 const AdminSalesContent: React.FC = () => {
@@ -47,16 +162,15 @@ const AdminSalesContent: React.FC = () => {
   const [pageSize, setPageSize] = useState(10);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [selectedSale, setSelectedSale] = useState<any>(null);
-  const [range, setRange] = useState<
-    [{ startDate: Date; endDate: Date; key: string }]
-  >([
+
+  const [range, setRange] = useState<Range[]>([
     {
-      startDate: new Date("2025-01-01"),
-      endDate: new Date("2025-12-31"),
+      startDate: startOfMonth(new Date()),
+      endDate: endOfMonth(new Date()),
       key: "selection",
     },
   ]);
-  // Inside your component
+
   const [filtersOpen, setFiltersOpen] = useState(false);
 
   const API_URL = import.meta.env.VITE_API_URL;
@@ -65,7 +179,7 @@ const AdminSalesContent: React.FC = () => {
     fetchWithAuth(`${API_URL}/api/sales`)
       .then((res) => res.json())
       .then((data) => {
-        const parsedData: Sale[] = data.map((item: any) => ({
+        const parsedData: Sale[] = (data || []).map((item: any) => ({
           transactionID: item.transactionID,
           customerName: item.customerName,
           package: item.package,
@@ -84,39 +198,64 @@ const AdminSalesContent: React.FC = () => {
           rating: Number(item.rating),
         }));
         setSales(parsedData);
-      });
-  }, []);
+      })
+      .catch((err) => console.error("Failed fetching sales:", err));
+  }, [API_URL]);
 
-  const packages = Array.from(new Set(sales.map((s) => s.package)));
+  // unique packages
+  const packages = Array.from(new Set(sales.map((s) => s.package))).filter(
+    Boolean
+  );
+
+  // reset page when filters change
+  useEffect(() => {
+    setPage(1);
+  }, [search, statusFilter, packageFilter, range]);
 
   const filtered = useMemo(() => {
     return sales.filter((s) => {
+      const q = search.trim().toLowerCase();
       const matchesSearch =
-        s.transactionID
-          .toString()
-          .toLowerCase()
-          .includes(search.toLowerCase()) ||
-        s.customerName.toLowerCase().includes(search.toLowerCase()) ||
-        s.package.toLowerCase().includes(search.toLowerCase());
+        !q ||
+        s.transactionID.toString().toLowerCase().includes(q) ||
+        s.customerName.toLowerCase().includes(q) ||
+        s.package.toLowerCase().includes(q);
 
       const matchesStatus =
         statusFilter === "All" || s.paymentStatus === statusFilter;
-
       const matchesPackage =
         packageFilter === "All" || s.package === packageFilter;
 
-      const saleDate = parse(s.transactionDate, "yyyy-MM-dd", new Date());
-      const matchesDate = isWithinInterval(saleDate, {
-        start: range[0].startDate,
-        end: range[0].endDate,
-      });
+      let saleDate: Date;
+      if (s.transactionDate) {
+        try {
+          saleDate = parseISO(s.transactionDate);
+        } catch {
+          saleDate = new Date(s.transactionDate);
+        }
+      } else {
+        saleDate = new Date();
+      }
+
+      const hasStart = Boolean(range[0]?.startDate);
+      const hasEnd = Boolean(range[0]?.endDate);
+
+      const matchesDate =
+        hasStart && hasEnd
+          ? isWithinInterval(saleDate, {
+              start: range[0].startDate as Date,
+              end: range[0].endDate as Date,
+            })
+          : true;
 
       return matchesSearch && matchesStatus && matchesPackage && matchesDate;
     });
   }, [sales, search, statusFilter, packageFilter, range]);
 
-  const totalPages = Math.ceil(filtered.length / pageSize);
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const paginated = filtered.slice((page - 1) * pageSize, page * pageSize);
+
+  const pickerButtonRef = useRef<HTMLButtonElement | null>(null);
 
   const handleExport = () => {
     const printWindow = window.open("", "_blank");
@@ -134,79 +273,79 @@ const AdminSalesContent: React.FC = () => {
     ).length;
 
     const htmlContent = `
-    <html>
-      <head>
-        <title>Sales Report</title>
-        <style>
-          body { font-family: Arial, sans-serif; padding: 20px; }
-          h2 { text-align: center;  margin: 0; padding: 0; }
-          h5 { text-align: center;  margin: 0; padding: 0; }
-          table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 12px; }
-          th, td { border: 1px solid #ccc; padding: 6px; text-align: left; vertical-align: top; }
-          th { background-color: #f2f2f2; text-align: center;}
-          tfoot td { font-weight: bold; }
-          .summary { margin: 2px 0 5px 0; font-size: 13px }
-          .summary p { margin: 2px 0; padding: 0; }
-        </style>
-      </head>
-      <body>
-        <h2>Sales Report</h2>
-        <h5>${format(range[0].startDate, "MMM dd yyyy")} - ${format(
-      range[0].endDate,
-      "MMM dd yyyy"
-    )}</h5>
-        <div class="summary">
-          <p><strong>Completed:</strong> ${completedCount}</p>
-          <p><strong>Pending:</strong> ${pendingCount}</p>
-          <p><strong>Cancelled:</strong> ${cancelledCount}</p>
-        </div>
-        <table>
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Customer Name</th>
-              <th>Email</th>
-              <th>Contact No.</th>
-              <th>Package</th>
-              <th>Date</th>
-              <th>Payment</th>
-              <th>Balance</th>
-              <th>Total Amount</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${filtered
-              .map(
-                (s) => `
+      <html>
+        <head>
+          <title>Sales Report</title>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 20px; }
+            h2 { text-align: center;  margin: 0; padding: 0; }
+            h5 { text-align: center;  margin: 0; padding: 0; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 12px; }
+            th, td { border: 1px solid #ccc; padding: 6px; text-align: left; vertical-align: top; }
+            th { background-color: #f2f2f2; text-align: center;}
+            tfoot td { font-weight: bold; }
+            .summary { margin: 2px 0 5px 0; font-size: 13px }
+            .summary p { margin: 2px 0; padding: 0; }
+          </style>
+        </head>
+        <body>
+          <h2>Sales Report</h2>
+          <h5>${format(
+            range[0].startDate ?? new Date(),
+            "MMM dd yyyy"
+          )} - ${format(range[0].endDate ?? new Date(), "MMM dd yyyy")}</h5>
+          <div class="summary">
+            <p><strong>Completed:</strong> ${completedCount}</p>
+            <p><strong>Pending:</strong> ${pendingCount}</p>
+            <p><strong>Cancelled:</strong> ${cancelledCount}</p>
+          </div>
+          <table>
+            <thead>
               <tr>
-                <td>${getBookingLabel(s.transactionID, s.package)}</td>
-                <td>${s.customerName}</td>
-                <td>${s.email || "-"}</td>
-                <td>${s.contactNo || "-"}</td>
-                <td>${s.package}</td>
-                <td>${format(
-                  parse(s.transactionDate, "yyyy-MM-dd", new Date()),
-                  "MMMM d, yyyy"
-                )}</td>
-                <td>${s.downPayment.toFixed(2)}</td>
-                <td>${s.balance.toFixed(2)}</td>
-                <td>${s.totalAmount.toFixed(2)}</td>
-                <td>${s.paymentStatus}</td>
-              </tr>`
-              )
-              .join("")}
-          </tbody>
-          <tfoot>
-            <tr>
-              <td colspan="9" style="text-align:right">TOTAL PAYMENT:</td>
-              <td colspan="2">${totalPayment.toFixed(2)}</td>
-            </tr>
-          </tfoot>
-        </table>
-      </body>
-    </html>
-  `;
+                <th>ID</th>
+                <th>Customer Name</th>
+                <th>Email</th>
+                <th>Contact No.</th>
+                <th>Package</th>
+                <th>Date</th>
+                <th>Payment</th>
+                <th>Balance</th>
+                <th>Total Amount</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${filtered
+                .map(
+                  (s) => `
+                <tr>
+                  <td>${getBookingLabel(s.transactionID, s.package)}</td>
+                  <td>${s.customerName}</td>
+                  <td>${s.email || "-"}</td>
+                  <td>${s.contactNo || "-"}</td>
+                  <td>${s.package}</td>
+                  <td>${format(
+                    parseISO(s.transactionDate),
+                    "MMMM d, yyyy"
+                  )}</td>
+                  <td>${s.downPayment.toFixed(2)}</td>
+                  <td>${s.balance.toFixed(2)}</td>
+                  <td>${s.totalAmount.toFixed(2)}</td>
+                  <td>${s.paymentStatus}</td>
+                </tr>`
+                )
+                .join("")}
+            </tbody>
+            <tfoot>
+              <tr>
+                <td colspan="9" style="text-align:right">TOTAL PAYMENT:</td>
+                <td colspan="2">${totalPayment.toFixed(2)}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </body>
+      </html>
+    `;
 
     printWindow.document.write(htmlContent);
     printWindow.document.close();
@@ -231,7 +370,6 @@ const AdminSalesContent: React.FC = () => {
 
       {/* Filters */}
       <div className="space-y-3 sm:space-y-0 sm:flex sm:items-center sm:gap-3">
-        {/* Search always visible */}
         <div className="relative w-full sm:w-64">
           <FontAwesomeIcon
             icon={faSearch}
@@ -245,9 +383,7 @@ const AdminSalesContent: React.FC = () => {
           />
         </div>
 
-        {/* Dropdown for rest of filters */}
         <div className="relative w-full sm:w-auto">
-          {/* Toggle button */}
           <button
             onClick={() => setFiltersOpen((prev) => !prev)}
             className="flex items-center justify-between w-full sm:w-auto border px-3 py-2 rounded-md bg-gray-50 hover:bg-gray-100 text-xs"
@@ -262,7 +398,6 @@ const AdminSalesContent: React.FC = () => {
             </motion.span>
           </button>
 
-          {/* Animated dropdown content */}
           <AnimatePresence>
             {filtersOpen && (
               <motion.div
@@ -273,9 +408,7 @@ const AdminSalesContent: React.FC = () => {
                 className="absolute left-1/2 -translate-x-1/2 mt-2 w-full sm:w-auto origin-top z-40"
               >
                 <div className="p-3 bg-white rounded-md shadow-lg grid gap-4 text-xs">
-                  {/* First row: Status + Package */}
                   <div className="grid gap-3 sm:flex sm:items-center sm:gap-4">
-                    {/* Status Filter */}
                     <label className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 w-full sm:w-auto">
                       <span className="font-medium">Status:</span>
                       <select
@@ -283,14 +416,13 @@ const AdminSalesContent: React.FC = () => {
                         onChange={(e) => setStatusFilter(e.target.value)}
                         className="px-2 py-2 border rounded-md w-full sm:w-auto"
                       >
-                        <option>All</option>
-                        <option>Completed</option>
-                        <option>Pending</option>
-                        <option>Cancelled</option>
+                        <option value="All">All</option>
+                        <option value="Completed">Completed</option>
+                        <option value="Pending">Pending</option>
+                        <option value="Cancelled">Cancelled</option>
                       </select>
                     </label>
 
-                    {/* Package Filter */}
                     <label className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 w-full sm:w-auto">
                       <span className="font-medium">Package:</span>
                       <select
@@ -298,62 +430,45 @@ const AdminSalesContent: React.FC = () => {
                         onChange={(e) => setPackageFilter(e.target.value)}
                         className="px-2 py-2 border rounded-md w-full sm:w-auto"
                       >
-                        <option>All</option>
+                        <option value="All">All</option>
                         {packages.map((p) => (
-                          <option key={p}>{p}</option>
+                          <option key={p} value={p}>
+                            {p}
+                          </option>
                         ))}
                       </select>
                     </label>
                   </div>
 
-                  {/* Second row: Date Picker full width */}
                   <div className="relative w-full">
                     <button
                       type="button"
+                      ref={pickerButtonRef}
                       onClick={() => setPickerOpen((prev) => !prev)}
                       className="w-full border px-3 py-2 rounded-md bg-white shadow-sm hover:bg-gray-100 transition text-left"
                     >
-                      {format(range[0].startDate, "MMM dd yyyy")} —{" "}
-                      {format(range[0].endDate, "MMM dd yyyy")}
+                      {format(range[0].startDate ?? new Date(), "MMM dd yyyy")}{" "}
+                      — {format(range[0].endDate ?? new Date(), "MMM dd yyyy")}
                     </button>
 
-                    {pickerOpen && (
-                      <div
-                        className="
-                                    absolute left-0 sm:left-auto mt-2 z-50
-                                    bg-white shadow-lg rounded-md p-3
-                                    w-full sm:min-w-[24rem] sm:max-w-[32rem]
-                                    origin-top
-                                  "
-                      >
-                        <DateRange
-                          ranges={range}
-                          onChange={(item) =>
-                            setRange([
-                              {
-                                startDate:
-                                  item.selection.startDate ?? new Date(),
-                                endDate: item.selection.endDate ?? new Date(),
-                                key: item.selection.key ?? "selection",
-                              },
-                            ])
-                          }
-                          moveRangeOnFirstSelection={false}
-                          rangeColors={["#000"]}
-                          maxDate={new Date("2025-12-31")}
-                          direction="horizontal"
-                          months={window.innerWidth < 640 ? 1 : 2} // 👈 auto-resize
-                          className="w-full"
-                        />
-
-                        <button
-                          onClick={() => setPickerOpen(false)}
-                          className="mt-2 px-3 py-1 bg-black text-white rounded text-xs w-full sm:w-auto"
-                        >
-                          Done
-                        </button>
-                      </div>
-                    )}
+                    <PortalDateRangePicker
+                      open={pickerOpen}
+                      anchorRef={pickerButtonRef}
+                      ranges={range}
+                      onChange={(item) => {
+                        const { startDate, endDate, key } = item.selection;
+                        setRange([
+                          {
+                            startDate: startDate ?? new Date(),
+                            endDate: endDate ?? new Date(),
+                            key: key ?? "selection",
+                          },
+                        ]);
+                      }}
+                      onClose={() => setPickerOpen(false)}
+                      maxDate={new Date()}
+                      months={1}
+                    />
                   </div>
                 </div>
               </motion.div>
@@ -407,13 +522,7 @@ const AdminSalesContent: React.FC = () => {
                 <td className="px-4 py-2">{s.customerName}</td>
                 <td className="px-4 py-2">{s.package}</td>
                 <td className="px-4 py-2 whitespace-nowrap">
-                  <br />
-                  {format(
-                    parse(s.transactionDate, "yyyy-MM-dd", new Date()),
-                    "MMMM d, yyyy"
-                  )}
-                  <br />
-                  <br />
+                  {format(parseISO(s.transactionDate), "MMMM d, yyyy")}
                 </td>
                 <td className="px-4 py-2">
                   {Number(s.downPayment).toFixed(2)}
@@ -440,6 +549,7 @@ const AdminSalesContent: React.FC = () => {
           </tbody>
         </table>
       </div>
+
       {/* Pagination */}
       <div className="flex flex-wrap items-center justify-between text-xs mt-4">
         <span>
@@ -485,6 +595,7 @@ const AdminSalesContent: React.FC = () => {
           </select>
         </div>
       </div>
+
       {/* Transaction Modal */}
       <TransactionModal
         isOpen={selectedSale !== null}
