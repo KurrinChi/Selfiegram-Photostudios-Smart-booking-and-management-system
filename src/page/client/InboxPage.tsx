@@ -1,11 +1,11 @@
 // page/client/HomePage.tsx
 import ClientLayout from "../../components/ClientLayout.tsx";
-import ClientInboxPageContent from "../../components/ClientInboxPageContent.tsx";
+import Notifications from "../../components/Notifications";
 
 const ClientHomePage = () => {
   return (
     <ClientLayout>
-      <ClientInboxPageContent />
+       <Notifications />
     </ClientLayout>
   );
 };

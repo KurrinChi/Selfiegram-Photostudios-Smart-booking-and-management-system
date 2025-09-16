@@ -2,7 +2,10 @@ import React, { useState, useEffect } from "react";
 import { format, parse } from "date-fns";
 import QRCode from "react-qr-code";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
-
+import ModalRequestedDialog from "./ModalRequestedDialog";
+import ModalOnRequestDialog from "./ModalOnRequestDialog";
+import { id } from "date-fns/locale";
+import { toast } from "react-toastify";
 interface TransactionModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -30,6 +33,7 @@ interface TransactionModalProps {
     onSaved?: () => void;
 }
 const API_URL = import.meta.env.VITE_API_URL;
+
 const RECEIPT_URL = import.meta.env.VITE_URL;
 const TransactionModal: React.FC<TransactionModalProps> = ({
   isOpen,
@@ -37,17 +41,29 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
   onSaved,
   data,
 }) => {
-  
+
   const [rating, setRating] = useState(0);
   const [hoveredRating, setHoveredRating] = useState(0);
   const [feedback, setFeedback] = useState("");
 const [hasTypedFeedback, setHasTypedFeedback] = useState(false);
 const [hasSelectedRating, setHasSelectedRating] = useState(false);
  
+
+
+const [isRequestedModalOpen, setIsRequestedModalOpen] = useState(false);
+const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
+const [cancelData, setCancelData] = useState<{ 
+  id: string;
+  reason: string; 
+  bookingDate: string;
+  bookingTime: string;
+  transactionDate: string;
+  bookingId: string;
+  totalAmount: number;
+  packageName: string;
+} | null>(null);
   useEffect(() => {
     if (data) {
-          console.log("📌 TransactionModal received data:", data);
-
       setRating(data.rating);
       setFeedback(data.feedback);
     }
@@ -88,7 +104,22 @@ const handleRatingClick = (value: number) => {
   setHasSelectedRating(true);
 };
 
- 
+ const handleCancelSubmit = (reason: string) => {
+  // TODO: call API to process cancellation
+  setCancelData({
+    id: data!.id,
+    reason,
+    bookingDate: data!.bookingDate,
+    bookingTime: data!.time,
+    transactionDate: data!.transactionDate,
+    bookingId: data!.id,
+    totalAmount: data!.total, // or total refund logic
+    packageName: data!.package,
+  });
+
+  setIsCancelModalOpen(false); // close modal
+  setIsRequestedModalOpen(true);
+};
 
   const formatDate = (dateStr: string) => {
   const date = new Date(dateStr);
@@ -119,6 +150,71 @@ useEffect(() => {
 
 return (
   <div className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm transition-opacity duration-300 flex justify-center items-center p-4">
+    
+    {/* ModalOnRequestDialog goes here, always rendered but controlled via isOpen */}
+    <ModalOnRequestDialog
+       isOpen={isCancelModalOpen}
+  onClose={() => setIsCancelModalOpen(false)}
+  onSubmit={async (reason) => {
+  try {
+    const user_id = localStorage.getItem("userID") || "";
+    const res = await fetchWithAuth(`${API_URL}/api/booking-request/cancel`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        bookingID: data.id,
+        userID: user_id,
+        reason: reason,
+      }),
+    });
+
+    if (!res.ok) throw new Error("Failed to submit request");
+
+    // ✅ Save the cancel data for the confirmation dialog
+    setCancelData({
+      id: data.id,
+      reason,
+      bookingDate: data.bookingDate,
+      bookingTime: data.time, // make sure `time` exists in your `data`
+      bookingId: data.id,
+      totalAmount: data.subtotal,
+      packageName: data.package,
+      transactionDate: new Date().toISOString().split("T")[0], // hardcoded to today
+    });
+
+    toast.success("Cancel request submitted successfully!");
+    setIsCancelModalOpen(false);
+    setIsRequestedModalOpen(true);
+    
+  } catch (err) {
+    toast.error("Error submitting request. Please try again.");
+  }
+}}
+    />
+
+   <ModalRequestedDialog
+  isOpen={isRequestedModalOpen}
+   onClose={() => {
+    setIsRequestedModalOpen(false); // close confirmation
+    onClose();                      // also close transaction modal
+  }}
+  data={
+    cancelData
+      ? {
+          id: cancelData.id,
+          reason: cancelData.reason,
+          bookingDate: cancelData.bookingDate,
+          bookingTime: cancelData.bookingTime,
+          transactionDate: cancelData.transactionDate,
+          bookingId: cancelData.bookingId,
+          totalAmount: cancelData.totalAmount,
+          packageName: cancelData.packageName,
+        }
+      : null
+  }
+/>
     <div
       className={`bg-white text-gray-900 rounded-lg shadow-md overflow-y-auto max-h-[95vh] ${
         data.paymentStatus === 1 && data.status === 2
@@ -275,6 +371,7 @@ return (
                     ))}
                   </div>
                 </div>
+                
               </>
             ) : Number(data.status) === 2 && Number(data.paymentStatus) === 0 ? (
               <div className="w-full">
@@ -284,6 +381,27 @@ return (
               </div>
             ) : null}
 
+              {/*FOR DOWN PAYMWENT*/}
+                {/* Cancel & Reschedule Buttons */}
+              <div className="flex justify-between mb-4">
+                <button
+                    onClick={() => setIsCancelModalOpen(true)}
+                    className="w-1/2 bg-gray-800 border rounded-md px-4 text-white py-2 hover:bg-gray-500 transition mr-2"
+                  >
+                    Cancel Appointment
+                </button>
+
+                <button
+                  onClick={() => {
+                    // TODO: handle reschedule logic
+                    alert("Reschedule clicked");
+                  }}
+                  className="w-1/2 bg-gray-100 border rounded-md px-4 py-2 rounded  hover:bg-gray-200 transition ml-2"
+                >
+                  Reschedule
+                </button>
+              </div>
+              
             <div className="flex justify-between">
               <button
                 onClick={onClose}
@@ -414,6 +532,40 @@ return (
               </span>
             </div>
           </div>
+           {/* Cancel & Reschedule Buttons */}
+              {Number(data.status) !== 1 && (
+                <div className="flex justify-between mb-4">
+                  <button
+                    onClick={() => setIsCancelModalOpen(true)}
+                    className="w-1/2 bg-gray-800 text-white px-4 py-2 rounded hover:bg-gray-700 transition mr-2"
+                  >
+                    Cancel Appointment
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      // TODO: handle reschedule logic
+                      alert("Reschedule clicked");
+                    }}
+                    className="w-1/2 bg-gray-100 border rounded-md px-4 py-2 rounded hover:bg-gray-200 transition ml-2"
+                  >
+                    Reschedule
+                  </button>
+                </div>
+              )}
+
+
+              <div className="flex justify-between">
+      
+                {(hasTypedFeedback || hasSelectedRating) && (
+                  <button
+                    onClick={handleSave}
+                    className="bg-gray-800 text-white px-4 py-2 rounded hover:bg-gray-600 transition"
+                  >
+                    Save
+                  </button>
+                )}
+              </div>
 
           {data.status === 1 ? (
             <>
@@ -453,6 +605,7 @@ return (
                   ))}
                 </div>
               </div>
+
             </>
           ) : data.status === 2 && data.paymentStatus === 0 ? (
             <div className="w-full">
@@ -461,6 +614,8 @@ return (
               </button>
             </div>
           ) : null}
+
+          
 
           <div className="flex justify-between">
             <button
@@ -482,6 +637,7 @@ return (
       )}
     </div>
   </div>
+    
 );
 
 };

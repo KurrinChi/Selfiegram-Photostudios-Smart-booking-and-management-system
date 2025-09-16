@@ -14,7 +14,7 @@
     use App\Http\Controllers\HomeController;
     use App\Http\Controllers\TransactionController;
     use App\Http\Controllers\ForgotPasswordController;
-
+    use App\Http\Controllers\BookingRequestController;
     // Just for testing
     Route::middleware('api')->get('/test', function (Request $request) {
         return response()->json([
@@ -157,6 +157,10 @@
         Route::post('/bookings', [TransactionController::class, 'createBooking']);
         Route::get('/bookings/{id}', [TransactionController::class, 'showBooking']);
         Route::get('/booked-slots', [TransactionController::class, 'getBookedTimeSlots']);
+
+
+        //Client Cancel and Reschedule Request
+        Route::post('/booking-request/cancel', [BookingRequestController::class, 'storeCancelRequest']);
     });
 
     //receipt

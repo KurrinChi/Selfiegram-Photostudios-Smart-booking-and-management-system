@@ -83,7 +83,7 @@ const ReceiptPage = () => {
                     </div>
                     <div className="flex justify-between text-xs text-gray-500">
                         <span>Transaction Date</span>
-                        <span>{formatDate(data.date)}</span>
+                        <span>{formatDate(data.transactionDate)}</span>
                          </div>
                     <div className="flex justify-between">
                         <span className="text-sm text-gray-500">Name</span>
@@ -103,6 +103,24 @@ const ReceiptPage = () => {
                     <div className="flex justify-between">
                         <span>{data.packageName}</span>
                     </div>
+
+
+                    {/* Add-ons Section */}
+                    {data.selectedAddOns && data.selectedAddOns.trim() !== "" && (
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-500">Add-ons</span>
+                        <span>{data.selectedAddOns}</span>
+                      </div>
+                    )}
+
+                    {/* Concepts Section */}
+                    {data.selectedConcepts && data.selectedConcepts.trim() !== "" && (
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-500">Concepts</span>
+                        <span>{data.selectedConcepts}</span>
+                      </div>
+                    )}
+
                     <div className="flex justify-between">
                         <span>Booking Date</span>
                         <span>{formatDate(data.bookingDate)}</span>
@@ -119,16 +137,16 @@ const ReceiptPage = () => {
                     </div>
                     <div className="flex justify-between">
                         <span className="text-sm text-gray-500">Paid Amount</span>
-                        <span>₱{isNaN(Number(data.receivedAmount)) ? '0.00' : Number(data.receivedAmount).toFixed(2)}</span>
+                        <span>₱{isNaN(Number(data.transactionReceivedAmount)) ? '0.00' : Number(data.transactionReceivedAmount).toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between">
                         <span className="text-sm text-gray-500">Pending Balance</span>
-                        <span>₱{isNaN(Number(data.rem)) ? '0.00' : Number(data.rem).toFixed(2)}</span>
+                        <span>₱{isNaN(Number(data.transactionRem)) ? '0.00' : Number(data.transactionRem).toFixed(2)}</span>
                     </div>
                     <hr className="my-4 border-t border-gray-300" />
                      <div className="flex justify-between">
                         <span className="text-lg text-gray-900">Total Amount</span>
-                        <span  className="text-lg font-bold">₱{isNaN(Number(data.total)) ? '0.00' : Number(data.total).toFixed(2)}</span>
+                        <span  className="text-lg font-bold">₱{isNaN(Number(data.transactionTotal)) ? '0.00' : Number(data.transactionTotal).toFixed(2)}</span>
                     </div>
                       
                     </div>

@@ -36,6 +36,7 @@ import ReceiptPage from "./page/client/ReceiptPage.tsx";
 
 import LandingPage from "./components/LandingPage.tsx";
 
+
 const App = () => {
   const location = useLocation();
 

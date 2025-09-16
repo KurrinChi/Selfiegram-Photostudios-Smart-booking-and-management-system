@@ -18,6 +18,7 @@ class PackageController extends Controller
                 'packages.packageID as id',
                 'packages.name as title',
                 'packages.price',
+                'packages.description',
                 'package_images.imagePath',
                 'package_types.typeName as tag'
             )
@@ -32,6 +33,7 @@ class PackageController extends Controller
                 'id' => $id,
                 'title' => $first->title,
                 'price' => (float) $first->price,
+                'description' => $first->description,
                 'images' => $items->pluck('imagePath')->filter()->unique()->map(fn($path) => url($path))->values(),
                 'tags' => $items->pluck('tag')->filter()->unique()->values(),
             ];
