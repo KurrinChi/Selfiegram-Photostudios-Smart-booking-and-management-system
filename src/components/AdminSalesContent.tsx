@@ -100,8 +100,7 @@ const AdminSalesContent: React.FC = () => {
         s.package.toLowerCase().includes(search.toLowerCase());
 
       const matchesStatus =
-        statusFilter === "All" ||
-        s.paymentStatus === statusFilter;
+        statusFilter === "All" || s.paymentStatus === statusFilter;
 
       const matchesPackage =
         packageFilter === "All" || s.package === packageFilter;
@@ -271,7 +270,6 @@ const AdminSalesContent: React.FC = () => {
                 animate={{ opacity: 1, height: "auto" }}
                 exit={{ opacity: 0, height: 0 }}
                 transition={{ duration: 0.3, ease: "easeInOut" }}
-                className="overflow-hidden"
               >
                 <div className="mt-2 space-y-2 sm:mt-0 sm:space-y-0 sm:flex sm:items-center sm:gap-3">
                   Booking Status:
@@ -286,9 +284,8 @@ const AdminSalesContent: React.FC = () => {
                     <option>Pending</option>
                     <option>Cancelled</option>
                   </select>
-
                   {/* Package Filter */}
-                  Package: 
+                  Package:
                   <select
                     value={packageFilter}
                     onChange={(e) => setPackageFilter(e.target.value)}
@@ -299,34 +296,41 @@ const AdminSalesContent: React.FC = () => {
                       <option key={p}>{p}</option>
                     ))}
                   </select>
-
                   {/* Date Picker */}
                   <div className="relative w-full sm:w-auto">
                     <button
+                      type="button"
                       onClick={() => setPickerOpen((prev) => !prev)}
                       className="w-full border px-3 py-2 rounded-md bg-white shadow-sm hover:bg-gray-100 transition text-left"
                     >
                       {format(range[0].startDate, "MMM dd yyyy")} —{" "}
                       {format(range[0].endDate, "MMM dd yyyy")}
                     </button>
+
                     {pickerOpen && (
-                      <div className="absolute z-20 mt-2 bg-white shadow-lg rounded-md p-3">
+                      <div className="absolute z-50 mt-2 bg-white shadow-lg rounded-md p-3">
                         <DateRange
                           ranges={range}
-                          onChange={(item) => {
-                            const { startDate, endDate, key } = item.selection;
+                          onChange={(item) =>
                             setRange([
                               {
-                                startDate: startDate ?? new Date(),
-                                endDate: endDate ?? new Date(),
-                                key: key ?? "selection",
+                                startDate:
+                                  item.selection.startDate ?? new Date(),
+                                endDate: item.selection.endDate ?? new Date(),
+                                key: item.selection.key ?? "selection",
                               },
-                            ]);
-                          }}
+                            ])
+                          }
                           moveRangeOnFirstSelection={false}
                           rangeColors={["#000"]}
                           maxDate={new Date("2025-12-31")}
                         />
+                        <button
+                          onClick={() => setPickerOpen(false)}
+                          className="mt-2 px-3 py-1 bg-black text-white rounded text-xs"
+                        >
+                          Done
+                        </button>
                       </div>
                     )}
                   </div>

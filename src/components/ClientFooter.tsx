@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { Facebook, Instagram, Mail } from "lucide-react";
+import FAQDialog from "./FAQ.tsx";
+import TermsDialog from "./TermsDialog.tsx";
 
 interface ClientFooterProps {
   logoX?: number;
@@ -12,6 +13,10 @@ const ClientFooter = ({
   infoX = 0,
   socialX = 0,
 }: ClientFooterProps) => {
+  // Add this
+  const [] = useState(false);
+  const [openFAQ, setOpenFAQ] = useState(false);
+  const [openTerms, setOpenTerms] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [isVisible, setIsVisible] = useState(false);
 
@@ -53,6 +58,26 @@ const ClientFooter = ({
           />
         </div>
 
+        {/* Resources & Contact Info */}
+        <div className="flex flex-col mr-10">
+          <h5 className="font-semibold mb-3 text-gray-300">Resources</h5>
+          <div className="flex flex-col gap-2 text-gray-300 text-sm">
+            <button
+              onClick={() => setOpenFAQ(true)}
+              className="hover:text-white text-left transition-all duration-300 hover:underline"
+            >
+              FAQs
+            </button>
+
+            <button
+              onClick={() => setOpenTerms(true)}
+              className="hover:text-white text-left transition-all duration-300 hover:underline"
+            >
+              Terms & Agreements
+            </button>
+          </div>
+        </div>
+
         {/* Contact Info */}
         <div
           className={`flex-[2] text-sm transform transition-all duration-700 ease-out delay-300
@@ -67,22 +92,22 @@ const ClientFooter = ({
           <p>0968 885 6035</p>
           <p>selfiegrammalolos@gmail.com</p>
         </div>
-
-        {/* Social Icons */}
-        <div
-          className={`flex-[1] flex gap-4 items-center justify-end transform transition-all duration-700 ease-out delay-500
-            ${
-              isVisible
-                ? "opacity-100 translate-y-0"
-                : "opacity-0 translate-y-6"
-            }`}
-          style={{ transform: `translateX(${socialX}px)` }}
-        >
-          <Facebook className="w-5 h-5" />
-          <Instagram className="w-5 h-5" />
-          <Mail className="w-5 h-5" />
-        </div>
       </div>
+      {openFAQ && (
+        <div className="fixed inset-0 z-1000 bg-black/50 flex items-center justify-center">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl overflow-hidden relative">
+            <FAQDialog onClose={() => setOpenFAQ(false)} />
+          </div>
+        </div>
+      )}
+
+      {openTerms && (
+        <div className="fixed inset-0 z-1000 bg-black/50 flex items-center justify-center">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl overflow-hidden relative">
+            <TermsDialog onClose={() => setOpenTerms(false)} />
+          </div>
+        </div>
+      )}
     </footer>
   );
 };

@@ -4,10 +4,10 @@ import packagesData from "../../data/packages.json";
 
 export default function SimpleParallaxGallery() {
   // ⚙️ Config
-  const MAX_SCALE = 1.15;
+  const MAX_SCALE = 1.35;
   const MIN_SCALE = 0.12;
   const MAX_ROTATE_Y = 42;
-  const ELEVATE = 60;
+  const ELEVATE = 40;
   const DIAGONAL_FACTOR = 0.6;
 
   // 📦 Data

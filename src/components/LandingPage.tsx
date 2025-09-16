@@ -339,6 +339,31 @@ export default function HomePage(): React.JSX.Element {
           </div>
         </section>
 
+        {/* ---------- ANNOUNCEMENTS (TAGEMBED) ---------- */}
+        <section
+          id="announcements"
+          className="py-6 bg-gray-200 overflow-visible snap-start"
+        >
+          {/* Heading stays centered */}
+          <div className="text-center mb-6 px-6 lg:px-20">
+            <h3 className="text-3xl font-bold">Announcements</h3>
+            <p className="text-gray-600 mt-3">
+              Stay updated with our latest news, promotions, and events.
+            </p>
+          </div>
+
+          {/* Embed loads naturally, centered */}
+          <motion.div
+            initial="hidden"
+            whileInView="show"
+            viewport={{ once: true, amount: 0.8 }}
+            variants={staggerContainer}
+            className="flex justify-center p-5 w-full max-w-6xl mx-auto overflow-y-hidden"
+          >
+            <TagEmbedWidget height={500} />
+          </motion.div>
+        </section>
+
         {/* ---------- STORY + VISION ---------- */}
         <section className="bg-white snap-start">
           <div className="bg-gray-200 w-full rounded-b-[5rem]">
@@ -631,31 +656,6 @@ export default function HomePage(): React.JSX.Element {
           </h3>
 
           <InfiniteParallaxGallery />
-        </section>
-
-        {/* ---------- ANNOUNCEMENTS (TAGEMBED) ---------- */}
-        <section
-          id="announcements"
-          className="py-6 bg-white overflow-visible snap-start"
-        >
-          {/* Heading stays centered */}
-          <div className="text-center mb-6 px-6 lg:px-20">
-            <h3 className="text-3xl font-bold">Announcements</h3>
-            <p className="text-gray-600 mt-3">
-              Stay updated with our latest news, promotions, and events.
-            </p>
-          </div>
-
-          {/* Embed loads naturally, centered */}
-          <motion.div
-            initial="hidden"
-            whileInView="show"
-            viewport={{ once: true, amount: 0.8 }}
-            variants={staggerContainer}
-            className="flex justify-center p-5 w-full max-w-6xl mx-auto overflow-y-hidden"
-          >
-            <TagEmbedWidget height={500} />
-          </motion.div>
         </section>
 
         {/* ---------- LOCATION ---------- */}
