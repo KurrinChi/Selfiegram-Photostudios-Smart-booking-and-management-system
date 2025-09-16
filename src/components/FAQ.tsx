@@ -93,7 +93,7 @@ const FAQDialog: React.FC<FAQDialogProps> = ({ onClose }) => {
   };
 
   return (
-    <section className="relative bg-white py-10 px-6 md:px-12 h-[80vh] max-h-[80vh] flex flex-col overflow-y-auto">
+    <section className="relative bg-white py-10 px-6 md:px-12 h-[80vh] max-h-[80vh] flex flex-col overflow-y-auto m-10">
       {/* 🔥 X Close Button */}
       {onClose && (
         <button
