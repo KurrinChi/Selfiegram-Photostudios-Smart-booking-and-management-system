@@ -246,7 +246,7 @@ const AdminSalesContent: React.FC = () => {
         </div>
 
         {/* Dropdown for rest of filters */}
-        <div className="w-full sm:w-auto">
+        <div className="relative w-full sm:w-auto">
           {/* Toggle button */}
           <button
             onClick={() => setFiltersOpen((prev) => !prev)}
@@ -266,38 +266,48 @@ const AdminSalesContent: React.FC = () => {
           <AnimatePresence>
             {filtersOpen && (
               <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                exit={{ opacity: 0, height: 0 }}
-                transition={{ duration: 0.3, ease: "easeInOut" }}
+                initial={{ opacity: 0, scaleY: 0.95 }}
+                animate={{ opacity: 1, scaleY: 1 }}
+                exit={{ opacity: 0, scaleY: 0.95 }}
+                transition={{ duration: 0.2, ease: "easeInOut" }}
+                className="absolute left-1/2 -translate-x-1/2 mt-2 w-full sm:w-auto origin-top z-40"
               >
-                <div className="mt-2 space-y-2 sm:mt-0 sm:space-y-0 sm:flex sm:items-center sm:gap-3">
-                  Booking Status:
-                  {/* Status Filter */}
-                  <select
-                    value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value)}
-                    className="px-2 py-2 border rounded-md w-full sm:w-auto"
-                  >
-                    <option>All</option>
-                    <option>Completed</option>
-                    <option>Pending</option>
-                    <option>Cancelled</option>
-                  </select>
-                  {/* Package Filter */}
-                  Package:
-                  <select
-                    value={packageFilter}
-                    onChange={(e) => setPackageFilter(e.target.value)}
-                    className="px-2 py-2 border rounded-md w-full sm:w-auto"
-                  >
-                    <option>All</option>
-                    {packages.map((p) => (
-                      <option key={p}>{p}</option>
-                    ))}
-                  </select>
-                  {/* Date Picker */}
-                  <div className="relative w-full sm:w-auto">
+                <div className="p-3 bg-white rounded-md shadow-lg grid gap-4 text-xs">
+                  {/* First row: Status + Package */}
+                  <div className="grid gap-3 sm:flex sm:items-center sm:gap-4">
+                    {/* Status Filter */}
+                    <label className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 w-full sm:w-auto">
+                      <span className="font-medium">Status:</span>
+                      <select
+                        value={statusFilter}
+                        onChange={(e) => setStatusFilter(e.target.value)}
+                        className="px-2 py-2 border rounded-md w-full sm:w-auto"
+                      >
+                        <option>All</option>
+                        <option>Completed</option>
+                        <option>Pending</option>
+                        <option>Cancelled</option>
+                      </select>
+                    </label>
+
+                    {/* Package Filter */}
+                    <label className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 w-full sm:w-auto">
+                      <span className="font-medium">Package:</span>
+                      <select
+                        value={packageFilter}
+                        onChange={(e) => setPackageFilter(e.target.value)}
+                        className="px-2 py-2 border rounded-md w-full sm:w-auto"
+                      >
+                        <option>All</option>
+                        {packages.map((p) => (
+                          <option key={p}>{p}</option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+
+                  {/* Second row: Date Picker full width */}
+                  <div className="relative w-full">
                     <button
                       type="button"
                       onClick={() => setPickerOpen((prev) => !prev)}
@@ -308,7 +318,14 @@ const AdminSalesContent: React.FC = () => {
                     </button>
 
                     {pickerOpen && (
-                      <div className="absolute z-50 mt-2 bg-white shadow-lg rounded-md p-3">
+                      <div
+                        className="
+                                    absolute left-0 sm:left-auto mt-2 z-50
+                                    bg-white shadow-lg rounded-md p-3
+                                    w-full sm:min-w-[24rem] sm:max-w-[32rem]
+                                    origin-top
+                                  "
+                      >
                         <DateRange
                           ranges={range}
                           onChange={(item) =>
@@ -324,10 +341,14 @@ const AdminSalesContent: React.FC = () => {
                           moveRangeOnFirstSelection={false}
                           rangeColors={["#000"]}
                           maxDate={new Date("2025-12-31")}
+                          direction="horizontal"
+                          months={window.innerWidth < 640 ? 1 : 2} // 👈 auto-resize
+                          className="w-full"
                         />
+
                         <button
                           onClick={() => setPickerOpen(false)}
-                          className="mt-2 px-3 py-1 bg-black text-white rounded text-xs"
+                          className="mt-2 px-3 py-1 bg-black text-white rounded text-xs w-full sm:w-auto"
                         >
                           Done
                         </button>

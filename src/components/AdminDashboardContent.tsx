@@ -866,9 +866,7 @@ const AdminDashboardContents: React.FC = () => {
     <div className="space-y-8 p-5">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 relative">
-        <h1 className="text-lg sm:text-xl font-semibold pl-12 sm:pl-0">
-          Dashboard
-        </h1>
+        <h1 className="text-lg font-semibold pl-12 sm:pl-0  ">Dashboard</h1>
 
         {/* Date Range Picker */}
         <div className="flex items-center gap-2">
@@ -885,7 +883,7 @@ const AdminDashboardContents: React.FC = () => {
                   )}`}
             </button>
             {pickerOpen && (
-              <div className="absolute z-20 mt-2 bg-white shadow-lg rounded-md p-3">
+              <div className="absolute left-0 z-20 mt-2 bg-white shadow-lg rounded-md p-3">
                 <DateRange
                   ranges={range}
                   onChange={(item) => {
@@ -926,52 +924,52 @@ const AdminDashboardContents: React.FC = () => {
               Reset
             </button>
           )}
-        </div>
 
-        {/* Action Buttons */}
-        <div className="flex items-center gap-2 ml-auto">
-          {/* Preview Button */}
-          <button
-            onClick={handlePreview}
-            className="px-4 py-2 rounded-md text-xs transition focus:outline-none bg-gray-100 text-gray-700 hover:bg-gray-200 border"
-          >
-            Preview Report
-          </button>
+          {/* Action Buttons */}
+          <div className="flex items-center gap-2 ml-auto">
+            {/* Preview Button */}
+            <button
+              onClick={handlePreview}
+              className="px-4 py-2 rounded-md text-xs transition focus:outline-none bg-gray-100 text-gray-700 hover:bg-gray-200 border"
+            >
+              Preview Report
+            </button>
 
-          {/* Export Button */}
-          <button
-            onClick={handleExport}
-            disabled={isGeneratingReport}
-            className={`px-4 py-2 rounded-md text-xs transition focus:outline-none flex items-center gap-2 ${
-              isGeneratingReport
-                ? "bg-gray-400 text-white cursor-not-allowed"
-                : "bg-black text-white hover:bg-gray-800 hover:scale-[1.02]"
-            }`}
-          >
-            {isGeneratingReport && (
-              <svg
-                className="animate-spin h-3 w-3 text-white"
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-              >
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                ></circle>
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                ></path>
-              </svg>
-            )}
-            {isGeneratingReport ? "Generating PDF..." : "Export Data"}
-          </button>
+            {/* Export Button */}
+            <button
+              onClick={handleExport}
+              disabled={isGeneratingReport}
+              className={`px-4 py-2 rounded-md text-xs transition focus:outline-none flex items-center gap-2 ${
+                isGeneratingReport
+                  ? "bg-gray-400 text-white cursor-not-allowed"
+                  : "bg-black text-white hover:bg-gray-800 hover:scale-[1.02]"
+              }`}
+            >
+              {isGeneratingReport && (
+                <svg
+                  className="animate-spin h-3 w-3 text-white"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  ></circle>
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  ></path>
+                </svg>
+              )}
+              {isGeneratingReport ? "Generating PDF..." : "Export Data"}
+            </button>
+          </div>
         </div>
       </div>
 

@@ -44,7 +44,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
   return (
     <div className="flex min-h-screen font-sf relative">
       {/* Sidebar - Desktop */}
-      <div className="hidden md:block">
+      <div className="hidden sm:block">
         <AdminSidebar
           username={username}
           profilePicture={profilePicture}
@@ -56,7 +56,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
       {/* Mobile Burger Button */}
       <button
         onClick={() => setMobileOpen(true)}
-        className="md:hidden fixed top-4 left-4 z-50 p-2 rounded-lg bg-gray-800 text-white"
+        className="sm:hidden fixed top-4 left-4 z-50 p-2 rounded-lg bg-gray-800 text-white"
       >
         <Menu size={24} />
       </button>
@@ -96,7 +96,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
 
       <main
         className={`flex-1 h-full overflow-hidden transition-all duration-300 ease-in-out
-    hidden md:block
+    hidden sm:block
     ${collapsed ? "ml-16" : "ml-48"} 
   `}
       >
@@ -104,7 +104,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
       </main>
 
       {/* Mobile Main Content (no margin, takes full width) */}
-      <main className="flex-1 h-full overflow-hidden block md:hidden">
+      <main className="flex-1 h-full overflow-hidden block sm:hidden">
         {children}
       </main>
     </div>
