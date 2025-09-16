@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, useMotionValue, useTransform, animate } from "framer-motion";
-import packagesData from "../data/packages.json";
+import packagesData from "../../data/packages.json";
 
 export default function SimpleParallaxGallery() {
   // ⚙️ Config
-  const MAX_SCALE = 1.35;
-  const MIN_SCALE = 0.32;
+  const MAX_SCALE = 1.15;
+  const MIN_SCALE = 0.12;
   const MAX_ROTATE_Y = 42;
-  const ELEVATE = 30;
+  const ELEVATE = 60;
   const DIAGONAL_FACTOR = 0.6;
 
   // 📦 Data
@@ -32,7 +32,7 @@ export default function SimpleParallaxGallery() {
   }, []);
 
   // responsive sizing
-  const GAP = vw < 600 ? 30 : 60;
+  const GAP = vw < 400 ? 10 : 12;
   const cardWidth = Math.max(200, Math.min(vw < 600 ? 320 : 520, vw * 0.42));
 
   // metrics
@@ -256,9 +256,9 @@ export default function SimpleParallaxGallery() {
                 style={{
                   width: "100%",
                   height: "100%",
-                  objectFit: "cover", // 🔥 show full image without cropping
-                  objectPosition: "center", // make sure it’s centered
-                  backgroundColor: "#000", // fill empty spaces if aspect ratio differs
+                  objectFit: "cover",
+                  objectPosition: "center",
+                  backgroundColor: "#000",
                   display: "block",
                   pointerEvents: "none",
                 }}

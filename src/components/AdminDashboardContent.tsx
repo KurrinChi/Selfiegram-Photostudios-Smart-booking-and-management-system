@@ -33,9 +33,9 @@ import "react-date-range/dist/theme/default.css";
 import "../styles/print.css";
 import axios from "axios";
 import { useEffect } from "react";
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
-import DashboardReportPDF from './DashboardReportPDF';
+import jsPDF from "jspdf";
+import html2canvas from "html2canvas";
+import DashboardReportPDF from "./DashboardReportPDF";
 
 // -----------------------------------------------------------------------------
 // Types
@@ -144,7 +144,7 @@ const AdminDashboardContents: React.FC = () => {
     },
   });
 
-  const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
+  const API_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
 
   const [range, setRange] = useState([
     {
@@ -153,7 +153,7 @@ const AdminDashboardContents: React.FC = () => {
       key: "selection",
     },
   ]);
-  
+
   const [isDefaultRange, setIsDefaultRange] = useState(true);
 
   const [grossIncomeWeeklyData, setGrossIncomeWeeklyData] = useState<
@@ -169,14 +169,14 @@ const AdminDashboardContents: React.FC = () => {
 
     // Summary cards - only send date params if user has actively changed the range
     const params = isDefaultRange ? {} : { startDate: start, endDate: end };
-    
-    console.log('Dashboard API call:', { 
-      isDefaultRange, 
-      params, 
-      startDate: start, 
-      endDate: end 
+
+    console.log("Dashboard API call:", {
+      isDefaultRange,
+      params,
+      startDate: start,
+      endDate: end,
     });
-    
+
     axios
       .get<SummaryData>(`${API_URL}/api/admin/summary`, {
         params,
@@ -185,7 +185,7 @@ const AdminDashboardContents: React.FC = () => {
         },
       })
       .then((r) => {
-        console.log('Dashboard API response:', r.data);
+        console.log("Dashboard API response:", r.data);
         setSummaryData(r.data);
       })
       .catch((e) => console.error(e));
@@ -225,33 +225,33 @@ const AdminDashboardContents: React.FC = () => {
       label: "Total User",
       value: summaryData?.totalUsers ?? 0,
       icon: faUser,
-      trend: summaryData?.hasDateRange 
+      trend: summaryData?.hasDateRange
         ? { value: "—", up: true } // Neutral when date range is selected
-        : (summaryData?.userTrend ?? { value: "0%", up: true }),
+        : summaryData?.userTrend ?? { value: "0%", up: true },
     },
     {
       label: "Total Schedule", // This shows bookings from today onwards
       value: summaryData?.totalBookings ?? 0,
       icon: faClipboardList,
-      trend: summaryData?.hasDateRange 
+      trend: summaryData?.hasDateRange
         ? { value: "—", up: true } // Neutral when date range is selected
-        : (summaryData?.scheduleTrend ?? { value: "0%", up: true }),
+        : summaryData?.scheduleTrend ?? { value: "0%", up: true },
     },
     {
       label: "Total Sales",
       value: `₱ ${summaryData?.totalSales?.toLocaleString() ?? "0"}`,
       icon: faPesoSign,
-      trend: summaryData?.hasDateRange 
+      trend: summaryData?.hasDateRange
         ? { value: "—", up: true } // Neutral when date range is selected
-        : (summaryData?.salesTrend ?? { value: "0%", up: true }),
+        : summaryData?.salesTrend ?? { value: "0%", up: true },
     },
     {
       label: "Total Appointments", // This shows all bookings (overall count)
       value: summaryData?.totalAppointments ?? 0,
       icon: faCalendarAlt,
-      trend: summaryData?.hasDateRange 
+      trend: summaryData?.hasDateRange
         ? { value: "—", up: true } // Neutral when date range is selected
-        : (summaryData?.appointmentsTrend ?? { value: "0%", up: true }),
+        : summaryData?.appointmentsTrend ?? { value: "0%", up: true },
     },
   ];
 
@@ -281,9 +281,12 @@ const AdminDashboardContents: React.FC = () => {
         start: isDefaultRange ? subDays(new Date(), 7).toDateString() : start,
         end: isDefaultRange ? new Date().toDateString() : end,
         hasCustomRange: !isDefaultRange,
-        formattedRange: isDefaultRange 
-          ? 'Last 7 days' 
-          : `${format(range[0].startDate, "MMM dd, yyyy")} - ${format(range[0].endDate, "MMM dd, yyyy")}`
+        formattedRange: isDefaultRange
+          ? "Last 7 days"
+          : `${format(range[0].startDate, "MMM dd, yyyy")} - ${format(
+              range[0].endDate,
+              "MMM dd, yyyy"
+            )}`,
       },
       summary: {
         totalUsers: summaryData?.totalUsers || 1250,
@@ -291,45 +294,57 @@ const AdminDashboardContents: React.FC = () => {
         totalSales: summaryData?.totalSales || 145750,
         totalAppointments: summaryData?.totalAppointments || 156,
         hasDateRange: !isDefaultRange,
-        salesTrend: summaryData?.salesTrend || { value: '15.5%', up: true },
-        userTrend: summaryData?.userTrend || { value: '8.2%', up: true },
-        scheduleTrend: summaryData?.scheduleTrend || { value: '12.8%', up: false },
-        appointmentsTrend: summaryData?.appointmentsTrend || { value: '6.4%', up: true }
-      },
-      weeklyIncome: grossIncomeWeeklyData.length > 0 ? grossIncomeWeeklyData : [
-        { week: 'Aug 05 - Aug 11', income: 18500 },
-        { week: 'Aug 12 - Aug 18', income: 22300 },
-        { week: 'Aug 19 - Aug 25', income: 19750 },
-        { week: 'Aug 26 - Sep 01', income: 25100 },
-        { week: 'Sep 02 - Sep 08', income: 28900 },
-        { week: 'Sep 09 - Sep 15', income: 31200 }
-      ],
-      packages: packageRows.length > 0 ? packageRows : [
-        {
-          name: 'Birthday Package Elite',
-          totalBooking: 15,
-          revenue: '₱45,000',
-          bookingPct: '16.9%',
-          rating: 5,
-          trend: '12%',
-          trendPositive: true
+        salesTrend: summaryData?.salesTrend || { value: "15.5%", up: true },
+        userTrend: summaryData?.userTrend || { value: "8.2%", up: true },
+        scheduleTrend: summaryData?.scheduleTrend || {
+          value: "12.8%",
+          up: false,
         },
-        {
-          name: 'Graduation Premium',
-          totalBooking: 12,
-          revenue: '₱36,000',
-          bookingPct: '13.5%',
-          rating: 4,
-          trend: '8%',
-          trendPositive: true
-        }
-      ],
+        appointmentsTrend: summaryData?.appointmentsTrend || {
+          value: "6.4%",
+          up: true,
+        },
+      },
+      weeklyIncome:
+        grossIncomeWeeklyData.length > 0
+          ? grossIncomeWeeklyData
+          : [
+              { week: "Aug 05 - Aug 11", income: 18500 },
+              { week: "Aug 12 - Aug 18", income: 22300 },
+              { week: "Aug 19 - Aug 25", income: 19750 },
+              { week: "Aug 26 - Sep 01", income: 25100 },
+              { week: "Sep 02 - Sep 08", income: 28900 },
+              { week: "Sep 09 - Sep 15", income: 31200 },
+            ],
+      packages:
+        packageRows.length > 0
+          ? packageRows
+          : [
+              {
+                name: "Birthday Package Elite",
+                totalBooking: 15,
+                revenue: "₱45,000",
+                bookingPct: "16.9%",
+                rating: 5,
+                trend: "12%",
+                trendPositive: true,
+              },
+              {
+                name: "Graduation Premium",
+                totalBooking: 12,
+                revenue: "₱36,000",
+                bookingPct: "13.5%",
+                rating: 4,
+                trend: "8%",
+                trendPositive: true,
+              },
+            ],
       companyInfo: {
-        name: 'Selfiegram Photo Studios',
-        address: 'Malolos, Bulacan',
-        phone: '+63 912 345 6789',
-        email: 'info@selfiegram.com'
-      }
+        name: "Selfiegram Photo Studios",
+        address: "Malolos, Bulacan",
+        phone: "+63 912 345 6789",
+        email: "info@selfiegram.com",
+      },
     };
 
     setReportData(mockReportData);
@@ -340,24 +355,27 @@ const AdminDashboardContents: React.FC = () => {
     // Add confirmation dialog
     const confirmed = window.confirm(
       `Are you sure you want to generate a PDF report for the selected date range?\n\n` +
-      (isDefaultRange 
-        ? `Period: All time data` 
-        : `Period: ${format(range[0].startDate, "MMM dd, yyyy")} - ${format(range[0].endDate, "MMM dd, yyyy")}`)
+        (isDefaultRange
+          ? `Period: All time data`
+          : `Period: ${format(range[0].startDate, "MMM dd, yyyy")} - ${format(
+              range[0].endDate,
+              "MMM dd, yyyy"
+            )}`)
     );
 
     if (!confirmed) return;
 
     setIsGeneratingReport(true);
-    
+
     try {
       const token = localStorage.getItem("token");
       const params = isDefaultRange ? {} : { startDate: start, endDate: end };
-      
-      console.log('Fetching report data...');
-      console.log('API URL:', `${API_URL}/api/admin/report-data`);
-      console.log('Request params:', params);
-      console.log('Token:', token ? 'Present' : 'Missing');
-      
+
+      console.log("Fetching report data...");
+      console.log("API URL:", `${API_URL}/api/admin/report-data`);
+      console.log("Request params:", params);
+      console.log("Token:", token ? "Present" : "Missing");
+
       // Try test endpoint first for debugging
       let response;
       try {
@@ -369,7 +387,7 @@ const AdminDashboardContents: React.FC = () => {
           },
         });
       } catch (mainError) {
-        console.warn('Main endpoint failed, trying test endpoint:', mainError);
+        console.warn("Main endpoint failed, trying test endpoint:", mainError);
         // Fallback to test endpoint
         response = await axios.get(`${API_URL}/api/test-report`, {
           headers: {
@@ -377,23 +395,25 @@ const AdminDashboardContents: React.FC = () => {
           },
         });
       }
-      
-      console.log('Report data fetched successfully:', response.data);
-      
+
+      console.log("Report data fetched successfully:", response.data);
+
       // Cast to any for flexible handling
       const rawData = response.data as any;
-      
+
       // Check if server returned an error
       if (rawData.error) {
         throw new Error(`Server error: ${rawData.message || rawData.error}`);
       }
-      
+
       // Validate the response data structure
       if (!rawData || !rawData.summary) {
-        console.error('Invalid response structure:', rawData);
-        throw new Error('Invalid report data structure received from server. Check console for details.');
+        console.error("Invalid response structure:", rawData);
+        throw new Error(
+          "Invalid report data structure received from server. Check console for details."
+        );
       }
-      
+
       // Ensure all required properties exist
       const reportDataWithDefaults = {
         ...rawData,
@@ -403,44 +423,44 @@ const AdminDashboardContents: React.FC = () => {
           totalSales: 0,
           totalAppointments: 0,
           hasDateRange: false,
-          salesTrend: { value: '0%', up: true },
-          userTrend: { value: '0%', up: true },
-          scheduleTrend: { value: '0%', up: true },
-          appointmentsTrend: { value: '0%', up: true },
-          ...rawData.summary
+          salesTrend: { value: "0%", up: true },
+          userTrend: { value: "0%", up: true },
+          scheduleTrend: { value: "0%", up: true },
+          appointmentsTrend: { value: "0%", up: true },
+          ...rawData.summary,
         },
         weeklyIncome: rawData.weeklyIncome || [],
         packages: rawData.packages || [],
         companyInfo: {
-          name: 'Selfiegram Photo Studios',
-          address: 'Your Studio Address',
-          phone: 'Your Phone Number',
-          email: 'info@selfiegram.com',
-          ...rawData.companyInfo
-        }
+          name: "Selfiegram Photo Studios",
+          address: "Your Studio Address",
+          phone: "Your Phone Number",
+          email: "info@selfiegram.com",
+          ...rawData.companyInfo,
+        },
       };
-      
+
       setReportData(reportDataWithDefaults);
-      
+
       // Wait for component to render and then generate PDF
       // Use requestAnimationFrame for better timing
-      await new Promise(resolve => {
+      await new Promise((resolve) => {
         requestAnimationFrame(() => {
           setTimeout(resolve, 2000); // Increased timeout
         });
       });
-      
-      console.log('Starting PDF generation...');
-      const reportElement = document.getElementById('dashboard-report');
-      
+
+      console.log("Starting PDF generation...");
+      const reportElement = document.getElementById("dashboard-report");
+
       if (!reportElement) {
-        throw new Error('Report element not found');
+        throw new Error("Report element not found");
       }
 
-      console.log('Generating canvas from report element...');
-      
+      console.log("Generating canvas from report element...");
+
       let canvas;
-      
+
       // Create a comprehensive CSS reset to eliminate all problematic styles
       const cssReset = `
         #dashboard-report, #dashboard-report * {
@@ -507,21 +527,21 @@ const AdminDashboardContents: React.FC = () => {
         #dashboard-report .text-amber-400 { color: rgb(251, 191, 36) !important; }
         #dashboard-report svg { display: inline-block !important; width: 16px !important; height: 16px !important; }
       `;
-      
+
       // Create and insert the style element
-      const styleElement = document.createElement('style');
-      styleElement.setAttribute('data-html2canvas', 'true');
+      const styleElement = document.createElement("style");
+      styleElement.setAttribute("data-html2canvas", "true");
       styleElement.innerHTML = cssReset;
       document.head.appendChild(styleElement);
-      
+
       try {
         // Wait a bit for styles to apply
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
+        await new Promise((resolve) => setTimeout(resolve, 500));
+
         // First attempt with comprehensive CSS override
         canvas = await html2canvas(reportElement, {
           scale: 1.2,
-          backgroundColor: '#ffffff',
+          backgroundColor: "#ffffff",
           logging: true,
           useCORS: false,
           allowTaint: false,
@@ -530,30 +550,34 @@ const AdminDashboardContents: React.FC = () => {
           removeContainer: true,
           ignoreElements: (element) => {
             // Ignore any elements that might cause issues
-            return element.tagName === 'STYLE' || element.tagName === 'SCRIPT';
+            return element.tagName === "STYLE" || element.tagName === "SCRIPT";
           },
           onclone: (clonedDoc: Document) => {
             // Remove all existing stylesheets and add only our safe CSS
-            const existingStyles = clonedDoc.querySelectorAll('style, link[rel="stylesheet"]');
-            existingStyles.forEach(style => style.remove());
-            
+            const existingStyles = clonedDoc.querySelectorAll(
+              'style, link[rel="stylesheet"]'
+            );
+            existingStyles.forEach((style) => style.remove());
+
             // Add our safe CSS reset
-            const safeStyle = clonedDoc.createElement('style');
+            const safeStyle = clonedDoc.createElement("style");
             safeStyle.innerHTML = cssReset;
             clonedDoc.head.appendChild(safeStyle);
-          }
+          },
         });
-        
-        console.log('Canvas generated successfully with CSS override');
-        
+
+        console.log("Canvas generated successfully with CSS override");
       } catch (colorError) {
-        console.warn('First canvas attempt failed, trying minimal approach:', colorError);
-        
+        console.warn(
+          "First canvas attempt failed, trying minimal approach:",
+          colorError
+        );
+
         try {
           // Fallback: Create a completely isolated copy of the element with inline styles
           const clonedElement = reportElement.cloneNode(true) as HTMLElement;
-          clonedElement.id = 'dashboard-report-isolated';
-          
+          clonedElement.id = "dashboard-report-isolated";
+
           // Apply inline styles to every element to bypass CSS parsing issues
           const applyInlineStyles = (element: HTMLElement) => {
             element.style.cssText = `
@@ -563,26 +587,31 @@ const AdminDashboardContents: React.FC = () => {
               box-sizing: border-box !important;
               display: block !important;
             `;
-            
+
             // Apply specific styles based on class names
             if (element.className) {
-              if (element.className.includes('text-gray-500')) element.style.color = 'rgb(107, 114, 128)';
-              if (element.className.includes('text-gray-600')) element.style.color = 'rgb(75, 85, 99)';
-              if (element.className.includes('text-green-600')) element.style.color = 'rgb(5, 150, 105)';
-              if (element.className.includes('text-red-600')) element.style.color = 'rgb(220, 38, 38)';
-              if (element.className.includes('font-bold')) element.style.fontWeight = 'bold';
+              if (element.className.includes("text-gray-500"))
+                element.style.color = "rgb(107, 114, 128)";
+              if (element.className.includes("text-gray-600"))
+                element.style.color = "rgb(75, 85, 99)";
+              if (element.className.includes("text-green-600"))
+                element.style.color = "rgb(5, 150, 105)";
+              if (element.className.includes("text-red-600"))
+                element.style.color = "rgb(220, 38, 38)";
+              if (element.className.includes("font-bold"))
+                element.style.fontWeight = "bold";
             }
-            
+
             // Recursively apply to children
-            Array.from(element.children).forEach(child => {
+            Array.from(element.children).forEach((child) => {
               if (child instanceof HTMLElement) {
                 applyInlineStyles(child);
               }
             });
           };
-          
+
           applyInlineStyles(clonedElement);
-          
+
           // Temporarily add the isolated element to the DOM
           clonedElement.style.cssText = `
             position: fixed !important;
@@ -594,69 +623,114 @@ const AdminDashboardContents: React.FC = () => {
             padding: 20px !important;
             z-index: -1000 !important;
           `;
-          
+
           document.body.appendChild(clonedElement);
-          
+
           // Generate canvas from the isolated element
           canvas = await html2canvas(clonedElement, {
             scale: 1,
-            backgroundColor: '#ffffff',
+            backgroundColor: "#ffffff",
             logging: false,
             useCORS: false,
-            allowTaint: false
+            allowTaint: false,
           });
-          
+
           // Remove the temporary element
           document.body.removeChild(clonedElement);
-          
-          console.log('Canvas generated successfully with isolated element');
-          
+
+          console.log("Canvas generated successfully with isolated element");
         } catch (fallbackError) {
-          console.error('Both canvas attempts failed, generating text-based PDF:', fallbackError);
-          
+          console.error(
+            "Both canvas attempts failed, generating text-based PDF:",
+            fallbackError
+          );
+
           // Remove the temporary element if it exists
-          const isolatedElement = document.getElementById('dashboard-report-isolated');
+          const isolatedElement = document.getElementById(
+            "dashboard-report-isolated"
+          );
           if (isolatedElement) {
             document.body.removeChild(isolatedElement);
           }
-          
+
           // Ultimate fallback: Generate a simple text-based PDF
-          const pdf = new jsPDF('p', 'mm', 'a4');
-          
+          const pdf = new jsPDF("p", "mm", "a4");
+
           // Add header
           pdf.setFontSize(20);
-          pdf.text('Selfiegram Dashboard Report', 20, 20);
-          
+          pdf.text("Selfiegram Dashboard Report", 20, 20);
+
           pdf.setFontSize(12);
-          pdf.text(`Report Period: ${isDefaultRange ? 'All Time' : `${format(range[0].startDate, "MMM dd, yyyy")} - ${format(range[0].endDate, "MMM dd, yyyy")}`}`, 20, 35);
-          pdf.text(`Generated: ${format(new Date(), 'PPP p')}`, 20, 45);
-          
+          pdf.text(
+            `Report Period: ${
+              isDefaultRange
+                ? "All Time"
+                : `${format(range[0].startDate, "MMM dd, yyyy")} - ${format(
+                    range[0].endDate,
+                    "MMM dd, yyyy"
+                  )}`
+            }`,
+            20,
+            35
+          );
+          pdf.text(`Generated: ${format(new Date(), "PPP p")}`, 20, 45);
+
           let yPos = 60;
-          
+
           // Add summary data
           pdf.setFontSize(16);
-          pdf.text('Summary', 20, yPos);
+          pdf.text("Summary", 20, yPos);
           yPos += 15;
-          
+
           pdf.setFontSize(10);
-          pdf.text(`Total Users: ${reportDataWithDefaults?.summary?.totalUsers || 0}`, 20, yPos);
+          pdf.text(
+            `Total Users: ${reportDataWithDefaults?.summary?.totalUsers || 0}`,
+            20,
+            yPos
+          );
           yPos += 10;
-          pdf.text(`Total Bookings: ${reportDataWithDefaults?.summary?.totalBookings || 0}`, 20, yPos);
+          pdf.text(
+            `Total Bookings: ${
+              reportDataWithDefaults?.summary?.totalBookings || 0
+            }`,
+            20,
+            yPos
+          );
           yPos += 10;
-          pdf.text(`Total Sales: ₱${reportDataWithDefaults?.summary?.totalSales?.toLocaleString() || '0'}`, 20, yPos);
+          pdf.text(
+            `Total Sales: ₱${
+              reportDataWithDefaults?.summary?.totalSales?.toLocaleString() ||
+              "0"
+            }`,
+            20,
+            yPos
+          );
           yPos += 10;
-          pdf.text(`Total Appointments: ${reportDataWithDefaults?.summary?.totalAppointments || 0}`, 20, yPos);
+          pdf.text(
+            `Total Appointments: ${
+              reportDataWithDefaults?.summary?.totalAppointments || 0
+            }`,
+            20,
+            yPos
+          );
           yPos += 20;
-          
+
           // Add packages
-          if (reportDataWithDefaults.packages && reportDataWithDefaults.packages.length > 0) {
+          if (
+            reportDataWithDefaults.packages &&
+            reportDataWithDefaults.packages.length > 0
+          ) {
             pdf.setFontSize(16);
-            pdf.text('Top Packages', 20, yPos);
+            pdf.text("Top Packages", 20, yPos);
             yPos += 15;
-            
+
             pdf.setFontSize(10);
             reportDataWithDefaults.packages.slice(0, 10).forEach((pkg: any) => {
-              pdf.text(`${pkg.name}: ${pkg.totalBooking} bookings, ${pkg.revenue}`, 20, yPos);
+              pdf.text(
+                `${pkg.name}: ${pkg.totalBooking} bookings, ${pkg.revenue}`,
+                20,
+                yPos
+              );
               yPos += 10;
               if (yPos > 270) {
                 pdf.addPage();
@@ -664,113 +738,126 @@ const AdminDashboardContents: React.FC = () => {
               }
             });
           }
-          
-          const timestamp = format(new Date(), 'yyyyMMdd-HHmmss');
-          const dateRange = isDefaultRange 
-            ? 'AllTime' 
-            : `${format(range[0].startDate, "yyyyMMdd")}-${format(range[0].endDate, "yyyyMMdd")}`;
+
+          const timestamp = format(new Date(), "yyyyMMdd-HHmmss");
+          const dateRange = isDefaultRange
+            ? "AllTime"
+            : `${format(range[0].startDate, "yyyyMMdd")}-${format(
+                range[0].endDate,
+                "yyyyMMdd"
+              )}`;
           const filename = `Selfiegram-Dashboard-${dateRange}-${timestamp}-TextOnly.pdf`;
-          
+
           pdf.save(filename);
           setReportData(null);
           return; // Exit early for fallback
         }
       }
-      
-      console.log('Canvas generated successfully, creating PDF...');
-      
-      const imgData = canvas.toDataURL('image/png', 0.9); // Added quality parameter
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      
+
+      console.log("Canvas generated successfully, creating PDF...");
+
+      const imgData = canvas.toDataURL("image/png", 0.9); // Added quality parameter
+      const pdf = new jsPDF("p", "mm", "a4");
+
       // Calculate dimensions to fit the content
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = pdf.internal.pageSize.getHeight();
       const imgWidth = canvas.width;
       const imgHeight = canvas.height;
-      
+
       // Better scaling calculation
       const widthRatio = pdfWidth / imgWidth;
       const heightRatio = pdfHeight / imgHeight;
       const ratio = Math.min(widthRatio, heightRatio) * 0.95; // 95% to add margins
-      
+
       const scaledWidth = imgWidth * ratio;
       const scaledHeight = imgHeight * ratio;
       const imgX = (pdfWidth - scaledWidth) / 2;
       const imgY = 10; // Top margin
-      
+
       // Check if content exceeds one page
       if (scaledHeight > pdfHeight - 20) {
         // Multi-page handling
         let yPosition = 0;
         let pageNumber = 1;
-        
+
         while (yPosition < imgHeight) {
           if (pageNumber > 1) {
             pdf.addPage();
           }
-          
+
           const remainingHeight = imgHeight - yPosition;
-          const pageContentHeight = Math.min(pdfHeight - 20, remainingHeight * ratio);
-          
+          const pageContentHeight = Math.min(
+            pdfHeight - 20,
+            remainingHeight * ratio
+          );
+
           pdf.addImage(
-            imgData, 
-            'PNG', 
-            imgX, 
-            imgY, 
-            scaledWidth, 
+            imgData,
+            "PNG",
+            imgX,
+            imgY,
+            scaledWidth,
             pageContentHeight
           );
-          
+
           yPosition += (pdfHeight - 20) / ratio;
           pageNumber++;
         }
       } else {
         // Single page
-        pdf.addImage(imgData, 'PNG', imgX, imgY, scaledWidth, scaledHeight);
+        pdf.addImage(imgData, "PNG", imgX, imgY, scaledWidth, scaledHeight);
       }
-      
+
       // Generate filename with timestamp
-      const timestamp = format(new Date(), 'yyyyMMdd-HHmmss');
-      const dateRange = isDefaultRange 
-        ? 'AllTime' 
-        : `${format(range[0].startDate, "yyyyMMdd")}-${format(range[0].endDate, "yyyyMMdd")}`;
+      const timestamp = format(new Date(), "yyyyMMdd-HHmmss");
+      const dateRange = isDefaultRange
+        ? "AllTime"
+        : `${format(range[0].startDate, "yyyyMMdd")}-${format(
+            range[0].endDate,
+            "yyyyMMdd"
+          )}`;
       const filename = `Selfiegram-Dashboard-${dateRange}-${timestamp}.pdf`;
-      
-      console.log('Saving PDF...', filename);
+
+      console.log("Saving PDF...", filename);
       pdf.save(filename);
-      
-      console.log('PDF generated and downloaded successfully!');
-      
+
+      console.log("PDF generated and downloaded successfully!");
+
       // Clean up
       try {
         if (document.head.contains(styleElement)) {
           document.head.removeChild(styleElement);
         }
       } catch (e) {
-        console.warn('Style cleanup warning:', e);
+        console.warn("Style cleanup warning:", e);
       }
       setReportData(null);
-      
     } catch (error) {
-      console.error('Error generating report:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error("Error generating report:", error);
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
       alert(`Failed to generate report: ${errorMessage}. Please try again.`);
     } finally {
       // Ensure cleanup of any temporary elements
       try {
-        const styleElement = document.querySelector('style[data-html2canvas="true"]') as HTMLStyleElement;
+        const styleElement = document.querySelector(
+          'style[data-html2canvas="true"]'
+        ) as HTMLStyleElement;
         if (styleElement && document.head.contains(styleElement)) {
           document.head.removeChild(styleElement);
         }
-        
-        const isolatedElement = document.getElementById('dashboard-report-isolated');
+
+        const isolatedElement = document.getElementById(
+          "dashboard-report-isolated"
+        );
         if (isolatedElement && document.body.contains(isolatedElement)) {
           document.body.removeChild(isolatedElement);
         }
       } catch (cleanupError) {
-        console.warn('Cleanup error (non-critical):', cleanupError);
+        console.warn("Cleanup error (non-critical):", cleanupError);
       }
-      
+
       setIsGeneratingReport(false);
     }
   };
@@ -790,9 +877,12 @@ const AdminDashboardContents: React.FC = () => {
               onClick={() => setPickerOpen((prev) => !prev)}
               className="border px-3 py-2 rounded-md bg-white shadow-sm hover:bg-gray-100 transition"
             >
-              {isDefaultRange ? "Select Date Range" : 
-                `${format(range[0].startDate, "MMM dd yyyy")} — ${format(range[0].endDate, "MMM dd yyyy")}`
-              }
+              {isDefaultRange
+                ? "Select Date Range"
+                : `${format(range[0].startDate, "MMM dd yyyy")} — ${format(
+                    range[0].endDate,
+                    "MMM dd yyyy"
+                  )}`}
             </button>
             {pickerOpen && (
               <div className="absolute z-20 mt-2 bg-white shadow-lg rounded-md p-3">
@@ -816,7 +906,7 @@ const AdminDashboardContents: React.FC = () => {
               </div>
             )}
           </div>
-          
+
           {/* Reset Button */}
           {!isDefaultRange && (
             <button
@@ -847,24 +937,40 @@ const AdminDashboardContents: React.FC = () => {
           >
             Preview Report
           </button>
-          
+
           {/* Export Button */}
           <button
             onClick={handleExport}
             disabled={isGeneratingReport}
             className={`px-4 py-2 rounded-md text-xs transition focus:outline-none flex items-center gap-2 ${
-              isGeneratingReport 
-                ? 'bg-gray-400 text-white cursor-not-allowed' 
-                : 'bg-black text-white hover:bg-gray-800 hover:scale-[1.02]'
+              isGeneratingReport
+                ? "bg-gray-400 text-white cursor-not-allowed"
+                : "bg-black text-white hover:bg-gray-800 hover:scale-[1.02]"
             }`}
           >
             {isGeneratingReport && (
-              <svg className="animate-spin h-3 w-3 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              <svg
+                className="animate-spin h-3 w-3 text-white"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                ></circle>
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                ></path>
               </svg>
             )}
-            {isGeneratingReport ? 'Generating PDF...' : 'Export Data'}
+            {isGeneratingReport ? "Generating PDF..." : "Export Data"}
           </button>
         </div>
       </div>
@@ -883,15 +989,18 @@ const AdminDashboardContents: React.FC = () => {
                 {card.trend.value !== "—" && <TrendArrow up={card.trend.up} />}
                 <span
                   className={
-                    card.trend.value === "—" 
-                      ? "text-gray-500" 
-                      : card.trend.up ? "text-green-500" : "text-red-500"
+                    card.trend.value === "—"
+                      ? "text-gray-500"
+                      : card.trend.up
+                      ? "text-green-500"
+                      : "text-red-500"
                   }
                 >
-                  {card.trend.value === "—" 
+                  {card.trend.value === "—"
                     ? "— Trend unavailable for custom range"
-                    : `${card.trend.value} ${card.trend.up ? "Up" : "Down"} from past week`
-                  }
+                    : `${card.trend.value} ${
+                        card.trend.up ? "Up" : "Down"
+                      } from past week`}
                 </span>
               </p>
             </div>
@@ -1024,7 +1133,7 @@ const AdminDashboardContents: React.FC = () => {
 
       {/* Report Preview Modal */}
       {showPreview && reportData && (
-        <div 
+        <div
           className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
           onClick={(e) => {
             if (e.target === e.currentTarget) {
@@ -1033,7 +1142,7 @@ const AdminDashboardContents: React.FC = () => {
             }
           }}
           onKeyDown={(e) => {
-            if (e.key === 'Escape') {
+            if (e.key === "Escape") {
               setShowPreview(false);
               setReportData(null);
             }
@@ -1042,7 +1151,9 @@ const AdminDashboardContents: React.FC = () => {
           <div className="bg-white rounded-lg max-w-5xl max-h-[90vh] overflow-auto relative shadow-2xl">
             {/* Modal Header */}
             <div className="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center z-10">
-              <h2 className="text-xl font-semibold text-gray-800">Dashboard Report Preview</h2>
+              <h2 className="text-xl font-semibold text-gray-800">
+                Dashboard Report Preview
+              </h2>
               <div className="flex gap-3">
                 <button
                   onClick={() => window.print()}
@@ -1063,7 +1174,7 @@ const AdminDashboardContents: React.FC = () => {
                 </button>
               </div>
             </div>
-            
+
             {/* Report Content */}
             <div className="bg-gray-50 p-6">
               <div className="bg-white rounded-lg shadow-sm">
@@ -1076,26 +1187,26 @@ const AdminDashboardContents: React.FC = () => {
 
       {/* Hidden Report Component for PDF Generation */}
       {reportData && !showPreview && (
-        <div 
-          id="dashboard-report" 
-          style={{ 
-            position: 'fixed',
-            top: '-10000px',
-            left: '-10000px',
+        <div
+          id="dashboard-report"
+          style={{
+            position: "fixed",
+            top: "-10000px",
+            left: "-10000px",
             zIndex: -1000,
             opacity: 0,
-            pointerEvents: 'none',
-            backgroundColor: 'white',
-            width: '210mm', 
-            minHeight: '297mm',
-            fontFamily: 'Arial, sans-serif',
-            color: 'black',
-            padding: '20px',
-            fontSize: '12px',
-            lineHeight: '1.4'
+            pointerEvents: "none",
+            backgroundColor: "white",
+            width: "210mm",
+            minHeight: "297mm",
+            fontFamily: "Arial, sans-serif",
+            color: "black",
+            padding: "20px",
+            fontSize: "12px",
+            lineHeight: "1.4",
           }}
         >
-          <div style={{ width: '800px', margin: '0 auto' }}>
+          <div style={{ width: "800px", margin: "0 auto" }}>
             <DashboardReportPDF data={reportData} />
           </div>
         </div>
