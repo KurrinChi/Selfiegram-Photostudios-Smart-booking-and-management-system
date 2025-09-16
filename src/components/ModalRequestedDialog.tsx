@@ -109,7 +109,10 @@ const ModalRequestedDialog: React.FC<ModalRequestedDialogProps> = ({
         {/* Actions */}
         <div className="flex justify-end">
           <button
-            onClick={onClose}
+             onClick={() => {
+                onClose();
+                window.location.reload(); // refreshes the page
+              }}
             className="px-6 py-2 border rounded-md text-sm hover:bg-gray-100"
           >
             Close

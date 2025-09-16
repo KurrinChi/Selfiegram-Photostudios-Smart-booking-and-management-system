@@ -120,13 +120,12 @@ class AppointmentController extends Controller
             return response()->json(['message' => 'Failed to mark appointment as done'], 400);
         }
     }
-    public function getAppointments($userID)
+   public function getAppointments($userID)
 {
     if (!$userID) {
         return response()->json(['error' => 'User ID is required'], 400);
     }
 
-    
     $appointments = DB::select("
         SELECT 
             b.bookingID AS id,
@@ -172,13 +171,13 @@ class AppointmentController extends Controller
         LEFT JOIN package_concept AS pc ON bc.conceptID = pc.conceptID
         LEFT JOIN transaction AS t ON b.bookingID = t.bookingID
         WHERE b.userID = ?
-        AND b.status = 2
+        AND b.status IN (2, 3, 4)
         GROUP BY 
             b.bookingID, b.customerName, b.customerEmail, b.customerContactNo, b.customerAddress, 
             b.bookingDate, b.bookingStartTime, b.bookingEndTime, 
             p.packageID, p.name, p.description, p.price, 
             b.subTotal, b.total, b.rem, b.receivedAmount, b.status, b.paymentStatus, b.feedback, b.rating, t.date;
-            ", [$userID]);
+    ", [$userID]);
 
     return response()->json($appointments);
 }

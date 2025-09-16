@@ -88,7 +88,14 @@ const ClientAppointmentsPageContent = () => {
         rawStatus: item.status,
         bookingStartTime: item.bookingStartTime,
         bookingEndTime: item.bookingEndTime,
-        tagColor: item.paymentStatus === 1 ? "bg-green-500" : "bg-yellow-500",
+       tagColor:
+        item.status === 3
+          ? "bg-red-500"
+          : item.status === 4
+          ? "bg-purple-700"
+          : item.paymentStatus === 1
+          ? "bg-green-500"
+          : "bg-orange-500",
         selectedAddOns: item.selectedAddOns,
         selectedConcepts: item.selectedConcepts,
         feedback: item.feedback,

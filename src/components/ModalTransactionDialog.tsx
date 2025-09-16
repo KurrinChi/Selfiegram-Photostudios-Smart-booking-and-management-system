@@ -48,7 +48,10 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
 const [hasTypedFeedback, setHasTypedFeedback] = useState(false);
 const [hasSelectedRating, setHasSelectedRating] = useState(false);
  
-
+const [cancelRequest, setCancelRequest] = useState<{
+  status: "pending" | "approved" | "declined";
+  requestDate: string;
+} | null>(null);
 
 const [isRequestedModalOpen, setIsRequestedModalOpen] = useState(false);
 const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
@@ -69,6 +72,19 @@ const [cancelData, setCancelData] = useState<{
     }
   }, [data]);
 
+
+useEffect(() => {
+  if (data?.id) {
+    fetchWithAuth(`${API_URL}/api/cancel-request/${data.id}`)
+      .then((res) => res.json())
+      .then((resData) => {
+        if (resData.data) {
+          setCancelRequest(resData.data);
+        }
+      })
+      .catch((err) => console.error("Error fetching cancel request:", err));
+  }
+}, [data?.id]);
   const handleSave = async () => {
     if (!feedback && (rating === 0 || rating === null)) {
     onClose();
@@ -139,6 +155,7 @@ const handleRatingClick = (value: number) => {
     return `${acronym}#${bookingID}`;
   };
 
+  
 useEffect(() => {
   if (isOpen) {
     setFeedback(data?.feedback || "");
@@ -222,10 +239,216 @@ return (
           : "max-w-xl w-full p-6"
       }`}
     >
+       
+  {/* Header Container */}
+{Number(data.status) === 3 && cancelRequest && (
+  <div className="p-6 rounded-2xl bg-gray-100 mb-4">
+    <h2 className="text-gray-600 text-lg font-semibold mb-4">
+      {cancelRequest.status === "pending"
+        ? "Cancellation Pending Review"
+        : cancelRequest.status === "approved"
+        ? "Cancellation Request Approved"
+        : "Cancellation Request Denied"}
+    </h2>
+
+    {/* Stepper */}
+    <div className="flex items-center justify-between relative mb-4">
+      {/* Step 1 */}
+      <div className="flex flex-col items-center">
+        <div
+          className={`w-8 h-8 flex items-center justify-center rounded-full font-bold ${
+            cancelRequest.status === "pending"
+              ? "bg-black text-white"
+              : cancelRequest.status === "approved"
+              ? "bg-green-500 text-white"
+              : "bg-red-500 text-white"
+          }`}
+        >
+          1
+        </div>
+        <span className="mt-2 text-xs font-medium text-gray-700">Request Sent</span>
+      </div>
+
+      {/* Connector 1 */}
+      <div
+        className={`flex-1 h-[2px] mx-2 ${
+          cancelRequest.status === "approved"
+            ? "bg-green-500"
+            : cancelRequest.status === "declined"
+            ? "bg-red-500"
+            : "bg-gray-300"
+        }`}
+      ></div>
+
+      {/* Step 2 */}
+      <div className="flex flex-col items-center">
+        <div
+          className={`w-8 h-8 flex items-center justify-center rounded-full font-bold ${
+            cancelRequest.status === "approved"
+              ? "bg-green-500 text-white"
+              : cancelRequest.status === "declined"
+              ? "bg-red-500 text-white"
+              : "bg-gray-300 text-gray-600"
+          }`}
+        >
+          {cancelRequest.status === "approved" || cancelRequest.status === "declined" ? "✔" : "2"}
+        </div>
+        <span className="mt-2 text-xs font-medium text-gray-700">Staff Response</span>
+      </div>
+
+      {/* Connector 2 */}
+      <div
+        className={`flex-1 h-[2px] mx-2 ${
+          cancelRequest.status === "approved"
+            ? "bg-green-500"
+            : cancelRequest.status === "declined"
+            ? "bg-red-500"
+            : "bg-gray-300"
+        }`}
+      ></div>
+
+      {/* Step 3 */}
+      <div className="flex flex-col items-center">
+        <div
+          className={`w-8 h-8 flex items-center justify-center rounded-full font-bold ${
+            cancelRequest.status === "approved"
+              ? "bg-green-500 text-white"
+              : cancelRequest.status === "declined"
+              ? "bg-red-500 text-white"
+              : "bg-gray-300 text-gray-600"
+          }`}
+        >
+          {cancelRequest.status === "approved" ? "✔" : cancelRequest.status === "declined" ? "✖" : "3"}
+        </div>
+        <span className="mt-2 text-xs font-medium text-gray-700">Approved</span>
+      </div>
+    </div>
+
+    <hr className="border-gray-400 my-4" />
+
+    {/* Message Section */}
+    {cancelRequest.status === "pending" && (
+      <>
+        <h2 className="text-gray-500 text-lg font-semibold mb-2">
+          Wait for our staff to review your request
+        </h2>
+        <p className="text-xs">
+          Please wait until{" "}
+          <span className="font-semibold">
+            {new Date(
+              new Date(cancelRequest.requestDate).getTime() + 2 * 24 * 60 * 60 * 1000
+            ).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}
+          </span>{" "}
+          for our staff to review and update the status of your cancellation request. You will be notified once the process is completed. Kindly note that the PHP 200 down payment you made is strictly non-refundable. If the booking was paid in full, any eligible refund will exclude the PHP 200 down payment.
+        </p>
+      </>
+    )}
+
+    {cancelRequest.status === "approved" && (
+      <>
+        <h2 className="text-gray-500 text-lg font-semibold mb-2">
+          Your Request to Cancel Has Been Accepted
+        </h2>
+        <p className="text-xs">
+          If you paid the full amount, any eligible refund will be returned to you shortly. Please note that the PHP 200 down payment is strictly non-refundable and will be excluded from any refund.
+        </p>
+      </>
+    )}
+
+    {cancelRequest.status === "declined" && (
+      <>
+        <h2 className="text-gray-500 text-lg font-semibold mb-2">
+          Sorry, we failed to cancel your appointment
+        </h2>
+        <p className="text-xs">
+          Your appointment cancellation request has been declined. Please note that your booking remains confirmed. For further assistance, kindly contact our staff{" "}
+          <a
+            href="https://www.facebook.com/selfiegrammalolos"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-500 underline"
+          >
+            here
+          </a>.
+        </p>
+      </>
+    )}
+  </div>
+)}
+
+
+
+
+
+{Number(data.status) === 4 && (
+  <div className="p-6 rounded-2xl bg-gray-100 mb-4">
+    <h2 className="text-gray-600 text-lg font-semibold mb-4">
+    Reschedule Pending Review
+  </h2>
+    <div className="flex items-center justify-between relative">
+      {/* Step 1 */}
+      <div className="flex flex-col items-center">
+        <div className="w-8 h-8 flex items-center justify-center rounded-full bg-black text-white font-bold">
+          1
+        </div>
+        <span className="mt-2 text-xs font-medium text-gray-700">
+          Request Sent
+        </span>
+      </div>
+
+      {/* Connector line */}
+      <div className="flex-1 h-[2px] bg-black mx-2"></div>
+
+      {/* Step 2 */}
+      <div className="flex flex-col items-center">
+        <div className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-300 text-gray-600 font-bold">
+          2
+        </div>
+        <span className="mt-2 text-xs font-medium text-gray-700">
+          Staff Response
+        </span>
+      </div>
+
+      {/* Connector line */}
+      <div className="flex-1 h-[2px] bg-gray-300 mx-2"></div>
+
+      {/* Step 3 */}
+      <div className="flex flex-col items-center">
+        <div className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-300 text-gray-600 font-bold">
+          3
+        </div>
+        <span className="mt-2 text-xs font-medium text-gray-700">
+          Approved
+        </span>
+      </div>
+    </div>
+    <hr className="border-gray-400 my-4" />
+    <h2 className="text-gray-500 text-lg font-semibold mb-4">
+    Wait for our staff to review your request
+  </h2>
+  <p className="text-xs">
+        Please wait until{" "}
+        <span className="font-semibold">
+          {new Date(
+            new Date(data.transactionDate).getTime() + 2 * 24 * 60 * 60 * 1000
+          ).toLocaleDateString("en-US", {
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+          })}
+        </span>{" "}
+        for our staff to review and update the status of your reschedule request. 
+        You will be notified once the process has been completed. We appreciate your
+         patience and understanding as we work to confirm your new appointment schedule.
+      </p>
+  </div>
+)}
+
       {data.paymentStatus === 1 && data.status === 2 ? (
         <>
           {/* Left Panel */}
           <div className="w-full md:w-2/3 p-6">
+          
             <h1 className="text-lg font-bold mb-1">{data.package}</h1>
             <div className="grid grid-cols-2 text-sm gap-y-1 mb-6">
               <p className="text-sm text-gray-500 mb-4">
@@ -533,7 +756,7 @@ return (
             </div>
           </div>
            {/* Cancel & Reschedule Buttons */}
-              {Number(data.status) !== 1 && (
+          {Number(data.status) !== 1 && Number(data.status) !== 3  && Number(data.status) !== 4 && (
                 <div className="flex justify-between mb-4">
                   <button
                     onClick={() => setIsCancelModalOpen(true)}

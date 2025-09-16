@@ -161,6 +161,8 @@
 
         //Client Cancel and Reschedule Request
         Route::post('/booking-request/cancel', [BookingRequestController::class, 'storeCancelRequest']);
+        Route::get('/cancel-request/{bookingID}', [BookingRequestController::class, 'getCancelRequest']);
+
     });
 
     //receipt
