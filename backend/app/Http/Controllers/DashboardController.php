@@ -11,8 +11,10 @@ class DashboardController extends Controller
 {
        public function getSummary(Request $request)
             {
+                $hasDateRange = $request->has(['startDate','endDate']);
+                
                 // 1) Determine raw inputs (YYYY-MM-DD) or fall back
-                if ($request->has(['startDate','endDate'])) {
+                if ($hasDateRange) {
                     $rawStart = $request->query('startDate');
                     $rawEnd   = $request->query('endDate');
                 } else {
@@ -21,66 +23,200 @@ class DashboardController extends Controller
                     $rawStart = Carbon::today()->subDays(7)->toDateString();   
                 }
 
-
                 // 2) Parse into Carbon + force start/end of day
                 $start = Carbon::parse($rawStart)->startOfDay();  // 00:00:00
                 $end   = Carbon::parse($rawEnd)  ->endOfDay();    // 23:59:59
 
-                // 3) Sum current sales
+                // 3) Sum current sales for selected date range
+                // Use date comparison since transaction.date is stored as DATE not DATETIME
                 $sales = DB::table('transaction')
                     ->whereBetween('date', [
-                        $start->toDateTimeString(),
-                        $end->toDateTimeString(),
+                        $start->toDateString(),
+                        $end->toDateString(),
                     ])
                     ->sum('receivedAmount');
 
-                // 4) Figure out how many days (inclusive)
-                $daysInWindow = $end->diffInDays($start) + 1;
-
-                // 5) Build previous window (FULL days)
-                $prevEnd   = $start
-                                ->copy()            // e.g. 2025-07-22 00:00:00
-                                ->subDay() // → 2025-07-21 00:00:00
-                                ->endOfDay();       // → 2025-07-21 23:59:59
-
-                $prevStart = $prevEnd
-                                ->copy()            // 2025‑07‑20 23:59:59
-                                ->subDays($daysInWindow + 14)
-                                ->startOfDay();     // → 00:00
-
-                // 6) Sum previous sales
-                $salesPrev = DB::table('transaction')
-                    ->whereBetween('date', [
-                        $prevStart->toDateTimeString(),
-                        $prevEnd->toDateTimeString(),
-                    ])
-                    ->sum('receivedAmount');
-
-                // 7) Compute trend
-                if ($salesPrev > 0) {
-                    $pct      = round((($sales - $salesPrev) / $salesPrev) * 100, 2);
-                    $trendVal = "{$pct}%";
-                    $trendUp  = $pct >= 0;
-                } else {
-                    $trendVal = '0%';
-                    $trendUp  = true;
+                // 4) Calculate trend only when NO date range is selected (default behavior)
+                $salesTrend = ['value' => '0%', 'up' => true];
+                
+                if (!$hasDateRange) {
+                    // Get current week (Monday to Sunday)
+                    $currentWeekStart = Carbon::now()->startOfWeek()->startOfDay();
+                    $currentWeekEnd = Carbon::now()->endOfWeek()->endOfDay();
+                    
+                    // Get last week (Monday to Sunday)
+                    $lastWeekStart = $currentWeekStart->copy()->subWeek()->startOfDay();
+                    $lastWeekEnd = $currentWeekStart->copy()->subDay()->endOfDay();
+                    
+                    // Current week sales
+                    $currentWeekSales = DB::table('transaction')
+                        ->whereBetween('date', [
+                            $currentWeekStart->toDateString(),
+                            $currentWeekEnd->toDateString(),
+                        ])
+                        ->sum('receivedAmount');
+                    
+                    // Last week sales
+                    $lastWeekSales = DB::table('transaction')
+                        ->whereBetween('date', [
+                            $lastWeekStart->toDateString(),
+                            $lastWeekEnd->toDateString(),
+                        ])
+                        ->sum('receivedAmount');
+                    
+                    // Calculate trend percentage
+                    if ($lastWeekSales > 0) {
+                        $pct = round((($currentWeekSales - $lastWeekSales) / $lastWeekSales) * 100, 2);
+                        $salesTrend = [
+                            'value' => abs($pct) . '%',
+                            'up' => $pct >= 0,
+                        ];
+                    }
                 }
 
-                // 8) Return JSON (debug fields retained)
+                // Total Users (active users)
+                $totalUsers = DB::table('users')->where('archive', 1)->count();
+                
+                // Total Appointments (all bookings)
+                $totalAppointments = DB::table('booking')->count();
+                
+                // Total Schedule (bookings from today onwards only)
+                $totalSchedule = DB::table('booking')
+                    ->where('bookingDate', '>=', Carbon::today()->toDateString())
+                    ->count();
+
+                // Calculate trends for users, schedule, and appointments (only when no date range selected)
+                $userTrend = ['value' => '0%', 'up' => true];
+                $scheduleTrend = ['value' => '0%', 'up' => true];
+                $appointmentsTrend = ['value' => '0%', 'up' => true];
+
+                if (!$hasDateRange) {
+                    // User Trend: Compare this week vs last week registrations using created_at
+                    $currentWeekStart = Carbon::now()->startOfWeek()->startOfDay();
+                    $currentWeekEnd = Carbon::now()->endOfWeek()->endOfDay();
+                    $lastWeekStart = $currentWeekStart->copy()->subWeek()->startOfDay();
+                    $lastWeekEnd = $currentWeekStart->copy()->subDay()->endOfDay();
+
+                    // Current week user registrations
+                    $currentWeekUsers = DB::table('users')
+                        ->where('archive', 1)
+                        ->whereBetween('created_at', [
+                            $currentWeekStart->toDateTimeString(),
+                            $currentWeekEnd->toDateTimeString()
+                        ])
+                        ->count();
+                    
+                    // Last week user registrations  
+                    $lastWeekUsers = DB::table('users')
+                        ->where('archive', 1)
+                        ->whereBetween('created_at', [
+                            $lastWeekStart->toDateTimeString(),
+                            $lastWeekEnd->toDateTimeString()
+                        ])
+                        ->count();
+
+                    // Calculate user trend percentage
+                    if ($lastWeekUsers > 0) {
+                        $userPct = round((($currentWeekUsers - $lastWeekUsers) / $lastWeekUsers) * 100, 2);
+                        $userTrend = [
+                            'value' => abs($userPct) . '%',
+                            'up' => $userPct >= 0,
+                        ];
+                    } elseif ($currentWeekUsers > 0) {
+                        // If no users last week but some this week, it's 100% increase
+                        $userTrend = [
+                            'value' => '100%',
+                            'up' => true,
+                        ];
+                    }
+
+                    // Schedule Trend: Compare this week vs last week future bookings made
+                    $currentWeekSchedule = DB::table('booking')
+                        ->where('bookingDate', '>=', Carbon::today()->toDateString())
+                        ->whereBetween('date', [
+                            $currentWeekStart->toDateString(),
+                            $currentWeekEnd->toDateString()
+                        ])
+                        ->count();
+
+                    $lastWeekSchedule = DB::table('booking')
+                        ->where('bookingDate', '>=', $lastWeekStart->toDateString())
+                        ->whereBetween('date', [
+                            $lastWeekStart->toDateString(),
+                            $lastWeekEnd->toDateString()
+                        ])
+                        ->count();
+
+                    // Calculate schedule trend percentage
+                    if ($lastWeekSchedule > 0) {
+                        $schedulePct = round((($currentWeekSchedule - $lastWeekSchedule) / $lastWeekSchedule) * 100, 2);
+                        $scheduleTrend = [
+                            'value' => abs($schedulePct) . '%',
+                            'up' => $schedulePct >= 0,
+                        ];
+                    } elseif ($currentWeekSchedule > 0) {
+                        // If no schedule last week but some this week, it's 100% increase
+                        $scheduleTrend = [
+                            'value' => '100%',
+                            'up' => true,
+                        ];
+                    }
+
+                    // Appointments Trend: Compare this week vs last week total bookings created
+                    $currentWeekAppointments = DB::table('booking')
+                        ->whereBetween('date', [
+                            $currentWeekStart->toDateString(),
+                            Carbon::now()->endOfWeek()->toDateString()
+                        ])
+                        ->count();
+
+                    $lastWeekAppointments = DB::table('booking')
+                        ->whereBetween('date', [
+                            $lastWeekStart->toDateString(),
+                            $lastWeekEnd->toDateString()
+                        ])
+                        ->count();
+
+                    // Calculate appointments trend percentage
+                    if ($lastWeekAppointments > 0) {
+                        $appointmentsPct = round((($currentWeekAppointments - $lastWeekAppointments) / $lastWeekAppointments) * 100, 2);
+                        $appointmentsTrend = [
+                            'value' => abs($appointmentsPct) . '%',
+                            'up' => $appointmentsPct >= 0,
+                        ];
+                    } elseif ($currentWeekAppointments > 0) {
+                        // If no appointments last week but some this week, it's 100% increase
+                        $appointmentsTrend = [
+                            'value' => '100%',
+                            'up' => true,
+                        ];
+                    }
+                }
+
+                // Return JSON
                 return response()->json([
-                    'totalUsers'    => DB::table('users')->where('archive', 1)->count(),
-                    'totalBookings' => DB::table('booking')->count(),
-                    'totalSales'    => $sales,
-                    'prevSales'     => $salesPrev,
-                    'totalAppointments' => DB::table('booking')->count(),
-                    'start'         => $start->toDateString(),
-                    'end'           => $end->toDateString(),
-                    'prevStart'     => $prevStart->toDateString(),
-                    'prevEnd'       => $prevEnd->toDateString(),
-                    'salesTrend'    => [
-                        'value' => $trendVal,
-                        'up'    => $trendUp,
-                    ],
+                    'totalUsers'        => $totalUsers,
+                    'totalBookings'     => $totalSchedule, // This is used for "Total Schedule" in frontend
+                    'totalSales'        => (float) $sales, // Ensure it's a float
+                    'totalAppointments' => $totalAppointments,
+                    'hasDateRange'      => $hasDateRange,
+                    'start'            => $start->toDateString(),
+                    'end'              => $end->toDateString(),
+                    'salesTrend'       => $salesTrend,
+                    'userTrend'        => $userTrend,
+                    'scheduleTrend'    => $scheduleTrend,  
+                    'appointmentsTrend' => $appointmentsTrend,
+                    // Debug info (can be removed later)
+                    'debug' => [
+                        'dateRangeQuery' => "SELECT SUM(receivedAmount) FROM transaction WHERE date BETWEEN '{$start->toDateString()}' AND '{$end->toDateString()}'",
+                        'hasDateRangeFlag' => $hasDateRange,
+                        'rawStart' => $hasDateRange ? $rawStart : 'not provided',
+                        'rawEnd' => $hasDateRange ? $rawEnd : 'not provided',
+                        'currentWeekStart' => !$hasDateRange ? Carbon::now()->startOfWeek()->toDateTimeString() : null,
+                        'currentWeekEnd' => !$hasDateRange ? Carbon::now()->endOfWeek()->toDateTimeString() : null,
+                        'lastWeekStart' => !$hasDateRange ? Carbon::now()->startOfWeek()->subWeek()->toDateTimeString() : null,
+                        'lastWeekEnd' => !$hasDateRange ? Carbon::now()->startOfWeek()->subDay()->toDateTimeString() : null,
+                    ]
                 ]);
         }
 
@@ -98,8 +234,8 @@ class DashboardController extends Controller
                         'week'   => $start->format('M j Y'),
                         'income' => (float) DB::table('transaction')
                             ->whereBetween('date', [
-                                $start->toDateTimeString(),
-                                $end  ->toDateTimeString(),
+                                $start->toDateString(),
+                                $end->toDateString(),
                             ])->sum('receivedAmount'),
                     ];
                 }
@@ -152,6 +288,82 @@ class DashboardController extends Controller
 
             // Return the response with proper JSON encoding to avoid Unicode escape issues
             return response()->json($rows, 200, [], JSON_UNESCAPED_UNICODE);
+        }
+
+        public function getReportData(Request $request)
+        {
+            try {
+                $hasDateRange = $request->has(['startDate','endDate']);
+                
+                // 1) Determine raw inputs (YYYY-MM-DD) or fall back
+                if ($hasDateRange) {
+                    $rawStart = $request->query('startDate');
+                    $rawEnd   = $request->query('endDate');
+                } else {
+                    // Default: last 7 days ago through today 
+                    $rawEnd   = Carbon::today()->toDateString();              
+                    $rawStart = Carbon::today()->subDays(7)->toDateString();   
+                }
+
+                // 2) Parse into Carbon + force start/end of day
+                $start = Carbon::parse($rawStart)->startOfDay();
+                $end   = Carbon::parse($rawEnd)->endOfDay();
+
+                // Get all the summary data (reuse existing logic)
+                $summaryResponse = $this->getSummary($request);
+                $summaryData = $summaryResponse->getData(true);
+                
+                if (!$summaryData) {
+                    throw new \Exception('Failed to retrieve summary data');
+                }
+
+                // Get weekly income data
+                $weeklyResponse = $this->getWeeklyGrossIncome();
+                $weeklyData = $weeklyResponse->getData(true);
+                
+                if (!$weeklyData) {
+                    $weeklyData = []; // Default empty array
+                }
+
+                // Get package details
+                $packageResponse = $this->getPackageDetails($request);
+                $packageData = $packageResponse->getData(true);
+                
+                if (!$packageData) {
+                    $packageData = []; // Default empty array
+                }
+
+            // Additional report metadata
+            $reportData = [
+                'reportGenerated' => Carbon::now()->toDateTimeString(),
+                'dateRange' => [
+                    'start' => $start->toDateString(),
+                    'end' => $end->toDateString(),
+                    'hasCustomRange' => $hasDateRange,
+                    'formattedRange' => $start->format('M j, Y') . ' - ' . $end->format('M j, Y')
+                ],
+                'summary' => $summaryData,
+                'weeklyIncome' => $weeklyData,
+                'packages' => $packageData,
+                'companyInfo' => [
+                    'name' => 'Selfiegram Photo Studios',
+                    'address' => 'Your Studio Address',
+                    'phone' => 'Your Phone Number',
+                    'email' => 'info@selfiegram.com'
+                ]
+            ];
+
+                return response()->json($reportData, 200, [], JSON_UNESCAPED_UNICODE);
+            } catch (\Exception $e) {
+                return response()->json([
+                    'error' => 'Failed to generate report data',
+                    'message' => $e->getMessage(),
+                    'debug' => [
+                        'file' => $e->getFile(),
+                        'line' => $e->getLine()
+                    ]
+                ], 500);
+            }
         }
 
 }
