@@ -22,7 +22,8 @@
             'message' => 'API is working!',
         ]);
     });
-       // Test auth without role
+
+    // Test auth without role
     Route::middleware(['auth:sanctum'])->get('/test-auth', function (Request $request) {
         $user = auth('sanctum')->user();
         return response()->json([
@@ -57,6 +58,7 @@
             ]
         ]);
     });
+
     // Debug route for testing booking creation
     Route::middleware(['auth:sanctum'])->post('/test-booking', function (Request $request) {
         $user = auth('sanctum')->user();
@@ -101,6 +103,7 @@
         Route::get('/admin/summary', [DashboardController::class, 'getSummary']);
         Route::get('/admin/gross-income-weekly',  [DashboardController::class, 'getWeeklyGrossIncome']);
         Route::get('/admin/packages', [DashboardController::class, 'getPackageDetails']);
+        Route::get('/admin/report-data', [DashboardController::class, 'getReportData']);
 
         //admin sales
         Route::get('/sales', [SalesController::class, 'getSales']);
@@ -114,7 +117,9 @@
         //admin package management
         Route::get('/admin/packages-all', [PackageController::class, 'adminShowAll']);
         Route::get('/admin/packages/{id}', [PackageController::class, 'adminShow']);
+        Route::get('/admin/package-types', [PackageController::class, 'packageType']);
         Route::post('/admin/packages/{id}/archive', [PackageController::class, 'archivePackage']);
+        Route::post('/admin/update-package/{id}', [PackageController::class, 'updatePackage']);
     });
 
     // Protected routes (user must be logged in) CUSTOMER
@@ -124,7 +129,7 @@
         Route::get('/packages', [PackageController::class, 'index']);
         Route::get('/packages/{id}', [PackageController::class, 'show']);
         Route::get('/packages/{id}/set-concepts', [PackageController::class, 'getPackageSetAndConcepts']);
-       Route::get('/packages/{id}/addons', [PackageController::class, 'getAddOns']);
+        Route::get('/packages/{id}/addons', [PackageController::class, 'getAddOns']);
 
 
 

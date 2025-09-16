@@ -1,10 +1,11 @@
 import { useEffect, useRef } from "react";
 
 interface TagEmbedWidgetProps {
-  height?: number; // optional, default to 500
+  height?: number;
+  width?: number;
 }
 
-const TagEmbedWidget = ({ height = 500 }: TagEmbedWidgetProps) => {
+const TagEmbedWidget = ({ height = 30 }: TagEmbedWidgetProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -22,7 +23,7 @@ const TagEmbedWidget = ({ height = 500 }: TagEmbedWidgetProps) => {
   return (
     <div
       ref={containerRef}
-      className="tagembed-widget w-full"
+      className="tagembed-widget"
       style={{ width: "100%", height: `${height}px`, overflow: "auto" }}
       data-widget-id="299752"
       data-website="1"

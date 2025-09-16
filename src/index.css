@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "leaflet-routing-machine/dist/leaflet-routing-machine.css";
 
 /* Existing SF Pro Display */
 @font-face {
@@ -62,9 +63,9 @@ body {
   }
 }
 
-  .Toastify__toast {
-    padding: 15px 20px;
-    min-width: 400px; 
-    max-width: 700px; 
-    word-wrap: break-word;
-  }
+.Toastify__toast {
+  padding: 15px 20px;
+  min-width: 400px;
+  max-width: 700px;
+  word-wrap: break-word;
+}

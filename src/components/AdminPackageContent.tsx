@@ -29,6 +29,7 @@ const AdminPackageContent: React.FC = () => {
   const [fadingImages, setFadingImages] = useState<Record<string, boolean>>({});
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [confirmArchive, setConfirmArchive] = useState<Package | null>(null); // modal state
 
   const navigate = useNavigate();
 
@@ -148,6 +149,17 @@ const AdminPackageContent: React.FC = () => {
     }
   };
 
+  const handleArchiveClick = (pkg: Package) => {
+    setConfirmArchive(pkg); // open modal
+  };
+
+  const confirmArchiveAction = async () => {
+    if (confirmArchive) {
+      await toggleArchive(confirmArchive);
+      setConfirmArchive(null); // close modal
+    }
+  };
+
   return (
     <div className="p-4 overflow-y-auto max-h-230 rounded-3xl transition-all duration-300">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
@@ -227,9 +239,8 @@ const AdminPackageContent: React.FC = () => {
                       (e.target as HTMLImageElement).src =
                         "/slfg-placeholder 2.png";
                     }}
-                    className={`w-full h-full object-cover transition-opacity duration-500 ease-in-out ${
-                      isFading ? "opacity-0" : "opacity-100"
-                    }`}
+                    className={`w-full h-full object-cover transition-opacity duration-500 ease-in-out ${isFading ? "opacity-0" : "opacity-100"
+                      }`}
                     alt="Package"
                   />
                   <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1 bg-white/60 px-2 py-1 rounded-full backdrop-blur-sm">
@@ -247,11 +258,10 @@ const AdminPackageContent: React.FC = () => {
                           (e.target as HTMLImageElement).src =
                             "/slfg-placeholder 2.png";
                         }}
-                        className={`w-6 h-6 object-cover rounded-full border-2 cursor-pointer transition ${
-                          i === currentImgIdx
+                        className={`w-6 h-6 object-cover rounded-full border-2 cursor-pointer transition ${i === currentImgIdx
                             ? "border-black"
                             : "border-transparent opacity-60"
-                        }`}
+                          }`}
                         alt={`Thumb ${i + 1}`}
                       />
                     ))}
@@ -277,7 +287,7 @@ const AdminPackageContent: React.FC = () => {
                   </div>
                   <div className="absolute top-4 right-4 flex gap-3 ">
                     <button
-                      onClick={() => toggleArchive(pkg)}
+                      onClick={() => handleArchiveClick(pkg)}
                       className=" p-2 rounded-md font-bold backdrop-blur-md bg-gray-100 border border-white/20 shadow-md hover:bg-gray-200 transition"
                       title={
                         pkg.status === 1
@@ -309,6 +319,51 @@ const AdminPackageContent: React.FC = () => {
           No packages found with the selected filters or search query.
         </div>
       )}
+
+      {/* ✅ Archive Confirmation Modal */}
+      {confirmArchive && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg p-6 w-96 text-center space-y-4">
+            <div
+              className={`mx-auto w-12 h-12 flex items-center justify-center rounded-full ${confirmArchive.status === 1 ? "bg-red-100" : "bg-green-100"
+                }`}
+            >
+              {confirmArchive.status === 1 ? (
+                <Archive className="text-red-600" />
+              ) : (
+                <RefreshCw className="text-green-600" />
+              )}
+            </div>
+            <h2 className="text-lg font-semibold">
+              {confirmArchive.status === 1 ? "Archive Package" : "Unarchive Package"}
+            </h2>
+            <p className="text-sm text-gray-600">
+              {confirmArchive.status === 1 ? "Are you sure you want to archive" : "Are you sure you want to unarchive"}{" "}
+              <span className="font-semibold">{confirmArchive.title}</span>?{" "}
+              {confirmArchive.status === 1 ? "This package will not be available to customers." : "This package will be available to customers."}
+            </p>
+            <div className="flex justify-between gap-4 pt-4">
+              <button
+                onClick={() => setConfirmArchive(null)}
+                className="w-full py-2 border rounded-md text-sm hover:bg-gray-100"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmArchiveAction}
+                className={`w-full py-2 text-white text-sm rounded-md ${confirmArchive.status === 1
+                    ? "bg-red-600 hover:bg-red-700"
+                    : "bg-green-600 hover:bg-green-700"
+                  }`}
+              >
+                {confirmArchive.status === 1 ? "Archive" : "Unarchive"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+
       <ToastContainer position="bottom-right" />
     </div>
   );

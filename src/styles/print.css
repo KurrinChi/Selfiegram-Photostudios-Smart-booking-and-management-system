@@ -1,0 +1,150 @@
+/* Print styles for dashboard report */
+@media print {
+  .dashboard-report {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 20px !important;
+    font-size: 12px !important;
+    line-height: 1.4 !important;
+    color: #000 !important;
+    background: white !important;
+  }
+
+  .dashboard-report * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .dashboard-report h1 {
+    font-size: 24px !important;
+    margin-bottom: 10px !important;
+  }
+
+  .dashboard-report h2 {
+    font-size: 18px !important;
+    margin-bottom: 8px !important;
+  }
+
+  .dashboard-report h3 {
+    font-size: 16px !important;
+    margin-bottom: 8px !important;
+  }
+
+  .dashboard-report p {
+    font-size: 11px !important;
+    margin-bottom: 4px !important;
+  }
+
+  .dashboard-report table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    margin-bottom: 15px !important;
+    page-break-inside: auto !important;
+  }
+
+  .dashboard-report th,
+  .dashboard-report td {
+    border: 1px solid #000 !important;
+    padding: 6px !important;
+    font-size: 10px !important;
+    line-height: 1.2 !important;
+  }
+
+  .dashboard-report th {
+    background-color: #f5f5f5 !important;
+    font-weight: bold !important;
+  }
+
+  .dashboard-report .grid {
+    display: block !important;
+  }
+
+  .dashboard-report .grid > div {
+    display: block !important;
+    width: 100% !important;
+    margin-bottom: 10px !important;
+    page-break-inside: avoid !important;
+  }
+
+  /* Ensure icons print as text alternatives */
+  .dashboard-report .fa-user::after {
+    content: "👤" !important;
+  }
+
+  .dashboard-report .fa-calendar-alt::after {
+    content: "📅" !important;
+  }
+
+  .dashboard-report .fa-peso-sign::after {
+    content: "₱" !important;
+  }
+
+  .dashboard-report .fa-clipboard-list::after {
+    content: "📋" !important;
+  }
+
+  .dashboard-report .fa-arrow-up::after {
+    content: "↑" !important;
+  }
+
+  .dashboard-report .fa-arrow-down::after {
+    content: "↓" !important;
+  }
+
+  .dashboard-report .fa-star::after {
+    content: "⭐" !important;
+  }
+
+  /* Page break controls */
+  .dashboard-report .mb-8 {
+    page-break-inside: avoid !important;
+  }
+
+  /* Hide unnecessary elements for print */
+  .no-print {
+    display: none !important;
+  }
+}
+
+/* Styles for PDF generation */
+.dashboard-report.pdf-export {
+  width: 210mm !important;
+  min-height: 297mm !important;
+  padding: 20mm !important;
+  margin: 0 auto !important;
+  background: white !important;
+  box-shadow: none !important;
+  font-family: 'Arial', sans-serif !important;
+}
+
+.dashboard-report.pdf-export h1 {
+  font-size: 28px !important;
+  color: #1a1a1a !important;
+}
+
+.dashboard-report.pdf-export h2 {
+  font-size: 20px !important;
+  color: #2d2d2d !important;
+}
+
+.dashboard-report.pdf-export h3 {
+  font-size: 16px !important;
+  color: #404040 !important;
+}
+
+.dashboard-report.pdf-export table {
+  font-size: 11px !important;
+  border: 1px solid #333 !important;
+}
+
+.dashboard-report.pdf-export th {
+  background-color: #f8f9fa !important;
+  color: #212529 !important;
+  border: 1px solid #333 !important;
+}
+
+.dashboard-report.pdf-export td {
+  border: 1px solid #333 !important;
+  color: #212529 !important;
+}

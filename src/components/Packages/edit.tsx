@@ -2,6 +2,11 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import { fetchWithAuth } from "../../utils/fetchWithAuth";
 
+interface PackageImage {
+  id: number;
+  path: string;
+}
+
 interface Package {
   id: string;
   title: string;
@@ -9,7 +14,7 @@ interface Package {
   duration: number;
   description: string;
   tags: string[];
-  images: string[];
+  images: PackageImage[];
   status: number; // 1 for active, 0 for archived
 }
 
@@ -30,10 +35,9 @@ const EditPackagePage = () => {
   const [duration, setDuration] = useState<number | "">("");
   const [description, setDescription] = useState("");
   const [tags, setTags] = useState<string[]>([]);
-  const [coverImage, setCoverImage] = useState<string>("");
-  const [carouselImages, setCarouselImages] = useState<string[]>([]);
-
-  // package types (from DB)
+  const [coverImage, setCoverImage] = useState<string | undefined>("");
+  const [carouselImages, setCarouselImages] = useState<PackageImage[]>([]);
+  const [newFiles, setNewFiles] = useState<File[]>([]);
   const [packageTypes, setPackageTypes] = useState<PackageType[]>([]);
   const [typesLoading, setTypesLoading] = useState(false);
   const [typesError, setTypesError] = useState<string | null>(null);
@@ -51,8 +55,14 @@ const EditPackagePage = () => {
         setDuration(data.duration);
         setDescription(data.description);
         setTags(data.tags || []);
-        setCoverImage(data.images[0] || "");
-        setCarouselImages(data.images || []);
+        if (data.images && data.images.length > 0) {
+          setCoverImage(data.images[0].path); // show path
+          setCarouselImages(data.images);          // full array of objects
+        } else {
+          setCoverImage(undefined);
+          setCarouselImages([]);
+        }
+        console.log("Fetched package:", data);
       } catch (error) {
         console.error("Failed to fetch package:", error);
         setPkg(null);
@@ -67,10 +77,11 @@ const EditPackagePage = () => {
       setTypesLoading(true);
       setTypesError(null);
       try {
-        const res = await fetchWithAuth(`${API_URL}/api/package_types`);
+        const res = await fetchWithAuth(`${API_URL}/api/admin/package-types`);
         if (!res.ok) throw new Error(`Failed to fetch types: ${res.status}`);
         const data = await res.json();
-        setPackageTypes(Array.isArray(data) ? data : []);
+        setPackageTypes(data);
+        console.log("Fetched package types:", data);
       } catch (err) {
         console.error(err);
         setTypesError("Failed to load package types.");
@@ -85,29 +96,78 @@ const EditPackagePage = () => {
   const handleCarouselImageChange = (index: number, file: File) => {
     const reader = new FileReader();
     reader.onloadend = () => {
-      const updated = [...carouselImages];
-      updated[index] = reader.result as string;
-      setCarouselImages(updated);
+      setCarouselImages((prev) => {
+        const updated = [...prev];
+
+        if (updated[index] && updated[index].id) {
+          // Replace existing image but keep its ID
+          updated[index] = { ...updated[index], path: reader.result as string };
+        } 
+
+        return updated;
+      });
     };
     reader.readAsDataURL(file);
+
+    setNewFiles((prev) => {
+      const updatedFiles = [...prev];
+      updatedFiles[index] = file; // set the new file at the correct index
+      return updatedFiles;
+    });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const updatedPackage = {
-      ...pkg!,
-      title: title.trim(),
-      price: price === "" ? 0 : price,
-      duration,
-      description: description.trim(),
-      tags,
-      images: carouselImages,
-    };
 
-    console.log("Updated Package:", updatedPackage);
-    alert("Package updated successfully!");
-    navigate("/admin/packages");
+    const formData = new FormData();
+    formData.append("name", title.trim());
+    formData.append("price", price === "" ? "0" : String(price));
+    formData.append("duration", String(duration));
+    formData.append("description", description.trim());
+
+    tags.forEach((tag, idx) => {
+      formData.append(`tags[${idx}]`, tag);
+    });
+
+    newFiles.forEach((file, idx) => {
+      if (file) {
+        formData.append(`images[${idx}]`, file);
+
+        // send the matching imageID to
+        if (pkg?.images[idx]?.id) {
+          formData.append(`imageIDs[${idx}]`, String(pkg.images[idx].id));
+        }
+      }
+    });
+
+    try {
+      const response = await fetchWithAuth(
+        `${API_URL}/api/admin/update-package/${pkg?.id}`,
+        {
+          method: "POST",
+          body: formData,
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        console.error("Backend error:", result);
+        alert(`Failed to update package: ${result.message || "Unknown error"}`);
+        return;
+      }
+
+      console.log("Package updated:", result);
+      alert("Package updated successfully!");
+      navigate("/admin/packages");
+    } catch (error) {
+      console.error("Network error:", error);
+      alert("An error occurred while updating the package.");
+    }
   };
+
+
+
 
   if (!pkg) return <div className="p-4">Loading...</div>;
 
@@ -140,7 +200,7 @@ const EditPackagePage = () => {
                     }
                   >
                     <img
-                      src={img}
+                      src={img.path}
                       alt={`Image ${idx + 1}`}
                       className="w-30 h-25 object-cover rounded-md"
                     />
@@ -181,7 +241,7 @@ const EditPackagePage = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-bold">
-                Duration (minutes)*
+                Duration (minutes)
               </label>
               <input
                 type="number"
@@ -232,17 +292,17 @@ const EditPackagePage = () => {
 
           {/* Tags from package_types */}
           <div>
-            <label className="block text-sm font-medium">Package Types *</label>
+            <label className="block text-sm font-medium">Package Types</label>
             {typesLoading ? (
               <p className="text-xs text-gray-500 mt-1">Loading...</p>
             ) : typesError ? (
               <p className="text-xs text-red-500 mt-1">{typesError}</p>
             ) : (
               <div className="flex flex-wrap gap-2 mt-1">
-                {packageTypes.map((type) => (
+                {packageTypes.map((type,id) => (
                   <button
                     type="button"
-                    key={type.id}
+                    key={id}
                     onClick={() =>
                       setTags((prev) =>
                         prev.includes(type.name)

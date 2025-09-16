@@ -8,8 +8,11 @@ import {
   useInView,
 } from "framer-motion";
 import type { Variants } from "framer-motion";
-import InfiniteParallaxGallery from "../components/LandingGallery.tsx";
+import InfiniteParallaxGallery from "./Embed/LandingGallery.tsx";
 import TagEmbedWidget from "./Embed/TagEmbedWidget.tsx";
+import Map from "./Embed/map.tsx";
+import FAQDialog from "./FAQ.tsx";
+import TermsDialog from "./TermsDialog.tsx";
 
 const fadeUp: Variants = {
   hidden: { opacity: 0, y: 24 },
@@ -23,6 +26,11 @@ const staggerContainer: Variants = {
 
 export default function HomePage(): React.JSX.Element {
   const pageRef = useRef<HTMLDivElement | null>(null);
+
+  // Add this
+  const [] = useState(false);
+  const [openFAQ, setOpenFAQ] = useState(false);
+  const [openTerms, setOpenTerms] = useState(false);
 
   // Hero parallax
   const { scrollYProgress } = useScroll({ target: pageRef });
@@ -116,58 +124,40 @@ export default function HomePage(): React.JSX.Element {
     <div ref={pageRef} className="text-gray-800 w-full">
       {/* ---------- NAVBAR ---------- */}
       <header
-        className={`fixed top-0 left-0 w-full z-50 backdrop-blur-sm transition-transform duration-300 ${
+        className={`fixed top-0 left-0 w-full z-50 backdrop-blur-md transition-transform duration-300 ${
           showHeader
             ? "translate-y-0 shadow-md bg-white/70"
             : "-translate-y-full"
         }`}
       >
         <div className="max-w-7xl mx-auto flex items-center justify-between p-4">
+          {/* Logo */}
           <div className="flex items-center gap-4">
             <img src="/slfg.svg" alt="logo" className="w-10 h-10" />
-
             <div className="text-sm font-bold tracking-wider text-gray-700">
               SELFIEGRAM PHOTOSTUDIOS MALOLOS
             </div>
           </div>
 
+          {/* Desktop navigation */}
           <nav className="hidden md:flex gap-8 items-center text-sm">
-            <button
-              onClick={() => scrollToSection("home")}
-              className="uppercase tracking-widest text-gray-700 transition-all duration-300 hover:text-black hover:-translate-y-0.5"
-              aria-label="Go to Home"
-            >
-              Home
-            </button>
-            <button
-              onClick={() => scrollToSection("services")}
-              className="uppercase tracking-widest text-gray-700 transition-all duration-300 hover:text-black hover:-translate-y-0.5"
-              aria-label="Go to Services"
-            >
-              Services
-            </button>
-            <button
-              onClick={() => scrollToSection("gallery")}
-              className="uppercase tracking-widest text-gray-700 transition-all duration-300 hover:text-black hover:-translate-y-0.5"
-              aria-label="Go to Gallery"
-            >
-              Gallery
-            </button>
-            <button
-              onClick={() => scrollToSection("contacts")}
-              className="uppercase tracking-widest text-gray-700 transition-all duration-300 hover:text-black hover:-translate-y-0.5"
-              aria-label="Go to Contacts"
-            >
-              Contacts
-            </button>
+            {["home", "services", "gallery", "contacts"].map((section) => (
+              <button
+                key={section}
+                onClick={() => scrollToSection(section)}
+                className="uppercase tracking-widest text-gray-700 transition-all duration-300 hover:text-black hover:-translate-y-0.5 hover:underline"
+                aria-label={`Go to ${section}`}
+              >
+                {section.charAt(0).toUpperCase() + section.slice(1)}
+              </button>
+            ))}
           </nav>
 
+          {/* Desktop Sign In */}
           <div className="hidden md:flex items-center gap-4">
             <button
-              className="px-4 py-2 rounded-full bg-black text-white text-sm font-medium hover:scale-[1.02] transform transition shadow-sm hover:shadow-lg"
-              onClick={() => {
-                window.location.href = "/login";
-              }}
+              className="px-4 py-2 rounded-full bg-black text-white text-sm font-medium transition-all duration-300 hover:scale-105 hover:shadow-lg"
+              onClick={() => (window.location.href = "/login")}
               aria-label="Sign In"
             >
               Sign In
@@ -178,7 +168,7 @@ export default function HomePage(): React.JSX.Element {
           <div className="md:hidden">
             <button
               onClick={() => setMobileMenuOpen((s) => !s)}
-              className="w-10 h-10 rounded-md border border-gray-200 bg-white text-gray-800"
+              className="w-10 h-10 rounded-md border border-gray-200 bg-white text-gray-800 transition-all duration-300 hover:shadow-md"
               aria-label="Toggle menu"
             >
               ☰
@@ -195,24 +185,19 @@ export default function HomePage(): React.JSX.Element {
               exit={{ opacity: 0, y: -10 }}
               className="md:hidden bg-white shadow-lg px-6 py-4 space-y-3"
             >
-              {[
-                { id: "home", label: "Home" },
-                { id: "services", label: "Services" },
-                { id: "gallery", label: "Gallery" },
-                { id: "contacts", label: "Contacts" },
-              ].map((item) => (
+              {["home", "services", "gallery", "contacts"].map((section) => (
                 <button
-                  key={item.id}
-                  onClick={() => scrollToSection(item.id)}
-                  className="block w-full text-left uppercase tracking-widest text-gray-700 hover:text-black"
+                  key={section}
+                  onClick={() => scrollToSection(section)}
+                  className="block w-full text-left uppercase tracking-widest text-gray-700 transition-all duration-300 hover:text-black hover:underline"
                 >
-                  {item.label}
+                  {section.charAt(0).toUpperCase() + section.slice(1)}
                 </button>
               ))}
 
               <button
                 onClick={() => (window.location.href = "/login")}
-                className="block w-full px-4 py-2 rounded-full bg-black text-white text-sm font-medium"
+                className="block w-full px-4 py-2 rounded-full bg-black text-white text-sm font-medium transition-all duration-300 hover:scale-105 hover:shadow-lg"
               >
                 Sign In
               </button>
@@ -222,7 +207,7 @@ export default function HomePage(): React.JSX.Element {
       </header>
 
       {/* ---------- HERO ---------- */}
-      <main className="pt-10 w-full min-h-screen">
+      <main className="pt-10 w-full min-h-screen snap-start">
         <section
           id="home"
           className="scroll-mt-32 min-h-screen relative w-full overflow-hidden bg-gradient-to-b from-white to-gray-200 max-w-[100vw]"
@@ -354,24 +339,24 @@ export default function HomePage(): React.JSX.Element {
           </div>
         </section>
 
-        {/* ---------- STORY + VISION + PLACEHOLDER ---------- */}
-        <section className="bg-white">
+        {/* ---------- STORY + VISION ---------- */}
+        <section className="bg-white snap-start">
           <div className="bg-gray-200 w-full rounded-b-[5rem]">
-            <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-20 pb-20">
-              <div className="grid gap-8 lg:grid-cols-2 lg:grid-rows-2 lg:gap-6">
-                {/* Story card (1) */}
+            <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-20 pb-16">
+              <div className="grid gap-6 lg:gap-6">
+                {/* Story card */}
                 <motion.div
                   initial="hidden"
                   whileInView="show"
                   viewport={{ once: true, amount: 0.25 }}
                   variants={staggerContainer}
-                  className="bg-white rounded-2xl shadow-lg p-8 flex flex-col lg:flex-row gap-4 lg:col-start-1  lg:row-start-1"
+                  className="bg-white rounded-2xl shadow-lg p-6 flex flex-col lg:flex-row gap-4"
                 >
                   {/* Text */}
                   <div className="flex-1 flex flex-col justify-center">
                     <motion.h3
                       variants={fadeUp}
-                      className="text-2xl font-bold mb-3"
+                      className="text-xl lg:text-2xl font-bold mb-3"
                     >
                       Our Story
                     </motion.h3>
@@ -395,24 +380,24 @@ export default function HomePage(): React.JSX.Element {
                     <img
                       src="/storage/packages/studiorental/studio3.jpg"
                       alt="story-main"
-                      className="rounded-xl shadow-xl w-full max-w-[360px]"
+                      className="rounded-xl shadow-xl w-full max-w-[280px]"
                     />
                   </motion.div>
                 </motion.div>
 
-                {/* Vision card (2) */}
+                {/* Vision card */}
                 <motion.div
                   initial="hidden"
                   whileInView="show"
                   viewport={{ once: true, amount: 0.25 }}
                   variants={staggerContainer}
-                  className="bg-white rounded-2xl shadow-lg p-8 flex flex-col lg:flex-row-reverse gap-4 lg:col-start-1 lg:row-start-2"
+                  className="bg-white rounded-2xl shadow-lg p-6 flex flex-col lg:flex-row-reverse gap-4"
                 >
                   {/* Text */}
                   <div className="flex-1 flex flex-col justify-center">
                     <motion.h3
                       variants={fadeUp}
-                      className="text-2xl font-bold mb-3"
+                      className="text-xl lg:text-2xl font-bold mb-3"
                     >
                       Our Vision
                     </motion.h3>
@@ -437,37 +422,8 @@ export default function HomePage(): React.JSX.Element {
                     <img
                       src="/storage/packages/studiorental/studio2.jpg"
                       alt="vision-main"
-                      className="rounded-xl shadow-xl w-full max-w-[360px]"
+                      className="rounded-xl shadow-xl w-full max-w-[280px]"
                     />
-                  </motion.div>
-                </motion.div>
-
-                {/* Placeholder card (3) spanning 2 rows */}
-                <motion.div
-                  initial="hidden"
-                  whileInView="show"
-                  viewport={{ once: true, amount: 0.25 }}
-                  variants={staggerContainer}
-                  className="bg-white rounded-2xl shadow-lg p-8 lg:col-start-2 lg:col-span-2 lg:row-start-1 lg:row-span-2 flex flex-col items-center justify-start gap-4"
-                >
-                  {/* Header */}
-                  <motion.div
-                    className="w-full flex justify-center"
-                    variants={fadeUp}
-                  >
-                    <motion.h3
-                      variants={fadeUp}
-                      className="text-2xl font-bold mb-4"
-                    >
-                      Announcements
-                    </motion.h3>
-                  </motion.div>
-
-                  <motion.div
-                    className="w-full max-w-[700px] max-h-[700px] overflow-y-auto"
-                    variants={fadeUp}
-                  >
-                    <TagEmbedWidget height={700} />
                   </motion.div>
                 </motion.div>
               </div>
@@ -478,47 +434,42 @@ export default function HomePage(): React.JSX.Element {
         {/* ---------- SERVICES ---------- */}
         <section
           id="services"
-          className="relative scroll-mt-32 min-h-screen py-14 overflow-hidden px-5"
+          className="relative scroll-mt-32 py-10 overflow-hidden px-5 mb-20 snap-start"
         >
-          {/* Background scattered static polaroids (full width) */}
+          {/* Background scattered polaroids */}
           <div className="absolute inset-0 w-full h-full z-0 pointer-events-none">
-            {[
-              {
-                src: "/slfg-placeholder-1.png",
-                left: "5%",
-                top: "40%",
-                size: "w-48",
-                rotate: "-12deg",
-              },
-              {
-                src: "/storage/packages/selfiefortwo/stwo3.png",
-                left: "20%",
-                top: "40%",
-                size: "w-54",
-                rotate: "8deg",
-              },
-              {
-                src: "/storage/packages/conceptstudio/cstudio3.jpg",
-                left: "55%",
-                top: "15%",
-                size: "w-60",
-                rotate: "-6deg",
-              },
-              {
-                src: "/storage/packages/selfiefortwo/stwo5.png",
-                left: "70%",
-                top: "55%",
-                size: "w-40",
-                rotate: "46deg",
-              },
-              {
-                src: "/storage/packages/studiorental/studio2.jpg",
-                left: "85%",
-                top: "25%",
-                size: "w-28",
-                rotate: "-10deg",
-              },
-            ].map((img, i) => (
+            {(
+              [
+                // Example polaroid images, replace/add as needed
+                {
+                  src: "/storage/packages/selfiefortwo/stwo1.png",
+                  size: "w-32 h-32",
+                  left: "10%",
+                  top: "20%",
+                  rotate: "-8deg",
+                },
+                {
+                  src: "/storage/packages/selfiefortwo/stwo2.png",
+                  size: "w-28 h-28",
+                  left: "60%",
+                  top: "10%",
+                  rotate: "12deg",
+                },
+                {
+                  src: "/storage/packages/conceptstudio/cstudio2.jpg",
+                  size: "w-36 h-36",
+                  left: "80%",
+                  top: "50%",
+                  rotate: "-6deg",
+                },
+              ] as {
+                src: string;
+                size: string;
+                left: string;
+                top: string;
+                rotate: string;
+              }[]
+            ).map((img, i) => (
               <img
                 key={i}
                 src={img.src}
@@ -533,22 +484,21 @@ export default function HomePage(): React.JSX.Element {
             ))}
           </div>
 
-          {/* Foreground content (aligned with max width) */}
           <div className="relative z-10 max-w-7xl mx-auto px-6 lg:px-20">
-            <div className="text-center mb-10">
+            <div className="text-center mb-8">
               <h3 className="text-3xl font-bold">Our Services</h3>
             </div>
 
-            <div className="grid lg:grid-cols-2 gap-8 items-center">
+            <div className="grid lg:grid-cols-2 gap-6 items-center">
               {/* Left: layered floating images */}
-              <div className="relative h-96 flex items-center justify-center">
+              <div className="relative h-80 flex items-center justify-center">
                 <motion.img
                   src="/storage/packages/selfiefortwo/stwo3.png"
                   alt="svc-1"
                   initial={{ rotate: -8, y: 40, opacity: 0 }}
                   whileInView={{ rotate: -8, y: 0, opacity: 1 }}
                   transition={{ duration: 0.7 }}
-                  className="absolute w-64 rounded-lg shadow-2xl"
+                  className="absolute w-48 rounded-lg shadow-2xl"
                   style={{ left: "-10%", top: "12%" }}
                 />
                 <motion.img
@@ -557,7 +507,7 @@ export default function HomePage(): React.JSX.Element {
                   initial={{ rotate: 6, y: 40, opacity: 0 }}
                   whileInView={{ rotate: 6, y: 0, opacity: 1 }}
                   transition={{ duration: 0.8, delay: 0.1 }}
-                  className="absolute w-64 rounded-lg shadow-2xl"
+                  className="absolute w-48 rounded-lg shadow-2xl z-40"
                   style={{ left: "20%", top: "39%" }}
                 />
                 <motion.img
@@ -566,17 +516,17 @@ export default function HomePage(): React.JSX.Element {
                   initial={{ rotate: -2, y: 50, opacity: 0 }}
                   whileInView={{ rotate: -2, y: 0, opacity: 1 }}
                   transition={{ duration: 0.9, delay: 0.18 }}
-                  className="absolute w-56 rounded-lg shadow-2xl"
+                  className="absolute w-44 rounded-lg shadow-2xl"
                   style={{ left: "55%", top: "3%" }}
                 />
               </div>
 
               {/* Right: text blocks */}
-              <div className="space-y-6">
+              <div className="space-y-4">
                 <motion.h4
                   initial={{ opacity: 0, y: 16 }}
                   whileInView={{ opacity: 1, y: 0 }}
-                  className="text-xl font-bold"
+                  className="text-lg font-bold"
                 >
                   Tailored Photography Options
                 </motion.h4>
@@ -593,7 +543,7 @@ export default function HomePage(): React.JSX.Element {
                 <motion.h4
                   initial={{ opacity: 0, y: 16 }}
                   whileInView={{ opacity: 1, y: 0 }}
-                  className="text-xl font-bold mt-4"
+                  className="text-lg font-bold mt-2"
                 >
                   Self-Shoot Sessions
                 </motion.h4>
@@ -610,7 +560,7 @@ export default function HomePage(): React.JSX.Element {
                 <motion.h4
                   initial={{ opacity: 0, y: 16 }}
                   whileInView={{ opacity: 1, y: 0 }}
-                  className="text-xl font-bold mt-4"
+                  className="text-lg font-bold mt-2"
                 >
                   Professional Photographer Sessions
                 </motion.h4>
@@ -628,11 +578,11 @@ export default function HomePage(): React.JSX.Element {
         </section>
 
         {/* ---------- CONCEPT STUDIO (DRAG CAROUSEL) ---------- */}
-        <section id="studio" className="bg-white">
-          <div className=" max-w-7xl mx-auto px-6 lg:px-20">
-            <div className="text-center mb-8">
+        <section id="studio" className="bg-white mb-20 snap-start">
+          <div className="max-w-7xl mx-auto px-6 lg:px-20">
+            <div className="text-center mb-6">
               <h3 className="text-3xl font-bold">Our Concept Studio</h3>
-              <p className="text-gray-600 max-w-2xl mx-auto mt-3">
+              <p className="text-gray-600 max-w-2xl mx-auto mt-2">
                 We offer a wide variety of themed studio booths designed to
                 inspire creativity and suit each client's unique style.
               </p>
@@ -645,22 +595,22 @@ export default function HomePage(): React.JSX.Element {
                   ref={carouselRef as any}
                   drag="x"
                   dragConstraints={{ left: carouselWidth, right: 0 }}
-                  className="flex gap-6 px-6 items-center"
+                  className="flex gap-4 px-4 items-center"
                   whileTap={{ cursor: "grabbing" }}
                 >
                   {Array.from({ length: 6 }).map((_, i) => (
                     <motion.div
                       key={i}
-                      className="min-w-[320px] md:min-w-[420px] rounded-lg overflow-hidden bg-gray-200 "
+                      className="min-w-[320px] md:min-w-[360px] rounded-lg overflow-hidden bg-gray-200"
                       whileHover={{ scale: 1.02 }}
                       transition={{ duration: 0.2 }}
                     >
                       <img
                         src="/slfg-placeholder.png"
                         alt={`studio-${i}`}
-                        className="w-full h-full object-cover"
+                        className="w-full h-48 md:h-60 object-cover"
                       />
-                      <div className="p-4 text-sm text-gray-700">
+                      <div className="p-3 text-sm text-gray-700">
                         Studio Theme {i + 1}
                       </div>
                     </motion.div>
@@ -672,76 +622,148 @@ export default function HomePage(): React.JSX.Element {
         </section>
 
         {/* ---------- PHOTO GALLERY ---------- */}
-        <section id="gallery" className="mt-10 min-h-screen mx-auto">
-          <h3 className="text-3xl text-center font-bold -mb-20 md:-mb-2">
+        <section
+          id="gallery"
+          className="mt-6 mb-10 min-h-[80vh] mx-auto snap-start"
+        >
+          <h3 className="text-3xl text-center font-bold mb-8 md:mb-4">
             Photo Gallery
           </h3>
 
           <InfiniteParallaxGallery />
         </section>
 
+        {/* ---------- ANNOUNCEMENTS (TAGEMBED) ---------- */}
+        <section
+          id="announcements"
+          className="py-6 bg-white overflow-visible snap-start"
+        >
+          {/* Heading stays centered */}
+          <div className="text-center mb-6 px-6 lg:px-20">
+            <h3 className="text-3xl font-bold">Announcements</h3>
+            <p className="text-gray-600 mt-3">
+              Stay updated with our latest news, promotions, and events.
+            </p>
+          </div>
+
+          {/* Embed loads naturally, centered */}
+          <motion.div
+            initial="hidden"
+            whileInView="show"
+            viewport={{ once: true, amount: 0.8 }}
+            variants={staggerContainer}
+            className="flex justify-center p-5 w-full max-w-6xl mx-auto overflow-y-hidden"
+          >
+            <TagEmbedWidget height={500} />
+          </motion.div>
+        </section>
+
+        {/* ---------- LOCATION ---------- */}
+        <section
+          id="location"
+          className="relative scroll-mt-32 py-14 snap-start"
+        >
+          <div className="max-w-7xl mx-auto px-6 lg:px-20">
+            <div className="text-center mb-10">
+              <h3 className="text-3xl font-bold">Our Location</h3>
+              <p className="text-gray-600 mt-3">
+                Visit us at our main studio in Malolos, Bulacan.
+              </p>
+            </div>
+
+            {/* Map */}
+            <Map />
+          </div>
+        </section>
+
         {/* ---------- FOOTER ---------- */}
         <footer id="contacts" className="mt-10 bg-[#212121] text-gray-200">
-          <div className="max-w-7xl mx-auto px-6 lg:px-20 py-12 grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="max-w-7xl mx-auto px-6 lg:px-20 py-12 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
             {/* Branding */}
-            <div>
-              <div className="text-2xl font-bold text-white">SelfieGram</div>
-              <p className="text-gray-400 mt-3">
-                © {new Date().getFullYear()} SelfieGram. All rights reserved.
+            <div className="flex flex-col items-start">
+              <h4 className="text-2xl font-bold text-white">SelfieGram</h4>
+              <p className="text-gray-400 mt-2">
+                © 2022 SelfieGram. All rights reserved.
               </p>
             </div>
 
             {/* Navigation */}
-            <div className="text-sm text-gray-300">
-              <div className="font-semibold mb-3">Information</div>
-              <div className="space-y-2">
-                <button
-                  onClick={() => scrollToSection("home")}
-                  className="block uppercase tracking-widest hover:text-white transition-colors"
-                >
-                  Home
-                </button>
-                <button
-                  onClick={() => scrollToSection("gallery")}
-                  className="block uppercase tracking-widest hover:text-white transition-colors"
-                >
-                  Gallery
-                </button>
-                <button
-                  onClick={() => scrollToSection("contacts")}
-                  className="block uppercase tracking-widest hover:text-white transition-colors"
-                >
-                  Contacts
-                </button>
+            <div className="flex flex-col">
+              <h5 className="font-semibold mb-3 text-gray-300">Navigation</h5>
+              <div className="flex flex-col gap-2">
+                {[
+                  "home",
+                  "services",
+                  "gallery",
+                  "studio",
+                  "location",
+                  "contacts",
+                ].map((section) => (
+                  <button
+                    key={section}
+                    onClick={() => scrollToSection(section)}
+                    className="text-gray-400 hover:text-white transition-all duration-300 hover:underline tracking-wide text-sm text-left "
+                  >
+                    {section.charAt(0).toUpperCase() + section.slice(1)}
+                  </button>
+                ))}
               </div>
             </div>
 
-            {/* Contact Info */}
-            <div className="text-sm text-gray-300">
-              <div className="font-semibold mb-3">Contacts</div>
-              <div className="space-y-2 text-gray-400">
-                <div>
+            {/* Resources & Contact Info */}
+            <div className="flex flex-col">
+              <h5 className="font-semibold mb-3 text-gray-300">Resources</h5>
+              <div className="flex flex-col gap-2 text-gray-300 text-sm">
+                <button
+                  onClick={() => setOpenFAQ(true)}
+                  className="hover:text-white text-left transition-all duration-300 hover:underline"
+                >
+                  FAQs
+                </button>
+
+                <button
+                  onClick={() => setOpenTerms(true)}
+                  className="hover:text-white text-left transition-all duration-300 hover:underline"
+                >
+                  Terms & Agreements
+                </button>
+              </div>
+
+              <h5 className="font-semibold mt-6 mb-3 text-gray-300">Contact</h5>
+              <div className="flex flex-col gap-2 text-gray-400 text-sm">
+                <span>
                   3rd Floor Kim Kor Building F Estrella St., Malolos,
                   Philippines
-                </div>
-                <div>
-                  <a href="tel:+639988556035" className="hover:text-white">
-                    +63 998 855 6035
-                  </a>
-                </div>
-                <div>
-                  <a
-                    href="mailto:selfiegrammalolos@gmail.com"
-                    className="hover:text-white"
-                  >
-                    selfiegrammalolos@gmail.com
-                  </a>
-                </div>
+                </span>
+                <a href="tel:+639988556035" className="hover:text-white">
+                  +63 998 855 6035
+                </a>
+                <a
+                  href="mailto:selfiegrammalolos@gmail.com"
+                  className="hover:text-white"
+                >
+                  selfiegrammalolos@gmail.com
+                </a>
               </div>
             </div>
           </div>
         </footer>
       </main>
+      {openFAQ && (
+        <div className="fixed inset-0 z-1000 bg-black/50 flex items-center justify-center">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl overflow-hidden relative">
+            <FAQDialog onClose={() => setOpenFAQ(false)} />
+          </div>
+        </div>
+      )}
+
+      {openTerms && (
+        <div className="fixed inset-0 z-1000 bg-black/50 flex items-center justify-center">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl overflow-hidden relative">
+            <TermsDialog onClose={() => setOpenTerms(false)} />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

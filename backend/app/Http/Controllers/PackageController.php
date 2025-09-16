@@ -3,9 +3,10 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+
 class PackageController extends Controller
 {
-    // 📦 Get all packages
+    //Get all packages
     public function index()
     {
         $raw = DB::table('packages')
@@ -41,7 +42,7 @@ class PackageController extends Controller
         return response()->json($packages);
     }
 
-    // 📦 Get a single package by ID
+    //Get a single package by ID
     public function show($id)
     {
         $raw = DB::table('packages')
@@ -88,6 +89,7 @@ class PackageController extends Controller
             ->select(
                 'packages.packageID as id',
                 'packages.name as title',
+                'packages.duration as duration',
                 'packages.price',
                 'package_images.imagePath',
                 'package_types.typeName as tag',
@@ -103,7 +105,7 @@ class PackageController extends Controller
             return [
                 'id' => $id,
                 'title' => $first->title,
-                
+                'duration' => (int) $first->duration,
                 'price' => (float) $first->price,
                 'images' => $items->pluck('imagePath')->filter()->unique()->map(fn($path) => url($path))->values(),
                 'tags' => $items->pluck('tag')->filter()->unique()->values(),
@@ -114,7 +116,7 @@ class PackageController extends Controller
         return response()->json($packages);
     }
 
-    public function adminShow($id)
+   public function adminShow($id)
     {
         $raw = DB::table('packages')
             ->where('packages.status', 1)
@@ -125,8 +127,10 @@ class PackageController extends Controller
             ->select(
                 'packages.packageID as id',
                 'packages.name as title',
+                'packages.duration as duration',
                 'packages.price',
                 'packages.description',
+                'package_images.imageID',
                 'package_images.imagePath',
                 'package_types.typeName as tag',
                 'packages.status'
@@ -142,16 +146,49 @@ class PackageController extends Controller
         $package = [
             'id' => $first->id,
             'title' => $first->title,
+            'duration' => (int) $first->duration,
             'price' => (float) $first->price,
             'description' => $first->description,
-            'images' => $raw->pluck('imagePath')->filter()->unique()->map(fn($path) => url($path))->values(),
+            'images' => $raw
+                ->filter(fn($row) => $row->imagePath) // only keep rows with image
+                ->map(fn($row) => [
+                    'id' => $row->imageID,
+                    'path' => url($row->imagePath), // full URL for frontend display
+                ])
+                ->unique('id')
+                ->values(),
             'tags' => $raw->pluck('tag')->filter()->unique()->values(),
-            'status' => $first->status
+            'status' => $first->status,
         ];
 
         return response()->json($package);
     }
 
+    public function packageType()
+    {
+        $raw = DB::table('package_types')
+            ->select('typeID as id', 'typeName as name')
+            ->get();
+
+        if ($raw->isEmpty()) {
+            return response()->json(['message' => 'Package not found'], 404);
+        }
+
+        $first = $raw->first();
+
+        $grouped = $raw->groupBy('id');
+
+        $package = $grouped->map(function ($items, $id) {
+            $first = $items->first();
+
+            return [
+                'id' => $first->id,
+                'name' => $first->name,
+            ];
+        })->values();
+
+        return response()->json($package);
+    }
 
     public function archivePackage($id)
     {
@@ -181,6 +218,84 @@ class PackageController extends Controller
             return response()->json(['message' => 'Package not found or no change made'], 404);
         }
     }
+
+    public function updatePackage(Request $request, $id)
+    {
+        $exists = DB::table('packages')->where('packageID', $id)->exists();
+        if (!$exists) {
+            return response()->json(['message' => 'Package not found'], 404);
+        }
+
+        DB::beginTransaction();
+
+        try {
+            $packageData = $request->only(['name', 'duration', 'price', 'description']);
+            DB::table('packages')->where('packageID', $id)->update($packageData);
+
+            // handle images
+            if ($request->hasFile('images')) {
+                $packageName = DB::table('packages')->where('packageID', $id)->value('name');
+                $safeName = preg_replace('/[^A-Za-z0-9_\- ]/', '_', $packageName); // sanitize folder
+                $folder = public_path("storage/packages/{$safeName}");
+
+                // Create folder if it doesn't exist
+                if (!file_exists($folder)) {
+                    mkdir($folder, 0777, true);
+                }
+
+                // Loop files with index
+                foreach ($request->file('images') as $index => $file) {
+                    $filename = time() . '_' . $file->getClientOriginalName();
+                    $file->move($folder, $filename);
+
+                    // Check if frontend sent an imageID for this file
+                    $imageId = $request->input("imageIDs.$index");
+
+                    if ($imageId) {
+                        // Replace existing image
+                        DB::table('package_images')
+                            ->where('imageID', $imageId)
+                            ->update([
+                                'imagePath' => "storage/packages/{$safeName}/{$filename}",
+                            ]);
+                    } 
+                }
+            }
+
+            // Handle tag/type mapping (frontend sends names)
+            $tags = $request->input('tags', []);
+
+            DB::table('package_type_mapping')->where('packageID', $id)->delete();
+
+            $insertData = [];
+            foreach ($tags as $tagName) {
+                $typeID = DB::table('package_types')
+                    ->where('typeName', $tagName)
+                    ->value('typeID');
+
+                if ($typeID) {
+                    $insertData[] = [
+                        'packageID' => $id,
+                        'typeID' => $typeID,
+                    ];
+                }
+            }
+
+            if (!empty($insertData)) {
+                DB::table('package_type_mapping')->insert($insertData);
+            }
+
+            DB::commit();
+            return response()->json(['message' => 'Package updated successfully']);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'message' => 'Error updating package',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
     public function getPackageSetAndConcepts($id)
         {
             // 1. Get the setID for the package

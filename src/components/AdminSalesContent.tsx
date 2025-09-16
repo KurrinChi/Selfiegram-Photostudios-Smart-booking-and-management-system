@@ -100,11 +100,11 @@ const AdminSalesContent: React.FC = () => {
         s.package.toLowerCase().includes(search.toLowerCase());
 
       const matchesStatus =
-        statusFilter === "Booking Status: All" ||
+        statusFilter === "All" ||
         s.paymentStatus === statusFilter;
 
       const matchesPackage =
-        packageFilter === "Package: All" || s.package === packageFilter;
+        packageFilter === "All" || s.package === packageFilter;
 
       const saleDate = parse(s.transactionDate, "yyyy-MM-dd", new Date());
       const matchesDate = isWithinInterval(saleDate, {
@@ -274,25 +274,27 @@ const AdminSalesContent: React.FC = () => {
                 className="overflow-hidden"
               >
                 <div className="mt-2 space-y-2 sm:mt-0 sm:space-y-0 sm:flex sm:items-center sm:gap-3">
+                  Booking Status:
                   {/* Status Filter */}
                   <select
                     value={statusFilter}
                     onChange={(e) => setStatusFilter(e.target.value)}
                     className="px-2 py-2 border rounded-md w-full sm:w-auto"
                   >
-                    <option>Booking Status: All</option>
+                    <option>All</option>
                     <option>Completed</option>
                     <option>Pending</option>
                     <option>Cancelled</option>
                   </select>
 
                   {/* Package Filter */}
+                  Package: 
                   <select
                     value={packageFilter}
                     onChange={(e) => setPackageFilter(e.target.value)}
                     className="px-2 py-2 border rounded-md w-full sm:w-auto"
                   >
-                    <option>Package: All</option>
+                    <option>All</option>
                     {packages.map((p) => (
                       <option key={p}>{p}</option>
                     ))}
