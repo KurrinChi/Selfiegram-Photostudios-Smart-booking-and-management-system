@@ -1,6 +1,14 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Paperclip, X } from "lucide-react";
+import { fetchWithAuth } from "../../utils/fetchWithAuth";
+
+const API_URL = import.meta.env.VITE_API_URL;
+
+interface PackageType {
+  id: string | number;
+  name: string;
+}
 
 const AddPackagePage = () => {
   const navigate = useNavigate();
@@ -13,12 +21,31 @@ const AddPackagePage = () => {
   const [carouselImages, setCarouselImages] = useState<string[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const availableTags = [
-    { id: "", label: "Wedding", color: "bg-pink-100" },
-    { id: "birthday", label: "Birthday", color: "bg-blue-100" },
-    { id: "corporate", label: "Corporate", color: "bg-green-100" },
-    { id: "outdoor", label: "Outdoor", color: "bg-yellow-100" },
-  ];
+  // Package types from backend
+  const [packageTypes, setPackageTypes] = useState<PackageType[]>([]);
+  const [typesLoading, setTypesLoading] = useState(false);
+  const [typesError, setTypesError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchTypes = async () => {
+      setTypesLoading(true);
+      setTypesError(null);
+      try {
+        const res = await fetchWithAuth(`${API_URL}/api/admin/package-types`);
+        if (!res.ok) throw new Error(`Failed to fetch types: ${res.status}`);
+        const data = await res.json();
+        setPackageTypes(data);
+        console.log("Fetched package types:", data);
+      } catch (err) {
+        console.error(err);
+        setTypesError("Failed to load package types.");
+      } finally {
+        setTypesLoading(false);
+      }
+    };
+
+    fetchTypes();
+  }, []);
 
   const handleCoverImageChange = (file: File) => {
     const reader = new FileReader();
@@ -262,24 +289,33 @@ const AddPackagePage = () => {
             )}
           </div>
 
-          {/* Tags Checklist */}
           <div className="md:col-span-2">
-            <label className="block text-sm font-medium mb-2">Tags</label>
-            <div className="flex flex-wrap gap-3">
-              {availableTags.map((tag) => (
-                <label
-                  key={tag.id}
-                  className={`flex items-center gap-2 px-3 py-1 border rounded-full cursor-pointer text-sm ${tag.color}`}
-                >
-                  <input
-                    type="checkbox"
-                    checked={tags.includes(tag.label)}
-                    onChange={() => toggleTag(tag.label)}
-                  />
-                  {tag.label}
-                </label>
-              ))}
-            </div>
+            <label className="block text-sm font-medium mb-2">Package Types</label>
+            {typesLoading ? (
+              <p className="text-xs text-gray-500 mt-1">Loading...</p>
+            ) : typesError ? (
+              <p className="text-xs text-red-500 mt-1">{typesError}</p>
+            ) : (
+              <div className="flex flex-wrap gap-2 mt-1">
+                {packageTypes.map((type) => (
+                  <button
+                    type="button"
+                    key={type.id}
+                    onClick={() =>
+                      toggleTag(type.name)
+                    }
+                    className={`px-3 py-1 rounded-md text-sm border transition-all duration-200
+                      ${
+                        tags.includes(type.name)
+                          ? "bg-[#212121] text-white border-[#212121]"
+                          : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"
+                      }`}
+                  >
+                    {type.name}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Actions */}

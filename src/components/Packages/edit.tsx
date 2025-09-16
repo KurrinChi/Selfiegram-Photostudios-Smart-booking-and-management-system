@@ -2,6 +2,11 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import { fetchWithAuth } from "../../utils/fetchWithAuth";
 
+interface PackageImage {
+  id: number;
+  path: string;
+}
+
 interface Package {
   id: string;
   title: string;
@@ -9,7 +14,7 @@ interface Package {
   duration: number;
   description: string;
   tags: string[];
-  images: string[];
+  images: PackageImage[];
   status: number; // 1 for active, 0 for archived
 }
 
@@ -30,10 +35,9 @@ const EditPackagePage = () => {
   const [duration, setDuration] = useState<number | "">("");
   const [description, setDescription] = useState("");
   const [tags, setTags] = useState<string[]>([]);
-  const [coverImage, setCoverImage] = useState<string>("");
-  const [carouselImages, setCarouselImages] = useState<string[]>([]);
-
-  // package types (from DB)
+  const [coverImage, setCoverImage] = useState<string | undefined>("");
+  const [carouselImages, setCarouselImages] = useState<PackageImage[]>([]);
+  const [newFiles, setNewFiles] = useState<File[]>([]);
   const [packageTypes, setPackageTypes] = useState<PackageType[]>([]);
   const [typesLoading, setTypesLoading] = useState(false);
   const [typesError, setTypesError] = useState<string | null>(null);
@@ -51,8 +55,13 @@ const EditPackagePage = () => {
         setDuration(data.duration);
         setDescription(data.description);
         setTags(data.tags || []);
-        setCoverImage(data.images[0] || "");
-        setCarouselImages(data.images || []);
+        if (data.images && data.images.length > 0) {
+          setCoverImage(data.images[0].path); // show path
+          setCarouselImages(data.images);          // full array of objects
+        } else {
+          setCoverImage(undefined);
+          setCarouselImages([]);
+        }
         console.log("Fetched package:", data);
       } catch (error) {
         console.error("Failed to fetch package:", error);
@@ -87,49 +96,77 @@ const EditPackagePage = () => {
   const handleCarouselImageChange = (index: number, file: File) => {
     const reader = new FileReader();
     reader.onloadend = () => {
-      const updated = [...carouselImages];
-      updated[index] = reader.result as string;
-      setCarouselImages(updated);
+      setCarouselImages((prev) => {
+        const updated = [...prev];
+
+        if (updated[index] && updated[index].id) {
+          // Replace existing image but keep its ID
+          updated[index] = { ...updated[index], path: reader.result as string };
+        } 
+
+        return updated;
+      });
     };
     reader.readAsDataURL(file);
+
+    setNewFiles((prev) => {
+      const updatedFiles = [...prev];
+      updatedFiles[index] = file; // set the new file at the correct index
+      return updatedFiles;
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
+    e.preventDefault();
 
-  const updatedPackage = {
-    name: title.trim(),
-    price: price === "" ? 0 : Number(price),
-    duration,
-    description: description.trim(),
-    images: carouselImages.map((url) => ({ imagePath: url })),
-    tags
-  };
+    const formData = new FormData();
+    formData.append("name", title.trim());
+    formData.append("price", price === "" ? "0" : String(price));
+    formData.append("duration", String(duration));
+    formData.append("description", description.trim());
 
-  try {
-    const response = await fetchWithAuth(`${API_URL}/api/admin/update-package/${pkg?.id}`, {
-      method: "PUT",
-      body: JSON.stringify(updatedPackage),
+    tags.forEach((tag, idx) => {
+      formData.append(`tags[${idx}]`, tag);
     });
 
-    const result = await response.json();
+    newFiles.forEach((file, idx) => {
+      if (file) {
+        formData.append(`images[${idx}]`, file);
 
-    if (!response.ok) {
-      console.error("Backend error:", result);
-      alert(`Failed to update package: ${result.message || 'Unknown error'}`);
-      return;
+        // send the matching imageID to
+        if (pkg?.images[idx]?.id) {
+          formData.append(`imageIDs[${idx}]`, String(pkg.images[idx].id));
+        }
+      }
+    });
+
+    try {
+      const response = await fetchWithAuth(
+        `${API_URL}/api/admin/update-package/${pkg?.id}`,
+        {
+          method: "POST",
+          body: formData,
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        console.error("Backend error:", result);
+        alert(`Failed to update package: ${result.message || "Unknown error"}`);
+        return;
+      }
+
+      console.log("Package updated:", result);
+      alert("Package updated successfully!");
+      navigate("/admin/packages");
+    } catch (error) {
+      console.error("Network error:", error);
+      alert("An error occurred while updating the package.");
     }
+  };
 
-    console.log("Success:", result);
-    console.log("Updated package:", updatedPackage);
-    alert("Package updated successfully!");
-    navigate("/admin/packages");
 
-  } catch (error) {
-    console.error("Network error:", error);
-    alert("An error occurred while updating the package.");
-  }
-};
 
 
   if (!pkg) return <div className="p-4">Loading...</div>;
@@ -163,7 +200,7 @@ const EditPackagePage = () => {
                     }
                   >
                     <img
-                      src={img}
+                      src={img.path}
                       alt={`Image ${idx + 1}`}
                       className="w-30 h-25 object-cover rounded-md"
                     />

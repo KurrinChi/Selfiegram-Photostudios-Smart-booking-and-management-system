@@ -114,7 +114,7 @@ class PackageController extends Controller
         return response()->json($packages);
     }
 
-    public function adminShow($id)
+   public function adminShow($id)
     {
         $raw = DB::table('packages')
             ->where('packages.status', 1)
@@ -128,6 +128,7 @@ class PackageController extends Controller
                 'packages.duration as duration',
                 'packages.price',
                 'packages.description',
+                'package_images.imageID',
                 'package_images.imagePath',
                 'package_types.typeName as tag',
                 'packages.status'
@@ -146,9 +147,16 @@ class PackageController extends Controller
             'duration' => (int) $first->duration,
             'price' => (float) $first->price,
             'description' => $first->description,
-            'images' => $raw->pluck('imagePath')->filter()->unique()->map(fn($path) => url($path))->values(),
+            'images' => $raw
+                ->filter(fn($row) => $row->imagePath) // only keep rows with image
+                ->map(fn($row) => [
+                    'id' => $row->imageID,
+                    'path' => url($row->imagePath), // full URL for frontend display
+                ])
+                ->unique('id')
+                ->values(),
             'tags' => $raw->pluck('tag')->filter()->unique()->values(),
-            'status' => $first->status
+            'status' => $first->status,
         ];
 
         return response()->json($package);
@@ -222,25 +230,35 @@ class PackageController extends Controller
             $packageData = $request->only(['name', 'duration', 'price', 'description']);
             DB::table('packages')->where('packageID', $id)->update($packageData);
 
-            // Handle images
-            // $images = $request->input('images', []);
-            // if (is_array($images)) {
-            //     foreach ($images as $image) {
-            //         if (isset($image['id'])) {
-            //             $existing = DB::table('package_images')
-            //                 ->where('imageID', $image['id'])
-            //                 ->where('packageID', $id)
-            //                 ->value('imagePath');
+            // handle images
+            if ($request->hasFile('images')) {
+                $packageName = DB::table('packages')->where('packageID', $id)->value('name');
+                $safeName = preg_replace('/[^A-Za-z0-9_\- ]/', '_', $packageName); // sanitize folder
+                $folder = public_path("storage/packages/{$safeName}");
 
-            //             if ($existing !== $image['imagePath']) {
-            //                 DB::table('package_images')
-            //                     ->where('imageID', $image['id'])
-            //                     ->where('packageID', $id)
-            //                     ->update(['imagePath' => $image['imagePath']]);
-            //             }
-            //         }
-            //     }
-            // }
+                // Create folder if it doesn't exist
+                if (!file_exists($folder)) {
+                    mkdir($folder, 0777, true);
+                }
+
+                // Loop files with index
+                foreach ($request->file('images') as $index => $file) {
+                    $filename = time() . '_' . $file->getClientOriginalName();
+                    $file->move($folder, $filename);
+
+                    // Check if frontend sent an imageID for this file
+                    $imageId = $request->input("imageIDs.$index");
+
+                    if ($imageId) {
+                        // Replace existing image
+                        DB::table('package_images')
+                            ->where('imageID', $imageId)
+                            ->update([
+                                'imagePath' => "storage/packages/{$safeName}/{$filename}",
+                            ]);
+                    } 
+                }
+            }
 
             // Handle tag/type mapping (frontend sends names)
             $tags = $request->input('tags', []);

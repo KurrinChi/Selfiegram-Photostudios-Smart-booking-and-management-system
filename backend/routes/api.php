@@ -119,7 +119,7 @@
         Route::get('/admin/packages/{id}', [PackageController::class, 'adminShow']);
         Route::get('/admin/package-types', [PackageController::class, 'packageType']);
         Route::post('/admin/packages/{id}/archive', [PackageController::class, 'archivePackage']);
-        Route::put('/admin/update-package/{id}', [PackageController::class, 'updatePackage']);
+        Route::post('/admin/update-package/{id}', [PackageController::class, 'updatePackage']);
     });
 
     // Protected routes (user must be logged in) CUSTOMER
