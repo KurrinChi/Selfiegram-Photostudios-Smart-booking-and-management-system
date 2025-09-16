@@ -1222,7 +1222,7 @@ import TransactionModalBooking from "../ModalTransactionDialogBooking";
                 />
                 <span>
                   <strong>I agree</strong> to pay PHP 200 down payment to confirm
-                  booking. The remaining balance is due on the day of the
+                  booking. <strong>Please note that the down payment is non-refundable.</strong> The remaining balance is due on the day of the
                   photoshoot or service.
                 </span>
               </label>
