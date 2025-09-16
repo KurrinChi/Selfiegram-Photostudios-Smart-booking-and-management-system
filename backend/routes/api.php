@@ -22,7 +22,41 @@
             'message' => 'API is working!',
         ]);
     });
+       // Test auth without role
+    Route::middleware(['auth:sanctum'])->get('/test-auth', function (Request $request) {
+        $user = auth('sanctum')->user();
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Authentication working!',
+            'user' => $user ? $user->username : 'No user',
+            'user_type' => $user ? $user->userType : 'No type',
+        ]);
+    });
 
+    // Test report data endpoint with minimal data
+    Route::middleware(['auth:sanctum', 'role:Admin'])->get('/test-report', function (Request $request) {
+        return response()->json([
+            'summary' => [
+                'totalUsers' => 100,
+                'totalBookings' => 50,
+                'totalSales' => 25000,
+                'totalAppointments' => 75,
+                'hasDateRange' => false,
+                'salesTrend' => ['value' => '10%', 'up' => true],
+                'userTrend' => ['value' => '5%', 'up' => true],
+                'scheduleTrend' => ['value' => '15%', 'up' => true],
+                'appointmentsTrend' => ['value' => '8%', 'up' => true]
+            ],
+            'weeklyIncome' => [],
+            'packages' => [],
+            'companyInfo' => [
+                'name' => 'Selfiegram Photo Studios',
+                'address' => 'Test Address',
+                'phone' => '123-456-7890',
+                'email' => 'test@selfiegram.com'
+            ]
+        ]);
+    });
     // Debug route for testing booking creation
     Route::middleware(['auth:sanctum'])->post('/test-booking', function (Request $request) {
         $user = auth('sanctum')->user();
