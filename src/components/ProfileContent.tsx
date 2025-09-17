@@ -86,11 +86,7 @@ const ProfileContents: React.FC = () => {
 
   if (!formData.firstName.trim()) newErrors.firstName = "First name is required";
   if (!formData.lastName.trim()) newErrors.lastName = "Last name is required";
-  if (!formData.email.trim()) {
-    newErrors.email = "Email is required";
-  } else if (!/^[\w-.]+@[\w-]+\.[a-z]{2,4}$/i.test(formData.email)) {
-    newErrors.email = "Email must be valid";
-  }
+
 
   if (!formData.phone.trim()) {
     newErrors.phone = "Contact number is required";
@@ -260,8 +256,9 @@ const ProfileContents: React.FC = () => {
             name="email"
             value={formData.email}
             onChange={handleChange}
+            readOnly
             placeholder="Enter your email"
-            className="w-full rounded-lg border border-gray-300 bg-gray-50 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black"
+            className="w-full rounded-lg bg-gray-100 border border-gray-300 px-4 py-2 text-sm text-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-400 cursor-not-allowed"
           />
           <div className="h-4 mt-1">
             {errors.email ? (
@@ -272,12 +269,7 @@ const ProfileContents: React.FC = () => {
           </div>
         </div>
 
-        <button
-          type="button"
-          className="mt-6 text-xs px-6 py-2.5 rounded-md bg-black text-white hover:bg-gray-800 transition"
-        >
-          <b>VERIFY</b>
-        </button>
+       
       </div>
 
         {/* Phone */}

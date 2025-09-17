@@ -4,8 +4,10 @@ import QRCode from "react-qr-code";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
 import ModalRequestedDialog from "./ModalRequestedDialog";
 import ModalOnRequestDialog from "./ModalOnRequestDialog";
+import ModalRescheduleDialog from "./ModalRescheduleDialog";
 import { id } from "date-fns/locale";
 import { toast } from "react-toastify";
+import ModalRequestedDialogReschedule from "./ModalRequestedDialogReschedule";
 interface TransactionModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -53,6 +55,19 @@ const [cancelRequest, setCancelRequest] = useState<{
   requestDate: string;
 } | null>(null);
 
+
+const [isRescheduleModalOpen, setIsRescheduleModalOpen] = useState(false);
+const [rescheduleData, setRescheduleData] = useState<{
+  id: string;
+  reason: string;
+  bookingDate: string;
+  bookingTime: string;
+  transactionDate: string;
+  bookingId: string;
+  totalAmount: number;
+  packageName: string;
+} | null>(null);
+
 const [isRequestedModalOpen, setIsRequestedModalOpen] = useState(false);
 const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
 const [cancelData, setCancelData] = useState<{ 
@@ -74,11 +89,14 @@ const [cancelData, setCancelData] = useState<{
 
 
 useEffect(() => {
-  if (data?.id) {
+   if (data?.id && data.status === 3) { // only fetch if status is "cancel requested"
     fetchWithAuth(`${API_URL}/api/cancel-request/${data.id}`)
-      .then((res) => res.json())
+      .then((res) => {
+        if (!res.ok) return null; // handle 404 gracefully
+        return res.json();
+      })
       .then((resData) => {
-        if (resData.data) {
+        if (resData?.data) {
           setCancelRequest(resData.data);
         }
       })
@@ -110,6 +128,35 @@ useEffect(() => {
     }
   }
 };
+
+
+useEffect(() => {
+  if (data?.id && data.status === 4) { // reschedule requested
+    fetchWithAuth(`${API_URL}/api/reschedule-request/${data.id}`)
+      .then((res) => {
+        if (!res.ok) return null;
+        return res.json();
+      })
+      .then((resData) => {
+        if (resData?.data) {
+          setRescheduleData({
+            id: data.id,
+            reason: resData.data.reason,
+            bookingDate: resData.data.requestedDate,
+            bookingTime: resData.data.requestedTime,
+            transactionDate: resData.data.requestDate,
+            bookingId: data.id,
+            totalAmount: data.subtotal,
+            packageName: data.package,
+          });
+        }
+      })
+      .catch((err) =>
+        console.error("Error fetching reschedule request:", err)
+      );
+  }
+}, [data?.id, data?.status]);
+
 const handleFeedbackChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
    setFeedback(e.target.value);
   setHasTypedFeedback(e.target.value.trim().length > 0);
@@ -122,19 +169,64 @@ const handleRatingClick = (value: number) => {
 
  const handleCancelSubmit = (reason: string) => {
   // TODO: call API to process cancellation
+  if (!data) return;
+
   setCancelData({
-    id: data!.id,
+    id: data.id,
     reason,
-    bookingDate: data!.bookingDate,
-    bookingTime: data!.time,
-    transactionDate: data!.transactionDate,
-    bookingId: data!.id,
-    totalAmount: data!.total, // or total refund logic
-    packageName: data!.package,
+    bookingDate: data.bookingDate,
+    bookingTime: data.time,
+    transactionDate: data.transactionDate,
+    bookingId: data.id,
+    totalAmount: data.total, // or total refund logic
+    packageName: data.package,
   });
 
   setIsCancelModalOpen(false); // close modal
   setIsRequestedModalOpen(true);
+};
+
+const handleRescheduleSubmit = async (reason: string, requestedDate: string, requestedStartTime: string) => {
+  if (!data) return;
+
+  try {
+    const user_id = localStorage.getItem("userID") || "";
+
+    // Send the reschedule request to the backend
+    const res = await fetch(`http://192.168.1.214:8000/api/booking-request/reschedule`, {
+      method: "POST",
+      body: JSON.stringify({
+        bookingID: data.id,
+        userID: user_id,
+        reason,
+        requestedDate,
+        requestedStartTime,
+      }),
+    });
+
+    if (!res.ok) throw new Error("Failed to submit reschedule request");
+
+    const responseData = await res.json();
+
+    // Update the state with the response data
+    setRescheduleData({
+      id: data.id,
+      reason,
+      bookingDate: requestedDate,
+      bookingTime: requestedStartTime,
+      transactionDate: new Date().toISOString().split("T")[0],
+      bookingId: data.id,
+      totalAmount: data.subtotal,
+      packageName: data.package,
+    });
+
+    toast.success(responseData.message || "Reschedule request submitted successfully!");
+    setIsRescheduleModalOpen(false); // Close the reschedule modal
+    setIsRequestedModalOpen(true); // Open the confirmation modal
+  } catch (err) {
+    console.error("Error submitting reschedule request:", err);
+    toast.error("Error submitting reschedule request. Please try again.");
+  }
 };
 
   const formatDate = (dateStr: string) => {
@@ -171,46 +263,67 @@ return (
     {/* ModalOnRequestDialog goes here, always rendered but controlled via isOpen */}
     <ModalOnRequestDialog
        isOpen={isCancelModalOpen}
-  onClose={() => setIsCancelModalOpen(false)}
-  onSubmit={async (reason) => {
-  try {
-    const user_id = localStorage.getItem("userID") || "";
-    const res = await fetchWithAuth(`${API_URL}/api/booking-request/cancel`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        bookingID: data.id,
-        userID: user_id,
-        reason: reason,
-      }),
-    });
+      onClose={() => setIsCancelModalOpen(false)}
+      onSubmit={async (reason) => {
+      try {
+        const user_id = localStorage.getItem("userID") || "";
+        const res = await fetchWithAuth(`${API_URL}/api/booking-request/cancel`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            bookingID: data?.id ?? "",
+            userID: user_id,
+            reason: reason,
+          }),
+        });
 
-    if (!res.ok) throw new Error("Failed to submit request");
+        if (!res.ok) throw new Error("Failed to submit request");
 
-    // ✅ Save the cancel data for the confirmation dialog
-    setCancelData({
-      id: data.id,
-      reason,
-      bookingDate: data.bookingDate,
-      bookingTime: data.time, // make sure `time` exists in your `data`
-      bookingId: data.id,
-      totalAmount: data.subtotal,
-      packageName: data.package,
-      transactionDate: new Date().toISOString().split("T")[0], // hardcoded to today
-    });
+        // ✅ Save the cancel data for the confirmation dialog
+        if (!data) return;
+        setCancelData({
+          id: data.id,
+          reason,
+          bookingDate: data.bookingDate,
+          bookingTime: data.time, // make sure `time` exists in your `data`
+          bookingId: data.id,
+          totalAmount: data.subtotal,
+          packageName: data.package,
+          transactionDate: new Date().toISOString().split("T")[0], // hardcoded to today
+        });
 
-    toast.success("Cancel request submitted successfully!");
-    setIsCancelModalOpen(false);
-    setIsRequestedModalOpen(true);
-    
-  } catch (err) {
-    toast.error("Error submitting request. Please try again.");
-  }
+        toast.success("Cancel request submitted successfully!");
+        setIsCancelModalOpen(false);
+        setIsRequestedModalOpen(true);
+        
+      } catch (err) {
+        toast.error("Error submitting request. Please try again.");
+      }
 }}
     />
-
+<ModalRequestedDialogReschedule
+  isOpen={isRequestedModalOpen}
+  onClose={() => {
+    setIsRequestedModalOpen(false); // Close the confirmation modal
+    onClose(); // Close the transaction modal
+  }}
+  data={
+    rescheduleData
+      ? {
+          id: rescheduleData.id,
+          reason: rescheduleData.reason,
+          bookingDate: rescheduleData.bookingDate,
+          bookingTime: rescheduleData.bookingTime,
+          transactionDate: rescheduleData.transactionDate,
+          bookingId: rescheduleData.bookingId,
+          totalAmount: rescheduleData.totalAmount,
+          packageName: rescheduleData.packageName,
+        }
+      : null
+  }
+/>
    <ModalRequestedDialog
   isOpen={isRequestedModalOpen}
    onClose={() => {
@@ -231,6 +344,57 @@ return (
         }
       : null
   }
+/>
+
+
+<ModalRescheduleDialog
+  isOpen={isRescheduleModalOpen}
+  onClose={() => setIsRescheduleModalOpen(false)}
+  bookingID={data?.id ? Number(data.id) : 0}
+  userID={localStorage.getItem("userID") ? Number(localStorage.getItem("userID")) : 0}
+  onSubmit={async (reason, requestedDate, requestedStartTime) => {
+    try {
+      const user_id = localStorage.getItem("userID") || "";
+      console.log("API_URL:", API_URL);
+console.log("Fetch URL:", `${API_URL}/api/booking-request/reschedule`);
+      const res = await fetchWithAuth(`${API_URL}/api/booking-request/reschedule`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          bookingID: data?.id ?? "",
+          userID: user_id,
+          requestedDate,
+          requestedStartTime,
+          reason,
+        }),
+      });
+
+      if (!res.ok) throw new Error("Failed to submit reschedule request");
+
+      const responseData = await res.json();
+
+      // ✅ Save reschedule data for confirmation dialog
+      if (!data) return;
+      setRescheduleData({
+        id: data.id,
+        reason,
+        bookingDate: requestedDate,
+        bookingTime: requestedStartTime,
+        transactionDate: new Date().toISOString().split("T")[0],
+        bookingId: data.id,
+        totalAmount: data.subtotal,
+        packageName: data.package,
+      });
+
+      toast.success(responseData.message || "Reschedule request submitted!");
+      setIsRescheduleModalOpen(false);
+      setIsRequestedModalOpen(true);
+    } catch (err) {
+      toast.error("Error submitting reschedule request. Please try again.");
+    }
+  }}
 />
     <div
       className={`bg-white text-gray-900 rounded-lg shadow-md overflow-y-auto max-h-[95vh] ${
@@ -615,10 +779,7 @@ return (
                 </button>
 
                 <button
-                  onClick={() => {
-                    // TODO: handle reschedule logic
-                    alert("Reschedule clicked");
-                  }}
+                  onClick={() => setIsRescheduleModalOpen(true)}
                   className="w-1/2 bg-gray-100 border rounded-md px-4 py-2 rounded  hover:bg-gray-200 transition ml-2"
                 >
                   Reschedule
@@ -766,10 +927,7 @@ return (
                   </button>
 
                   <button
-                    onClick={() => {
-                      // TODO: handle reschedule logic
-                      alert("Reschedule clicked");
-                    }}
+                   onClick={() => setIsRescheduleModalOpen(true)}
                     className="w-1/2 bg-gray-100 border rounded-md px-4 py-2 rounded hover:bg-gray-200 transition ml-2"
                   >
                     Reschedule

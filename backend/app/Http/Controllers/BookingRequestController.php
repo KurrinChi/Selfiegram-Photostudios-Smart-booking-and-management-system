@@ -82,5 +82,144 @@ class BookingRequestController extends Controller
             ], 500);
         }
     }
+    public function createRescheduleRequest(Request $request)
+{
+    // Validate input
+    $validated = $request->validate([
+        'bookingID' => 'required|integer|exists:booking,bookingID',
+        'userID' => 'required|integer|exists:users,userID',
+        'requestedDate' => 'required|date',
+        'requestedStartTime' => 'required|date_format:H:i',
+        'reason' => 'nullable|string|max:1000',
+    ]);
+
+    // Wrap in transaction to ensure both queries succeed
+    DB::beginTransaction();
+
+    try {
+        // Insert into booking_request
+        $rescheduleRequest = BookingRequest::create([
+            'bookingID' => $validated['bookingID'],
+            'userID' => $validated['userID'],
+            'requestType' => 'reschedule',
+            'requestedDate' => $validated['requestedDate'],
+            'requestedStartTime' => $validated['requestedStartTime'],
+            'requestedEndTime' => date("H:i:s", strtotime($validated['requestedStartTime'] . " +30 minutes")),
+            'reason' => $validated['reason'],
+            'status' => 'pending',
+            'requestDate' => now(),
+        ]);
+
+        // Update booking status = 4 (rescheduled)
+        DB::table('booking')
+            ->where('bookingID', $validated['bookingID'])
+            ->update(['status' => 4]);
+
+        DB::commit();
+
+        return response()->json([
+            'message' => 'Reschedule request submitted and booking updated successfully.',
+            'data' => $rescheduleRequest,
+        ], 201);
+
+    } catch (\Exception $e) {
+        DB::rollBack();
+
+        return response()->json([
+            'message' => 'Error submitting reschedule request.',
+            'error' => $e->getMessage(),
+        ], 500);
+    }
+}
+public function markBookingAsRescheduled($bookingID)
+{
+    $updated = DB::table('booking')
+        ->where('bookingID', $bookingID)
+        ->update(['status' => 4]);
+
+    if ($updated) {
+        return response()->json([
+            'success' => true,
+            'message' => 'Booking status updated to Reschedule.'
+        ]);
+    } else {
+        return response()->json([
+            'success' => false,
+            'message' => 'Booking not found or status not updated.'
+        ], 404);
+    }
+}
+public function rescheduleBooking(Request $request)
+{
+    \Log::info('Reschedule request payload', $request->all());
+    $request->validate([
+        'bookingID' => 'required|integer|exists:booking,bookingID',
+        'userID' => 'required|integer|exists:users,userID',
+        'requestedDate' => 'required|date',
+        'requestedStartTime' => 'required|date_format:H:i',
+        'reason' => 'nullable|string|max:1000',
+    ]);
+    \Log::info('Updating booking status', ['bookingID' => $request->bookingID]);
+
+    // Calculate requestedEndTime as 30 minutes after requestedStartTime
+    $startTime = $request->requestedStartTime;
+    $endTime = date("H:i:s", strtotime($startTime . " +30 minutes"));
+
+    // Wrap in transaction to ensure both succeed
+    DB::beginTransaction();
+    try {
+        // 1️⃣ Insert booking request
+        $bookingRequestID = DB::table('booking_request')->insertGetId([
+            'bookingID' => $request->bookingID,
+            'userID' => $request->userID,
+            'requestType' => 'reschedule',
+            'requestedDate' => $request->requestedDate,
+            'requestedStartTime' => $startTime,
+            'requestedEndTime' => $endTime,
+            'reason' => $request->reason,
+            'status' => 'pending',
+            'requestDate' => now(),
+        ]);
+
+        // 2️⃣ Update booking status
+        DB::table('booking')
+            ->where('bookingID', $request->bookingID)
+            ->update(['status' => 4]);
+
+        DB::commit();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Reschedule request submitted and booking status updated.',
+            'requestID' => $bookingRequestID
+        ]);
+    } catch (\Exception $e) {
+        DB::rollBack();
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to reschedule booking: ' . $e->getMessage()
+        ], 500);
+    }
+}
+public function getRescheduleRequest($bookingId)
+{
+    $reschedule = DB::table('booking_request')
+        ->where('bookingID', $bookingId)
+        ->first();
+
+    if (!$reschedule) {
+        return response()->json(['message' => 'No reschedule request found'], 404);
+    }
+
+    return response()->json([
+        'data' => [
+            'status' => $reschedule->status, // pending | approved | declined
+            'requestDate' => $reschedule->created_at,
+            'requestedDate' => $reschedule->requested_date,
+            'requestedTime' => $reschedule->requested_time,
+            'reason' => $reschedule->reason,
+        ]
+    ]);
+}
 
 }

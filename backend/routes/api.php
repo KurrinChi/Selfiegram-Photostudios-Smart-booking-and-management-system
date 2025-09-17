@@ -171,6 +171,11 @@
         Route::post('/booking-request/cancel', [BookingRequestController::class, 'storeCancelRequest']);
         Route::get('/cancel-request/{bookingID}', [BookingRequestController::class, 'getCancelRequest']);
 
+         //Client Reschedule Request
+        Route::post('/reschedule', [BookingRequestController::class, 'createRescheduleRequest']);
+       //Route::post('/reschedule', [BookingRequestController::class, 'rescheduleBooking']);
+        Route::post('/booking-request/reschedule', [BookingRequestController::class, 'rescheduleBooking']);
+        Route::get('/reschedule-request/{bookingId}', [BookingRequestController::class, 'getRescheduleRequest']);
     });
 
     //receipt
