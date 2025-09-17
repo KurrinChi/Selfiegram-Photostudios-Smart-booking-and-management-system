@@ -26,4 +26,25 @@ public function getTopSellingPackages()
 
     return response()->json($packages);
 }
+public function getFeedbacks()
+    {
+       $feedbacks = DB::table('booking')
+            ->join('users', 'booking.userID', '=', 'users.userID') // adjust if PK is different
+            ->join('packages', 'booking.packageID', '=', 'packages.packageID')
+            ->select(
+                'users.username as username',
+                 DB::raw("IFNULL(users.profilePicture, 'storage/profile_photos/default.png') as user_image"), // Fallback to default image
+                'packages.name as package_name',
+                'booking.feedback',
+                'booking.rating',
+                'booking.bookingDate',
+                DB::raw("CONCAT(DATE_FORMAT(booking.bookingStartTime, '%h:%i %p'), ' - ', DATE_FORMAT(booking.bookingEndTime, '%h:%i %p')) as booking_time")
+            )
+            ->whereNotNull('booking.feedback')
+            ->orderBy('booking.bookingID', 'desc')
+            ->limit(10)
+            ->get();
+
+        return response()->json($feedbacks);
+    }
 }

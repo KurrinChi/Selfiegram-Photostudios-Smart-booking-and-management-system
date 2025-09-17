@@ -160,6 +160,7 @@
 
         //Client Home Page
         Route::get('/top-selling-packages', [HomeController::class, 'getTopSellingPackages']);
+        Route::get('/feedbacks', [HomeController::class, 'getFeedbacks']);
 
         //Client Booking/Transaction
         Route::post('/bookings', [TransactionController::class, 'createBooking']);

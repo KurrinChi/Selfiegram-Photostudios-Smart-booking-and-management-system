@@ -1146,14 +1146,7 @@ console.log("Fetch URL:", `${API_URL}/api/booking-request/reschedule`);
 
               <div className="flex justify-between">
       
-                {(hasTypedFeedback || hasSelectedRating) && (
-                  <button
-                    onClick={handleSave}
-                    className="bg-gray-800 text-white px-4 py-2 rounded hover:bg-gray-600 transition"
-                  >
-                    Save
-                  </button>
-                )}
+         
               </div>
 
           {data.status === 1 ? (

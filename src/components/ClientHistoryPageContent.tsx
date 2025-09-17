@@ -1,20 +1,23 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { Eye, Trash2 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import ModalTransactionDialog from "./ModalTransactionDialog"; // adjust path if needed
 
 const ITEMS_PER_PAGE = 5;
 const API_URL = import.meta.env.VITE_API_URL;
-
 const ClientHistoryPageContent = () => {
+  const navigate = useNavigate();
   const [historyData, setHistoryData] = useState<any[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [showModal, setShowModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState<any | null>(null);
   const [itemToDelete, setItemToDelete] = useState<any | null>(null);
   const [rawBookingMap, setRawBookingMap] = useState<{ [id: number]: any }>({});
+  const [loading, setLoading] = useState(false);
   
   const fetchHistory = async () => {
+    setLoading(true);
     try {
       const user_id = localStorage.getItem("userID");
       const token = localStorage.getItem("token");
@@ -29,42 +32,42 @@ const ClientHistoryPageContent = () => {
       );
       const data = response.data as any[];
 
-    const formatted = data.map((item: any) => ({
-      id: item.bookingID,
-      packageName: item.packageName,
-      image: null,
-      dateTime: item.dateTime,
-      displayPrice: `₱${parseFloat(item.price).toFixed(2)}`, // for table only
-      feedback: item.feedback ?? null,
-      rating: item.rating ?? null,
-      status: item.status,
-      paymentStatus: item.paymentStatus,
-      subtotal: toNumber(item.subTotal),
-      total: toNumber(item.total),
-      paidAmount: toNumber(item.receivedAmount),
-      pendingBalance: toNumber(item.rem),
-      customerName: item.customerName,
-      customerEmail: item.customerEmail,
-      customerAddress: item.customerAddress,
-      customerContactNo: item.customerContactNo,
-      bookingDate: item.bookingDate,
-      bookingStartTime: item.bookingStartTime,
-      bookingEndTime: item.bookingEndTime,
-      selectedAddOns: item.selectedAddOns || [],
-      selectedConcepts: item.selectedConcepts || []
-    }));
+      const formatted = data.map((item: any) => ({
+        id: item.bookingID,
+        packageName: item.packageName,
+        image: null,
+        dateTime: item.dateTime,
+        displayPrice: `₱${parseFloat(item.price).toFixed(2)}`, // for table only
+        feedback: item.feedback ?? null,
+        rating: item.rating ?? null,
+        status: item.status,
+        paymentStatus: item.paymentStatus,
+        subtotal: toNumber(item.subTotal),
+        total: toNumber(item.total),
+        paidAmount: toNumber(item.receivedAmount),
+        pendingBalance: toNumber(item.rem),
+        customerName: item.customerName,
+        customerEmail: item.customerEmail,
+        customerAddress: item.customerAddress,
+        customerContactNo: item.customerContactNo,
+        bookingDate: item.bookingDate,
+        bookingStartTime: item.bookingStartTime,
+        bookingEndTime: item.bookingEndTime,
+        selectedAddOns: item.selectedAddOns || [],
+        selectedConcepts: item.selectedConcepts || []
+      }));
 
-  
+      const rawMap: { [id: number]: any } = {};
+      data.forEach((item) => {
+        rawMap[item.bookingID] = item;
+      });
 
-        const rawMap: { [id: number]: any } = {};
-        data.forEach((item) => {
-          rawMap[item.bookingID] = item;
-        });
-
-        setRawBookingMap(rawMap);
-        setHistoryData(formatted);
+      setRawBookingMap(rawMap);
+      setHistoryData(formatted);
     } catch (error) {
       console.error("Failed to fetch history:", error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -159,76 +162,88 @@ const toNumber = (value: any): number => {
 
   return (
     <div className="p-4 animate-fadeIn">
-      <h1 className="text-2xl font-semibold mb-4">History</h1>
-      <div className="bg-white rounded-2xl shadow-md overflow-x-auto h-[calc(100vh-20vh)]">
-        <table className="min-w-full table-auto text-left text-sm">
-          <thead className="bg-gray-50 text-gray-700 font-semibold">
-            <tr>
-              <th className="p-4">Package Name</th>
-              <th className="p-4">Transaction Date</th>
-              <th className="p-4">Price</th>
-              <th className="p-4">ID</th>
-              <th className="p-4">Feedback</th>
-              <th className="p-4 text-center">Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {paginatedData.map((item, idx) => (
-              <tr
-                key={idx}
-                className="border-t border-gray-100 hover:bg-gray-50 transition-all"
-              >
-                <td className="p-4 flex items-center gap-3">
-              
-                  {item.packageName}
-                </td>
-                <td className="p-4">{formatDate(item.dateTime)}</td>
-                <td className="p-4">{item.displayPrice}</td>
-                <td className="p-4">{getBookingLabel(item.id, item.packageName)}</td>
+  <h1 className="text-2xl font-semibold mb-4">History</h1>
+  {loading ? (
+    <div className="text-center text-gray-500">Loading history...</div>
+  ) : historyData.length === 0 ? (
+    <div className="text-center text-gray-500 border border-dashed py-20 rounded-md">
+      <p className="mb-4">No transactions made yet.</p>
+      <button
+        onClick={() => navigate("/client/packages")}
+        className="px-4 py-2 bg-gray-700 text-white rounded-md hover:bg-gray-600 transition"
+      >
+        Book A Package Here
+      </button>
+    </div>
+  ) : (
+    <div className="bg-white rounded-2xl shadow-md overflow-x-auto h-[calc(100vh-20vh)]">
+      <table className="min-w-full table-auto text-left text-sm">
+        <thead className="bg-gray-50 text-gray-700 font-semibold">
+          <tr>
+            <th className="p-4">Package Name</th>
+            <th className="p-4">Transaction Date</th>
+            <th className="p-4">Price</th>
+            <th className="p-4">ID</th>
+            <th className="p-4">Feedback</th>
+            <th className="p-4 text-center">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {paginatedData.map((item, idx) => (
+            <tr
+              key={idx}
+              className="border-t border-gray-100 hover:bg-gray-50 transition-all"
+            >
+              <td className="p-4 flex items-center gap-3">{item.packageName}</td>
+              <td className="p-4">{formatDate(item.dateTime)}</td>
+              <td className="p-4">{item.displayPrice}</td>
+              <td className="p-4">{getBookingLabel(item.id, item.packageName)}</td>
               <td className="p-4">
-              {item.rating === null || item.rating === 0 ? (
-                <em className="text-gray-400">No Rating Yet</em>
-              ) : (
-                <StarRating rating={item.rating} />
-              )}
-            </td>
-                <td className="p-4 text-center flex gap-2 justify-center">
-                  <button
-                    className="text-gray-600 hover:text-gray-300 transition"
-                    onClick={() => handleView(item)}
-                  >
-                    <Eye className="w-5 h-5" />
-                  </button>
-                  <button
-                    className="text-gray-600 hover:text-red-500 transition"
-                    onClick={() => handleDelete(item)}
-                  >
-                    <Trash2 className="w-5 h-5" />
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                {item.rating === null || item.rating === 0 ? (
+                  <em className="text-gray-400">No Rating Yet</em>
+                ) : (
+                  <StarRating rating={item.rating} />
+                )}
+              </td>
+              <td className="p-4 text-center flex gap-2 justify-center">
+                <button
+                  className="text-gray-600 hover:text-gray-300 transition"
+                  onClick={() => handleView(item)}
+                >
+                  <Eye className="w-5 h-5" />
+                </button>
+                <button
+                  className="text-gray-600 hover:text-red-500 transition"
+                  onClick={() => handleDelete(item)}
+                >
+                  <Trash2 className="w-5 h-5" />
+                </button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
 
-        {/* Pagination */}
-        <div className="flex justify-end items-center gap-2 px-4 py-3">
-          <button
-            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-            disabled={currentPage === 1}
-            className="px-3 py-1 rounded-lg text-sm bg-gray-100 hover:bg-gray-200 transition disabled:opacity-50"
-          >
-            &lt;
-          </button>
-          <button
-            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-            disabled={currentPage === totalPages}
-            className="px-3 py-1 rounded-lg text-sm bg-gray-100 hover:bg-gray-200 transition disabled:opacity-50"
-          >
-            &gt;
-          </button>
-        </div>
+      {/* Pagination */}
+      <div className="flex justify-end items-center gap-2 px-4 py-3">
+        <button
+          onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+          disabled={currentPage === 1}
+          className="px-3 py-1 rounded-lg text-sm bg-gray-100 hover:bg-gray-200 transition disabled:opacity-50"
+        >
+          &lt;
+        </button>
+        <button
+          onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+          disabled={currentPage === totalPages}
+          className="px-3 py-1 rounded-lg text-sm bg-gray-100 hover:bg-gray-200 transition disabled:opacity-50"
+        >
+          &gt;
+        </button>
       </div>
+    </div>
+  )}
+
 
       {/* View Modal */}
       {showModal && selectedItem && (
@@ -288,6 +303,7 @@ const toNumber = (value: any): number => {
         </div>
       )}
     </div>
+    
   );
 };
 

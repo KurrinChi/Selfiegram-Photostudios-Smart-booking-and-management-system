@@ -10,6 +10,7 @@
   import type { Tag } from "../../types"; 
   import type { SelectedAddon } from "../../typeSelect"; 
 import TransactionModalBooking from "../ModalTransactionDialogBooking";
+import TermsDialog from "../TermsDialog";
 
   interface AddOn {
     id: string;
@@ -161,9 +162,10 @@ import TransactionModalBooking from "../ModalTransactionDialogBooking";
     const [previewData, setPreviewData] = useState<PreviewBookingData | null>(
       null
     );
-   
+    const [isTermsDialogOpen, setIsTermsDialogOpen] = useState(false);
 
-    
+    const [agreedToPayment, setAgreedToPayment] = useState(false); // For Down Payment Agreement
+
     const [tags, setTags] = useState<Tag[]>([]);
     const [addOns, setAddOns] = useState<AddOn[]>([]);
     const [bookedTimeSlots, setBookedTimeSlots] = useState<string[]>([]);
@@ -1213,36 +1215,68 @@ import TransactionModalBooking from "../ModalTransactionDialogBooking";
             </div>
 
             <div className="text-sm space-y-4">
-              <label className="flex items-start gap-2">
-                <input
-                  type="checkbox"
-                  checked={agreed}
-                  onChange={(e) => setAgreed(e.target.checked)}
-                  className="mt-1"
-                />
-                <span>
-                  <strong>I agree</strong> to pay PHP 200 down payment to confirm
-                  booking. <strong>Please note that the down payment is non-refundable.</strong> The remaining balance is due on the day of the
-                  photoshoot or service.
-                </span>
-              </label>
+               <div className="text-sm space-y-4">
+  {/* Terms and Agreements Checkbox */}
+  <label className="flex items-start gap-2">
+    <input
+      type="checkbox"
+      checked={agreed} // State for the first checkbox
+      onChange={(e) => setAgreed(e.target.checked)}
+      className="mt-1"
+    />
+    <span>
+      <strong>I accept</strong>{" "}
+      <button
+        type="button"
+        onClick={() => setIsTermsDialogOpen(true)} // Open the TermsDialog modal
+        className="text-blue-500 underline hover:text-blue-700"
+      >
+        the Terms and Agreements
+      </button>
+      . By using our system and services, you agree to abide by the following
+      rules and conditions.
+    </span>
+  </label>
 
-              <div className="flex flex-col sm:flex-row gap-3">
-                <button
-                  className="w-full bg-black text-white py-3 rounded-md disabled:opacity-50"
-                  disabled={!agreed}
-                  onClick={() => handleShowPreview("deposit")}
-                >
-                  Confirm with Deposit
-                </button>
-                <button
-                  className="w-full bg-white text-black py-3 rounded-md disabled:opacity-50"
-                  disabled={!agreed}
-                  onClick={() => handleShowPreview("full")}
-                >
-                  Full Payment
-                </button>
-              </div>
+  {/* Down Payment Agreement Checkbox */}
+  <label className="flex items-start gap-2">
+    <input
+      type="checkbox"
+      checked={agreedToPayment} // State for the second checkbox
+      onChange={(e) => setAgreedToPayment(e.target.checked)}
+      className="mt-1"
+      disabled={!agreed} // Disable this checkbox until the first one is checked
+    />
+    <span>
+      <strong>I agree</strong> to pay PHP 200 down payment to confirm booking.{" "}
+      <strong>Please note that the down payment is non-refundable.</strong> The
+      remaining balance is due on the day of the photoshoot or service.
+    </span>
+  </label>
+
+
+
+  {/* Buttons */}
+  <div className="flex flex-col sm:flex-row gap-3">
+    <button
+      className="w-full bg-black text-white py-3 rounded-md disabled:opacity-50"
+      disabled={!agreed || !agreedToPayment} // Both checkboxes must be checked
+      onClick={() => handleShowPreview("deposit")}
+    >
+      Confirm with Deposit
+    </button>
+    <button
+      className="w-full bg-white text-black py-3 rounded-md disabled:opacity-50"
+      disabled={!agreed || !agreedToPayment} // Both checkboxes must be checked
+      onClick={() => handleShowPreview("full")}
+    >
+      Full Payment
+    </button>
+  </div>
+</div>
+
+
+
             </div>
           </div>
         </div>
