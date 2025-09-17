@@ -128,14 +128,48 @@ const GalleryModal: React.FC<GalleryModalProps> = ({
   };
 
   // Single delete
-  const handleRemove = async (id: string) => {
-    setDeleteTarget({ type: "single", ids: [id] });
+  const handleRemove = (id: string) => {
+    const target = images.find((img) => img.id === id);
+
+    if (target?.isNew) {
+      // remove before upload
+      setImages((prev) => prev.filter((img) => img.id !== id));
+      toast.info("Image removed before upload.");
+    } else {
+      // Existing image, confirm delete
+      setDeleteTarget({ type: "single", ids: [id] });
+    }
   };
 
-  // Bulk delete
+  // Bulk delete 
   const handleRemoveSelected = async () => {
     if (selectedImages.length === 0) return;
-    setDeleteTarget({ type: "bulk", ids: selectedImages });
+
+    const newImages = images.filter(
+      (img) => selectedImages.includes(img.id) && img.isNew
+    );
+    const existingImages = images.filter(
+      (img) => selectedImages.includes(img.id) && !img.isNew
+    );
+
+    // remove before upload
+    if (newImages.length > 0) {
+      setImages((prev) =>
+        prev.filter((img) => !newImages.some((n) => n.id === img.id))
+      );
+      toast.info(`${newImages.length} image(s) removed before upload.`);
+    }
+
+    // If existing images, confirm delete
+    if (existingImages.length > 0) {
+      setDeleteTarget({
+        type: "bulk",
+        ids: existingImages.map((img) => img.id),
+      });
+    }
+    // Reset selections
+    setSelectedImages([]);
+    setMultiSelectMode(false);
   };
 
   // Unchanged toggle select
