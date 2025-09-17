@@ -15,6 +15,8 @@
     use App\Http\Controllers\TransactionController;
     use App\Http\Controllers\ForgotPasswordController;
     use App\Http\Controllers\BookingRequestController;
+    use App\Http\Controllers\GalleryController;
+
     // Just for testing
     Route::middleware('api')->get('/test', function (Request $request) {
         return response()->json([
@@ -120,6 +122,12 @@
         Route::get('/admin/package-types', [PackageController::class, 'packageType']);
         Route::post('/admin/packages/{id}/archive', [PackageController::class, 'archivePackage']);
         Route::post('/admin/update-package/{id}', [PackageController::class, 'updatePackage']);
+
+        //admin gallery page
+        Route::get('/admin/completed-appointments', [GalleryController::class, 'completedAppointments']);
+        Route::post('/admin/upload', [GalleryController::class, 'uploadImage']);
+        Route::get('/admin/images/{userID}', [GalleryController::class, 'getImagesByUser']);
+        Route::delete('/admin/images/delete', [GalleryController::class, 'deleteImages']);
     });
 
     // Protected routes (user must be logged in) CUSTOMER

@@ -158,7 +158,12 @@ const LoginForm = () => {
       const data = await res.json();
 
       if (res.ok) {
-        alert("Password reset successful, please login");
+        toast.success(
+          "Password reset successful, please login",
+          {
+            autoClose: 2000,
+          }
+        );
         setShowPasswordModal(false);
       } else {
         toast.error(data.message || "Failed to reset password");
@@ -170,15 +175,15 @@ const LoginForm = () => {
   };
 
   return (
-    
+
     <div className="w-full max-w-md mx-auto text-[#111] font-sf relative">
-       {/* Back Button */}
-          <button
-            onClick={() => navigate("/")}
-            className="absolute top-4 left-1 w-10 h-10 flex items-center justify-center rounded-full bg-gray-200 hover:bg-gray-300 shadow-md"
-          >
-            <i className="fas fa-arrow-left" />
-          </button>
+      {/* Back Button */}
+      <button
+        onClick={() => navigate("/")}
+        className="absolute top-4 left-1 w-10 h-10 flex items-center justify-center rounded-full bg-gray-200 hover:bg-gray-300 shadow-md"
+      >
+        <i className="fas fa-arrow-left" />
+      </button>
       <img src="/slfg.svg" alt="logo" className="w-28 mb-6 mx-auto" />
       <h3 className="text-s font-bold mb-2 text-left">Login to Account</h3>
       <h2 className="text-2xl font-bold text-left mb-2">
