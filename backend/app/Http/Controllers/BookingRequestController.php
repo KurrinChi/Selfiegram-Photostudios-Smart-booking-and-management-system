@@ -203,23 +203,39 @@ public function rescheduleBooking(Request $request)
 }
 public function getRescheduleRequest($bookingId)
 {
-    $reschedule = DB::table('booking_request')
-        ->where('bookingID', $bookingId)
-        ->first();
+   
+    try {
+            // Get the latest reschedule request for the booking
+            $rescheduleRequest = BookingRequest::where('bookingID',$bookingId)
+                ->where('requestType', 'reschedule')
+                ->latest('requestDate')
+                ->first();
 
-    if (!$reschedule) {
-        return response()->json(['message' => 'No reschedule request found'], 404);
-    }
+            if (!$rescheduleRequest) {
+                return response()->json([
+                    'message' => 'No reschedule request found for this booking.',
+                    'data'    => null
+                ], 404);
+            }
 
-    return response()->json([
-        'data' => [
-            'status' => $reschedule->status, // pending | approved | declined
-            'requestDate' => $reschedule->created_at,
-            'requestedDate' => $reschedule->requested_date,
-            'requestedTime' => $reschedule->requested_time,
-            'reason' => $reschedule->reason,
-        ]
-    ]);
+            return response()->json([
+                'message' => 'Reschedule request fetched successfully.',
+                'data'    => [
+                    'status'           => $rescheduleRequest->status,
+                    'requestDate'      => $rescheduleRequest->requestDate,
+                    'requestedDate'    => $rescheduleRequest->requestedDate,
+                    'requestedStartTime' => $rescheduleRequest->requestedStartTime,
+                    'requestedEndTime' => $rescheduleRequest->requestedEndTime,
+                    'reason'           => $rescheduleRequest->reason,
+                ]
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Error fetching cancel request.',
+                'error'   => $e->getMessage()
+            ], 500);
+        }
 }
 
 }
