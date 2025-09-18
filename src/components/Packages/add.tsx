@@ -10,6 +10,21 @@ interface PackageType {
   name: string;
 }
 
+interface Addon {
+  id: number;
+  label: string;
+  type: "toggle" | "dropdown" | "spinner";
+  options?: string[];
+  price: number;
+}
+
+interface SelectedAddon {
+  id: number;
+  label: string;
+  price: number;
+  value: string | number | boolean;
+}
+
 const AddPackagePage = () => {
   const navigate = useNavigate();
   const [title, setTitle] = useState("");
@@ -25,6 +40,15 @@ const AddPackagePage = () => {
   const [packageTypes, setPackageTypes] = useState<PackageType[]>([]);
   const [typesLoading, setTypesLoading] = useState(false);
   const [typesError, setTypesError] = useState<string | null>(null);
+
+  // Background selection (exclusive Plain / Concept / Both)
+  const [background, setBackground] = useState<
+    "plain" | "concept" | "both" | null
+  >(null);
+
+  // Add-ons
+  const [addons, setAddons] = useState<Addon[]>([]);
+  const [selectedAddons, setSelectedAddons] = useState<SelectedAddon[]>([]);
 
   useEffect(() => {
     const fetchTypes = async () => {
@@ -44,7 +68,20 @@ const AddPackagePage = () => {
       }
     };
 
+    const fetchAddons = async () => {
+      try {
+        const res = await fetchWithAuth(`${API_URL}/api/admin/addons`);
+        const raw = await res.json();
+        const data = Array.isArray(raw) ? raw : raw.addons || [];
+        setAddons(data);
+        console.log("Fetched addons:", data);
+      } catch (err) {
+        console.error("Failed to fetch addons:", err);
+      }
+    };
+
     fetchTypes();
+    fetchAddons();
   }, []);
 
   const handleCoverImageChange = (file: File) => {
@@ -69,13 +106,29 @@ const AddPackagePage = () => {
   };
 
   const removeCarouselImage = (idx: number) => {
-    setCarouselImages(carouselImages.filter((_, i) => i !== idx));
+    setCarouselImages((prev) => prev.filter((_, i) => i !== idx));
   };
 
   const toggleTag = (tag: string) => {
     setTags((prev) =>
       prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
     );
+  };
+
+  const handleAddonChange = (
+    addon: Addon,
+    value: string | number | boolean
+  ) => {
+    setSelectedAddons((prev) => {
+      const existing = prev.find((a) => a.id === addon.id);
+      if (existing) {
+        return prev.map((a) => (a.id === addon.id ? { ...a, value } : a));
+      }
+      return [
+        ...prev,
+        { id: addon.id, label: addon.label, price: addon.price, value },
+      ];
+    });
   };
 
   const validateForm = () => {
@@ -104,8 +157,11 @@ const AddPackagePage = () => {
       description,
       tags,
       images: [coverImage, ...carouselImages],
+      background,
+      addons: selectedAddons,
     };
     console.log("Package created:", newPkg);
+    // TODO: call backend to POST new package (FormData) - not sent here by request
     alert("Package added successfully!");
     navigate("/admin/packages");
   };
@@ -289,8 +345,121 @@ const AddPackagePage = () => {
             )}
           </div>
 
+          {/* Background Selection */}
           <div className="md:col-span-2">
-            <label className="block text-sm font-medium mb-2">Package Types</label>
+            <h4 className="text-sm font-medium mb-2">Background Selection</h4>
+            <div className="flex gap-4">
+              <button
+                type="button"
+                onClick={() =>
+                  setBackground(background === "plain" ? null : "plain")
+                }
+                className={`px-3 py-1 rounded-md text-sm border ${
+                  background === "plain"
+                    ? "bg-[#212121] text-white"
+                    : "bg-white text-gray-700"
+                }`}
+              >
+                Plain Background
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  setBackground(background === "concept" ? null : "concept")
+                }
+                className={`px-3 py-1 rounded-md text-sm border ${
+                  background === "concept"
+                    ? "bg-[#212121] text-white"
+                    : "bg-white text-gray-700"
+                }`}
+              >
+                Concept Background
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  setBackground(background === "both" ? null : "both")
+                }
+                className={`px-3 py-1 rounded-md text-sm border ${
+                  background === "both"
+                    ? "bg-[#212121] text-white"
+                    : "bg-white text-gray-700"
+                }`}
+              >
+                Both
+              </button>
+            </div>
+          </div>
+
+          {/* Add-ons */}
+          <div className="md:col-span-2">
+            <h4 className="text-sm font-medium mb-2">Add-ons</h4>
+            <div className="space-y-3">
+              {addons.map((addon) => {
+                const selected = selectedAddons.find((a) => a.id === addon.id);
+                return (
+                  <div key={addon.id} className="flex items-center gap-3">
+                    {addon.type === "toggle" && (
+                      <>
+                        <input
+                          type="checkbox"
+                          checked={!!selected?.value}
+                          onChange={(e) =>
+                            handleAddonChange(addon, e.target.checked)
+                          }
+                        />
+                        <span>
+                          {addon.label} (+₱{addon.price})
+                        </span>
+                      </>
+                    )}
+
+                    {addon.type === "dropdown" && (
+                      <>
+                        <label className="text-sm">{addon.label}</label>
+                        <select
+                          value={(selected?.value as string) || ""}
+                          onChange={(e) =>
+                            handleAddonChange(addon, e.target.value)
+                          }
+                          className="border rounded-md px-2 py-1 text-sm"
+                        >
+                          <option value="">Select</option>
+                          {addon.options?.map((opt) => (
+                            <option key={opt} value={opt}>
+                              {opt}
+                            </option>
+                          ))}
+                        </select>
+                      </>
+                    )}
+
+                    {addon.type === "spinner" && (
+                      <>
+                        <label className="text-sm">{addon.label}</label>
+                        <input
+                          type="number"
+                          min={0}
+                          value={(selected?.value as number) || 0}
+                          onChange={(e) =>
+                            handleAddonChange(addon, Number(e.target.value))
+                          }
+                          className="border rounded-md w-20 px-2 py-1 text-sm"
+                        />
+                        <span className="text-sm">x ₱{addon.price}</span>
+                      </>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Package Types */}
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium mb-2">
+              Package Types
+            </label>
             {typesLoading ? (
               <p className="text-xs text-gray-500 mt-1">Loading...</p>
             ) : typesError ? (
@@ -301,9 +470,7 @@ const AddPackagePage = () => {
                   <button
                     type="button"
                     key={type.id}
-                    onClick={() =>
-                      toggleTag(type.name)
-                    }
+                    onClick={() => toggleTag(type.name)}
                     className={`px-3 py-1 rounded-md text-sm border transition-all duration-200
                       ${
                         tags.includes(type.name)

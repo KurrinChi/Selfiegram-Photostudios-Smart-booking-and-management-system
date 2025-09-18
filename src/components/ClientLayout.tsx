@@ -17,52 +17,53 @@ const ClientLayout = ({ children }: ClientLayoutProps) => {
     setTimeout(() => {
       setSidebarOpen(false);
       setIsAnimatingOut(false);
-    }, 300); // Matches slideOutLeft animation duration
+    }, 300);
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-100 font-sf">
-      {/* Header */}
-      <div className="h-16 shrink-0">
-        <ClientHeader onToggleSidebar={() => setSidebarOpen(true)} />
-      </div>
-
-      {/* Main content (fills screen minus header) */}
-      <div className="flex flex-grow min-h-[calc(100vh-64px)]">
-        {/* Desktop Sidebar */}
-        <div className="hidden md:block w-64 shrink-0">
-          <ClientSidebar isOpen toggle={() => setSidebarOpen(false)} />
+    <div className="bg-gray-100 font-sf">
+      {/* Screen-height section with header + sidebar + main */}
+      <div className="flex flex-col h-screen">
+        {/* Header */}
+        <div className="h-16 shrink-0">
+          <ClientHeader onToggleSidebar={() => setSidebarOpen(true)} />
         </div>
 
-        {/* Mobile Sidebar */}
-        {(sidebarOpen || isAnimatingOut) && (
-          <div className="fixed inset-0 z-90 md:hidden flex">
-            {/* Backdrop */}
-            <div
-              className="absolute inset-0 bg-black/30 backdrop-blur-sm"
-              onClick={handleSidebarClose}
-            />
-            {/* Slide Animation */}
-            <div
-              className={`relative z-50 w-64 h-full bg-white shadow-lg ${
-                isAnimatingOut ? "animate-slideOutLeft" : "animate-slideInLeft"
-              }`}
-            >
-              <ClientSidebar isOpen toggle={handleSidebarClose} />
-            </div>
+        {/* Sidebar + Main */}
+        <div className="flex flex-1 overflow-hidden">
+          {/* Desktop Sidebar */}
+          <div className="hidden md:flex w-64 shrink-0">
+            <ClientSidebar isOpen toggle={() => setSidebarOpen(false)} />
           </div>
-        )}
 
-        {/* Main Content */}
-        <main className="flex-1 overflow-y-auto bg-white">
-          <div className="min-h-full">{children}</div>
-        </main>
+          {/* Mobile Sidebar */}
+          {(sidebarOpen || isAnimatingOut) && (
+            <div className="fixed inset-0 z-90 md:hidden flex">
+              <div
+                className="absolute inset-0 bg-black/30 backdrop-blur-sm"
+                onClick={handleSidebarClose}
+              />
+              <div
+                className={`relative z-50 w-64 h-full bg-white shadow-lg ${
+                  isAnimatingOut
+                    ? "animate-slideOutLeft"
+                    : "animate-slideInLeft"
+                }`}
+              >
+                <ClientSidebar isOpen toggle={handleSidebarClose} />
+              </div>
+            </div>
+          )}
+
+          {/* Main Content */}
+          <main className="flex-1 flex flex-col bg-white overflow-y-auto">
+            {children}
+          </main>
+        </div>
       </div>
 
-      {/* Footer */}
-      <div>
-        <ClientFooter />
-      </div>
+      {/* Footer outside of the screen-height wrapper */}
+      <ClientFooter />
     </div>
   );
 };

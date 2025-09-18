@@ -8,14 +8,6 @@ interface PackageImage {
   path: string;
 }
 
-interface Addon {
-  id: string | number;
-  label: string;
-  type: "toggle" | "dropdown" | "spinner";
-  price: number;
-  options?: string[];
-}
-
 interface Package {
   id: string;
   title: string;
@@ -25,11 +17,29 @@ interface Package {
   tags: string[];
   images: PackageImage[];
   status: number; // 1 for active, 0 for archived
+  addons?: AddonSelection[];
+  backgroundType?: "plain" | "concept" | "both";
 }
 
 interface PackageType {
   id: string | number;
   name: string;
+}
+
+interface Addon {
+  id: string;
+  name: string;
+  type: "toggle" | "dropdown" | "spinner";
+  options?: { label: string; price: number }[];
+}
+
+interface AddonSelection {
+  addonId: string;
+  name: string;
+  type: "toggle" | "dropdown" | "spinner";
+  option?: string;
+  price: number;
+  quantity?: number;
 }
 
 const API_URL = import.meta.env.VITE_API_URL;
@@ -51,8 +61,11 @@ const EditPackagePage = () => {
   const [typesLoading, setTypesLoading] = useState(false);
   const [typesError, setTypesError] = useState<string | null>(null);
 
-  const [addons, setAddons] = useState<Addon[]>([]); // fetched from API
-  const [selectedAddons, setSelectedAddons] = useState<any[]>([]);
+  // Addons
+  const [addons, setAddons] = useState<Addon[]>([]);
+  const [selectedAddons, setSelectedAddons] = useState<AddonSelection[]>([]);
+
+  // Background type
   const [backgroundType, setBackgroundType] = useState<
     "plain" | "concept" | "both"
   >("plain");
@@ -71,11 +84,17 @@ const EditPackagePage = () => {
         setDescription(data.description);
         setTags(data.tags || []);
         if (data.images && data.images.length > 0) {
-          setCoverImage(data.images[0].path); // show path
+          setCoverImage(data.images[0].path);
           setCarouselImages(data.images);
         } else {
           setCoverImage(undefined);
           setCarouselImages([]);
+        }
+        if (data.addons) {
+          setSelectedAddons(data.addons);
+        }
+        if (data.backgroundType) {
+          setBackgroundType(data.backgroundType);
         }
         console.log("Fetched package:", data);
       } catch (error) {
@@ -108,6 +127,28 @@ const EditPackagePage = () => {
     fetchTypes();
   }, []);
 
+  useEffect(() => {
+    const fetchAddons = async () => {
+      try {
+        const res = await fetchWithAuth(`${API_URL}/api/admin/addons`);
+        if (!res.ok) throw new Error("Failed to fetch addons");
+        const data = await res.json();
+        // Handle both [] and { addons: [] }
+        const addonsArray = Array.isArray(data)
+          ? data
+          : Array.isArray(data.addons)
+          ? data.addons
+          : [];
+        setAddons(addonsArray);
+        console.log("Fetched addons:", addonsArray);
+      } catch (err) {
+        console.error(err);
+        toast.error("Failed to load addons");
+      }
+    };
+    fetchAddons();
+  }, []);
+
   const handleCarouselImageChange = (index: number, file: File) => {
     const reader = new FileReader();
     reader.onloadend = () => {
@@ -115,7 +156,6 @@ const EditPackagePage = () => {
         const updated = [...prev];
 
         if (updated[index] && updated[index].id) {
-          // Replace existing image but keep its ID
           updated[index] = { ...updated[index], path: reader.result as string };
         }
 
@@ -126,33 +166,79 @@ const EditPackagePage = () => {
 
     setNewFiles((prev) => {
       const updatedFiles = [...prev];
-      updatedFiles[index] = file; // set the new file at the correct index
+      updatedFiles[index] = file;
       return updatedFiles;
     });
   };
 
-  useEffect(() => {
-    const fetchAddons = async () => {
-      try {
-        const res = await fetchWithAuth(`${API_URL}/api/admin/addons`);
-        const data = await res.json();
-        setAddons(data);
-        console.log("Fetched addons:", data);
-      } catch (err) {
-        console.error("Failed to fetch addons:", err);
-      }
-    };
-    fetchAddons();
-  }, []);
-
-  // Handle addon change
-  const handleAddonChange = (addon: Addon, value: any) => {
+  const handleAddonChange = (
+    addon: Addon,
+    value?: string | number,
+    checked?: boolean
+  ) => {
     setSelectedAddons((prev) => {
-      const existing = prev.find((a) => a.id === addon.id);
-      if (existing) {
-        return prev.map((a) => (a.id === addon.id ? { ...a, value } : a));
+      let updated = [...prev];
+      const existingIndex = updated.findIndex((a) => a.addonId === addon.id);
+
+      if (addon.type === "toggle") {
+        if (checked) {
+          if (existingIndex === -1) {
+            updated.push({
+              addonId: addon.id,
+              name: addon.name,
+              type: addon.type,
+              price: addon.options?.[0]?.price || 0,
+            });
+          }
+        } else {
+          updated = updated.filter((a) => a.addonId !== addon.id);
+        }
+      } else if (addon.type === "dropdown") {
+        const option = addon.options?.find((o) => o.label === value);
+        if (option) {
+          if (existingIndex !== -1) {
+            updated[existingIndex] = {
+              addonId: addon.id,
+              name: addon.name,
+              type: addon.type,
+              option: option.label,
+              price: option.price,
+            };
+          } else {
+            updated.push({
+              addonId: addon.id,
+              name: addon.name,
+              type: addon.type,
+              option: option.label,
+              price: option.price,
+            });
+          }
+        }
+      } else if (addon.type === "spinner") {
+        const qty = Number(value);
+        if (qty > 0) {
+          if (existingIndex !== -1) {
+            updated[existingIndex] = {
+              addonId: addon.id,
+              name: addon.name,
+              type: addon.type,
+              price: addon.options?.[0]?.price || 0,
+              quantity: qty,
+            };
+          } else {
+            updated.push({
+              addonId: addon.id,
+              name: addon.name,
+              type: addon.type,
+              price: addon.options?.[0]?.price || 0,
+              quantity: qty,
+            });
+          }
+        } else {
+          updated = updated.filter((a) => a.addonId !== addon.id);
+        }
       }
-      return [...prev, { ...addon, value }];
+      return updated;
     });
   };
 
@@ -169,11 +255,25 @@ const EditPackagePage = () => {
       formData.append(`tags[${idx}]`, tag);
     });
 
+    formData.append("backgroundType", backgroundType);
+
+    selectedAddons.forEach((addon, idx) => {
+      formData.append(`addons[${idx}][addonId]`, addon.addonId);
+      formData.append(`addons[${idx}][name]`, addon.name);
+      formData.append(`addons[${idx}][type]`, addon.type);
+      if (addon.option) {
+        formData.append(`addons[${idx}][option]`, addon.option);
+      }
+      if (addon.quantity) {
+        formData.append(`addons[${idx}][quantity]`, String(addon.quantity));
+      }
+      formData.append(`addons[${idx}][price]`, String(addon.price));
+    });
+
     newFiles.forEach((file, idx) => {
       if (file) {
         formData.append(`images[${idx}]`, file);
 
-        // send the matching imageID to
         if (pkg?.images[idx]?.id) {
           formData.append(`imageIDs[${idx}]`, String(pkg.images[idx].id));
         }
@@ -198,20 +298,6 @@ const EditPackagePage = () => {
         );
         return;
       }
-
-      // tags
-      tags.forEach((tag, idx) => {
-        formData.append(`tags[${idx}]`, tag);
-      });
-
-      // addons
-      selectedAddons.forEach((addon, idx) => {
-        formData.append(`addons[${idx}][id]`, String(addon.id));
-        formData.append(`addons[${idx}][value]`, String(addon.value));
-      });
-
-      // background type
-      formData.append("backgroundType", backgroundType);
 
       console.log("Package updated:", result);
       toast.success("Package updated successfully!");
@@ -343,108 +429,107 @@ const EditPackagePage = () => {
             />
           </div>
 
-          {/* Background Type */}
-          <div>
-            <label className="block text-sm font-bold mb-1">
-              Background Type
-            </label>
-            <div className="flex gap-2">
-              {["plain", "concept", "both"].map((type) => (
-                <button
-                  type="button"
-                  key={type}
-                  onClick={() => setBackgroundType(type as any)}
-                  className={`px-3 py-1 rounded-md text-sm border transition-all
-                    ${
-                      backgroundType === type
-                        ? "bg-black text-white border-black"
-                        : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"
-                    }`}
-                >
-                  {type === "plain"
-                    ? "Plain BG"
-                    : type === "concept"
-                    ? "Concept BG"
-                    : "Both"}
-                </button>
-              ))}
+          {/* Background Selection */}
+          <div className="md:col-span-2">
+            <h4 className="text-sm font-medium mb-2">Background Selection</h4>
+            <div className="flex gap-4">
+              <button
+                type="button"
+                onClick={() => setBackgroundType("plain")}
+                className={`px-3 py-1 rounded-md text-sm border ${
+                  backgroundType === "plain"
+                    ? "bg-black text-white border-black"
+                    : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"
+                }`}
+              >
+                Plain Background
+              </button>
+              <button
+                type="button"
+                onClick={() => setBackgroundType("concept")}
+                className={`px-3 py-1 rounded-md text-sm border ${
+                  backgroundType === "concept"
+                    ? "bg-black text-white border-black"
+                    : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"
+                }`}
+              >
+                Concept Background
+              </button>
+              <button
+                type="button"
+                onClick={() => setBackgroundType("both")}
+                className={`px-3 py-1 rounded-md text-sm border ${
+                  backgroundType === "both"
+                    ? "bg-black text-white border-black"
+                    : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"
+                }`}
+              >
+                Both
+              </button>
             </div>
           </div>
 
-          {/* Add-ons */}
+          {/* Addons */}
           <div>
-            <label className="block text-sm font-bold mb-1">Add-ons</label>
-            <div className="space-y-3">
-              {addons.map((addon) => (
-                <div key={addon.id} className="flex items-center gap-3">
-                  {addon.type === "toggle" && (
-                    <label className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        checked={
-                          !!selectedAddons.find((a) => a.id === addon.id)?.value
-                        }
-                        onChange={(e) =>
-                          handleAddonChange(addon, e.target.checked)
-                        }
-                      />
-                      {addon.label} (+₱{addon.price})
-                    </label>
-                  )}
-
-                  {addon.type === "dropdown" && (
-                    <div className="flex flex-col">
-                      <span className="text-sm">{addon.label}</span>
+            <label className="block text-sm font-bold">Add-ons</label>
+            <div className="space-y-3 mt-2">
+              {addons.map((addon) => {
+                const existing = selectedAddons.find(
+                  (a) => a.addonId === addon.id
+                );
+                return (
+                  <div
+                    key={addon.id}
+                    className="flex flex-col gap-2 border p-3 rounded-md"
+                  >
+                    <span className="font-medium">{addon.name}</span>
+                    {addon.type === "toggle" && (
+                      <label className="flex items-center gap-2 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={!!existing}
+                          onChange={(e) =>
+                            handleAddonChange(
+                              addon,
+                              undefined,
+                              e.target.checked
+                            )
+                          }
+                        />
+                        Enable ({addon.options?.[0]?.price || 0}₱)
+                      </label>
+                    )}
+                    {addon.type === "dropdown" && (
                       <select
+                        value={existing?.option || ""}
                         onChange={(e) =>
                           handleAddonChange(addon, e.target.value)
                         }
-                        className="border px-2 py-1 rounded"
+                        className="border px-2 py-1 rounded-md text-sm"
                       >
                         <option value="">Select option</option>
-                        {addon.options?.map((opt, idx) => (
-                          <option key={idx} value={opt}>
-                            {opt} (+₱{addon.price})
+                        {addon.options?.map((opt) => (
+                          <option key={opt.label} value={opt.label}>
+                            {opt.label} ({opt.price}₱)
                           </option>
                         ))}
                       </select>
-                    </div>
-                  )}
-
-                  {addon.type === "spinner" && (
-                    <div className="flex items-center gap-2">
-                      <span>{addon.label}</span>
+                    )}
+                    {addon.type === "spinner" && (
                       <input
                         type="number"
                         min={0}
+                        value={existing?.quantity || 0}
                         onChange={(e) =>
                           handleAddonChange(addon, e.target.value)
                         }
-                        className="border w-20 px-2 py-1 rounded"
+                        className="border px-2 py-1 rounded-md text-sm w-24"
                       />
-                      <span>(+₱{addon.price} each)</span>
-                    </div>
-                  )}
-                </div>
-              ))}
+                    )}
+                  </div>
+                );
+              })}
             </div>
-          </div>
-
-          {/* Buttons */}
-          <div className="flex justify-end gap-3 mt-auto">
-            <button
-              type="button"
-              onClick={() => navigate("/admin/packages")}
-              className="px-4 py-2 border rounded-md text-sm hover:bg-gray-200"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="px-6 py-2 bg-black text-white rounded-md text-sm hover:opacity-80"
-            >
-              Confirm
-            </button>
           </div>
 
           {/* Tags from package_types */}
@@ -481,24 +566,26 @@ const EditPackagePage = () => {
             )}
           </div>
 
-          <div className="flex justify-end gap-3 mt-auto">
+          {/* Actions */}
+          <div className="md:col-span-2 flex justify-end gap-3 mt-6">
             <button
               type="button"
               onClick={() => navigate("/admin/packages")}
-              className="px-4 py-2 border rounded-md text-sm hover:bg-gray-200 transition"
+              className="px-4 py-2 border rounded-md text-sm hover:bg-gray-50"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-6 py-2 bg-black text-white rounded-md text-sm hover:opacity-80 transition"
+              className="px-6 py-2 bg-black text-white rounded-md text-sm hover:bg-gray-900"
             >
-              Confirm
+              Save Changes
             </button>
           </div>
         </form>
       </div>
-      <ToastContainer position="bottom-right" />
+
+      <ToastContainer />
     </div>
   );
 };
