@@ -3,7 +3,6 @@ import React from "react";
 interface TermsDialogProps {
   isOpen: boolean;
   onClose?: () => void;
-   theme?: "dark" | "light";
 }
 const TermsDialog: React.FC<TermsDialogProps> = ({ isOpen, onClose }) => {
   if (!isOpen) return null;

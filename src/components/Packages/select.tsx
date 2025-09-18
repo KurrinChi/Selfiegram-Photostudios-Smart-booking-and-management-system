@@ -1304,13 +1304,9 @@ const SelectPackagePage = () => {
                 />
                 <span>
                   <strong>I accept</strong>{" "}
-                  <button
-                    type="button"
-                    onClick={() => setIsTermsDialogOpen(true)} // Open the TermsDialog modal
-                    className="text-blue-500 underline hover:text-blue-700"
-                  >
+                
                     the Terms and Agreements
-                  </button>
+            
                   . By using our system and services, you agree to abide by the
                   following rules and conditions.
                 </span>

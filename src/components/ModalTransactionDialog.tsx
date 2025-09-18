@@ -713,8 +713,18 @@ console.log("Fetch URL:", `${API_URL}/api/booking-request/reschedule`);
           Your booking has been successfully rescheduled to{" "}
           <span className="font-semibold">
             {formatDate(rescheduleRequest.requestedDate)} at {formatTime(rescheduleRequest.requestedStartTime)}
-          </span>.
+          </span>. Please present the QR code below during your visit.
         </p>
+
+       {/* QR Code Section */}
+      <div className="flex justify-center items-center mt-6">
+        <div className="w-full max-w-xs border-2 border-dashed border-gray-400 rounded-lg p-4 flex items-center justify-center">
+          <QRCode
+            value={`${RECEIPT_URL}/receipt/booking/${data.id}`}
+            size={256}
+          />
+        </div>
+      </div>
       </>
     )}
 
@@ -740,6 +750,7 @@ console.log("Fetch URL:", `${API_URL}/api/booking-request/reschedule`);
   </div>
 )}
 
+    
       {data.paymentStatus === 1 && data.status === 2 ? (
         <>
           {/* Left Panel */}
@@ -937,20 +948,28 @@ console.log("Fetch URL:", `${API_URL}/api/booking-request/reschedule`);
           </div>
 
           {/* QR Code Panel */}
-          <div className="hidden md:flex w-1/3 items-center justify-center bg-gray-100 p-4 border-l border-gray-200">
-            <div className="w-full flex flex-col items-center justify-center">
-              <div className="w-full aspect-square max-w-xs border-2 border-dashed border-gray-400 rounded-lg flex items-center justify-center">
-                <span className="text-gray-400 text-center text-sm p-4">
-                   <QRCode
-                    value={`${RECEIPT_URL}/receipt/booking/${data.id}`}
-                    size={256}
-                  />
-                </span>
+          {(data.paymentStatus === 1 && data.status === 2)? (
+            
+            <div className="hidden md:flex w-1/3 items-center justify-center bg-gray-100 p-4 border-l border-gray-200">
+              <div className="w-full flex flex-col items-center justify-center">
+                <div className="w-full aspect-square max-w-xs border-2 border-dashed border-gray-400 rounded-lg flex items-center justify-center">
+                  <span className="text-gray-400 text-center text-sm p-4">
+                    
+                    <QRCode
+                      value={`${RECEIPT_URL}/receipt/booking/${data.id}`}
+                      size={256}
+                    />
+                  </span>
+                </div>
               </div>
             </div>
-          </div>
+          ) : null
+          
+          }
         </>
       ) : (
+
+       
         <div>
           <h1 className="text-lg font-bold mb-1">{data.package}</h1>
           <div className="grid grid-cols-2 text-sm gap-y-1 mb-6">
@@ -1002,27 +1021,27 @@ console.log("Fetch URL:", `${API_URL}/api/booking-request/reschedule`);
 
 
           <div className="grid grid-cols-2 gap-4 text-sm mb-4">
-            {/* Previous Booking Date */}
-    <div>
-      <label className="text-gray-500 block text-xs mb-1">Booking Date</label>
-      <input
-        disabled
-        value={
-          data.bookingDate &&
-          !isNaN(parse(data.bookingDate, "yyyy-MM-dd", new Date()).getTime())
-            ? format(
-                parse(data.bookingDate, "yyyy-MM-dd", new Date()),
-                "MMMM d, yyyy"
-              )
-            : "Invalid date"
-        }
-        className="w-full border rounded-md px-3 py-1.5 bg-gray-100"
-      />
-    </div>
-
-
-  {/* Previous Booking Time */}
-
+           {/* Previous Booking Date */}
+    {rescheduleRequest?.status !== "approved" && (
+      <div>
+        <label className="text-gray-500 block text-xs mb-1">Booking Date</label>
+        <input
+          disabled
+          value={
+            data.bookingDate &&
+            !isNaN(parse(data.bookingDate, "yyyy-MM-dd", new Date()).getTime())
+              ? format(
+                  parse(data.bookingDate, "yyyy-MM-dd", new Date()),
+                  "MMMM d, yyyy"
+                )
+              : "Invalid date"
+          }
+          className="w-full border rounded-md px-3 py-1.5 bg-gray-100"
+        />
+      </div>
+    )}
+ {/* Previous Booking Time */}
+  {rescheduleRequest?.status !== "approved" && (
     <div>
       <label className="text-gray-500 block text-xs mb-1">Booking Time</label>
       <input
@@ -1031,7 +1050,7 @@ console.log("Fetch URL:", `${API_URL}/api/booking-request/reschedule`);
         className="w-full border rounded-md px-3 py-1.5 bg-gray-100"
       />
     </div>
- 
+  )}
 
   {/* New Booking Date (Conditional) */}
 {rescheduleRequest?.requestedDate && (
