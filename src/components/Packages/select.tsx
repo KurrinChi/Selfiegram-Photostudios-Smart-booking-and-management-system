@@ -1303,9 +1303,7 @@ const SelectPackagePage = () => {
                   className="mt-1"
                 />
                 <span>
-                  <strong>I accept</strong>{" "}
-                
-                    the Terms and Agreements
+                  <strong>I accept</strong>{" "}the Terms and Agreements
             
                   . By using our system and services, you agree to abide by the
                   following rules and conditions.
