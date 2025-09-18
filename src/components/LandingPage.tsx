@@ -691,22 +691,17 @@ export default function HomePage(): React.JSX.Element {
             <div className="flex flex-col">
               <h5 className="font-semibold mb-3 text-gray-300">Navigation</h5>
               <div className="flex flex-col gap-2">
-                {[
-                  "home",
-                  "services",
-                  "gallery",
-                  "studio",
-                  "location",
-                  "contacts",
-                ].map((section) => (
-                  <button
-                    key={section}
-                    onClick={() => scrollToSection(section)}
-                    className="text-gray-400 hover:text-white transition-all duration-300 hover:underline tracking-wide text-sm text-left "
-                  >
-                    {section.charAt(0).toUpperCase() + section.slice(1)}
-                  </button>
-                ))}
+                {["home", "services", "gallery", "studio", "location"].map(
+                  (section) => (
+                    <button
+                      key={section}
+                      onClick={() => scrollToSection(section)}
+                      className="text-gray-400 hover:text-white transition-all duration-300 hover:underline tracking-wide text-sm text-left "
+                    >
+                      {section.charAt(0).toUpperCase() + section.slice(1)}
+                    </button>
+                  )
+                )}
               </div>
             </div>
 
