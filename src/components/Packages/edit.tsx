@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import { fetchWithAuth } from "../../utils/fetchWithAuth";
+import { toast, ToastContainer } from "react-toastify";
 
 interface PackageImage {
   id: number;
@@ -57,7 +58,7 @@ const EditPackagePage = () => {
         setTags(data.tags || []);
         if (data.images && data.images.length > 0) {
           setCoverImage(data.images[0].path); // show path
-          setCarouselImages(data.images);          // full array of objects
+          setCarouselImages(data.images);    
         } else {
           setCoverImage(undefined);
           setCarouselImages([]);
@@ -153,16 +154,16 @@ const EditPackagePage = () => {
 
       if (!response.ok) {
         console.error("Backend error:", result);
-        alert(`Failed to update package: ${result.message || "Unknown error"}`);
+        toast.error(`Failed to update package: ${result.message || "Unknown error"}`);
         return;
       }
 
       console.log("Package updated:", result);
-      alert("Package updated successfully!");
+      toast.success("Package updated successfully!");
       navigate("/admin/packages");
     } catch (error) {
       console.error("Network error:", error);
-      alert("An error occurred while updating the package.");
+      toast.error("An error occurred while updating the package.");
     }
   };
 
@@ -341,6 +342,7 @@ const EditPackagePage = () => {
           </div>
         </form>
       </div>
+      <ToastContainer position="bottom-right" />
     </div>
   );
 };

@@ -4,8 +4,11 @@ import QRCode from "react-qr-code";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
 import ModalRequestedDialog from "./ModalRequestedDialog";
 import ModalOnRequestDialog from "./ModalOnRequestDialog";
+import ModalRescheduleDialog from "./ModalRescheduleDialog";
 import { id } from "date-fns/locale";
 import { toast } from "react-toastify";
+import ModalRequestedDialogReschedule from "./ModalRequestedDialogReschedule";
+import ModalRescheduleRequestedDialog from "./ModalRescheduleRequestedDialog";
 interface TransactionModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -53,6 +56,27 @@ const [cancelRequest, setCancelRequest] = useState<{
   requestDate: string;
 } | null>(null);
 
+const [rescheduleRequest, setRescheduleRequest] = useState<{
+  status: "pending" | "approved" | "declined";
+  requestDate: string;
+  requestedDate: string;
+  requestedStartTime: string;
+  requestedEndTime: string;
+  reason: string;
+} | null>(null);
+
+const [isRescheduleModalOpen, setIsRescheduleModalOpen] = useState(false);
+const [rescheduleData, setRescheduleData] = useState<{
+  id: string;
+  reason: string;
+  bookingDate: string;
+  bookingTime: string;
+  transactionDate: string;
+  bookingId: string;
+  totalAmount: number;
+  packageName: string;
+} | null>(null);
+
 const [isRequestedModalOpen, setIsRequestedModalOpen] = useState(false);
 const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
 const [cancelData, setCancelData] = useState<{ 
@@ -72,13 +96,32 @@ const [cancelData, setCancelData] = useState<{
     }
   }, [data]);
 
+useEffect(() => {
+  if (data?.id && data.status === 4) { // only fetch if status is "rescheduled"
+    fetchWithAuth(`${API_URL}/api/reschedule-request/${data.id}`)
+      .then((res) => {
+        if (!res.ok) return null; // handle 404 gracefully
+        return res.json();
+      })
+      .then((resData) => {
+         console.log("Reschedule Request Data:", resData?.data);
+        if (resData?.data) {
+          setRescheduleRequest(resData.data);
+        }
+      })
+      .catch((err) => console.error("Error fetching reschedule request:", err));
+  }
+}, [data?.id]);
 
 useEffect(() => {
-  if (data?.id) {
+   if (data?.id && data.status === 3) { // only fetch if status is "cancel requested"
     fetchWithAuth(`${API_URL}/api/cancel-request/${data.id}`)
-      .then((res) => res.json())
+      .then((res) => {
+        if (!res.ok) return null; // handle 404 gracefully
+        return res.json();
+      })
       .then((resData) => {
-        if (resData.data) {
+        if (resData?.data) {
           setCancelRequest(resData.data);
         }
       })
@@ -110,6 +153,35 @@ useEffect(() => {
     }
   }
 };
+
+
+useEffect(() => {
+  if (data?.id && data.status === 4) { // reschedule requested
+    fetchWithAuth(`${API_URL}/api/reschedule-request/${data.id}`)
+      .then((res) => {
+        if (!res.ok) return null;
+        return res.json();
+      })
+      .then((resData) => {
+        if (resData?.data) {
+          setRescheduleData({
+            id: data.id,
+            reason: resData.data.reason,
+            bookingDate: resData.data.requestedDate,
+            bookingTime: resData.data.requestedTime,
+            transactionDate: resData.data.requestDate,
+            bookingId: data.id,
+            totalAmount: data.subtotal,
+            packageName: data.package,
+          });
+        }
+      })
+      .catch((err) =>
+        console.error("Error fetching reschedule request:", err)
+      );
+  }
+}, [data?.id, data?.status]);
+
 const handleFeedbackChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
    setFeedback(e.target.value);
   setHasTypedFeedback(e.target.value.trim().length > 0);
@@ -122,19 +194,64 @@ const handleRatingClick = (value: number) => {
 
  const handleCancelSubmit = (reason: string) => {
   // TODO: call API to process cancellation
+  if (!data) return;
+
   setCancelData({
-    id: data!.id,
+    id: data.id,
     reason,
-    bookingDate: data!.bookingDate,
-    bookingTime: data!.time,
-    transactionDate: data!.transactionDate,
-    bookingId: data!.id,
-    totalAmount: data!.total, // or total refund logic
-    packageName: data!.package,
+    bookingDate: data.bookingDate,
+    bookingTime: data.time,
+    transactionDate: data.transactionDate,
+    bookingId: data.id,
+    totalAmount: data.total, // or total refund logic
+    packageName: data.package,
   });
 
   setIsCancelModalOpen(false); // close modal
   setIsRequestedModalOpen(true);
+};
+
+const handleRescheduleSubmit = async (reason: string, requestedDate: string, requestedStartTime: string) => {
+  if (!data) return;
+
+  try {
+    const user_id = localStorage.getItem("userID") || "";
+
+    // Send the reschedule request to the backend
+    const res = await fetch(`http://192.168.1.214:8000/api/booking-request/reschedule`, {
+      method: "POST",
+      body: JSON.stringify({
+        bookingID: data.id,
+        userID: user_id,
+        reason,
+        requestedDate,
+        requestedStartTime,
+      }),
+    });
+
+    if (!res.ok) throw new Error("Failed to submit reschedule request");
+
+    const responseData = await res.json();
+
+    // Update the state with the response data
+    setRescheduleData({
+      id: data.id,
+      reason,
+      bookingDate: requestedDate,
+      bookingTime: requestedStartTime,
+      transactionDate: new Date().toISOString().split("T")[0],
+      bookingId: data.id,
+      totalAmount: data.subtotal,
+      packageName: data.package,
+    });
+
+    toast.success(responseData.message || "Reschedule request submitted successfully!");
+    setIsRescheduleModalOpen(false); // Close the reschedule modal
+    setIsRequestedModalOpen(true); // Open the confirmation modal
+  } catch (err) {
+    console.error("Error submitting reschedule request:", err);
+    toast.error("Error submitting reschedule request. Please try again.");
+  }
 };
 
   const formatDate = (dateStr: string) => {
@@ -143,6 +260,18 @@ const handleRatingClick = (value: number) => {
     year: "numeric",
     month: "long",
     day: "numeric",
+  });
+};
+
+const formatTime = (time: string) => {
+  const [hours, minutes] = time.split(":").map(Number); // Split time into hours and minutes
+  const date = new Date();
+  date.setHours(hours, minutes);
+
+  return date.toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true, // Use 12-hour format
   });
 };
 
@@ -171,46 +300,67 @@ return (
     {/* ModalOnRequestDialog goes here, always rendered but controlled via isOpen */}
     <ModalOnRequestDialog
        isOpen={isCancelModalOpen}
-  onClose={() => setIsCancelModalOpen(false)}
-  onSubmit={async (reason) => {
-  try {
-    const user_id = localStorage.getItem("userID") || "";
-    const res = await fetchWithAuth(`${API_URL}/api/booking-request/cancel`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        bookingID: data.id,
-        userID: user_id,
-        reason: reason,
-      }),
-    });
+      onClose={() => setIsCancelModalOpen(false)}
+      onSubmit={async (reason) => {
+      try {
+        const user_id = localStorage.getItem("userID") || "";
+        const res = await fetchWithAuth(`${API_URL}/api/booking-request/cancel`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            bookingID: data?.id ?? "",
+            userID: user_id,
+            reason: reason,
+          }),
+        });
 
-    if (!res.ok) throw new Error("Failed to submit request");
+        if (!res.ok) throw new Error("Failed to submit request");
 
-    // ✅ Save the cancel data for the confirmation dialog
-    setCancelData({
-      id: data.id,
-      reason,
-      bookingDate: data.bookingDate,
-      bookingTime: data.time, // make sure `time` exists in your `data`
-      bookingId: data.id,
-      totalAmount: data.subtotal,
-      packageName: data.package,
-      transactionDate: new Date().toISOString().split("T")[0], // hardcoded to today
-    });
+        // ✅ Save the cancel data for the confirmation dialog
+        if (!data) return;
+        setCancelData({
+          id: data.id,
+          reason,
+          bookingDate: data.bookingDate,
+          bookingTime: data.time, // make sure `time` exists in your `data`
+          bookingId: data.id,
+          totalAmount: data.subtotal,
+          packageName: data.package,
+          transactionDate: new Date().toISOString().split("T")[0], // hardcoded to today
+        });
 
-    toast.success("Cancel request submitted successfully!");
-    setIsCancelModalOpen(false);
-    setIsRequestedModalOpen(true);
-    
-  } catch (err) {
-    toast.error("Error submitting request. Please try again.");
-  }
+        toast.success("Cancel request submitted successfully!");
+        setIsCancelModalOpen(false);
+        setIsRequestedModalOpen(true);
+        
+      } catch (err) {
+        toast.error("Error submitting request. Please try again.");
+      }
 }}
     />
-
+<ModalRequestedDialogReschedule
+  isOpen={isRequestedModalOpen}
+  onClose={() => {
+    setIsRequestedModalOpen(false); // Close the confirmation modal
+    onClose(); // Close the transaction modal
+  }}
+  data={
+    rescheduleData
+      ? {
+          id: rescheduleData.id,
+          reason: rescheduleData.reason,
+          bookingDate: rescheduleData.bookingDate,
+          bookingTime: rescheduleData.bookingTime,
+          transactionDate: rescheduleData.transactionDate,
+          bookingId: rescheduleData.bookingId,
+          totalAmount: rescheduleData.totalAmount,
+          packageName: rescheduleData.packageName,
+        }
+      : null
+  }
+/>
    <ModalRequestedDialog
   isOpen={isRequestedModalOpen}
    onClose={() => {
@@ -231,6 +381,77 @@ return (
         }
       : null
   }
+/>
+<ModalRescheduleRequestedDialog
+  isOpen={isRequestedModalOpen}
+  onClose={() => {
+    setIsRequestedModalOpen(false); // Close the confirmation modal
+    onClose(); // Close the transaction modal
+  }}
+  data={
+    rescheduleData
+      ? {
+          id: rescheduleData.id,
+          reason: rescheduleData.reason,
+          bookingDate: rescheduleData.bookingDate,
+          bookingTime: rescheduleData.bookingTime,
+          transactionDate: rescheduleData.transactionDate,
+          bookingId: rescheduleData.bookingId,
+          totalAmount: rescheduleData.totalAmount,
+          packageName: rescheduleData.packageName,
+        }
+      : null
+  }
+/>
+
+<ModalRescheduleDialog
+  isOpen={isRescheduleModalOpen}
+  onClose={() => setIsRescheduleModalOpen(false)}
+  bookingID={data?.id ? Number(data.id) : 0}
+  userID={localStorage.getItem("userID") ? Number(localStorage.getItem("userID")) : 0}
+  onSubmit={async (reason, requestedDate, requestedStartTime) => {
+    try {
+      const user_id = localStorage.getItem("userID") || "";
+      console.log("API_URL:", API_URL);
+console.log("Fetch URL:", `${API_URL}/api/booking-request/reschedule`);
+      const res = await fetchWithAuth(`${API_URL}/api/booking-request/reschedule`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          bookingID: data?.id ?? "",
+          userID: user_id,
+          requestedDate,
+          requestedStartTime,
+          reason,
+        }),
+      });
+
+      if (!res.ok) throw new Error("Failed to submit reschedule request");
+
+      const responseData = await res.json();
+
+      // ✅ Save reschedule data for confirmation dialog
+      if (!data) return;
+      setRescheduleData({
+        id: data.id,
+        reason,
+        bookingDate: requestedDate,
+        bookingTime: requestedStartTime,
+        transactionDate: new Date().toISOString().split("T")[0],
+        bookingId: data.id,
+        totalAmount: data.subtotal,
+        packageName: data.package,
+      });
+
+      toast.success(responseData.message || "Reschedule request submitted!");
+      setIsRescheduleModalOpen(false);
+      setIsRequestedModalOpen(true);
+    } catch (err) {
+      toast.error("Error submitting reschedule request. Please try again.");
+    }
+  }}
 />
     <div
       className={`bg-white text-gray-900 rounded-lg shadow-md overflow-y-auto max-h-[95vh] ${
@@ -380,67 +601,142 @@ return (
 
 
 
-{Number(data.status) === 4 && (
+{Number(data.status) === 4 && rescheduleRequest && (
   <div className="p-6 rounded-2xl bg-gray-100 mb-4">
     <h2 className="text-gray-600 text-lg font-semibold mb-4">
-    Reschedule Pending Review
-  </h2>
-    <div className="flex items-center justify-between relative">
+      {rescheduleRequest.status === "pending"
+        ? "Reschedule Pending Review"
+        : rescheduleRequest.status === "approved"
+        ? "Reschedule Request Approved"
+        : "Reschedule Request Denied"}
+    </h2>
+
+    {/* Stepper */}
+    <div className="flex items-center justify-between relative mb-4">
       {/* Step 1 */}
       <div className="flex flex-col items-center">
-        <div className="w-8 h-8 flex items-center justify-center rounded-full bg-black text-white font-bold">
+        <div
+          className={`w-8 h-8 flex items-center justify-center rounded-full font-bold ${
+            rescheduleRequest.status === "pending"
+              ? "bg-black text-white"
+              : rescheduleRequest.status === "approved"
+              ? "bg-green-500 text-white"
+              : "bg-red-500 text-white"
+          }`}
+        >
           1
         </div>
-        <span className="mt-2 text-xs font-medium text-gray-700">
-          Request Sent
-        </span>
+        <span className="mt-2 text-xs font-medium text-gray-700">Request Sent</span>
       </div>
 
-      {/* Connector line */}
-      <div className="flex-1 h-[2px] bg-black mx-2"></div>
+      {/* Connector 1 */}
+      <div
+        className={`flex-1 h-[2px] mx-2 ${
+          rescheduleRequest.status === "approved"
+            ? "bg-green-500"
+            : rescheduleRequest.status === "declined"
+            ? "bg-red-500"
+            : "bg-gray-300"
+        }`}
+      ></div>
 
       {/* Step 2 */}
       <div className="flex flex-col items-center">
-        <div className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-300 text-gray-600 font-bold">
-          2
+        <div
+          className={`w-8 h-8 flex items-center justify-center rounded-full font-bold ${
+            rescheduleRequest.status === "approved"
+              ? "bg-green-500 text-white"
+              : rescheduleRequest.status === "declined"
+              ? "bg-red-500 text-white"
+              : "bg-gray-300 text-gray-600"
+          }`}
+        >
+          {rescheduleRequest.status === "approved" || rescheduleRequest.status === "declined" ? "✔" : "2"}
         </div>
-        <span className="mt-2 text-xs font-medium text-gray-700">
-          Staff Response
-        </span>
+        <span className="mt-2 text-xs font-medium text-gray-700">Staff Response</span>
       </div>
 
-      {/* Connector line */}
-      <div className="flex-1 h-[2px] bg-gray-300 mx-2"></div>
+      {/* Connector 2 */}
+      <div
+        className={`flex-1 h-[2px] mx-2 ${
+          rescheduleRequest.status === "approved"
+            ? "bg-green-500"
+            : rescheduleRequest.status === "declined"
+            ? "bg-red-500"
+            : "bg-gray-300"
+        }`}
+      ></div>
 
       {/* Step 3 */}
       <div className="flex flex-col items-center">
-        <div className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-300 text-gray-600 font-bold">
-          3
+        <div
+          className={`w-8 h-8 flex items-center justify-center rounded-full font-bold ${
+            rescheduleRequest.status === "approved"
+              ? "bg-green-500 text-white"
+              : rescheduleRequest.status === "declined"
+              ? "bg-red-500 text-white"
+              : "bg-gray-300 text-gray-600"
+          }`}
+        >
+          {rescheduleRequest.status === "approved" ? "✔" : rescheduleRequest.status === "declined" ? "✖" : "3"}
         </div>
-        <span className="mt-2 text-xs font-medium text-gray-700">
-          Approved
-        </span>
+        <span className="mt-2 text-xs font-medium text-gray-700">Approved</span>
       </div>
     </div>
+
     <hr className="border-gray-400 my-4" />
-    <h2 className="text-gray-500 text-lg font-semibold mb-4">
-    Wait for our staff to review your request
-  </h2>
-  <p className="text-xs">
-        Please wait until{" "}
-        <span className="font-semibold">
-          {new Date(
-            new Date(data.transactionDate).getTime() + 2 * 24 * 60 * 60 * 1000
-          ).toLocaleDateString("en-US", {
-            year: "numeric",
-            month: "long",
-            day: "numeric",
-          })}
-        </span>{" "}
-        for our staff to review and update the status of your reschedule request. 
-        You will be notified once the process has been completed. We appreciate your
-         patience and understanding as we work to confirm your new appointment schedule.
-      </p>
+
+    {/* Message Section */}
+    {rescheduleRequest.status === "pending" && (
+      <>
+        <h2 className="text-gray-500 text-lg font-semibold mb-2">
+          Wait for our staff to review your request
+        </h2>
+        <p className="text-xs">
+          Please wait until{" "}
+          <span className="font-semibold">
+            {new Date(
+              new Date(rescheduleRequest.requestDate).getTime() + 2 * 24 * 60 * 60 * 1000
+            ).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}
+          </span>{" "}
+          for our staff to review and update the status of your reschedule request. You will be notified once the process is completed.
+        </p>
+      </>
+    )}
+
+    {rescheduleRequest.status === "approved" && (
+      <>
+        <h2 className="text-gray-500 text-lg font-semibold mb-2">
+          Your Reschedule Request Has Been Approved
+        </h2>
+        <p className="text-xs">
+          Your booking has been successfully rescheduled to{" "}
+          <span className="font-semibold">
+            {formatDate(rescheduleRequest.requestedDate)} at {formatTime(rescheduleRequest.requestedStartTime)}
+          </span>.
+        </p>
+      </>
+    )}
+
+    {rescheduleRequest.status === "declined" && (
+      <>
+        <h2 className="text-gray-500 text-lg font-semibold mb-2">
+          Sorry, we could not reschedule your appointment
+        </h2>
+        <p className="text-xs">
+          Your reschedule request has been declined. Please contact our staff{" "}
+          <a
+            href="https://www.facebook.com/selfiegrammalolos"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-500 underline"
+          >
+            here
+          </a>{" "}
+          for further assistance.
+        </p>
+      </>
+    )}
   </div>
 )}
 
@@ -615,10 +911,7 @@ return (
                 </button>
 
                 <button
-                  onClick={() => {
-                    // TODO: handle reschedule logic
-                    alert("Reschedule clicked");
-                  }}
+                  onClick={() => setIsRescheduleModalOpen(true)}
                   className="w-1/2 bg-gray-100 border rounded-md px-4 py-2 rounded  hover:bg-gray-200 transition ml-2"
                 >
                   Reschedule
@@ -709,32 +1002,108 @@ return (
 
 
           <div className="grid grid-cols-2 gap-4 text-sm mb-4">
-            <div>
-              <label className="text-gray-500 block text-xs mb-1">
-                Booking Date
-              </label>
-              <input
-                disabled
-                value={
-                  data.bookingDate &&
-                  !isNaN(parse(data.bookingDate, "yyyy-MM-dd", new Date()).getTime())
-                    ? format(parse(data.bookingDate, "yyyy-MM-dd", new Date()), "MMMM d, yyyy")
-                    : "Invalid date"
-                }
-                className="w-full border rounded-md px-3 py-1.5 bg-gray-100"
-              />
-            </div>
-            <div>
-              <label className="text-gray-500 block text-xs mb-1">
-                Booking Time
-              </label>
-              <input
-                disabled
-                value={data.time}
-                className="w-full border rounded-md px-3 py-1.5 bg-gray-100"
-              />
-            </div>
+            {/* Previous Booking Date */}
+    <div>
+      <label className="text-gray-500 block text-xs mb-1">Booking Date</label>
+      <input
+        disabled
+        value={
+          data.bookingDate &&
+          !isNaN(parse(data.bookingDate, "yyyy-MM-dd", new Date()).getTime())
+            ? format(
+                parse(data.bookingDate, "yyyy-MM-dd", new Date()),
+                "MMMM d, yyyy"
+              )
+            : "Invalid date"
+        }
+        className="w-full border rounded-md px-3 py-1.5 bg-gray-100"
+      />
+    </div>
+
+
+  {/* Previous Booking Time */}
+
+    <div>
+      <label className="text-gray-500 block text-xs mb-1">Booking Time</label>
+      <input
+        disabled
+        value={data.time}
+        className="w-full border rounded-md px-3 py-1.5 bg-gray-100"
+      />
+    </div>
+ 
+
+  {/* New Booking Date (Conditional) */}
+{rescheduleRequest?.requestedDate && (
+  <div>
+    <label
+      className={`block text-xs mb-1 ${
+        rescheduleRequest.status === "pending"
+          ? "text-gray-500"
+          : rescheduleRequest.status === "declined"
+          ? "text-red-500"
+          : "text-green-500"
+      }`}
+    >
+      New Booking Date
+    </label>
+    <input
+      disabled
+      value={
+        !isNaN(
+          parse(rescheduleRequest.requestedDate, "yyyy-MM-dd", new Date()).getTime()
+        )
+          ? format(
+              parse(rescheduleRequest.requestedDate, "yyyy-MM-dd", new Date()),
+              "MMMM d, yyyy"
+            )
+          : "Invalid date"
+      }
+      className={`w-full border rounded-md px-3 py-1.5 ${
+        rescheduleRequest.status === "pending"
+          ? "bg-gray-100 text-gray-700"
+          : rescheduleRequest.status === "declined"
+          ? "bg-red-100 text-red-700"
+          : "bg-green-100 text-green-700"
+      }`}
+    />
+  </div>
+)}
+
+{/* New Booking Time (Conditional) */}
+{rescheduleRequest?.requestedStartTime && rescheduleRequest?.requestedEndTime && (
+  <div>
+    <label
+      className={`block text-xs mb-1 ${
+        rescheduleRequest.status === "pending"
+          ? "text-gray-500"
+          : rescheduleRequest.status === "declined"
+          ? "text-red-500"
+          : "text-green-500"
+      }`}
+    >
+      New Booking Time
+    </label>
+    <input
+      disabled
+      value={`${formatTime(rescheduleRequest.requestedStartTime)} - ${formatTime(
+        rescheduleRequest.requestedEndTime
+      )}`}
+      className={`w-full border rounded-md px-3 py-1.5 ${
+        rescheduleRequest.status === "pending"
+          ? "bg-gray-100 text-gray-700"
+          : rescheduleRequest.status === "declined"
+          ? "bg-red-100 text-red-700"
+          : "bg-green-100 text-green-700"
+      }`}
+    />
+  </div>
+)}
           </div>
+
+            
+
+
 
           <div className="text-sm mb-4">
             <div className="flex justify-between">
@@ -766,10 +1135,7 @@ return (
                   </button>
 
                   <button
-                    onClick={() => {
-                      // TODO: handle reschedule logic
-                      alert("Reschedule clicked");
-                    }}
+                   onClick={() => setIsRescheduleModalOpen(true)}
                     className="w-1/2 bg-gray-100 border rounded-md px-4 py-2 rounded hover:bg-gray-200 transition ml-2"
                   >
                     Reschedule
@@ -780,14 +1146,7 @@ return (
 
               <div className="flex justify-between">
       
-                {(hasTypedFeedback || hasSelectedRating) && (
-                  <button
-                    onClick={handleSave}
-                    className="bg-gray-800 text-white px-4 py-2 rounded hover:bg-gray-600 transition"
-                  >
-                    Save
-                  </button>
-                )}
+         
               </div>
 
           {data.status === 1 ? (

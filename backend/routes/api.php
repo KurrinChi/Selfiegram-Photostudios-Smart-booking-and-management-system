@@ -15,6 +15,8 @@
     use App\Http\Controllers\TransactionController;
     use App\Http\Controllers\ForgotPasswordController;
     use App\Http\Controllers\BookingRequestController;
+    use App\Http\Controllers\GalleryController;
+
     // Just for testing
     Route::middleware('api')->get('/test', function (Request $request) {
         return response()->json([
@@ -120,6 +122,12 @@
         Route::get('/admin/package-types', [PackageController::class, 'packageType']);
         Route::post('/admin/packages/{id}/archive', [PackageController::class, 'archivePackage']);
         Route::post('/admin/update-package/{id}', [PackageController::class, 'updatePackage']);
+
+        //admin gallery page
+        Route::get('/admin/completed-appointments', [GalleryController::class, 'completedAppointments']);
+        Route::post('/admin/upload', [GalleryController::class, 'uploadImage']);
+        Route::get('/admin/images/{userID}', [GalleryController::class, 'getImagesByUser']);
+        Route::delete('/admin/images/delete', [GalleryController::class, 'deleteImages']);
     });
 
     // Protected routes (user must be logged in) CUSTOMER
@@ -152,6 +160,7 @@
 
         //Client Home Page
         Route::get('/top-selling-packages', [HomeController::class, 'getTopSellingPackages']);
+        Route::get('/feedbacks', [HomeController::class, 'getFeedbacks']);
 
         //Client Booking/Transaction
         Route::post('/bookings', [TransactionController::class, 'createBooking']);
@@ -163,6 +172,11 @@
         Route::post('/booking-request/cancel', [BookingRequestController::class, 'storeCancelRequest']);
         Route::get('/cancel-request/{bookingID}', [BookingRequestController::class, 'getCancelRequest']);
 
+         //Client Reschedule Request
+        Route::post('/reschedule', [BookingRequestController::class, 'createRescheduleRequest']);
+       //Route::post('/reschedule', [BookingRequestController::class, 'rescheduleBooking']);
+        Route::post('/booking-request/reschedule', [BookingRequestController::class, 'rescheduleBooking']);
+        Route::get('/reschedule-request/{bookingId}', [BookingRequestController::class, 'getRescheduleRequest']);
     });
 
     //receipt

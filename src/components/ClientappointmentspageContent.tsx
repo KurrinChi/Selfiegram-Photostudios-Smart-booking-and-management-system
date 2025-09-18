@@ -278,6 +278,7 @@ const ClientAppointmentsPageContent = () => {
         </div>
 
         {/* Appointment Cards */}
+{/* Appointment Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
           {appointments.map((a, i) => (
             <div
@@ -354,40 +355,61 @@ const ClientAppointmentsPageContent = () => {
             <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
           </div>
 
-          <div className="font-semibold mb-2">Scheduled Photoshoots</div>
-          <div className="space-y-4 overflow-y-auto">
-            {filteredAppointments.map((a, i) => (
-              <div
-                key={i}
-                className="flex items-start gap-3 cursor-pointer hover:bg-gray-100 p-2 rounded-lg"
-                onClick={() => {
-                  setSelectedAppointment(a);
-                  setShowSidebar(false);
+          {/* Scheduled Photoshoots Section */}
+<div className="font-semibold mb-2">Scheduled Photoshoots</div>
+{appointments.some((a) => [2, 3, 4].includes(a.rawStatus)) ? (
+  <div className="space-y-4 overflow-y-auto">
+    {filteredAppointments.map((a, i) => {
+      if ([2, 3, 4].includes(a.rawStatus)) {
+        return (
+          <div
+            key={i}
+            className="flex items-start gap-3 cursor-pointer hover:bg-gray-100 p-2 rounded-lg"
+            onClick={() => {
+              setSelectedAppointment(a);
+              setShowSidebar(false);
+            }}
+          >
+            {profilePicture ? (
+              <img
+                src={profilePicture}
+                alt="Profile"
+                className="w-8 h-8 rounded-full object-cover border border-gray-300"
+                onError={(e) => {
+                  e.currentTarget.src = "/fallback.png";
                 }}
-              >
-                 {profilePicture ? (
-                    <img
-                      src={profilePicture}
-                      alt="Profile"
-                      className="w-8 h-8 rounded-full object-cover border border-gray-300"
-                      onError={(e) => {
-                        e.currentTarget.src = "/fallback.png"; 
-                      }}
-                    />
-                  ) : (
-                    <div className="w-8 h-8 rounded-full bg-gray-300" />
-                  )}
-                <div className="text-xs text-gray-700">
-                  <div className="font-bold">{getBookingLabel(Number(a.id), a.package)}</div>
-                  <div className="text-[11px]">
-                    {formatDate(a.date)} at {formatTime(a.time)}
-                  </div>
-                  <div className="text-[11px] leading-tight">3rd Floor Kim Kar Building F Estrella St., Malolos, Philippines</div>
-                  <div className="text-[11px] italic mt-1">Name: {a.name}</div>
-                </div>
+              />
+            ) : (
+              <div className="w-8 h-8 rounded-full bg-gray-300" />
+            )}
+            <div className="text-xs text-gray-700">
+              <div className="font-bold">{getBookingLabel(Number(a.id), a.package)}</div>
+              <div className="text-[11px]">
+                {formatDate(a.date)} at {formatTime(a.time)}
               </div>
-            ))}
+              <div className="text-[11px] leading-tight">
+                3rd Floor Kim Kar Building F Estrella St., Malolos, Philippines
+              </div>
+              <div className="text-[11px] italic mt-1">Name: {a.name}</div>
+            </div>
           </div>
+        );
+      }
+      return null;
+    })}
+  </div>
+) : (
+  <div className="text-center text-gray-500 mt-4">
+  No scheduled photoshoot appointments yet.{" "}Begin your booking{" "}
+  <button
+    onClick={() => navigate("/client/packages")}
+    className="text-gray-700 underline hover:text-blue-700 transition"
+  >
+     now!
+  </button>
+</div>
+)}
+
         </div>
       </div>
 

@@ -1,13 +1,12 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
-import { Eye, Trash2 } from "lucide-react";
+import { Upload } from "lucide-react";
 import GalleryModal from "./GalleryModal"; // adjust path if needed
 import "react-date-range/dist/styles.css";
 import "react-date-range/dist/theme/default.css";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faSearch } from "@fortawesome/free-solid-svg-icons";
-
-const ITEMS_PER_PAGE = 5;
+const ITEMS_PER_PAGE = 8;
 const API_URL = import.meta.env.VITE_API_URL;
 
 const AdminGalleryContent = () => {
@@ -15,17 +14,15 @@ const AdminGalleryContent = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [showModal, setShowModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState<any | null>(null);
-  const [itemToDelete, setItemToDelete] = useState<any | null>(null);
   const [search, setSearch] = useState(""); // Added search state
   const [statusFilter, setStatusFilter] = useState("All");
 
   useEffect(() => {
     const fetchHistory = async () => {
       try {
-        const user_id = localStorage.getItem("userID");
         const token = localStorage.getItem("token");
         const response = await axios.get(
-          `${API_URL}/api/booking/history/${user_id}`,
+          `${API_URL}/api/admin/completed-appointments`,
           {
             headers: { Authorization: `Bearer ${token}` },
           }
@@ -34,17 +31,18 @@ const AdminGalleryContent = () => {
         const data = response.data as any[];
 
         const formatted = data.map((item: any) => ({
-          id: item.bookingID,
-          packageName: item.packageName,
+          id: item.id,
+          userID: item.userID,
+          packageID: item.packageID,
+          username: item.username,
+          packageName: item.package,
           image: null,
-          dateTime: item.dateTime,
+          dateTime: item.bookingDate,
           price: `₱${parseFloat(item.price).toFixed(2)}`,
-          feedback: item.feedback ?? null,
-          rating: item.rating ?? null,
-          status: item.status,
-          paymentStatus: item.paymentStatus,
-          paidAmount: item.paidAmount,
-          pendingBalance: item.pendingBalance,
+          customerName: item.customerName,
+          bookingStartTime: item.bookingStartTime,
+          bookingEndTime: item.bookingEndTime,
+          status: item.status
         }));
 
         setHistoryData(formatted);
@@ -54,78 +52,13 @@ const AdminGalleryContent = () => {
           error
         );
 
-        // ✅ Temporary placeholder data
-        const placeholderData = [
-          {
-            id: 1,
-            packageName: "Basic",
-            dateTime: new Date().toISOString(),
-            price: "₱1500.00",
-            feedback: "Great service!",
-            rating: 4,
-            status: "Completed",
-            paymentStatus: "Paid",
-            paidAmount: "₱1500.00",
-            pendingBalance: "₱0.00",
-          },
-          {
-            id: 2,
-            packageName: "Premium",
-            dateTime: new Date().toISOString(),
-            price: "₱3000.00",
-            feedback: null,
-            rating: 0,
-            status: "Pending",
-            paymentStatus: "Unpaid",
-            paidAmount: "₱0.00",
-            pendingBalance: "₱3000.00",
-          },
-          {
-            id: 3,
-            packageName: "Deluxe",
-            dateTime: new Date().toISOString(),
-            price: "₱5000.00",
-            feedback: "Absolutely worth it!",
-            rating: 5,
-            status: "Completed",
-            paymentStatus: "Paid",
-            paidAmount: "₱5000.00",
-            pendingBalance: "₱0.00",
-          },
-          {
-            id: 4,
-            packageName: "Basic",
-            dateTime: new Date().toISOString(),
-            price: "₱1500.00",
-            feedback: null,
-            rating: 3,
-            status: "Completed",
-            paymentStatus: "Paid",
-            paidAmount: "₱1500.00",
-            pendingBalance: "₱0.00",
-          },
-          {
-            id: 5,
-            packageName: "Premium",
-            dateTime: new Date().toISOString(),
-            price: "₱3000.00",
-            feedback: "Needs improvement.",
-            rating: 2,
-            status: "Cancelled",
-            paymentStatus: "Refunded",
-            paidAmount: "₱0.00",
-            pendingBalance: "₱0.00",
-          },
-        ];
-
-        setHistoryData(placeholderData);
       }
     };
 
     fetchHistory();
   }, []);
 
-  // 🔎 Filter all history data first
+  // filtering logic
   const filteredData = historyData
     .filter((item) => {
       if (!search) return true;
@@ -141,46 +74,24 @@ const AdminGalleryContent = () => {
       if (statusFilter === "Package") {
         return a.packageName.localeCompare(b.packageName);
       }
-      if (statusFilter === "Client") {
+      if (statusFilter === "Customer") {
         return (a.customerName || "").localeCompare(b.customerName || "");
       }
       return 0;
     });
 
-  // 📄 Apply pagination AFTER filtering
+  // pagination 
   const paginatedData = filteredData.slice(
     (currentPage - 1) * ITEMS_PER_PAGE,
     currentPage * ITEMS_PER_PAGE
   );
   const totalPages = Math.ceil(filteredData.length / ITEMS_PER_PAGE);
 
-  const token = localStorage.getItem("token");
-
   const handleView = (item: any) => {
-    setSelectedItem(item); // 👈 Save the clicked row
-    setShowModal(true); // 👈 Open the modal
+    setSelectedItem(item);
+    setShowModal(true);
   };
 
-  const handleDelete = (item: any) => {
-    setItemToDelete(item);
-  };
-
-  const confirmDelete = async () => {
-    try {
-      await axios.delete(`${API_URL}/api/booking/${itemToDelete.id}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      setHistoryData((prev) =>
-        prev.filter((item) => item.id !== itemToDelete.id)
-      );
-
-      setItemToDelete(null);
-    } catch (error) {
-      console.error("Failed to delete:", error);
-    }
-  };
   const formatTime = (time: string) => {
     const date = new Date(`1970-01-01T${time}`);
     return date.toLocaleTimeString("en-US", {
@@ -237,7 +148,7 @@ const AdminGalleryContent = () => {
           <option>Filter By:</option>
           <option>Most Recent</option>
           <option>Package</option>
-          <option>Client</option>
+          <option>Customer</option>
         </select>
       </div>
 
@@ -248,8 +159,8 @@ const AdminGalleryContent = () => {
               <th className="p-4">ID</th>
               <th className="p-4">Package Name</th>
               <th className="p-4">Customer Name</th>
-              <th className="p-4">Date</th>
-              <th className="p-4">Time</th>
+              <th className="p-4">Booking Date</th>
+              <th className="p-4">Booking Time</th>
               <th className="p-4 text-center">Action</th>
             </tr>
           </thead>
@@ -293,15 +204,9 @@ const AdminGalleryContent = () => {
                   <button
                     onClick={() => handleView(item)} // 👈 Make sure this exists
                     className="p-2 text-gray-600 hover:text-blue-800"
+                    title="Upload Photos"
                   >
-                    <Eye className="w-4 h-4" />
-                  </button>
-
-                  <button
-                    className="text-gray-600 hover:text-red-500 transition"
-                    onClick={() => handleDelete(item)}
-                  >
-                    <Trash2 className="w-5 h-5" />
+                    <Upload className="w-4 h-4" />
                   </button>
                 </td>
               </tr>
@@ -333,33 +238,8 @@ const AdminGalleryContent = () => {
         <GalleryModal
           isOpen={showModal}
           onClose={() => setShowModal(false)}
-          booking={selectedItem} // 👈 pass the booking/item here
+          booking={selectedItem}
         />
-      )}
-
-      {/* Delete Modal */}
-      {itemToDelete && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black/30 backdrop-blur-sm z-50">
-          <div className="bg-white p-6 rounded-xl shadow-lg max-w-sm w-full animate-fadeIn">
-            <h2 className="text-lg font-semibold mb-4">
-              Are you sure you want to delete this history item?
-            </h2>
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => setItemToDelete(null)}
-                className="px-4 py-2 text-sm rounded-md bg-gray-100 hover:bg-gray-200"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={confirmDelete}
-                className="px-4 py-2 text-sm rounded-md bg-red-500 text-white hover:bg-red-600"
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-        </div>
       )}
     </div>
   );

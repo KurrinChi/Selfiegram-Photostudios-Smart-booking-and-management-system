@@ -95,8 +95,14 @@ const ClientFavoritePageContent: React.FC = () => {
         <div className="text-center text-gray-500">Loading favorites...</div>
       ) : favorites.length === 0 ? (
         <div className="text-center text-gray-500 border border-dashed py-20 rounded-md">
-          You don't have any favorites yet.
-        </div>
+      <p className="mb-4">You don't have any favorites yet.</p>
+      <button
+        onClick={() => navigate("/client/packages")}
+        className="px-4 py-2 bg-gray-700 text-white rounded-md hover:bg-gray-600 transition"
+      >
+        Select Package Here
+      </button>
+    </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {favorites.map((pkg) => {

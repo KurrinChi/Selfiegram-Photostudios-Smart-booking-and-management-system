@@ -4,12 +4,24 @@ import { useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { Star } from "lucide-react";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
+import FeedbackSection from "./FeedbackSection"; 
 
 interface Package {
   id: string;
   title: string;
   price: number;
-    image: string | null;
+  image: string | null;
+  rating: number;
+}
+
+interface Feedback {
+  id: number;
+  username: string;
+  profilePic: string | null;
+  packageName: string;
+  bookingDate: string;
+  bookingTime: string;
+  feedback: string;
   rating: number;
 }
 
@@ -31,7 +43,7 @@ const slides = [
       "SelfieGram is here to provide you with a seamless studio scheduling experience.",
     button: "Get Started →",
     route: "/client/packages",
-    bg: "", // intentionally left empty to show solid background
+    bg: "",
   },
 ];
 
@@ -40,30 +52,56 @@ const ClientHomepageContent = () => {
   const [slideIndex, setSlideIndex] = useState(0);
   const [direction, setDirection] = useState(0);
   const [packages, setPackages] = useState<Package[]>([]);
+  const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
 
   const SLIDE_DURATION = 0.5;
   const SLIDE_INTERVAL = 10000;
 
   useEffect(() => {
     const fetchTopPackages = async () => {
-    try {
-      const res = await fetchWithAuth(`${API_URL}/api/top-selling-packages`);
-      const data = await res.json();
-      setPackages(
-        data.map((pkg: any) => ({
-          id: pkg.id,
-          title: pkg.title,
-          price: parseFloat(pkg.price),
-         image: pkg.image, 
-          rating: Math.round(pkg.rating || 0), 
-        }))
-      );
-    } catch (err) {
-      console.error("Failed to fetch top packages:", err);
-    }
-  };
+      try {
+        const res = await fetchWithAuth(`${API_URL}/api/top-selling-packages`);
+        const data = await res.json();
+        setPackages(
+          data.map((pkg: any) => ({
+            id: pkg.id,
+            title: pkg.title,
+            price: parseFloat(pkg.price),
+            image: pkg.image,
+            rating: Math.round(pkg.rating || 0),
+          }))
+        );
+      } catch (err) {
+        console.error("Failed to fetch top packages:", err);
+      }
+    };
 
-  fetchTopPackages();
+   const fetchFeedbacks = async () => {
+  try {
+    const res = await fetchWithAuth(`${API_URL}/api/feedbacks`);
+    const data = await res.json();
+
+     console.log("Feedback data from backend:", data);
+     
+    setFeedbacks(
+      data.map((fb: any) => ({
+        id: fb.id,
+        username: fb.username,
+        profilePic: fb.user_image,
+        packageName: fb.package_name,
+        bookingDate: fb.bookingDate,
+        bookingTime: fb.booking_time,
+        feedback: fb.feedback,
+        rating: fb.rating,
+      }))
+    );
+  } catch (err) {
+    console.error("Failed to fetch feedbacks:", err);
+  }
+};
+
+    fetchTopPackages();
+    fetchFeedbacks();
   }, []);
 
   const paginate = (newIndex: number) => {
@@ -82,18 +120,9 @@ const ClientHomepageContent = () => {
   const current = slides[slideIndex];
 
   const variants = {
-    enter: (dir: number) => ({
-      x: dir > 0 ? 300 : -300,
-      opacity: 0,
-    }),
-    center: {
-      x: 0,
-      opacity: 1,
-    },
-    exit: (dir: number) => ({
-      x: dir > 0 ? -300 : 300,
-      opacity: 0,
-    }),
+    enter: (dir: number) => ({ x: dir > 0 ? 300 : -300, opacity: 0 }),
+    center: { x: 0, opacity: 1 },
+    exit: (dir: number) => ({ x: dir > 0 ? -300 : 300, opacity: 0 }),
   };
 
   return (
@@ -167,21 +196,23 @@ const ClientHomepageContent = () => {
               onClick={() => navigate(`/client/packages/select/${pkg.id}`)}
             >
               <div className="relative">
-           {pkg.image ? (
-            <img
-              src={`${API_URL}/storage/${pkg.image?.split("storage/")[1]}`}
-              alt={pkg.title}
-              className="w-full h-60 object-cover rounded-lg mb-3"
-            />
-          ) : (
-            <div className="w-full h-60 bg-gray-200 rounded-lg mb-3 flex items-center justify-center text-gray-500">
-              No Image
-            </div>
-          )}
+                {pkg.image ? (
+                  <img
+                    src={`${API_URL}/storage/${pkg.image?.split("storage/")[1]}`}
+                    alt={pkg.title}
+                    className="w-full h-60 object-cover rounded-lg mb-3"
+                  />
+                ) : (
+                  <div className="w-full h-60 bg-gray-200 rounded-lg mb-3 flex items-center justify-center text-gray-500">
+                    No Image
+                  </div>
+                )}
               </div>
               <div className="mt-4 space-y-2">
                 <h4 className="text-sm font-semibold">{pkg.title}</h4>
-                <p className="text-gray-600 text-sm">₱{pkg.price.toFixed(2)}</p>
+                <p className="text-gray-600 text-sm">
+                  ₱{pkg.price.toFixed(2)}
+                </p>
                 <div className="flex items-center gap-1">
                   {Array.from({ length: 5 }).map((_, i) => (
                     <Star
@@ -199,6 +230,12 @@ const ClientHomepageContent = () => {
             </motion.div>
           ))}
         </div>
+      </div>
+
+      {/* Feedback Section */}
+      <div className="max-w-6xl mx-auto">
+        <FeedbackSection feedbacks={feedbacks}/>
+       
       </div>
     </div>
   );
