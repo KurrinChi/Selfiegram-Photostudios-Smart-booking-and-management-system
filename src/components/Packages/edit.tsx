@@ -8,6 +8,14 @@ interface PackageImage {
   path: string;
 }
 
+interface Addon {
+  id: string | number;
+  label: string;
+  type: "toggle" | "dropdown" | "spinner";
+  price: number;
+  options?: string[];
+}
+
 interface Package {
   id: string;
   title: string;
@@ -43,6 +51,12 @@ const EditPackagePage = () => {
   const [typesLoading, setTypesLoading] = useState(false);
   const [typesError, setTypesError] = useState<string | null>(null);
 
+  const [addons, setAddons] = useState<Addon[]>([]); // fetched from API
+  const [selectedAddons, setSelectedAddons] = useState<any[]>([]);
+  const [backgroundType, setBackgroundType] = useState<
+    "plain" | "concept" | "both"
+  >("plain");
+
   useEffect(() => {
     const fetchPackage = async () => {
       try {
@@ -58,7 +72,7 @@ const EditPackagePage = () => {
         setTags(data.tags || []);
         if (data.images && data.images.length > 0) {
           setCoverImage(data.images[0].path); // show path
-          setCarouselImages(data.images);    
+          setCarouselImages(data.images);
         } else {
           setCoverImage(undefined);
           setCarouselImages([]);
@@ -103,7 +117,7 @@ const EditPackagePage = () => {
         if (updated[index] && updated[index].id) {
           // Replace existing image but keep its ID
           updated[index] = { ...updated[index], path: reader.result as string };
-        } 
+        }
 
         return updated;
       });
@@ -114,6 +128,31 @@ const EditPackagePage = () => {
       const updatedFiles = [...prev];
       updatedFiles[index] = file; // set the new file at the correct index
       return updatedFiles;
+    });
+  };
+
+  useEffect(() => {
+    const fetchAddons = async () => {
+      try {
+        const res = await fetchWithAuth(`${API_URL}/api/admin/addons`);
+        const data = await res.json();
+        setAddons(data);
+        console.log("Fetched addons:", data);
+      } catch (err) {
+        console.error("Failed to fetch addons:", err);
+      }
+    };
+    fetchAddons();
+  }, []);
+
+  // Handle addon change
+  const handleAddonChange = (addon: Addon, value: any) => {
+    setSelectedAddons((prev) => {
+      const existing = prev.find((a) => a.id === addon.id);
+      if (existing) {
+        return prev.map((a) => (a.id === addon.id ? { ...a, value } : a));
+      }
+      return [...prev, { ...addon, value }];
     });
   };
 
@@ -154,9 +193,25 @@ const EditPackagePage = () => {
 
       if (!response.ok) {
         console.error("Backend error:", result);
-        toast.error(`Failed to update package: ${result.message || "Unknown error"}`);
+        toast.error(
+          `Failed to update package: ${result.message || "Unknown error"}`
+        );
         return;
       }
+
+      // tags
+      tags.forEach((tag, idx) => {
+        formData.append(`tags[${idx}]`, tag);
+      });
+
+      // addons
+      selectedAddons.forEach((addon, idx) => {
+        formData.append(`addons[${idx}][id]`, String(addon.id));
+        formData.append(`addons[${idx}][value]`, String(addon.value));
+      });
+
+      // background type
+      formData.append("backgroundType", backgroundType);
 
       console.log("Package updated:", result);
       toast.success("Package updated successfully!");
@@ -166,9 +221,6 @@ const EditPackagePage = () => {
       toast.error("An error occurred while updating the package.");
     }
   };
-
-
-
 
   if (!pkg) return <div className="p-4">Loading...</div>;
 
@@ -291,6 +343,110 @@ const EditPackagePage = () => {
             />
           </div>
 
+          {/* Background Type */}
+          <div>
+            <label className="block text-sm font-bold mb-1">
+              Background Type
+            </label>
+            <div className="flex gap-2">
+              {["plain", "concept", "both"].map((type) => (
+                <button
+                  type="button"
+                  key={type}
+                  onClick={() => setBackgroundType(type as any)}
+                  className={`px-3 py-1 rounded-md text-sm border transition-all
+                    ${
+                      backgroundType === type
+                        ? "bg-black text-white border-black"
+                        : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"
+                    }`}
+                >
+                  {type === "plain"
+                    ? "Plain BG"
+                    : type === "concept"
+                    ? "Concept BG"
+                    : "Both"}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Add-ons */}
+          <div>
+            <label className="block text-sm font-bold mb-1">Add-ons</label>
+            <div className="space-y-3">
+              {addons.map((addon) => (
+                <div key={addon.id} className="flex items-center gap-3">
+                  {addon.type === "toggle" && (
+                    <label className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={
+                          !!selectedAddons.find((a) => a.id === addon.id)?.value
+                        }
+                        onChange={(e) =>
+                          handleAddonChange(addon, e.target.checked)
+                        }
+                      />
+                      {addon.label} (+₱{addon.price})
+                    </label>
+                  )}
+
+                  {addon.type === "dropdown" && (
+                    <div className="flex flex-col">
+                      <span className="text-sm">{addon.label}</span>
+                      <select
+                        onChange={(e) =>
+                          handleAddonChange(addon, e.target.value)
+                        }
+                        className="border px-2 py-1 rounded"
+                      >
+                        <option value="">Select option</option>
+                        {addon.options?.map((opt, idx) => (
+                          <option key={idx} value={opt}>
+                            {opt} (+₱{addon.price})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+                  {addon.type === "spinner" && (
+                    <div className="flex items-center gap-2">
+                      <span>{addon.label}</span>
+                      <input
+                        type="number"
+                        min={0}
+                        onChange={(e) =>
+                          handleAddonChange(addon, e.target.value)
+                        }
+                        className="border w-20 px-2 py-1 rounded"
+                      />
+                      <span>(+₱{addon.price} each)</span>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Buttons */}
+          <div className="flex justify-end gap-3 mt-auto">
+            <button
+              type="button"
+              onClick={() => navigate("/admin/packages")}
+              className="px-4 py-2 border rounded-md text-sm hover:bg-gray-200"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="px-6 py-2 bg-black text-white rounded-md text-sm hover:opacity-80"
+            >
+              Confirm
+            </button>
+          </div>
+
           {/* Tags from package_types */}
           <div>
             <label className="block text-sm font-medium">Package Types</label>
@@ -300,7 +456,7 @@ const EditPackagePage = () => {
               <p className="text-xs text-red-500 mt-1">{typesError}</p>
             ) : (
               <div className="flex flex-wrap gap-2 mt-1">
-                {packageTypes.map((type,id) => (
+                {packageTypes.map((type, id) => (
                   <button
                     type="button"
                     key={id}

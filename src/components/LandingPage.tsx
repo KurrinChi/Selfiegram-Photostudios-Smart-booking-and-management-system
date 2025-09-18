@@ -755,7 +755,10 @@ export default function HomePage(): React.JSX.Element {
       {openTerms && (
         <div className="fixed inset-0 z-1000 bg-black/50 flex items-center justify-center">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl overflow-hidden relative">
-            <TermsDialog onClose={() => setOpenTerms(false)} />
+            <TermsDialog
+              isOpen={openTerms}
+              onClose={() => setOpenTerms(false)}
+            />
           </div>
         </div>
       )}

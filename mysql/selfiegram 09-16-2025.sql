@@ -1059,7 +1059,10 @@ INSERT INTO `users` (`userID`, `username`, `fname`, `lname`, `email`, `password`
 (1, 'okim', 'Miko', 'Santos', 'santosmikoallen@gmail.com', '$2y$12$5fiTMf0S/7ll.UcIeQYhIuLKKsuObtkuv4iWZT3ahxXaokqIR6ybm', '09292902337', '2003-03-26', 'Male', 0, 'http://localhost:8000/storage/profile_photos/1753946270_okim.jpeg', 'San Juan', 1, 'Admin'),
 (2, 'bibingka20', 'Mary Hannah', 'Reyes', 'reyesmaryhannahcaryl@gmail.com', '$2y$12$7aAuFyzyNrWoggmlULLs.uNvq.eDC/xdE5d47cWSVEMelo9yfx9J6', '09155467893', '2003-09-20', 'Female', 0, 'http://localhost:8000/storage/profile_photos/1754251090_ph-11134207-7ra0p-mchwszm552lqa1@resize_w450_nl.png', 'Malinis St', 1, 'Admin'),
 (3, 'nicolevarga', 'Nicole', 'Varga', 'nicolevarga19@icloud.com', '$2y$12$O5dvQVpUA64PqaGq5vTwiuNtkH4/tAGMPmn6mcXDhjSCqolXigfNK', '09155467893', '2003-08-20', 'Female', 0, 'http://192.168.1.214:8000/storage/profile_photos/1757440340_46f9ed697599fb2a1990aa37c02561f4.jpg', 'Guiguinto Bulacan', 1, 'Customer'),
-(4, 'bibingkinitan', 'Jose', 'Rizal', 'joserizal@icloud.com', '$2y$12$O5dvQVpUA64PqaGq5vTwiuNtkH4/tAGMPmn6mcXDhjSCqolXigfNK', '09155467893', '2003-08-20', 'Female', 0, 'http://192.168.1.214:8000/storage/profile_photos/1757233807_land.png', 'Guiguinto Bulacan', 1, 'Customer');
+(4, 'bibingkinitan', 'Jose', 'Rizal', 'joserizal@icloud.com', '$2y$12$O5dvQVpUA64PqaGq5vTwiuNtkH4/tAGMPmn6mcXDhjSCqolXigfNK', '09155467893', '2003-08-20', 'Female', 0, 'http://192.168.1.214:8000/storage/profile_photos/1757233807_land.png', 'Guiguinto Bulacan', 1, 'Customer'),
+(5, 'KurrinChi', 'Ethan Gabriel', 'Fernandez', 'ethangabrielfernandez@gmail.com', '$2y$12$ZjQre96MDPJyMJAUae6nJut7d/SP5qv.Ah.YiJicpcINNEFTE9KOa', '09391179123', '2003-12-18', 'Male', 0, 'http://192.168.1.244:8000/storage/profile_photos/1758031154_pfp.jpg', 'Maronquillo', 1, 'Customer', NULL, NULL, NULL, '2025-09-16 13:53:55', '2025-09-16 13:59:15'),
+(6, 'KurrinChi', 'Ethan Gabriel', 'Fernandez', 'ethangabrielfernandezadmin@gmail.com', '$2y$12$ZjQre96MDPJyMJAUae6nJut7d/SP5qv.Ah.YiJicpcINNEFTE9KOa', '09391179123', '2003-12-18', 'Male', 0, '', 'Maronquillo', 1, 'Admin', NULL, NULL, NULL, '2025-09-16 13:53:55', '2025-09-16 13:58:21');
+;
 
 -- --------------------------------------------------------
 
