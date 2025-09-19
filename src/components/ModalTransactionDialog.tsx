@@ -1015,18 +1015,20 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
             </div>
 
             {/* QR Code Panel */}
-            <div className="hidden md:flex w-1/3 items-center justify-center bg-gray-100 p-4 border-l border-gray-200">
-              <div className="w-full flex flex-col items-center justify-center">
-                <div className="w-full aspect-square max-w-xs border-2 border-dashed border-gray-400 rounded-lg flex items-center justify-center">
-                  <span className="text-gray-400 text-center text-sm p-4">
-                    <QRCode
-                      value={`${RECEIPT_URL}/receipt/booking/${data.id}`}
-                      size={256}
-                    />
-                  </span>
+            {data.paymentStatus === 1 && data.status === 2 ? (
+              <div className="hidden md:flex w-1/3 items-center justify-center bg-gray-100 p-4 border-l border-gray-200">
+                <div className="w-full flex flex-col items-center justify-center">
+                  <div className="w-full aspect-square max-w-xs border-2 border-dashed border-gray-400 rounded-lg flex items-center justify-center">
+                    <span className="text-gray-400 text-center text-sm p-4">
+                      <QRCode
+                        value={`${RECEIPT_URL}/receipt/booking/${data.id}`}
+                        size={256}
+                      />
+                    </span>
+                  </div>
                 </div>
               </div>
-            </div>
+            ) : null}
           </>
         ) : (
           <div>
