@@ -69,3 +69,8 @@ body {
   max-width: 700px;
   word-wrap: break-word;
 }
+
+.tui-image-editor-menu-button {
+  background-size: contain !important;
+  background-repeat: no-repeat !important;
+}

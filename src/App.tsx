@@ -33,9 +33,9 @@ import ClientHistoryPage from "./page/client/HistoryPage.tsx";
 import ClientSettingsPage from "./page/client/SettingsPage.tsx";
 import ClientPackagePageContent from "./components/ClientPackagePageContent.tsx";
 import ReceiptPage from "./page/client/ReceiptPage.tsx";
+import PhotoEditorAPI from "./components/Embed/PhotoEditor.tsx";
 
 import LandingPage from "./components/LandingPage.tsx";
-
 
 const App = () => {
   const location = useLocation();
@@ -44,16 +44,66 @@ const App = () => {
     <AnimatePresence mode="wait">
       <Routes location={location} key={location.pathname}>
         {/* Public routes */}
-        <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
-        <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
-        <Route path="/register-info" element={<PublicRoute><RegisterInfoForm /></PublicRoute>} />
-        <Route path="/register-success" element={<PublicRoute><RegisterSuccess /></PublicRoute>} />
-        <Route path="/" element={<PublicRoute><LandingPage /></PublicRoute>} />
-
+        <Route
+          path="/login"
+          element={
+            <PublicRoute>
+              <Login />
+            </PublicRoute>
+          }
+        />
+        <Route
+          path="/register"
+          element={
+            <PublicRoute>
+              <Register />
+            </PublicRoute>
+          }
+        />
+        <Route
+          path="/register-info"
+          element={
+            <PublicRoute>
+              <RegisterInfoForm />
+            </PublicRoute>
+          }
+        />
+        <Route
+          path="/register-success"
+          element={
+            <PublicRoute>
+              <RegisterSuccess />
+            </PublicRoute>
+          }
+        />
+        <Route
+          path="/"
+          element={
+            <PublicRoute>
+              <LandingPage />
+            </PublicRoute>
+          }
+        />
 
         {/* Routes that are not found */}
-          <Route path="*" element={<PublicRoute><div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh" }}>404 Not Found</div></PublicRoute>} />
-          {/* <Route path="/" element={<ProtectedRoute><div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh" }}>Already Logged In</div></ProtectedRoute>} /> */}
+        <Route
+          path="*"
+          element={
+            <PublicRoute>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  height: "100vh",
+                }}
+              >
+                404 Not Found
+              </div>
+            </PublicRoute>
+          }
+        />
+        {/* <Route path="/" element={<ProtectedRoute><div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh" }}>Already Logged In</div></ProtectedRoute>} /> */}
         {/* Admin routes */}
         <Route
           path="/admin/dashboard"
@@ -196,6 +246,8 @@ const App = () => {
             </ProtectedRoute>
           }
         />
+
+        <Route path="/photo-editor" element={<PhotoEditorAPI />} />
 
         <Route path="/receipt/booking/:bookingID" element={<ReceiptPage />} />
         {/* Fallback */}

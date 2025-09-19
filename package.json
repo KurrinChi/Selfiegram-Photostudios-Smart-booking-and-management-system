@@ -17,6 +17,7 @@
     "@splinetool/react-spline": "^4.0.0",
     "@tailwindcss/vite": "^4.1.10",
     "axios": "^1.11.0",
+    "fabric": "4.6.0",
     "framer-motion": "^12.18.1",
     "html2canvas": "^1.4.1",
     "jspdf": "^3.0.2",
@@ -30,7 +31,10 @@
     "react-qr-code": "^2.0.18",
     "react-router-dom": "^7.6.2",
     "react-toastify": "^11.0.5",
-    "recharts": "^2.15.3"
+    "recharts": "^2.15.3",
+    "tui-code-snippet": "2.3.3",
+    "tui-color-picker": "2.2.6",
+    "tui-image-editor": "3.15.3"
   },
   "devDependencies": {
     "@eslint/js": "^9.25.0",
