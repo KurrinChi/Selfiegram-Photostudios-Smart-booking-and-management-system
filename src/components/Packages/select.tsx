@@ -762,9 +762,9 @@ const SelectPackagePage = () => {
             {/* Determine visibility and interactivity */}
             {(() => {
               const setIdNum = Number(setData.setId);
-              const showStudioA = setIdNum !== 5;
+              const showStudioA = setIdNum !== 5 && setIdNum !== 6;; 
               const enableStudioB =
-                setIdNum === 2 || setIdNum === 4 || setIdNum === 3;
+                setIdNum === 2 || setIdNum === 4 || setIdNum === 3 || setIdNum === 6;
 
               // Helper for mutual exclusivity if set 2
               const handleStudioASelect = () => {

@@ -16,7 +16,7 @@
     use App\Http\Controllers\ForgotPasswordController;
     use App\Http\Controllers\BookingRequestController;
     use App\Http\Controllers\GalleryController;
-
+    use App\Http\Controllers\NotificationController;
     // Just for testing
     Route::middleware('api')->get('/test', function (Request $request) {
         return response()->json([
@@ -179,6 +179,9 @@
        //Route::post('/reschedule', [BookingRequestController::class, 'rescheduleBooking']);
         Route::post('/booking-request/reschedule', [BookingRequestController::class, 'rescheduleBooking']);
         Route::get('/reschedule-request/{bookingId}', [BookingRequestController::class, 'getRescheduleRequest']);
+
+        //Client Notification
+        Route::get('/notifications/{userID}', [NotificationController::class, 'getUserNotifications']);
     });
 
     //receipt
