@@ -92,7 +92,6 @@ const EditPackagePage = () => {
         if (data.backgroundType) {
           setSelectedBackground(data.backgroundType); // wrap in array
         }
-        console.log("Fetched package:", data);
       } catch (error) {
         console.error("Failed to fetch package:", error);
         setPkg(null);
@@ -109,7 +108,6 @@ const EditPackagePage = () => {
         if (!res.ok) throw new Error(`Failed to fetch background types: ${res.status}`);
         const data = await res.json();
         setBackgroundTypes(data);
-        console.log("Fetched background types:", data);
       } catch (err) {
         console.error(err);
         setBackgroundError("Failed to load background types.");
@@ -128,7 +126,6 @@ const EditPackagePage = () => {
         if (!res.ok) throw new Error(`Failed to fetch types: ${res.status}`);
         const data = await res.json();
         setPackageTypes(data);
-        console.log("Fetched package types:", data);
       } catch (err) {
         console.error(err);
         setTypesError("Failed to load package types.");
@@ -152,7 +149,6 @@ const EditPackagePage = () => {
             ? data.data
             : [];
         setAddons(addonsArray);
-        console.log("Fetched addons:", addonsArray);
       } catch (err) {
         console.error(err);
         setAddonsError("Failed to load addons");
@@ -228,10 +224,7 @@ const EditPackagePage = () => {
         );
         return;
       }
-
-      console.log("Package updated:", result);
-      toast.success("Package updated successfully!");
-      navigate("/admin/packages");
+      navigate("/admin/packages", { state: { toast: { type: "success", message: "Package updated successfully!" } } });
     } catch (error) {
       console.error("Network error:", error);
       toast.error("An error occurred while updating the package.");
@@ -360,8 +353,8 @@ const EditPackagePage = () => {
             />
           </div>
 
-            {/* Background Selection */}
-            <div className="md:col-span-2">
+          {/* Background Selection */}
+          <div className="md:col-span-2">
             <h4 className="text-sm font-medium mb-2">Background Selection</h4>
             {typesLoading ? (
               <p className="text-xs text-gray-500 mt-1">Loading...</p>
@@ -384,8 +377,8 @@ const EditPackagePage = () => {
                   </button>
                 ))}
               </div>
-              )}
-            </div>
+            )}
+          </div>
 
           {/* Addons */}
           <div>

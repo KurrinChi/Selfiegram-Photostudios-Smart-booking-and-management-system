@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { ChevronDown } from "lucide-react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faSearch } from "@fortawesome/free-solid-svg-icons";
@@ -32,6 +32,20 @@ const AdminPackageContent: React.FC = () => {
   const [confirmArchive, setConfirmArchive] = useState<Package | null>(null); // modal state
 
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // ✅ Handle toast messages from navigation state
+  useEffect(() => {
+    if (location.state?.toast) {
+      const { type, message } = location.state.toast;
+
+      if (type === "success") toast.success(message);
+      else if (type === "error") toast.error(message);
+      else toast.info(message);
+
+      navigate(location.pathname, { replace: true }); // Clear state after showing
+    }
+  }, [location, navigate]);
 
   useEffect(() => {
     const fetchPackages = async () => {
@@ -259,8 +273,8 @@ const AdminPackageContent: React.FC = () => {
                             "/slfg-placeholder 2.png";
                         }}
                         className={`w-6 h-6 object-cover rounded-full border-2 cursor-pointer transition ${i === currentImgIdx
-                            ? "border-black"
-                            : "border-transparent opacity-60"
+                          ? "border-black"
+                          : "border-transparent opacity-60"
                           }`}
                         alt={`Thumb ${i + 1}`}
                       />
@@ -352,8 +366,8 @@ const AdminPackageContent: React.FC = () => {
               <button
                 onClick={confirmArchiveAction}
                 className={`w-full py-2 text-white text-sm rounded-md ${confirmArchive.status === 1
-                    ? "bg-red-600 hover:bg-red-700"
-                    : "bg-green-600 hover:bg-green-700"
+                  ? "bg-red-600 hover:bg-red-700"
+                  : "bg-green-600 hover:bg-green-700"
                   }`}
               >
                 {confirmArchive.status === 1 ? "Archive" : "Unarchive"}
