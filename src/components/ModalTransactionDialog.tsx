@@ -1082,20 +1082,15 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
 
             <div className="grid grid-cols-2 gap-4 text-sm mb-4">
               {/* Previous Booking Date */}
+              {rescheduleRequest?.status !== "approved" && (
               <div>
-                <label className="text-gray-500 block text-xs mb-1">
-                  Booking Date
-                </label>
+                <label className="text-gray-500 block text-xs mb-1">Booking Date</label>
                 <input
                   disabled
                   value={
                     data.bookingDate &&
                     !isNaN(
-                      parse(
-                        data.bookingDate,
-                        "yyyy-MM-dd",
-                        new Date()
-                      ).getTime()
+                      parse(data.bookingDate, "yyyy-MM-dd", new Date()).getTime()
                     )
                       ? format(
                           parse(data.bookingDate, "yyyy-MM-dd", new Date()),
@@ -1106,19 +1101,19 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
                   className="w-full border rounded-md px-3 py-1.5 bg-gray-100"
                 />
               </div>
+            )}
 
               {/* Previous Booking Time */}
-
-              <div>
-                <label className="text-gray-500 block text-xs mb-1">
-                  Booking Time
-                </label>
-                <input
-                  disabled
-                  value={data.time}
-                  className="w-full border rounded-md px-3 py-1.5 bg-gray-100"
-                />
-              </div>
+              {rescheduleRequest?.status !== "approved" && (
+                  <div>
+                    <label className="text-gray-500 block text-xs mb-1">Booking Time</label>
+                    <input
+                      disabled
+                      value={data.time}
+                      className="w-full border rounded-md px-3 py-1.5 bg-gray-100"
+                    />
+                  </div>
+                )}
 
               {/* New Booking Date (Conditional) */}
               {rescheduleRequest?.requestedDate && (

@@ -3,6 +3,7 @@
     namespace App\Http\Controllers;
 
     use App\Models\User;
+    use App\Models\Notification;
     use Illuminate\Http\Request;
     use Illuminate\Support\Facades\DB;
     use Illuminate\Support\Facades\Hash;
@@ -98,7 +99,17 @@
             ]);
 
             Mail::to($user->email)->send(new VerifyEmail($user));
-
+             
+            /*Notification::create([
+            'userID' => $user->id, // Address the notification to the new user
+            'title' => 'Welcome to SelfieGram!',
+            'label' => 'System',
+            'message' => 'Welcome to SelfieGram Photostudios! Thank you for choosing our service! Best Regards, SelfieGram Team',
+            'time' => now(),
+            'starred' => 0,
+            'bookingID' => 0, 
+              'transID' => 0
+        ]);*/
             return response()->json([
                 'status' => 'success',
                 'message' => 'User registered successfully! Please check your email to verify your account.',

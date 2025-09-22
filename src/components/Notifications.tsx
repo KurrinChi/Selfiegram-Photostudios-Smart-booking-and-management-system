@@ -1,10 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { Trash2, Info, X, Download } from "lucide-react";
+import { Info, X, Download } from "lucide-react";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
-import QRCode from "react-qr-code";
 import { QRCodeCanvas } from "qrcode.react"; // Import QRCodeCanvas from qrcode.react
 type Notification = {
-  id: number;
+  notificationID: number;
   title: string;
   label?: "Booking" | "Payment" | "Reschedule" | "Cancellation" | "Reminder" | "Promotion" | "System";
   message: string;
@@ -141,6 +140,7 @@ export default function Notifications() {
         if (!res.ok) throw new Error("Failed to fetch notifications");
 
         const data = await res.json();
+          console.log("Fetched notifications:", data);
         setNotifications(data);
       } catch (err) {
         console.error("Error fetching notifications:", err);
@@ -150,7 +150,30 @@ export default function Notifications() {
     fetchNotifications();
   }, []);
 
-useEffect(() => {
+
+  const markAsRead = async (id: number) => {
+  try {
+    const res = await fetch(`${API_URL}/api/notifications/${id}/mark-as-read`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
+      },
+    });
+
+    if (!res.ok) throw new Error("Failed to mark notification as read");
+
+    // Update the local state to reflect the change
+    setNotifications((prev) =>
+      prev.map((n) =>
+        n.notificationID === id ? { ...n, starred: true } : n // Update the `starred` field for the clicked notification
+      )
+    );
+  } catch (err) {
+    console.error("Error marking notification as read:", err);
+  }
+};
+//Fetch Booking Details when notification with label "Booking" is selected
 const fetchBookingDetails = async (bookingID: number) => {
   try {
     console.log(`Fetching booking details for bookingID: ${bookingID}`);
@@ -175,6 +198,7 @@ const fetchBookingDetails = async (bookingID: number) => {
   }
 };
 
+useEffect(() => {
   if (selected?.label === "Booking" && selected.bookingID) {
     console.log("Selected notification matches criteria:", selected);
     fetchBookingDetails(selected.bookingID); // Use bookingID from the selected notification
@@ -184,64 +208,133 @@ const fetchBookingDetails = async (bookingID: number) => {
   }
 }, [selected]);
 
-  // Nested component for booking details
-  const BookingDetails = ({ details }: { details: any }) => {
-const qrCodeRef = useRef<HTMLCanvasElement>(null); // Reference to the QR code canvas
 
-     const downloadQRCode = () => {
+//fetch reschedule label
+  useEffect(() => {
+  const fetchRescheduleDetails = async (bookingID: number) => {
+  try {
+    console.log(`Fetching reschedule details for bookingID: ${bookingID}`);
+    const res = await fetch(`${API_URL}/api/reschedule-details?bookingID=${bookingID}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
+      },
+    });
+
+    console.log("API response:", res);
+    console.log(`Response status: ${res.status}`);
+
+    if (!res.ok) throw new Error("Failed to fetch reschedule details");
+
+    const data = await res.json();
+    console.log("Fetched reschedule details:", data);
+
+    // Fetch the associated booking details
+    const bookingRes = await fetch(`${API_URL}/api/booking-details?bookingID=${bookingID}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
+      },
+    });
+
+    if (!bookingRes.ok) throw new Error("Failed to fetch booking details");
+
+    const bookingData = await bookingRes.json();
+    console.log("Fetched booking details:", bookingData);
+
+    // Combine reschedule and booking details
+    setBookingDetails({ ...data, ...bookingData });
+  } catch (err) {
+    console.error("Error fetching reschedule details:", err);
+  }
+};
+
+   if (selected?.label === "Reschedule" && selected.bookingID) {
+    console.log("Selected notification matches reschedule criteria:", selected);
+    fetchRescheduleDetails(selected.bookingID); // Use bookingID from the selected notification
+  } else if (selected?.label === "Booking" && selected.bookingID) {
+    console.log("Selected notification matches booking criteria:", selected);
+    fetchBookingDetails(selected.bookingID); // Use bookingID from the selected notification
+  } else {
+    console.log("Clearing booking details as criteria do not match.");
+    setBookingDetails(null);
+  }
+}, [selected]);
+
+
+  // Nested component for booking details
+const BookingDetails = ({ details }: { details: any }) => {
+  const qrCodeRef = useRef<HTMLCanvasElement>(null);
+
+  const downloadQRCode = () => {
     const canvas = qrCodeRef.current;
     if (!canvas) return;
 
-    const url = canvas.toDataURL("image/png"); // Convert canvas to data URL
+    const url = canvas.toDataURL("image/png");
     const link = document.createElement("a");
     link.href = url;
-    link.download = `booking-${details.id}-qrcode.png`; // Set the filename
-    link.click(); // Trigger the download
+    link.download = `booking-${details.id}-qrcode.png`;
+    link.click();
   };
 
   if (!details) return null;
-    return (
-      <div className="mt-4 p-4 bg-gray-50 rounded-lg shadow">
-         <h4 className="text-xl font-semibold mb-2">{getBookingLabel(details.id, details.packageName)}</h4>
-        <h4 className="text-lg font-semibold mb-2">{details.packageName}</h4>
-        <p className="text-sm">
-          <strong>Booking Date:</strong> {formatDate(details.bookingDate)}
-        </p>
-        <p className="text-sm">
-          <strong>Booking Time:</strong> {formatTime(details.bookingStartTime)} - {formatTime(details.bookingEndTime)}
-        </p>
-        <hr className="border-gray-300 my-4" />
-       <div className="flex justify-center items-center mb-4">
 
-           <QRCodeCanvas
-            value={`${RECEIPT_URL}/receipt/booking/${details.id}`}
-            size={206}
-            ref={qrCodeRef as any} // QRCode does not support ref, but this avoids TS error
-          />
-                       {/* Download Button */}
-       
-        </div>
-        <div className="flex justify-center">
-         <button
+  return (
+    <div className="mt-4 p-4 bg-gray-50 rounded-lg shadow">
+      <h4 className="text-xl font-semibold mb-2">
+        {details.packageName ? getBookingLabel(details.id, details.packageName) : `Reschedule Request #${details.requestID} - Reschedule Approved`}
+      </h4>
+      {details.packageName && (
+        <>
+          <h4 className="text-lg font-semibold mb-2">{details.packageName}</h4>
+          <p className="text-sm">
+            <strong>Booking Date:</strong> {formatDate(details.bookingDate)}
+          </p>
+          <p className="text-sm">
+            <strong>Booking Time:</strong> {formatTime(details.bookingStartTime)} - {formatTime(details.bookingEndTime)}
+          </p>
+        </>
+      )}
+      {!details.packageName && (
+        <>
+          <p className="text-sm">
+            <strong>Requested Date:</strong> {formatDate(details.requestedDate)}
+          </p>
+          <p className="text-sm">
+            <strong>Requested Time:</strong> {formatTime(details.requestedStartTime)} - {formatTime(details.requestedEndTime)}
+          </p>
+          <p className="text-sm">
+            <strong>Reason:</strong> {details.reason}
+          </p>
+        </>
+      )}
+      <hr className="border-gray-300 my-4" />
+      <div className="flex justify-center items-center mb-4">
+        <QRCodeCanvas
+          value={`${RECEIPT_URL}/receipt/booking/${details.id || details.bookingID}`}
+          size={206}
+          ref={qrCodeRef as any}
+        />
+      </div>
+      <div className="flex justify-center">
+        <button
           onClick={downloadQRCode}
           className="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition mb-4"
-      
         >
-            <Download className="w-5 h-5" /> 
+          <Download className="w-5 h-5" />
           Download QR Code
         </button>
-        </div>
-        <p className="text-sm text-gray-500">
-        **You can present your QR code at the studio. 
-        This will serve as your official proof of booking 
-        and may be required for verification in case of 
-        any concerns or complications.
-        </p>
-    
       </div>
-    );
-  };
+      <p className="text-sm text-gray-500">
+        **You can present your QR code at the studio. This will serve as your official proof of booking or reschedule request.
+      </p>
+    </div>
+  );
+};
 
+  
   return (
     <div className="flex h-[calc(100vh-10vh)]">
       {/* Notifications List */}
@@ -259,27 +352,19 @@ const qrCodeRef = useRef<HTMLCanvasElement>(null); // Reference to the QR code c
 
           {/* Notifications Table */}
           <table className="min-w-full table-auto text-left text-sm">
-           <tbody>
+        <tbody>
   {notifications.map((n) => (
     <tr
-      key={n.id}
-      className="border-t border-gray-100 hover:bg-gray-50 transition-all cursor-pointer"
-      onClick={() => setSelected(n)} // Pass the entire notification object, including bookingID
+      key={n.notificationID}
+      className={`border-t border-gray-100 hover:bg-gray-50 transition-all cursor-pointer ${
+        n.starred ? "bg-gray-50" : "bg-white font-semibold"
+      }`} // Different styles for read (starred) and unread notifications
+      onClick={() => {
+        console.log("Notification ID:", n.notificationID);
+        setSelected(n);
+        markAsRead(n.notificationID); // Mark the notification as read when clicked
+      }}
     >
-      {/* Star */}
-      <td className="p-4 w-10">
-        <span
-          className={`${
-            n.starred ? "text-yellow-500" : "text-gray-300"
-          } cursor-pointer`}
-          onClick={(e) => {
-            e.stopPropagation(); // Prevent row click when clicking star
-          }}
-        >
-          ★
-        </span>
-      </td>
-
       {/* Title + Label + Message */}
       <td className="p-4">
         <div className="flex items-center gap-2">
@@ -294,11 +379,19 @@ const qrCodeRef = useRef<HTMLCanvasElement>(null); // Reference to the QR code c
             </span>
           )}
         </div>
-        <p className="text-xs text-gray-600 truncate max-w-md">{n.message}</p>
+        <p
+          className={`text-xs truncate max-w-md ${
+            n.starred ? "text-gray-600" : "text-gray-800"
+          }`}
+        >
+          {n.message}
+        </p>
       </td>
 
       {/* Time */}
-      <td className="p-4 text-xs text-gray-500 whitespace-nowrap">{formatDateTime(n.time)}</td>
+      <td className="p-4 text-xs text-gray-500 whitespace-nowrap">
+        {formatDateTime(n.time)}
+      </td>
 
       {/* Actions */}
       <td
@@ -311,9 +404,6 @@ const qrCodeRef = useRef<HTMLCanvasElement>(null); // Reference to the QR code c
         >
           <Info className="w-4 h-4 text-gray-500" />
         </button>
-        <button className="p-1.5 rounded-full hover:bg-gray-100">
-          <Trash2 className="w-4 h-4 text-red-500" />
-        </button>
       </td>
     </tr>
   ))}
@@ -323,7 +413,7 @@ const qrCodeRef = useRef<HTMLCanvasElement>(null); // Reference to the QR code c
       </div>
 
       {/* Details Sidebar */}
-      {selected && (
+     {selected && (
   <div className="w-[40rem] border-l bg-white shadow-lg p-4 flex flex-col">
     <div className="flex justify-between items-center mb-4">
       <h2 className="font-semibold text-lg">Details</h2>
@@ -348,8 +438,18 @@ const qrCodeRef = useRef<HTMLCanvasElement>(null); // Reference to the QR code c
     </p>
 
     {/* Nested Booking Details Component */}
-    {selected.label === "Booking" && selected.bookingID && (
+    {["Booking", "Reschedule"].includes(selected.label || "") && selected.bookingID && (
       <BookingDetails details={bookingDetails} />
+    )}
+
+    {/* Placeholder for Payment Label */}
+    {selected.label === "Payment" && (
+      <div className="mt-4 p-4 bg-gray-50 rounded-lg shadow">
+        <h4 className="text-xl font-semibold mb-2">PayMongo API</h4>
+        <p className="text-sm text-gray-500">
+          This is a placeholder for the PayMongo API integration. Payment details will be displayed here in the future.
+        </p>
+      </div>
     )}
   </div>
       )}

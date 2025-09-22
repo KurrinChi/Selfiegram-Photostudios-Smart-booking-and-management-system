@@ -64,4 +64,43 @@ class NotificationController extends Controller
 
         return response()->json($bookingDetails);
     }
+     public function getRescheduleDetails(Request $request)
+    {
+        $bookingID = $request->query('bookingID');
+
+        if (!$bookingID) {
+            return response()->json(['error' => 'Booking ID is required'], 400);
+        }
+
+        $rescheduleDetails = DB::table('booking_request')
+            ->where('bookingID', $bookingID)
+            ->where('requestType', 'reschedule')
+            ->where('status', 'approved')
+            ->select(
+                'requestID',
+                'bookingID',
+                'userID',
+                'requestedDate',
+                'requestedStartTime',
+                'requestedEndTime',
+                'reason',
+                'status',
+                'requestDate'
+            )
+            ->first();
+
+        if (!$rescheduleDetails) {
+            return response()->json(['error' => 'Reschedule request not found'], 404);
+        }
+
+        return response()->json($rescheduleDetails);
+    }
+    public function markAsRead($id)
+        {
+            $notification = Notification::findOrFail($id);
+            $notification->starred = 1;
+            $notification->save();
+
+            return response()->json(['success' => true]);
+        }
 }
