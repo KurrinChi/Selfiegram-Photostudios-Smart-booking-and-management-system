@@ -120,6 +120,8 @@
         Route::get('/admin/packages-all', [PackageController::class, 'adminShowAll']);
         Route::get('/admin/packages/{id}', [PackageController::class, 'adminShow']);
         Route::get('/admin/package-types', [PackageController::class, 'packageType']);
+        Route::get('/admin/addons', [PackageController::class, 'getAllAddOns']);
+        Route::get('/admin/package-sets', [PackageController::class, 'getAllBackgrounds']);
         Route::post('/admin/packages/{id}/archive', [PackageController::class, 'archivePackage']);
         Route::post('/admin/update-package/{id}', [PackageController::class, 'updatePackage']);
 

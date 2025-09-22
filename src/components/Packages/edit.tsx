@@ -3,6 +3,7 @@ import { useNavigate, useParams, Link } from "react-router-dom";
 import { fetchWithAuth } from "../../utils/fetchWithAuth";
 import { toast, ToastContainer } from "react-toastify";
 
+
 interface PackageImage {
   id: number;
   path: string;
@@ -16,9 +17,9 @@ interface Package {
   description: string;
   tags: string[];
   images: PackageImage[];
-  status: number; // 1 for active, 0 for archived
-  addons?: AddonSelection[];
-  backgroundType?: "plain" | "concept" | "both";
+  status: number;
+  addons?: { addOnID: string; addOn: string }[];
+  backgroundType?: string;
 }
 
 interface PackageType {
@@ -26,20 +27,14 @@ interface PackageType {
   name: string;
 }
 
-interface Addon {
-  id: string;
-  name: string;
-  type: "toggle" | "dropdown" | "spinner";
-  options?: { label: string; price: number }[];
+interface BackgroundType {
+  setID: string | number;
+  setName: string;
 }
 
-interface AddonSelection {
-  addonId: string;
-  name: string;
-  type: "toggle" | "dropdown" | "spinner";
-  option?: string;
-  price: number;
-  quantity?: number;
+interface Addon {
+  addOnID: string;
+  addOn: string;
 }
 
 const API_URL = import.meta.env.VITE_API_URL;
@@ -62,13 +57,14 @@ const EditPackagePage = () => {
   const [typesError, setTypesError] = useState<string | null>(null);
 
   // Addons
-  const [addons, setAddons] = useState<Addon[]>([]);
-  const [selectedAddons, setSelectedAddons] = useState<AddonSelection[]>([]);
+  const [addons, setAddons] = useState<Addon[]>([]); // all available addons
+  const [selectedAddons, setSelectedAddons] = useState<string[]>([]); // addonIDs chosen
+  const [addonsError, setAddonsError] = useState<string | null>(null);
 
   // Background type
-  const [backgroundType, setBackgroundType] = useState<
-    "plain" | "concept" | "both"
-  >("plain");
+  const [backgroundTypes, setBackgroundTypes] = useState<BackgroundType[]>([]);
+  const [selectedBackground, setSelectedBackground] = useState<string>("");
+  const [backgroundError, setBackgroundError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchPackage = async () => {
@@ -91,10 +87,10 @@ const EditPackagePage = () => {
           setCarouselImages([]);
         }
         if (data.addons) {
-          setSelectedAddons(data.addons);
+          setSelectedAddons(data.addons.map((a: Addon) => a.addOnID));
         }
         if (data.backgroundType) {
-          setBackgroundType(data.backgroundType);
+          setSelectedBackground(data.backgroundType); // wrap in array
         }
         console.log("Fetched package:", data);
       } catch (error) {
@@ -105,6 +101,23 @@ const EditPackagePage = () => {
 
     if (id) fetchPackage();
   }, [id]);
+
+  useEffect(() => {
+    const fetchBackgroundTypes = async () => {
+      try {
+        const res = await fetchWithAuth(`${API_URL}/api/admin/package-sets`);
+        if (!res.ok) throw new Error(`Failed to fetch background types: ${res.status}`);
+        const data = await res.json();
+        setBackgroundTypes(data);
+        console.log("Fetched background types:", data);
+      } catch (err) {
+        console.error(err);
+        setBackgroundError("Failed to load background types.");
+      }
+    };
+
+    fetchBackgroundTypes();
+  }, []);
 
   useEffect(() => {
     const fetchTypes = async () => {
@@ -133,17 +146,16 @@ const EditPackagePage = () => {
         const res = await fetchWithAuth(`${API_URL}/api/admin/addons`);
         if (!res.ok) throw new Error("Failed to fetch addons");
         const data = await res.json();
-        // Handle both [] and { addons: [] }
         const addonsArray = Array.isArray(data)
           ? data
-          : Array.isArray(data.addons)
-          ? data.addons
-          : [];
+          : Array.isArray(data.data)
+            ? data.data
+            : [];
         setAddons(addonsArray);
         console.log("Fetched addons:", addonsArray);
       } catch (err) {
         console.error(err);
-        toast.error("Failed to load addons");
+        setAddonsError("Failed to load addons");
       }
     };
     fetchAddons();
@@ -154,11 +166,9 @@ const EditPackagePage = () => {
     reader.onloadend = () => {
       setCarouselImages((prev) => {
         const updated = [...prev];
-
         if (updated[index] && updated[index].id) {
           updated[index] = { ...updated[index], path: reader.result as string };
         }
-
         return updated;
       });
     };
@@ -168,77 +178,6 @@ const EditPackagePage = () => {
       const updatedFiles = [...prev];
       updatedFiles[index] = file;
       return updatedFiles;
-    });
-  };
-
-  const handleAddonChange = (
-    addon: Addon,
-    value?: string | number,
-    checked?: boolean
-  ) => {
-    setSelectedAddons((prev) => {
-      let updated = [...prev];
-      const existingIndex = updated.findIndex((a) => a.addonId === addon.id);
-
-      if (addon.type === "toggle") {
-        if (checked) {
-          if (existingIndex === -1) {
-            updated.push({
-              addonId: addon.id,
-              name: addon.name,
-              type: addon.type,
-              price: addon.options?.[0]?.price || 0,
-            });
-          }
-        } else {
-          updated = updated.filter((a) => a.addonId !== addon.id);
-        }
-      } else if (addon.type === "dropdown") {
-        const option = addon.options?.find((o) => o.label === value);
-        if (option) {
-          if (existingIndex !== -1) {
-            updated[existingIndex] = {
-              addonId: addon.id,
-              name: addon.name,
-              type: addon.type,
-              option: option.label,
-              price: option.price,
-            };
-          } else {
-            updated.push({
-              addonId: addon.id,
-              name: addon.name,
-              type: addon.type,
-              option: option.label,
-              price: option.price,
-            });
-          }
-        }
-      } else if (addon.type === "spinner") {
-        const qty = Number(value);
-        if (qty > 0) {
-          if (existingIndex !== -1) {
-            updated[existingIndex] = {
-              addonId: addon.id,
-              name: addon.name,
-              type: addon.type,
-              price: addon.options?.[0]?.price || 0,
-              quantity: qty,
-            };
-          } else {
-            updated.push({
-              addonId: addon.id,
-              name: addon.name,
-              type: addon.type,
-              price: addon.options?.[0]?.price || 0,
-              quantity: qty,
-            });
-          }
-        } else {
-          updated = updated.filter((a) => a.addonId !== addon.id);
-        }
-      }
-      return updated;
     });
   };
 
@@ -255,19 +194,10 @@ const EditPackagePage = () => {
       formData.append(`tags[${idx}]`, tag);
     });
 
-    formData.append("backgroundType", backgroundType);
+    formData.append("background", selectedBackground);
 
-    selectedAddons.forEach((addon, idx) => {
-      formData.append(`addons[${idx}][addonId]`, addon.addonId);
-      formData.append(`addons[${idx}][name]`, addon.name);
-      formData.append(`addons[${idx}][type]`, addon.type);
-      if (addon.option) {
-        formData.append(`addons[${idx}][option]`, addon.option);
-      }
-      if (addon.quantity) {
-        formData.append(`addons[${idx}][quantity]`, String(addon.quantity));
-      }
-      formData.append(`addons[${idx}][price]`, String(addon.price));
+    selectedAddons.forEach((id, idx) => {
+      formData.append(`addons[${idx}]`, id);
     });
 
     newFiles.forEach((file, idx) => {
@@ -320,7 +250,7 @@ const EditPackagePage = () => {
       </nav>
 
       <div className="bg-white shadow rounded-lg p-6 flex flex-col lg:flex-row gap-6">
-        {/* Left - Cover and Carousel */}
+        {/* Left - Images */}
         <div className="flex-shrink-0 w-full lg:w-1/3">
           <img
             src={coverImage}
@@ -366,6 +296,7 @@ const EditPackagePage = () => {
 
         {/* Right - Form */}
         <form onSubmit={handleSubmit} className="flex-1 space-y-4">
+          {/* Name */}
           <div>
             <label className="block text-sm font-bold">Package Name</label>
             <input
@@ -377,11 +308,10 @@ const EditPackagePage = () => {
             />
           </div>
 
+          {/* Duration + Price */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-bold">
-                Duration (minutes)
-              </label>
+              <label className="block text-sm font-bold">Duration (minutes)</label>
               <input
                 type="number"
                 min={30}
@@ -417,6 +347,7 @@ const EditPackagePage = () => {
             </div>
           </div>
 
+          {/* Description */}
           <div>
             <label className="block text-sm font-bold">Description</label>
             <textarea
@@ -429,107 +360,67 @@ const EditPackagePage = () => {
             />
           </div>
 
-          {/* Background Selection */}
-          <div className="md:col-span-2">
+            {/* Background Selection */}
+            <div className="md:col-span-2">
             <h4 className="text-sm font-medium mb-2">Background Selection</h4>
-            <div className="flex gap-4">
-              <button
-                type="button"
-                onClick={() => setBackgroundType("plain")}
-                className={`px-3 py-1 rounded-md text-sm border ${
-                  backgroundType === "plain"
-                    ? "bg-black text-white border-black"
-                    : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"
-                }`}
-              >
-                Plain Background
-              </button>
-              <button
-                type="button"
-                onClick={() => setBackgroundType("concept")}
-                className={`px-3 py-1 rounded-md text-sm border ${
-                  backgroundType === "concept"
-                    ? "bg-black text-white border-black"
-                    : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"
-                }`}
-              >
-                Concept Background
-              </button>
-              <button
-                type="button"
-                onClick={() => setBackgroundType("both")}
-                className={`px-3 py-1 rounded-md text-sm border ${
-                  backgroundType === "both"
-                    ? "bg-black text-white border-black"
-                    : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"
-                }`}
-              >
-                Both
-              </button>
+            {typesLoading ? (
+              <p className="text-xs text-gray-500 mt-1">Loading...</p>
+            ) : backgroundError ? (
+              <p className="text-xs text-red-500 mt-1">{backgroundError}</p>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {backgroundTypes.map((bg) => (
+                  <button
+                    type="button"
+                    key={bg.setID}
+                    onClick={() => setSelectedBackground(bg.setName)}
+                    className={`px-3 py-1 rounded-md text-sm border transition-all duration-200
+                      ${selectedBackground === bg.setName
+                        ? "bg-[#212121] text-white border-[#212121]"
+                        : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"
+                      }`}
+                  >
+                    {bg.setName}
+                  </button>
+                ))}
+              </div>
+              )}
             </div>
-          </div>
 
           {/* Addons */}
           <div>
-            <label className="block text-sm font-bold">Add-ons</label>
-            <div className="space-y-3 mt-2">
-              {addons.map((addon) => {
-                const existing = selectedAddons.find(
-                  (a) => a.addonId === addon.id
-                );
-                return (
-                  <div
-                    key={addon.id}
-                    className="flex flex-col gap-2 border p-3 rounded-md"
-                  >
-                    <span className="font-medium">{addon.name}</span>
-                    {addon.type === "toggle" && (
-                      <label className="flex items-center gap-2 text-sm">
-                        <input
-                          type="checkbox"
-                          checked={!!existing}
-                          onChange={(e) =>
-                            handleAddonChange(
-                              addon,
-                              undefined,
-                              e.target.checked
-                            )
-                          }
-                        />
-                        Enable ({addon.options?.[0]?.price || 0}₱)
-                      </label>
-                    )}
-                    {addon.type === "dropdown" && (
-                      <select
-                        value={existing?.option || ""}
-                        onChange={(e) =>
-                          handleAddonChange(addon, e.target.value)
-                        }
-                        className="border px-2 py-1 rounded-md text-sm"
-                      >
-                        <option value="">Select option</option>
-                        {addon.options?.map((opt) => (
-                          <option key={opt.label} value={opt.label}>
-                            {opt.label} ({opt.price}₱)
-                          </option>
-                        ))}
-                      </select>
-                    )}
-                    {addon.type === "spinner" && (
-                      <input
-                        type="number"
-                        min={0}
-                        value={existing?.quantity || 0}
-                        onChange={(e) =>
-                          handleAddonChange(addon, e.target.value)
-                        }
-                        className="border px-2 py-1 rounded-md text-sm w-24"
-                      />
-                    )}
-                  </div>
-                );
-              })}
-            </div>
+            <label className="block text-sm font-medium">Add-ons</label>
+            {typesLoading ? (
+              <p className="text-xs text-gray-500 mt-1">Loading...</p>
+            ) : addonsError ? (
+              <p className="text-xs text-red-500 mt-1">{addonsError}</p>
+            ) : (
+              <div className="flex flex-wrap gap-2 mt-1">
+                {addons.map((addon) => {
+                  const isSelected = selectedAddons.includes(addon.addOnID);
+                  return (
+                    <button
+                      type="button"
+                      key={addon.addOnID}
+                      onClick={() =>
+                        setSelectedAddons((prev) =>
+                          prev.includes(addon.addOnID)
+                            ? prev.filter((id) => id !== addon.addOnID)
+                            : [...prev, addon.addOnID]
+                        )
+                      }
+                      className={`px-3 py-1 rounded-md text-sm border transition-all duration-200
+                        ${isSelected
+                          ? "bg-[#212121] text-white border-[#212121]"
+                          : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"
+                        }`}
+                    >
+                      {addon.addOn}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           {/* Tags from package_types */}
@@ -553,10 +444,9 @@ const EditPackagePage = () => {
                       )
                     }
                     className={`px-3 py-1 rounded-md text-sm border transition-all duration-200
-                      ${
-                        tags.includes(type.name)
-                          ? "bg-[#212121] text-white border-[#212121]"
-                          : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"
+                      ${tags.includes(type.name)
+                        ? "bg-[#212121] text-white border-[#212121]"
+                        : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"
                       }`}
                   >
                     {type.name}
@@ -584,8 +474,7 @@ const EditPackagePage = () => {
           </div>
         </form>
       </div>
-
-      <ToastContainer />
+      <ToastContainer position="bottom-right" />
     </div>
   );
 };
