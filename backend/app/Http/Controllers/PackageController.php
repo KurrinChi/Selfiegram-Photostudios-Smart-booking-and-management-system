@@ -124,6 +124,9 @@ class PackageController extends Controller
             ->leftJoin('package_images', 'packages.packageID', '=', 'package_images.packageID')
             ->leftJoin('package_type_mapping', 'packages.packageID', '=', 'package_type_mapping.packageID')
             ->leftJoin('package_types', 'package_type_mapping.typeID', '=', 'package_types.typeID')
+            ->leftJoin('package_sets', 'packages.setID', '=', 'package_sets.setID')
+            ->leftJoin('package_add_on_mapping', 'packages.packageID', '=', 'package_add_on_mapping.packageID')
+            ->leftJoin('package_add_ons', 'package_add_on_mapping.addOnID', '=', 'package_add_ons.addOnID')
             ->select(
                 'packages.packageID as id',
                 'packages.name as title',
@@ -133,7 +136,10 @@ class PackageController extends Controller
                 'package_images.imageID',
                 'package_images.imagePath',
                 'package_types.typeName as tag',
-                'packages.status'
+                'packages.status',
+                'package_add_ons.addOn',
+                'package_add_ons.addOnID',
+                'package_sets.setName'
             )
             ->get();
 
@@ -159,6 +165,16 @@ class PackageController extends Controller
                 ->values(),
             'tags' => $raw->pluck('tag')->filter()->unique()->values(),
             'status' => $first->status,
+            'backgroundType' => $first->setName,
+            'addons' => $raw
+                ->filter(fn($row) => $row->addOn)
+                ->map(fn($row) => [
+                    'addOnID' => $row->addOnID,
+                    'addOn' => $row->addOn,
+                ])
+                ->unique('addOnID')
+                ->values()
+            
         ];
 
         return response()->json($package);
@@ -285,6 +301,46 @@ class PackageController extends Controller
                 DB::table('package_type_mapping')->insert($insertData);
             }
 
+            // Handle add-on mapping (frontend sends IDs)
+            $addons = $request->input('addons', []);
+
+            DB::table('package_add_on_mapping')->where('packageID', $id)->delete();
+
+            $addonInsertData = [];
+            foreach ($addons as $addonID) {
+                // Verify addon exists
+                $exists = DB::table('package_add_ons')
+                    ->where('addOnID', $addonID)
+                    ->exists();
+
+                if ($exists) {
+                    $addonInsertData[] = [
+                        'packageID' => $id,
+                        'addOnID'   => $addonID,
+                    ];
+                }
+            }
+
+            if (!empty($addonInsertData)) {
+                DB::table('package_add_on_mapping')->insert($addonInsertData);
+            }
+
+            $background = $request->input('background'); // this is a string like "Plain"
+
+            if ($background) {
+                // find the setID for this background
+                $setID = DB::table('package_sets')
+                    ->where('setName', $background)
+                    ->value('setID');
+
+                if ($setID) {
+                    // valid background found → update package
+                    DB::table('packages')
+                        ->where('packageID', $id)
+                        ->update(['setID' => $setID]);
+                }
+            }
+            
             DB::commit();
             return response()->json(['message' => 'Package updated successfully']);
         } catch (\Exception $e) {
@@ -297,7 +353,7 @@ class PackageController extends Controller
     }
 
     public function getPackageSetAndConcepts($id)
-        {
+    {
             // 1. Get the setID for the package
             $set = DB::table('packages')
                 ->where('packageID', $id)
@@ -331,32 +387,80 @@ class PackageController extends Controller
                     ];
                 })->values()
             ]);
+    }
+
+    //customer side - get add-ons for a specific package
+    public function getAddOns($id)
+    {
+        try {
+        // Make sure $id comes from the route: /api/packages/{id}/addons
+            $addOns = DB::table('package_add_ons as pa')
+                ->join('package_add_on_mapping as pam', 'pa.addOnID', '=', 'pam.addOnID')
+                ->where('pam.packageID', $id)
+                ->select('pa.addOnID', 'pa.addOn', 'pa.addOnPrice')
+                ->get();
+
+                return response()->json([
+                    'success' => true,
+                    'data' => $addOns
+                ], 200);
+
+        } catch (\Exception $e) {
+             return response()->json([
+                'success' => false,
+                'message' => 'Failed to fetch add-ons',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    //admin side - get all add-ons
+    public function getAllAddOns()
+    {
+        try {
+            $addOns = DB::table('package_add_ons as pa')
+                ->select('pa.addOnID', 'pa.addOn', 'pa.addOnPrice')
+                ->get();
+
+                return response()->json([
+                    'success' => true,
+                    'data' => $addOns
+                ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to fetch add-ons',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function getAllBackgrounds()
+    {
+        $raw = DB::table('package_sets')
+            ->select('setID', 'setName')
+            ->get();
+
+        if ($raw->isEmpty()) {
+            return response()->json(['message' => 'Package not found'], 404);
         }
 
-          public function getAddOns($id)
-                {
-                     try {
-                            // Make sure $id comes from the route: /api/packages/{id}/addons
-                            $addOns = DB::table('package_add_ons as pa')
-                                ->join('package_add_on_mapping as pam', 'pa.addOnID', '=', 'pam.addOnID')
-                                ->where('pam.packageID', $id)
-                                ->select('pa.addOnID', 'pa.addOn', 'pa.addOnPrice')
-                                ->get();
+        $first = $raw->first();
 
-                            return response()->json([
-                                'success' => true,
-                                'data' => $addOns
-                            ], 200);
+        $grouped = $raw->groupBy('setID');
 
-                        } catch (\Exception $e) {
-                            return response()->json([
-                                'success' => false,
-                                'message' => 'Failed to fetch add-ons',
-                                'error' => $e->getMessage()
-                            ], 500);
-                        }
-                }
+        $package = $grouped->map(function ($items, $id) {
+            $first = $items->first();
 
+            return [
+                'setID' => $first->setID,
+                'setName' => $first->setName,
+            ];
+        })->values();
+
+        return response()->json($package);
+    }
 
 }
 ?>
