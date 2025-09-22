@@ -1039,17 +1039,27 @@ const SelectPackagePage = () => {
                       {/* Quantity Input */}
                       <input
                         type="number"
-                        min={1}
-                        max={5}
-                        value={
-                          selectedAddons.find((a) => a.id === item.id)?.value ||
-                          1
-                        } // default 1
-                        onChange={(e) =>
-                          handleAddonChange(item.id, parseInt(e.target.value))
+                      min={1}
+                      max={5}
+                      value={selectedAddons.find((a) => a.id === item.id)?.value || 1} // default 1
+                      onChange={(e) => {
+                        const value = parseInt(e.target.value, 10);
+
+                        // Enforce the min and max limits
+                        if (value >= 1 && value <= 5) {
+                          handleAddonChange(item.id, value);
                         }
-                        onClick={(e) => e.stopPropagation()} // prevent toggling
-                        className="w-16 border rounded p-1"
+                      }}
+                      onBlur={(e) => {
+                        // Reset to min value if the input is empty or invalid
+                        if (!e.target.value || parseInt(e.target.value, 10) < 1) {
+                          handleAddonChange(item.id, 1);
+                        } else if (parseInt(e.target.value, 10) > 5) {
+                          handleAddonChange(item.id, 5);
+                        }
+                      }}
+                      onClick={(e) => e.stopPropagation()} // Prevent toggling
+                      className="w-16 border rounded p-1"
                       />
 
                       {/* Total Price beside input */}
