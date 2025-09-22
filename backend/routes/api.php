@@ -182,6 +182,8 @@
 
         //Client Notification
         Route::get('/notifications/{userID}', [NotificationController::class, 'getUserNotifications']);
+
+          Route::get('/booking-details', [NotificationController::class, 'getBookingDetails']);
     });
 
     //receipt

@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Notification;
+use Illuminate\Support\Facades\DB;
+
 class NotificationController extends Controller
 {
      public function getUserNotifications($userID)
@@ -17,5 +19,49 @@ class NotificationController extends Controller
             ->get();
 
         return response()->json($notifications);
+    }
+
+
+    public function getBookingDetails(Request $request)
+    {
+        $bookingID = $request->query('bookingID'); // Get bookingID from query parameters
+
+        if (!$bookingID) {
+            return response()->json(['error' => 'Booking ID is required'], 400);
+        }
+
+        $bookingDetails = DB::table('booking')
+            ->join('packages', 'booking.packageID', '=', 'packages.packageID')
+            ->leftJoin('transaction', 'transaction.bookingID', '=', 'booking.bookingID')
+            ->select(
+                'booking.bookingID as id',
+                'booking.customerName',
+                'booking.customerEmail as email',
+                'booking.customerContactNo as contact',
+                'booking.customerAddress as address',
+                'booking.bookingDate',
+                'booking.bookingStartTime',
+                'booking.bookingEndTime',
+                'packages.name as packageName',
+                'packages.description as packageDescription',
+                'packages.price as basePrice',
+                'booking.subTotal',
+                'booking.total',
+                'booking.rem as balance',
+                'booking.receivedAmount as payment',
+                'booking.status',
+                'booking.paymentStatus',
+                'booking.feedback',
+                'booking.rating',
+                'transaction.date as transactionDate'
+            )
+            ->where('booking.bookingID', $bookingID)
+            ->first();
+
+        if (!$bookingDetails) {
+            return response()->json(['error' => 'Booking not found'], 404);
+        }
+
+        return response()->json($bookingDetails);
     }
 }
