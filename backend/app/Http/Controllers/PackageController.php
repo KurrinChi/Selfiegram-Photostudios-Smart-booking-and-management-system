@@ -352,6 +352,101 @@ class PackageController extends Controller
         }
     }
 
+    public function addPackage(Request $request)
+    {
+        DB::beginTransaction();
+
+        try {
+            // Insert base package
+            $setID = null;
+            $background = $request->input('background');
+            if ($background) {
+                $setID = DB::table('package_sets')
+                    ->where('setName', $background)
+                    ->value('setID');
+            }
+
+            // Insert base package, including setID if available
+            $packageData = [
+                'name' => $request->input('title'),
+                'duration' => $request->input('duration'),
+                'price' => $request->input('price'),
+                'description' => $request->input('description'),
+                'status' => 1, // default to active
+            ];
+
+            if ($setID !== null) {
+                $packageData['setID'] = $setID;
+            }
+
+            $packageID = DB::table('packages')->insertGetId($packageData);
+
+            // Handle image upload (cover + carousel as same array)
+            if ($request->hasFile('images')) {
+                $safeName = preg_replace('/[^A-Za-z0-9_\- ]/', '_', $request->input('title'));
+                $folder = public_path("storage/packages/{$safeName}");
+
+                if (!file_exists($folder)) {
+                    mkdir($folder, 0777, true);
+                }
+
+                foreach ($request->file('images') as $file) {
+                    $filename = time() . '_' . $file->getClientOriginalName();
+                    $file->move($folder, $filename);
+
+                    DB::table('package_images')->insert([
+                        'packageID' => $packageID,
+                        'imagePath' => "storage/packages/{$safeName}/{$filename}",
+                    ]);
+                }
+            }
+
+            // Tags (package types)
+            $tags = $request->input('tags', []);
+            foreach ($tags as $tagName) {
+                $typeID = DB::table('package_types')
+                    ->where('typeName', $tagName)
+                    ->value('typeID');
+
+                if ($typeID) {
+                    DB::table('package_type_mapping')->insert([
+                        'packageID' => $packageID,
+                        'typeID' => $typeID,
+                    ]);
+                }
+            }
+
+            // Add-ons
+            $addons = $request->input('addons', []);
+            foreach ($addons as $addonID) {
+                $exists = DB::table('package_add_ons')
+                    ->where('addOnID', $addonID)
+                    ->exists();
+
+                if ($exists) {
+                    DB::table('package_add_on_mapping')->insert([
+                        'packageID' => $packageID,
+                        'addOnID' => $addonID,
+                    ]);
+                }
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'message' => 'Package added successfully',
+                'packageID' => $packageID,
+            ], 201);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'message' => 'Error adding package',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+
     public function getPackageSetAndConcepts($id)
     {
             // 1. Get the setID for the package

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Paperclip, X } from "lucide-react";
 import { fetchWithAuth } from "../../utils/fetchWithAuth";
+import { toast, ToastContainer } from "react-toastify";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -11,18 +12,13 @@ interface PackageType {
 }
 
 interface Addon {
-  id: number;
-  label: string;
-  type: "toggle" | "dropdown" | "spinner";
-  options?: string[];
-  price: number;
+  addOnID: string;
+  addOn: string;
 }
 
-interface SelectedAddon {
-  id: number;
-  label: string;
-  price: number;
-  value: string | number | boolean;
+interface BackgroundType {
+  setID: string | number;
+  setName: string;
 }
 
 const AddPackagePage = () => {
@@ -41,14 +37,31 @@ const AddPackagePage = () => {
   const [typesLoading, setTypesLoading] = useState(false);
   const [typesError, setTypesError] = useState<string | null>(null);
 
-  // Background selection (exclusive Plain / Concept / Both)
-  const [background, setBackground] = useState<
-    "plain" | "concept" | "both" | null
-  >(null);
+  // Addons
+  const [addons, setAddons] = useState<Addon[]>([]); // all available addons
+  const [selectedAddons, setSelectedAddons] = useState<string[]>([]); // addonIDs chosen
+  const [addonsError, setAddonsError] = useState<string | null>(null);
 
-  // Add-ons
-  const [addons, setAddons] = useState<Addon[]>([]);
-  const [selectedAddons, setSelectedAddons] = useState<SelectedAddon[]>([]);
+  // Background type
+  const [backgroundTypes, setBackgroundTypes] = useState<BackgroundType[]>([]);
+  const [selectedBackground, setSelectedBackground] = useState<string>("");
+  const [backgroundError, setBackgroundError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchBackgroundTypes = async () => {
+      try {
+        const res = await fetchWithAuth(`${API_URL}/api/admin/package-sets`);
+        if (!res.ok) throw new Error(`Failed to fetch background types: ${res.status}`);
+        const data = await res.json();
+        setBackgroundTypes(data);
+      } catch (err) {
+        console.error(err);
+        setBackgroundError("Failed to load background types.");
+      }
+    };
+
+    fetchBackgroundTypes();
+  }, []);
 
   useEffect(() => {
     const fetchTypes = async () => {
@@ -67,28 +80,28 @@ const AddPackagePage = () => {
         setTypesLoading(false);
       }
     };
+    fetchTypes();
+  }, []);
 
+  useEffect(() => {
     const fetchAddons = async () => {
       try {
         const res = await fetchWithAuth(`${API_URL}/api/admin/addons`);
-        const raw = await res.json();
-        const data = Array.isArray(raw) ? raw : raw.addons || [];
-        setAddons(data);
-        console.log("Fetched addons:", data);
+        if (!res.ok) throw new Error("Failed to fetch addons");
+        const data = await res.json();
+        const addonsArray = Array.isArray(data)
+          ? data
+          : Array.isArray(data.data)
+            ? data.data
+            : [];
+        setAddons(addonsArray);
       } catch (err) {
-        console.error("Failed to fetch addons:", err);
+        console.error(err);
+        setAddonsError("Failed to load addons");
       }
     };
-
-    fetchTypes();
     fetchAddons();
   }, []);
-
-  const handleCoverImageChange = (file: File) => {
-    const reader = new FileReader();
-    reader.onloadend = () => setCoverImage(reader.result as string);
-    reader.readAsDataURL(file);
-  };
 
   const handleCarouselImagesUpload = (files: FileList) => {
     const fileArray = Array.from(files);
@@ -100,13 +113,35 @@ const AddPackagePage = () => {
           reader.readAsDataURL(file);
         })
     );
-    Promise.all(readers).then((imgs) =>
-      setCarouselImages((prev) => [...prev, ...imgs])
-    );
+    Promise.all(readers).then((imgs) => {
+      setCarouselImages((prev) => {
+        // Set the first image as the cover image
+        const newImages = [...prev, ...imgs];
+        setCoverImage(newImages[0]); // Automatically set the first image as cover
+        return newImages;
+      });
+    });
   };
 
+
   const removeCarouselImage = (idx: number) => {
-    setCarouselImages((prev) => prev.filter((_, i) => i !== idx));
+    setCarouselImages((prev) => {
+      // Remove the image at the given index
+      const newImages = prev.filter((_, i) => i !== idx);
+
+      // Update the cover image if the first image was removed
+      if (idx === 0) {
+        if (newImages.length > 0) {
+          // Set the next image as cover
+          setCoverImage(newImages[0]);
+        } else {
+          // If no images are left, reset cover image
+          setCoverImage("");
+        }
+      }
+
+      return newImages;
+    });
   };
 
   const toggleTag = (tag: string) => {
@@ -115,34 +150,27 @@ const AddPackagePage = () => {
     );
   };
 
-  const handleAddonChange = (
-    addon: Addon,
-    value: string | number | boolean
-  ) => {
-    setSelectedAddons((prev) => {
-      const existing = prev.find((a) => a.id === addon.id);
-      if (existing) {
-        return prev.map((a) => (a.id === addon.id ? { ...a, value } : a));
-      }
-      return [
-        ...prev,
-        { id: addon.id, label: addon.label, price: addon.price, value },
-      ];
-    });
-  };
-
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
     if (!title.trim()) newErrors.title = "Package name is required.";
     if (!price || price <= 0) newErrors.price = "Price must be greater than 0.";
     if (!duration.trim()) newErrors.duration = "Duration is required.";
     if (!description.trim()) newErrors.description = "Description is required.";
-    if (!coverImage) newErrors.coverImage = "Cover image is required.";
+    if (!coverImage) {
+      newErrors.coverImage = "Cover image is required. The first carousel image will be used as cover.";
+    }
+    if (carouselImages.length < 2) {
+      newErrors.carouselImages = "At least 2 images are required.";
+    }
+    if (!selectedBackground) newErrors.background = "Background selection is required.";
+    if (tags.length === 0) newErrors.tags = "Select at least one package type.";
+    if (selectedAddons.length === 0) newErrors.addons = "Select at least one add-on.";
     return newErrors;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
     const formErrors = validateForm();
     if (Object.keys(formErrors).length > 0) {
       setErrors(formErrors);
@@ -150,21 +178,54 @@ const AddPackagePage = () => {
     }
     setErrors({});
 
-    const newPkg = {
-      title,
-      price,
-      duration,
-      description,
-      tags,
-      images: [coverImage, ...carouselImages],
-      background,
-      addons: selectedAddons,
-    };
-    console.log("Package created:", newPkg);
-    // TODO: call backend to POST new package (FormData) - not sent here by request
-    alert("Package added successfully!");
-    navigate("/admin/packages");
+    const formData = new FormData();
+    formData.append('title', title);
+    formData.append('price', price.toString());
+    formData.append('duration', duration);
+    formData.append('description', description);
+    formData.append('background', selectedBackground);
+
+    // Tags
+    tags.forEach(tag => formData.append('tags[]', tag));
+
+    // Addons
+    selectedAddons.forEach(addonID => formData.append('addons[]', addonID));
+
+    // ✅ Wait for all carousel image blobs to be fetched and appended
+    const blobPromises = carouselImages.map(async (img, idx) => {
+      const res = await fetch(img);
+      const blob = await res.blob();
+      formData.append('images[]', blob, `carouselImage-${idx}.jpg`);
+    });
+
+    await Promise.all(blobPromises);
+
+    // Send the form data
+    try {
+      const res = await fetchWithAuth(`${API_URL}/api/admin/add-package`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error("Server error:", errorText);
+        throw new Error('Failed to create package');
+      }
+
+      const data = await res.json();
+      console.log('Package created:', data);
+
+      navigate("/admin/packages", {
+        state: { toast: { type: "success", message: "Package added successfully!" } },
+      });
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to create package");
+    }
   };
+
+
 
   return (
     <div className="p-6 max-w-6xl mx-auto">
@@ -196,25 +257,6 @@ const AddPackagePage = () => {
             {errors.coverImage && (
               <p className="text-xs text-red-500 mt-1">{errors.coverImage}</p>
             )}
-
-            <input
-              id="cover-upload"
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={(e) =>
-                e.target.files && handleCoverImageChange(e.target.files[0])
-              }
-            />
-            <button
-              type="button"
-              onClick={() => document.getElementById("cover-upload")?.click()}
-              className="mt-2 flex items-center gap-2 bg-[#212121] text-white px-4 py-2 rounded-md text-sm
-                          transition-all duration-200 ease-in-out
-                        hover:bg-black hover:scale-105 hover:shadow-md active:scale-95"
-            >
-              <Paperclip size={16} /> Attach Cover
-            </button>
           </div>
 
           {/* Carousel */}
@@ -235,8 +277,8 @@ const AddPackagePage = () => {
                     type="button"
                     onClick={() => removeCarouselImage(idx)}
                     className="absolute top-1 right-1 bg-black bg-opacity-60 text-white rounded-full p-1 
-             transform transition-all duration-200 ease-in-out
-             hover:bg-opacity-80 hover:scale-110 hover:rotate-12 active:scale-95"
+                              transform transition-all duration-200 ease-in-out
+                              hover:bg-opacity-80 hover:scale-110 hover:rotate-12 active:scale-95"
                   >
                     <X size={14} />
                   </button>
@@ -260,11 +302,14 @@ const AddPackagePage = () => {
                 document.getElementById("carousel-upload")?.click()
               }
               className="flex items-center gap-2 bg-[#212121] text-white px-4 py-2 rounded-md text-sm
-           transform transition-all duration-200 ease-in-out
-           hover:bg-black hover:scale-105 hover:shadow-md active:scale-95"
+                        transform transition-all duration-200 ease-in-out
+                        hover:bg-black hover:scale-105 hover:shadow-md active:scale-95"
             >
               <Paperclip size={16} /> Attach Carousel
             </button>
+            {errors.carouselImages && (
+              <p className="text-xs text-red-500 mt-1">{errors.carouselImages}</p>
+            )}
           </div>
         </div>
 
@@ -279,9 +324,8 @@ const AddPackagePage = () => {
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               maxLength={100}
-              className={`w-full px-3 py-2 border rounded-md text-sm ${
-                errors.title ? "border-red-500" : ""
-              }`}
+              className={`w-full px-3 py-2 border rounded-md text-sm ${errors.title ? "border-red-500" : ""
+                }`}
               placeholder="e.g., Premium Wedding Package"
             />
             {errors.title && (
@@ -300,9 +344,8 @@ const AddPackagePage = () => {
               step={30}
               value={duration}
               onChange={(e) => setDuration(e.target.value)}
-              className={`w-full px-3 py-2 border rounded-md text-sm ${
-                errors.duration ? "border-red-500" : ""
-              }`}
+              className={`w-full px-3 py-2 border rounded-md text-sm ${errors.duration ? "border-red-500" : ""
+                }`}
               placeholder="e.g., 60"
             />
 
@@ -318,9 +361,8 @@ const AddPackagePage = () => {
               value={price}
               onChange={(e) => setPrice(Number(e.target.value))}
               min={1}
-              className={`w-full px-3 py-2 border rounded-md text-sm ${
-                errors.price ? "border-red-500" : ""
-              }`}
+              className={`w-full px-3 py-2 border rounded-md text-sm ${errors.price ? "border-red-500" : ""
+                }`}
               placeholder="e.g., 1500"
             />
             {errors.price && (
@@ -335,9 +377,8 @@ const AddPackagePage = () => {
               onChange={(e) => setDescription(e.target.value)}
               rows={6}
               maxLength={500}
-              className={`w-full px-3 py-2 border rounded-md text-sm ${
-                errors.description ? "border-red-500" : ""
-              }`}
+              className={`w-full px-3 py-2 border rounded-md text-sm ${errors.description ? "border-red-500" : ""
+                }`}
               placeholder="Describe the package details..."
             />
             {errors.description && (
@@ -348,111 +389,70 @@ const AddPackagePage = () => {
           {/* Background Selection */}
           <div className="md:col-span-2">
             <h4 className="text-sm font-medium mb-2">Background Selection</h4>
-            <div className="flex gap-4">
-              <button
-                type="button"
-                onClick={() =>
-                  setBackground(background === "plain" ? null : "plain")
-                }
-                className={`px-3 py-1 rounded-md text-sm border ${
-                  background === "plain"
-                    ? "bg-[#212121] text-white"
-                    : "bg-white text-gray-700"
-                }`}
-              >
-                Plain Background
-              </button>
-              <button
-                type="button"
-                onClick={() =>
-                  setBackground(background === "concept" ? null : "concept")
-                }
-                className={`px-3 py-1 rounded-md text-sm border ${
-                  background === "concept"
-                    ? "bg-[#212121] text-white"
-                    : "bg-white text-gray-700"
-                }`}
-              >
-                Concept Background
-              </button>
-              <button
-                type="button"
-                onClick={() =>
-                  setBackground(background === "both" ? null : "both")
-                }
-                className={`px-3 py-1 rounded-md text-sm border ${
-                  background === "both"
-                    ? "bg-[#212121] text-white"
-                    : "bg-white text-gray-700"
-                }`}
-              >
-                Both
-              </button>
-            </div>
+            {typesLoading ? (
+              <p className="text-xs text-gray-500 mt-1">Loading...</p>
+            ) : backgroundError ? (
+              <p className="text-xs text-red-500 mt-1">{backgroundError}</p>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {backgroundTypes.map((bg) => (
+                  <button
+                    type="button"
+                    key={bg.setID}
+                    onClick={() => setSelectedBackground(bg.setName)}
+                    className={`px-3 py-1 rounded-md text-sm border transition-all duration-200
+                  ${selectedBackground === bg.setName
+                        ? "bg-[#212121] text-white border-[#212121]"
+                        : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"
+                      }`}
+                  >
+                    {bg.setName}
+                  </button>
+                ))}
+              </div>
+            )}
+            {errors.background && (
+              <p className="text-xs text-red-500 mt-1">{errors.background}</p>
+            )}
           </div>
 
-          {/* Add-ons */}
+          {/* Addons */}
           <div className="md:col-span-2">
-            <h4 className="text-sm font-medium mb-2">Add-ons</h4>
-            <div className="space-y-3">
-              {addons.map((addon) => {
-                const selected = selectedAddons.find((a) => a.id === addon.id);
-                return (
-                  <div key={addon.id} className="flex items-center gap-3">
-                    {addon.type === "toggle" && (
-                      <>
-                        <input
-                          type="checkbox"
-                          checked={!!selected?.value}
-                          onChange={(e) =>
-                            handleAddonChange(addon, e.target.checked)
-                          }
-                        />
-                        <span>
-                          {addon.label} (+₱{addon.price})
-                        </span>
-                      </>
-                    )}
-
-                    {addon.type === "dropdown" && (
-                      <>
-                        <label className="text-sm">{addon.label}</label>
-                        <select
-                          value={(selected?.value as string) || ""}
-                          onChange={(e) =>
-                            handleAddonChange(addon, e.target.value)
-                          }
-                          className="border rounded-md px-2 py-1 text-sm"
-                        >
-                          <option value="">Select</option>
-                          {addon.options?.map((opt) => (
-                            <option key={opt} value={opt}>
-                              {opt}
-                            </option>
-                          ))}
-                        </select>
-                      </>
-                    )}
-
-                    {addon.type === "spinner" && (
-                      <>
-                        <label className="text-sm">{addon.label}</label>
-                        <input
-                          type="number"
-                          min={0}
-                          value={(selected?.value as number) || 0}
-                          onChange={(e) =>
-                            handleAddonChange(addon, Number(e.target.value))
-                          }
-                          className="border rounded-md w-20 px-2 py-1 text-sm"
-                        />
-                        <span className="text-sm">x ₱{addon.price}</span>
-                      </>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
+            <label className="block text-sm font-medium mb-2">Add-ons</label>
+            {typesLoading ? (
+              <p className="text-xs text-gray-500 mt-1">Loading...</p>
+            ) : addonsError ? (
+              <p className="text-xs text-red-500 mt-1">{addonsError}</p>
+            ) : (
+              <div className="flex flex-wrap gap-2 mt-1">
+                {addons.map((addon) => {
+                  const isSelected = selectedAddons.includes(addon.addOnID);
+                  return (
+                    <button
+                      type="button"
+                      key={addon.addOnID}
+                      onClick={() =>
+                        setSelectedAddons((prev) =>
+                          prev.includes(addon.addOnID)
+                            ? prev.filter((id) => id !== addon.addOnID)
+                            : [...prev, addon.addOnID]
+                        )
+                      }
+                      className={`px-3 py-1 rounded-md text-sm border transition-all duration-200
+                ${isSelected
+                          ? "bg-[#212121] text-white border-[#212121]"
+                          : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"
+                        }`}
+                    >
+                      {addon.addOn}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+            {errors.addons && (
+              <p className="text-xs text-red-500 mt-1">{errors.addons}</p>
+            )}
           </div>
 
           {/* Package Types */}
@@ -472,16 +472,18 @@ const AddPackagePage = () => {
                     key={type.id}
                     onClick={() => toggleTag(type.name)}
                     className={`px-3 py-1 rounded-md text-sm border transition-all duration-200
-                      ${
-                        tags.includes(type.name)
-                          ? "bg-[#212121] text-white border-[#212121]"
-                          : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"
+                  ${tags.includes(type.name)
+                        ? "bg-[#212121] text-white border-[#212121]"
+                        : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"
                       }`}
                   >
                     {type.name}
                   </button>
                 ))}
               </div>
+            )}
+            {errors.tags && (
+              <p className="text-xs text-red-500 mt-1">{errors.tags}</p>
             )}
           </div>
 
@@ -503,6 +505,7 @@ const AddPackagePage = () => {
           </div>
         </form>
       </div>
+      <ToastContainer position="bottom-right" />
     </div>
   );
 };
