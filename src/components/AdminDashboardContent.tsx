@@ -34,7 +34,7 @@ import "../styles/print.css";
 import axios from "axios";
 import { useEffect } from "react";
 import jsPDF from "jspdf";
-import html2canvas from "html2canvas";
+import autoTable from "jspdf-autotable";
 import DashboardReportPDF from "./DashboardReportPDF";
 
 // -----------------------------------------------------------------------------
@@ -351,6 +351,330 @@ const AdminDashboardContents: React.FC = () => {
     setShowPreview(true);
   };
 
+  const generateProfessionalPDF = (data: any) => {
+    const pdf = new jsPDF("p", "mm", "a4");
+
+    // Company colors and styling
+    const primaryColor: [number, number, number] = [31, 41, 55]; // Gray-800
+    const successColor: [number, number, number] = [16, 185, 129]; // Green-500
+    const errorColor: [number, number, number] = [239, 68, 68]; // Red-500
+
+    let yPosition = 25;
+    const leftMargin = 20;
+    const rightMargin = 190;
+    const pageWidth = 210;
+    const pageHeight = 297;
+
+    // Helper function to add a new page if needed
+    const checkPageBreak = (neededSpace: number) => {
+      if (yPosition + neededSpace > pageHeight - 20) {
+        pdf.addPage();
+        yPosition = 25;
+        return true;
+      }
+      return false;
+    };
+
+    // Header Section
+    pdf.setFillColor(...primaryColor);
+    pdf.rect(0, 0, pageWidth, 40, "F");
+
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFontSize(24);
+    pdf.setFont("helvetica", "bold");
+    pdf.text(data.companyInfo.name, leftMargin, 20);
+
+    pdf.setFontSize(10);
+    pdf.setFont("helvetica", "normal");
+    pdf.text(data.companyInfo.address, leftMargin, 28);
+    pdf.text(
+      `${data.companyInfo.phone} | ${data.companyInfo.email}`,
+      leftMargin,
+      34
+    );
+
+    yPosition = 55;
+
+    // Report Title and Info
+    pdf.setTextColor(...primaryColor);
+    pdf.setFontSize(20);
+    pdf.setFont("helvetica", "bold");
+    pdf.text("Dashboard Analytics Report", leftMargin, yPosition);
+
+    yPosition += 15;
+
+    pdf.setFontSize(10);
+    pdf.setFont("helvetica", "normal");
+    pdf.setTextColor(75, 85, 99);
+    pdf.text(
+      `Report Period: ${data.dateRange.formattedRange}`,
+      leftMargin,
+      yPosition
+    );
+    pdf.text(
+      `Generated: ${format(new Date(data.reportGenerated), "PPP p")}`,
+      rightMargin - 60,
+      yPosition
+    );
+
+    yPosition += 20;
+
+    // Summary Cards Section
+    checkPageBreak(60);
+
+    pdf.setTextColor(...primaryColor);
+    pdf.setFontSize(16);
+    pdf.setFont("helvetica", "bold");
+    pdf.text("Executive Summary", leftMargin, yPosition);
+
+    yPosition += 10;
+
+    // Draw summary cards in a 2x2 grid
+    const cardWidth = 80;
+    const cardHeight = 25;
+    const cardSpacing = 10;
+
+    const summaryItems = [
+      {
+        label: "Total Users",
+        value: data.summary.totalUsers,
+        trend: data.summary.userTrend,
+      },
+      {
+        label: "Total Bookings",
+        value: data.summary.totalBookings,
+        trend: data.summary.scheduleTrend,
+      },
+      {
+        label: "Total Sales",
+        value: `₱${data.summary.totalSales?.toLocaleString() || "0"}`,
+        trend: data.summary.salesTrend,
+      },
+      {
+        label: "Total Appointments",
+        value: data.summary.totalAppointments,
+        trend: data.summary.appointmentsTrend,
+      },
+    ];
+
+    summaryItems.forEach((item, index) => {
+      const col = index % 2;
+      const row = Math.floor(index / 2);
+      const x = leftMargin + col * (cardWidth + cardSpacing);
+      const y = yPosition + row * (cardHeight + cardSpacing);
+
+      // Card background
+      pdf.setFillColor(249, 250, 251);
+      pdf.setDrawColor(209, 213, 219);
+      pdf.rect(x, y, cardWidth, cardHeight, "FD");
+
+      // Card content
+      pdf.setTextColor(75, 85, 99);
+      pdf.setFontSize(9);
+      pdf.setFont("helvetica", "normal");
+      pdf.text(item.label, x + 5, y + 8);
+
+      pdf.setTextColor(...primaryColor);
+      pdf.setFontSize(16);
+      pdf.setFont("helvetica", "bold");
+      pdf.text(String(item.value), x + 5, y + 16);
+
+      // Trend indicator (only if not custom date range)
+      if (!data.summary.hasDateRange && item.trend) {
+        const trendColor = item.trend.up ? successColor : errorColor;
+        pdf.setTextColor(...trendColor);
+        pdf.setFontSize(8);
+        pdf.setFont("helvetica", "normal");
+        const trendText = `${item.trend.up ? "↑" : "↓"} ${item.trend.value}`;
+        pdf.text(trendText, x + 5, y + 22);
+      }
+    });
+
+    yPosition += 60;
+
+    // Weekly Income Table
+    if (data.weeklyIncome && data.weeklyIncome.length > 0) {
+      checkPageBreak(80);
+
+      pdf.setTextColor(...primaryColor);
+      pdf.setFontSize(14);
+      pdf.setFont("helvetica", "bold");
+      pdf.text("Weekly Income Analysis", leftMargin, yPosition);
+
+      yPosition += 10;
+
+      const weeklyData = data.weeklyIncome
+        .slice(-10)
+        .map((week: any) => [week.week, `₱${week.income.toLocaleString()}`]);
+
+      autoTable(pdf, {
+        startY: yPosition,
+        head: [["Week Period", "Income"]],
+        body: weeklyData,
+        margin: { left: leftMargin, right: leftMargin },
+        styles: {
+          fontSize: 9,
+          cellPadding: 4,
+        },
+        headStyles: {
+          fillColor: primaryColor,
+          textColor: [255, 255, 255],
+          fontStyle: "bold",
+        },
+        alternateRowStyles: {
+          fillColor: [249, 250, 251],
+        },
+        columnStyles: {
+          1: { halign: "right", fontStyle: "bold" },
+        },
+      });
+
+      yPosition = (pdf as any).lastAutoTable.finalY + 15;
+    }
+
+    // Package Performance Table
+    if (data.packages && data.packages.length > 0) {
+      checkPageBreak(80);
+
+      pdf.setTextColor(...primaryColor);
+      pdf.setFontSize(14);
+      pdf.setFont("helvetica", "bold");
+      pdf.text("Package Performance Analysis", leftMargin, yPosition);
+
+      yPosition += 10;
+
+      const packageData = data.packages.map((pkg: any) => [
+        pkg.name,
+        String(pkg.totalBooking),
+        pkg.revenue,
+        pkg.bookingPct,
+        pkg.rating ? "★".repeat(Math.floor(pkg.rating)) : "N/A",
+        `${pkg.trendPositive ? "↑" : "↓"} ${pkg.trend}`,
+      ]);
+
+      autoTable(pdf, {
+        startY: yPosition,
+        head: [
+          ["Package Name", "Bookings", "Revenue", "Share %", "Rating", "Trend"],
+        ],
+        body: packageData,
+        margin: { left: leftMargin, right: leftMargin },
+        styles: {
+          fontSize: 8,
+          cellPadding: 3,
+        },
+        headStyles: {
+          fillColor: primaryColor,
+          textColor: [255, 255, 255],
+          fontStyle: "bold",
+        },
+        alternateRowStyles: {
+          fillColor: [249, 250, 251],
+        },
+        columnStyles: {
+          0: { cellWidth: 50 },
+          1: { halign: "center" },
+          2: { halign: "right", fontStyle: "bold" },
+          3: { halign: "center" },
+          4: { halign: "center" },
+          5: { halign: "center" },
+        },
+        didParseCell: function (data: any) {
+          // Color the trend column based on direction
+          if (data.column.index === 5 && data.section === "body") {
+            const trend = data.cell.raw;
+            if (trend.includes("↑")) {
+              data.cell.styles.textColor = successColor;
+            } else if (trend.includes("↓")) {
+              data.cell.styles.textColor = errorColor;
+            }
+          }
+        },
+      });
+
+      yPosition = (pdf as any).lastAutoTable.finalY + 15;
+    }
+
+    // Key Insights Section
+    checkPageBreak(50);
+
+    pdf.setTextColor(...primaryColor);
+    pdf.setFontSize(14);
+    pdf.setFont("helvetica", "bold");
+    pdf.text("Key Performance Insights", leftMargin, yPosition);
+
+    yPosition += 10;
+
+    pdf.setFontSize(10);
+    pdf.setFont("helvetica", "normal");
+    pdf.setTextColor(55, 65, 81);
+
+    const insights = [];
+
+    if (data.summary.totalSales > 0) {
+      const avgPerBooking =
+        data.summary.totalBookings > 0
+          ? (data.summary.totalSales / data.summary.totalBookings).toFixed(0)
+          : 0;
+      insights.push(
+        `• Average revenue per booking: ₱${Number(
+          avgPerBooking
+        ).toLocaleString()}`
+      );
+    }
+
+    if (data.packages && data.packages.length > 0) {
+      const topPackage = data.packages.reduce(
+        (max: any, pkg: any) =>
+          pkg.totalBooking > max.totalBooking ? pkg : max,
+        data.packages[0]
+      );
+      insights.push(
+        `• Most popular package: ${topPackage.name} (${topPackage.totalBooking} bookings)`
+      );
+    }
+
+    if (data.weeklyIncome && data.weeklyIncome.length >= 2) {
+      const recent = data.weeklyIncome.slice(-2);
+      const growth = (
+        ((recent[1].income - recent[0].income) / recent[0].income) *
+        100
+      ).toFixed(1);
+      insights.push(`• Week-over-week growth: ${growth}%`);
+    }
+
+    insights.push(
+      `• Total system users: ${data.summary.totalUsers.toLocaleString()}`
+    );
+    insights.push(`• Active appointment slots: ${data.summary.totalBookings}`);
+
+    insights.forEach((insight) => {
+      pdf.text(insight, leftMargin, yPosition);
+      yPosition += 6;
+    });
+
+    // Footer
+    const footerY = pageHeight - 20;
+    pdf.setDrawColor(209, 213, 219);
+    pdf.line(leftMargin, footerY - 5, rightMargin, footerY - 5);
+
+    pdf.setTextColor(107, 114, 128);
+    pdf.setFontSize(8);
+    pdf.setFont("helvetica", "normal");
+    pdf.text(
+      "Generated by Selfiegram Dashboard System",
+      leftMargin,
+      footerY
+    );
+    pdf.text(
+      `Page 1 of ${pdf.internal.pages.length - 1}`,
+      rightMargin - 20,
+      footerY
+    );
+
+    return pdf;
+  };
+
   const handleExport = async () => {
     // Add confirmation dialog
     const confirmed = window.confirm(
@@ -372,14 +696,10 @@ const AdminDashboardContents: React.FC = () => {
       const params = isDefaultRange ? {} : { startDate: start, endDate: end };
 
       console.log("Fetching report data...");
-      console.log("API URL:", `${API_URL}/api/admin/report-data`);
-      console.log("Request params:", params);
-      console.log("Token:", token ? "Present" : "Missing");
 
-      // Try test endpoint first for debugging
+      // Try to fetch data
       let response;
       try {
-        // First try the real endpoint
         response = await axios.get(`${API_URL}/api/admin/report-data`, {
           params,
           headers: {
@@ -388,7 +708,6 @@ const AdminDashboardContents: React.FC = () => {
         });
       } catch (mainError) {
         console.warn("Main endpoint failed, trying test endpoint:", mainError);
-        // Fallback to test endpoint
         response = await axios.get(`${API_URL}/api/test-report`, {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -396,26 +715,20 @@ const AdminDashboardContents: React.FC = () => {
         });
       }
 
-      console.log("Report data fetched successfully:", response.data);
-
-      // Cast to any for flexible handling
       const rawData = response.data as any;
 
-      // Check if server returned an error
       if (rawData.error) {
         throw new Error(`Server error: ${rawData.message || rawData.error}`);
       }
 
-      // Validate the response data structure
       if (!rawData || !rawData.summary) {
-        console.error("Invalid response structure:", rawData);
         throw new Error(
-          "Invalid report data structure received from server. Check console for details."
+          "Invalid report data structure received from server."
         );
       }
 
-      // Ensure all required properties exist
-      const reportDataWithDefaults = {
+      // Prepare data with defaults
+      const reportData = {
         ...rawData,
         summary: {
           totalUsers: 0,
@@ -433,383 +746,31 @@ const AdminDashboardContents: React.FC = () => {
         packages: rawData.packages || [],
         companyInfo: {
           name: "Selfiegram Photo Studios",
-          address: "Your Studio Address",
-          phone: "Your Phone Number",
+          address: "Malolos, Bulacan",
+          phone: "+63 912 345 6789",
           email: "info@selfiegram.com",
           ...rawData.companyInfo,
         },
+        dateRange: {
+          start: start,
+          end: end,
+          hasCustomRange: !isDefaultRange,
+          formattedRange: isDefaultRange
+            ? "All Time Data"
+            : `${format(range[0].startDate, "MMM dd, yyyy")} - ${format(
+                range[0].endDate,
+                "MMM dd, yyyy"
+              )}`,
+        },
+        reportGenerated: new Date().toISOString(),
       };
 
-      setReportData(reportDataWithDefaults);
+      console.log("Generating professional PDF...");
 
-      // Wait for component to render and then generate PDF
-      // Use requestAnimationFrame for better timing
-      await new Promise((resolve) => {
-        requestAnimationFrame(() => {
-          setTimeout(resolve, 2000); // Increased timeout
-        });
-      });
+      // Generate PDF using autoTable
+      const pdf = generateProfessionalPDF(reportData);
 
-      console.log("Starting PDF generation...");
-      const reportElement = document.getElementById("dashboard-report");
-
-      if (!reportElement) {
-        throw new Error("Report element not found");
-      }
-
-      console.log("Generating canvas from report element...");
-
-      let canvas;
-
-      // Create a comprehensive CSS reset to eliminate all problematic styles
-      const cssReset = `
-        #dashboard-report, #dashboard-report * {
-          all: unset !important;
-          display: block !important;
-          box-sizing: border-box !important;
-          font-family: system-ui, -apple-system, sans-serif !important;
-          color: rgb(0, 0, 0) !important;
-          background-color: rgb(255, 255, 255) !important;
-          background-image: none !important;
-          border: none !important;
-          outline: none !important;
-          text-decoration: none !important;
-          list-style: none !important;
-        }
-        
-        #dashboard-report {
-          width: 800px !important;
-          min-height: 1000px !important;
-          padding: 30px !important;
-          margin: 0 auto !important;
-          font-size: 14px !important;
-          line-height: 1.6 !important;
-          page-break-inside: avoid !important;
-        }
-        
-        #dashboard-report h1 { font-size: 24px !important; font-weight: bold !important; margin-bottom: 10px !important; }
-        #dashboard-report h2 { font-size: 20px !important; font-weight: bold !important; margin-bottom: 8px !important; }
-        #dashboard-report h3 { font-size: 16px !important; font-weight: bold !important; margin-bottom: 6px !important; }
-        #dashboard-report p { margin-bottom: 8px !important; }
-        #dashboard-report table { width: 100% !important; border-collapse: collapse !important; margin-bottom: 20px !important; }
-        #dashboard-report th, #dashboard-report td { 
-          padding: 8px !important; 
-          border: 1px solid rgb(209, 213, 219) !important; 
-          text-align: left !important; 
-        }
-        #dashboard-report th { 
-          background-color: rgb(249, 250, 251) !important; 
-          font-weight: bold !important; 
-        }
-        #dashboard-report .grid { display: flex !important; flex-wrap: wrap !important; gap: 16px !important; }
-        #dashboard-report .card { 
-          flex: 1 !important; 
-          min-width: 200px !important; 
-          padding: 16px !important; 
-          border: 1px solid rgb(209, 213, 219) !important; 
-          border-radius: 8px !important; 
-        }
-        #dashboard-report .text-center { text-align: center !important; }
-        #dashboard-report .font-bold { font-weight: bold !important; }
-        #dashboard-report .text-sm { font-size: 14px !important; }
-        #dashboard-report .text-xs { font-size: 12px !important; }
-        #dashboard-report .text-lg { font-size: 18px !important; }
-        #dashboard-report .text-xl { font-size: 20px !important; }
-        #dashboard-report .text-2xl { font-size: 24px !important; }
-        #dashboard-report .mb-4 { margin-bottom: 16px !important; }
-        #dashboard-report .mb-6 { margin-bottom: 24px !important; }
-        #dashboard-report .mt-4 { margin-top: 16px !important; }
-        #dashboard-report .text-gray-500 { color: rgb(107, 114, 128) !important; }
-        #dashboard-report .text-gray-600 { color: rgb(75, 85, 99) !important; }
-        #dashboard-report .text-gray-700 { color: rgb(55, 65, 81) !important; }
-        #dashboard-report .text-green-600 { color: rgb(5, 150, 105) !important; }
-        #dashboard-report .text-red-600 { color: rgb(220, 38, 38) !important; }
-        #dashboard-report .text-amber-400 { color: rgb(251, 191, 36) !important; }
-        #dashboard-report svg { display: inline-block !important; width: 16px !important; height: 16px !important; }
-      `;
-
-      // Create and insert the style element
-      const styleElement = document.createElement("style");
-      styleElement.setAttribute("data-html2canvas", "true");
-      styleElement.innerHTML = cssReset;
-      document.head.appendChild(styleElement);
-
-      try {
-        // Wait a bit for styles to apply
-        await new Promise((resolve) => setTimeout(resolve, 500));
-
-        // First attempt with comprehensive CSS override
-        canvas = await html2canvas(reportElement, {
-          scale: 1.2,
-          backgroundColor: "#ffffff",
-          logging: true,
-          useCORS: false,
-          allowTaint: false,
-          foreignObjectRendering: false,
-          imageTimeout: 15000,
-          removeContainer: true,
-          ignoreElements: (element) => {
-            // Ignore any elements that might cause issues
-            return element.tagName === "STYLE" || element.tagName === "SCRIPT";
-          },
-          onclone: (clonedDoc: Document) => {
-            // Remove all existing stylesheets and add only our safe CSS
-            const existingStyles = clonedDoc.querySelectorAll(
-              'style, link[rel="stylesheet"]'
-            );
-            existingStyles.forEach((style) => style.remove());
-
-            // Add our safe CSS reset
-            const safeStyle = clonedDoc.createElement("style");
-            safeStyle.innerHTML = cssReset;
-            clonedDoc.head.appendChild(safeStyle);
-          },
-        });
-
-        console.log("Canvas generated successfully with CSS override");
-      } catch (colorError) {
-        console.warn(
-          "First canvas attempt failed, trying minimal approach:",
-          colorError
-        );
-
-        try {
-          // Fallback: Create a completely isolated copy of the element with inline styles
-          const clonedElement = reportElement.cloneNode(true) as HTMLElement;
-          clonedElement.id = "dashboard-report-isolated";
-
-          // Apply inline styles to every element to bypass CSS parsing issues
-          const applyInlineStyles = (element: HTMLElement) => {
-            element.style.cssText = `
-              color: rgb(0, 0, 0) !important;
-              background-color: rgb(255, 255, 255) !important;
-              font-family: system-ui, -apple-system, sans-serif !important;
-              box-sizing: border-box !important;
-              display: block !important;
-            `;
-
-            // Apply specific styles based on class names
-            if (element.className) {
-              if (element.className.includes("text-gray-500"))
-                element.style.color = "rgb(107, 114, 128)";
-              if (element.className.includes("text-gray-600"))
-                element.style.color = "rgb(75, 85, 99)";
-              if (element.className.includes("text-green-600"))
-                element.style.color = "rgb(5, 150, 105)";
-              if (element.className.includes("text-red-600"))
-                element.style.color = "rgb(220, 38, 38)";
-              if (element.className.includes("font-bold"))
-                element.style.fontWeight = "bold";
-            }
-
-            // Recursively apply to children
-            Array.from(element.children).forEach((child) => {
-              if (child instanceof HTMLElement) {
-                applyInlineStyles(child);
-              }
-            });
-          };
-
-          applyInlineStyles(clonedElement);
-
-          // Temporarily add the isolated element to the DOM
-          clonedElement.style.cssText = `
-            position: fixed !important;
-            top: -10000px !important;
-            left: -10000px !important;
-            width: 210mm !important;
-            min-height: 297mm !important;
-            background-color: white !important;
-            padding: 20px !important;
-            z-index: -1000 !important;
-          `;
-
-          document.body.appendChild(clonedElement);
-
-          // Generate canvas from the isolated element
-          canvas = await html2canvas(clonedElement, {
-            scale: 1,
-            backgroundColor: "#ffffff",
-            logging: false,
-            useCORS: false,
-            allowTaint: false,
-          });
-
-          // Remove the temporary element
-          document.body.removeChild(clonedElement);
-
-          console.log("Canvas generated successfully with isolated element");
-        } catch (fallbackError) {
-          console.error(
-            "Both canvas attempts failed, generating text-based PDF:",
-            fallbackError
-          );
-
-          // Remove the temporary element if it exists
-          const isolatedElement = document.getElementById(
-            "dashboard-report-isolated"
-          );
-          if (isolatedElement) {
-            document.body.removeChild(isolatedElement);
-          }
-
-          // Ultimate fallback: Generate a simple text-based PDF
-          const pdf = new jsPDF("p", "mm", "a4");
-
-          // Add header
-          pdf.setFontSize(20);
-          pdf.text("Selfiegram Dashboard Report", 20, 20);
-
-          pdf.setFontSize(12);
-          pdf.text(
-            `Report Period: ${
-              isDefaultRange
-                ? "All Time"
-                : `${format(range[0].startDate, "MMM dd, yyyy")} - ${format(
-                    range[0].endDate,
-                    "MMM dd, yyyy"
-                  )}`
-            }`,
-            20,
-            35
-          );
-          pdf.text(`Generated: ${format(new Date(), "PPP p")}`, 20, 45);
-
-          let yPos = 60;
-
-          // Add summary data
-          pdf.setFontSize(16);
-          pdf.text("Summary", 20, yPos);
-          yPos += 15;
-
-          pdf.setFontSize(10);
-          pdf.text(
-            `Total Users: ${reportDataWithDefaults?.summary?.totalUsers || 0}`,
-            20,
-            yPos
-          );
-          yPos += 10;
-          pdf.text(
-            `Total Bookings: ${
-              reportDataWithDefaults?.summary?.totalBookings || 0
-            }`,
-            20,
-            yPos
-          );
-          yPos += 10;
-          pdf.text(
-            `Total Sales: ₱${
-              reportDataWithDefaults?.summary?.totalSales?.toLocaleString() ||
-              "0"
-            }`,
-            20,
-            yPos
-          );
-          yPos += 10;
-          pdf.text(
-            `Total Appointments: ${
-              reportDataWithDefaults?.summary?.totalAppointments || 0
-            }`,
-            20,
-            yPos
-          );
-          yPos += 20;
-
-          // Add packages
-          if (
-            reportDataWithDefaults.packages &&
-            reportDataWithDefaults.packages.length > 0
-          ) {
-            pdf.setFontSize(16);
-            pdf.text("Top Packages", 20, yPos);
-            yPos += 15;
-
-            pdf.setFontSize(10);
-            reportDataWithDefaults.packages.slice(0, 10).forEach((pkg: any) => {
-              pdf.text(
-                `${pkg.name}: ${pkg.totalBooking} bookings, ${pkg.revenue}`,
-                20,
-                yPos
-              );
-              yPos += 10;
-              if (yPos > 270) {
-                pdf.addPage();
-                yPos = 20;
-              }
-            });
-          }
-
-          const timestamp = format(new Date(), "yyyyMMdd-HHmmss");
-          const dateRange = isDefaultRange
-            ? "AllTime"
-            : `${format(range[0].startDate, "yyyyMMdd")}-${format(
-                range[0].endDate,
-                "yyyyMMdd"
-              )}`;
-          const filename = `Selfiegram-Dashboard-${dateRange}-${timestamp}-TextOnly.pdf`;
-
-          pdf.save(filename);
-          setReportData(null);
-          return; // Exit early for fallback
-        }
-      }
-
-      console.log("Canvas generated successfully, creating PDF...");
-
-      const imgData = canvas.toDataURL("image/png", 0.9); // Added quality parameter
-      const pdf = new jsPDF("p", "mm", "a4");
-
-      // Calculate dimensions to fit the content
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = pdf.internal.pageSize.getHeight();
-      const imgWidth = canvas.width;
-      const imgHeight = canvas.height;
-
-      // Better scaling calculation
-      const widthRatio = pdfWidth / imgWidth;
-      const heightRatio = pdfHeight / imgHeight;
-      const ratio = Math.min(widthRatio, heightRatio) * 0.95; // 95% to add margins
-
-      const scaledWidth = imgWidth * ratio;
-      const scaledHeight = imgHeight * ratio;
-      const imgX = (pdfWidth - scaledWidth) / 2;
-      const imgY = 10; // Top margin
-
-      // Check if content exceeds one page
-      if (scaledHeight > pdfHeight - 20) {
-        // Multi-page handling
-        let yPosition = 0;
-        let pageNumber = 1;
-
-        while (yPosition < imgHeight) {
-          if (pageNumber > 1) {
-            pdf.addPage();
-          }
-
-          const remainingHeight = imgHeight - yPosition;
-          const pageContentHeight = Math.min(
-            pdfHeight - 20,
-            remainingHeight * ratio
-          );
-
-          pdf.addImage(
-            imgData,
-            "PNG",
-            imgX,
-            imgY,
-            scaledWidth,
-            pageContentHeight
-          );
-
-          yPosition += (pdfHeight - 20) / ratio;
-          pageNumber++;
-        }
-      } else {
-        // Single page
-        pdf.addImage(imgData, "PNG", imgX, imgY, scaledWidth, scaledHeight);
-      }
-
-      // Generate filename with timestamp
+      // Generate filename
       const timestamp = format(new Date(), "yyyyMMdd-HHmmss");
       const dateRange = isDefaultRange
         ? "AllTime"
@@ -819,45 +780,16 @@ const AdminDashboardContents: React.FC = () => {
           )}`;
       const filename = `Selfiegram-Dashboard-${dateRange}-${timestamp}.pdf`;
 
-      console.log("Saving PDF...", filename);
+      // Save the PDF
       pdf.save(filename);
 
-      console.log("PDF generated and downloaded successfully!");
-
-      // Clean up
-      try {
-        if (document.head.contains(styleElement)) {
-          document.head.removeChild(styleElement);
-        }
-      } catch (e) {
-        console.warn("Style cleanup warning:", e);
-      }
-      setReportData(null);
+      console.log("Professional PDF generated and downloaded successfully!");
     } catch (error) {
       console.error("Error generating report:", error);
       const errorMessage =
         error instanceof Error ? error.message : "Unknown error";
       alert(`Failed to generate report: ${errorMessage}. Please try again.`);
     } finally {
-      // Ensure cleanup of any temporary elements
-      try {
-        const styleElement = document.querySelector(
-          'style[data-html2canvas="true"]'
-        ) as HTMLStyleElement;
-        if (styleElement && document.head.contains(styleElement)) {
-          document.head.removeChild(styleElement);
-        }
-
-        const isolatedElement = document.getElementById(
-          "dashboard-report-isolated"
-        );
-        if (isolatedElement && document.body.contains(isolatedElement)) {
-          document.body.removeChild(isolatedElement);
-        }
-      } catch (cleanupError) {
-        console.warn("Cleanup error (non-critical):", cleanupError);
-      }
-
       setIsGeneratingReport(false);
     }
   };

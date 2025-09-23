@@ -124,6 +124,7 @@
         Route::get('/admin/package-sets', [PackageController::class, 'getAllBackgrounds']);
         Route::post('/admin/packages/{id}/archive', [PackageController::class, 'archivePackage']);
         Route::post('/admin/update-package/{id}', [PackageController::class, 'updatePackage']);
+        Route::post('/admin/add-package', [PackageController::class, 'addPackage']);
 
         //admin gallery page
         Route::get('/admin/completed-appointments', [GalleryController::class, 'completedAppointments']);
