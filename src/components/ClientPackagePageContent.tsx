@@ -252,7 +252,7 @@ const ClientPackagePageContent: React.FC = () => {
 >
   <Heart
     className={`w-5 h-5 transition-colors ${
-      isFav ? "text-red-500 fill-red-500" : "text-gray-600"
+      isFav ? "text-pink-500 fill-pink-500" : "text-gray-600"
     }`}
   />
   <AnimatePresence>
