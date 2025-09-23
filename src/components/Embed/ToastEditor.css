@@ -1,5 +1,0 @@
-/* Override TOAST UI button icons path if blank */
-.tui-image-editor-menu-button {
-  background-size: contain !important;
-  background-repeat: no-repeat !important;
-}

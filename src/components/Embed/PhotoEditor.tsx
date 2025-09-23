@@ -1,6 +1,6 @@
-// ToastEditor.tsx
-import React, { useEffect, useRef, useState, useCallback } from "react";
-
+import React, { useRef, useEffect, useState } from "react";
+import type { HTMLAttributes } from "react";
+import { useCallback } from "react";
 declare global {
   interface Window {
     tui?: any;
@@ -10,7 +10,6 @@ declare global {
 
 /**
  * CONFIG — adjust as needed:
- * - TOAST_CSS_BACKUPS / TOAST_SCRIPT_BACKUPS: fallback CDN URLs for Toast UI (tries in order).
  */
 const TOAST_CSS_BACKUPS = [
   "https://uicdn.toast.com/tui-image-editor/latest/tui-image-editor.css",
@@ -18,44 +17,28 @@ const TOAST_CSS_BACKUPS = [
 const TOAST_COLOR_PICKER_CSS = [
   "https://uicdn.toast.com/tui-color-picker/latest/tui-color-picker.css",
 ];
-const TOAST_SCRIPT_BACKUPS = [
-  "https://uicdn.toast.com/tui-image-editor/latest/tui-image-editor.min.js",
-];
 
-// Minimalist line icons as SVG data URLs
+const FABRIC_CDN =
+  "https://cdnjs.cloudflare.com/ajax/libs/fabric.js/4.6.0/fabric.min.js";
+const TUI_SNIPPET_CDN =
+  "https://uicdn.toast.com/tui.code-snippet/latest/tui-code-snippet.min.js";
+const TUI_COLOR_PICKER_SCRIPT =
+  "https://uicdn.toast.com/tui-color-picker/latest/tui-color-picker.min.js";
+const TUI_IMAGE_EDITOR_CDN =
+  "https://uicdn.toast.com/tui-image-editor/latest/tui-image-editor.min.js";
+
+/** Minimal inline SVG icons as data URLs */
 const ICONS = {
   adjust: `data:image/svg+xml,${encodeURIComponent(
     `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="3"/><path d="M12 1v6M12 17v6M4.22 4.22l4.24 4.24M15.54 15.54l4.24 4.24M1 12h6M17 12h6M4.22 19.78l4.24-4.24M15.54 8.46l4.24-4.24"/></svg>`
   )}`,
-  brightness: `data:image/svg+xml,${encodeURIComponent(
-    `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>`
-  )}`,
-  contrast: `data:image/svg+xml,${encodeURIComponent(
-    `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 2A10 10 0 0 0 12 22Z"/></svg>`
-  )}`,
-  saturation: `data:image/svg+xml,${encodeURIComponent(
-    `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M7 3C9 1 13 1 15 3L21 9C23 11 23 15 21 17L15 23C13 25 9 25 7 23L1 17C-1 15 -1 11 1 9Z"/></svg>`
-  )}`,
-  highlights: `data:image/svg+xml,${encodeURIComponent(
-    `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="13,2 3,14 12,14 11,22 21,10 12,10"/></svg>`
-  )}`,
-  shadows: `data:image/svg+xml,${encodeURIComponent(
-    `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z"/></svg>`
-  )}`,
-  whites: `data:image/svg+xml,${encodeURIComponent(
-    `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/></svg>`
-  )}`,
-  blacks: `data:image/svg+xml,${encodeURIComponent(
-    `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10" fill="currentColor"/></svg>`
-  )}`,
-  hue: `data:image/svg+xml,${encodeURIComponent(
-    `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 11v1a10 10 0 1 1-9-10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>`
-  )}`,
   reset: `data:image/svg+xml,${encodeURIComponent(
     `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M3 21v-5h5"/></svg>`
   )}`,
+  brightness: "", // not strictly necessary (used by labels)
 };
 
+/** Menu icon mapping (keeps your previous approach) */
 const MENU_ICONS: Record<string, string> = {
   crop: "https://img.icons8.com/ios-filled/50/crop.png",
   flip: "https://img.icons8.com/ios-filled/50/flip.png",
@@ -95,7 +78,11 @@ async function loadScriptWithBackups(urls: string[], timeout = 15000) {
   let lastErr: any = null;
   for (const url of urls) {
     try {
-      if (document.querySelector(`script[src="${url}"]`)) return;
+      // if already present, resolve quickly
+      if (document.querySelector(`script[src="${url}"]`)) {
+        console.info(`[loader] script already present: ${url}`);
+        return;
+      }
       await new Promise<void>((resolve, reject) => {
         const s = document.createElement("script");
         s.src = url;
@@ -128,7 +115,10 @@ async function loadScriptWithBackups(urls: string[], timeout = 15000) {
 async function loadCssWithBackups(urls: string[]) {
   for (const href of urls) {
     try {
-      if (document.querySelector(`link[href="${href}"]`)) return;
+      if (document.querySelector(`link[href="${href}"]`)) {
+        console.info(`[loader] css already present: ${href}`);
+        return;
+      }
       await new Promise<void>((resolve, reject) => {
         const link = document.createElement("link");
         link.rel = "stylesheet";
@@ -145,30 +135,36 @@ async function loadCssWithBackups(urls: string[]) {
   }
 }
 
-const ToastEditor: React.FC = () => {
+interface ToastEditorProps extends HTMLAttributes<HTMLDivElement> {
+  sampleImage?: { path: string; name?: string };
+}
+
+const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
   const editorRef = useRef<HTMLDivElement | null>(null);
   const instanceRef = useRef<any>(null);
   const adjustPanelRef = useRef<HTMLDivElement | null>(null);
-  const canvasListenersRef = useRef<{
-    added?: (e: any) => void;
-    modified?: (e: any) => void;
-    afterRender?: (e: any) => void;
-    selectionCreated?: (e: any) => void;
-    selectionCleared?: (e: any) => void;
-  } | null>(null);
+  const canvasListenersRef = useRef<any | null>(null);
   const adjustMenuLiRef = useRef<HTMLElement | null>(null);
   const rafRef = useRef<number | null>(null);
   const scheduledSessionRef = useRef<AdjustValues | null>(null);
   const panelVisibilityRef = useRef<boolean>(false);
   const menuBarListenerRef = useRef<((e: Event) => void) | null>(null);
 
+  // track listeners attached to the adjust panel so we can remove them cleanly
+  const panelListenersRef = useRef<
+    Array<{
+      el: Element;
+      type: string;
+      handler: EventListenerOrEventListenerObject;
+    }>
+  >([]);
+
   // session = temporary live adjustments (overlay, never baked)
   const [sessionValues, setSessionValues] = useState<AdjustValues>(
     DEFAULT_ADJUST_VALUES
   );
-
-  // local ref to avoid recreating panel when session updates
   const sessionRef = useRef<AdjustValues>(sessionValues);
+
   useEffect(() => {
     sessionRef.current = sessionValues;
   }, [sessionValues]);
@@ -178,7 +174,6 @@ const ToastEditor: React.FC = () => {
   const [isAdjustPanelOpen, setIsAdjustPanelOpen] = useState(false);
   const [currentActiveMenu, setCurrentActiveMenu] = useState<string>("");
 
-  // Update panel visibility ref when state changes
   useEffect(() => {
     panelVisibilityRef.current = isAdjustPanelOpen;
   }, [isAdjustPanelOpen]);
@@ -190,10 +185,6 @@ const ToastEditor: React.FC = () => {
     return String(Math.round(val));
   };
 
-  /**
-   * Build fabric filters from numeric session values with improved accuracy.
-   * (stable — no external deps)
-   */
   const buildAdjustmentFilters = useCallback((values: AdjustValues) => {
     const filters: any[] = [];
 
@@ -236,6 +227,7 @@ const ToastEditor: React.FC = () => {
           (f as any).__tui_session_marker = true;
           filters.push(f);
         } else {
+          // fallback color matrix
           const s = 1 + values.saturation;
           const lumR = 0.2126;
           const lumG = 0.7152;
@@ -286,7 +278,6 @@ const ToastEditor: React.FC = () => {
       console.warn("Hue filter creation failed", e);
     }
 
-    // Improved tonal adjustments with better scaling
     if (
       Math.abs(values.highlights) > 0.00001 ||
       Math.abs(values.shadows) > 0.00001 ||
@@ -294,10 +285,9 @@ const ToastEditor: React.FC = () => {
       Math.abs(values.blacks) > 0.00001
     ) {
       try {
-        // More refined scaling for better control
-        const hFactor = values.highlights * 0.02; // -5..5 -> -0.1..0.1
+        const hFactor = values.highlights * 0.02;
         const sFactor = values.shadows * 0.02;
-        const wFactor = values.whites * 0.005; // -100..100 -> -0.5..0.5
+        const wFactor = values.whites * 0.005;
         const bFactor = values.blacks * 0.005;
 
         const diag = Math.max(0.1, Math.min(2.0, 1 + wFactor - bFactor));
@@ -339,7 +329,6 @@ const ToastEditor: React.FC = () => {
     return filters;
   }, []);
 
-  // rAF-debounce scheduling
   const scheduleApplySession = useCallback((values: AdjustValues) => {
     scheduledSessionRef.current = values;
     if (rafRef.current != null) return;
@@ -349,13 +338,8 @@ const ToastEditor: React.FC = () => {
       scheduledSessionRef.current = null;
       if (sess) reapplySessionToCurrentTargets(sess);
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  /**
-   * Reapply session values (non-destructive preview) to current targets.
-   * Uses sessionRef/current state instead of depending on sessionValues in the callback list.
-   */
   const reapplySessionToCurrentTargets = useCallback(
     (session?: AdjustValues) => {
       const instance = instanceRef.current;
@@ -367,17 +351,11 @@ const ToastEditor: React.FC = () => {
       const targets: any[] = [];
 
       try {
-        // Prefer active image object
         const active = canvas.getActiveObject();
         if (active && active.type === "image") targets.push(active);
-
-        // Always include background image if exists
         if (canvas.backgroundImage) targets.push(canvas.backgroundImage);
-
-        // If we still have nothing, include background as fallback
-        if (targets.length === 0 && canvas.backgroundImage) {
+        if (targets.length === 0 && canvas.backgroundImage)
           targets.push(canvas.backgroundImage);
-        }
       } catch (e) {
         console.warn("Target detection failed:", e);
       }
@@ -385,16 +363,10 @@ const ToastEditor: React.FC = () => {
       targets.forEach((target) => {
         try {
           (target as any).__tui_session_values = sess;
-
-          // snapshot current filters
           const currentFilters = (target.filters && [...target.filters]) || [];
-
-          // keep base filters that are not ours
           const baseFilters = currentFilters.filter(
             (f: any) => !(f && f.__tui_session_marker === true)
           );
-
-          // new session filters
           const adjustmentFilters = buildAdjustmentFilters(sess);
 
           target.filters = [...baseFilters, ...adjustmentFilters];
@@ -403,9 +375,7 @@ const ToastEditor: React.FC = () => {
           if (typeof target.applyFilters === "function") {
             try {
               target.applyFilters();
-            } catch (err) {
-              // ignore per-target apply errors
-            }
+            } catch (err) {}
           }
         } catch (ex) {
           console.warn("Per-target filter application failed:", ex);
@@ -421,14 +391,11 @@ const ToastEditor: React.FC = () => {
     [buildAdjustmentFilters]
   );
 
-  // Whenever sessionValues change, schedule apply and update UI (no panel recreate)
   useEffect(() => {
     scheduleApplySession(sessionValues);
     updatePanelUI(sessionValues);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionValues]);
+  }, [sessionValues]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Reset session-only adjustments
   const resetSession = useCallback(() => {
     setSessionValues(DEFAULT_ADJUST_VALUES);
 
@@ -468,7 +435,6 @@ const ToastEditor: React.FC = () => {
     updatePanelUI(DEFAULT_ADJUST_VALUES);
   }, []);
 
-  // Update panel UI (reads from passed session)
   const updatePanelUI = useCallback((session: AdjustValues) => {
     const panel = adjustPanelRef.current;
     if (!panel) return;
@@ -487,7 +453,6 @@ const ToastEditor: React.FC = () => {
     });
   }, []);
 
-  // Start slider interaction (reset only that slider's session value to 0)
   const startSliderInteraction = useCallback((key: keyof AdjustValues) => {
     setSessionValues((prev) => {
       const next = { ...prev, [key]: 0 };
@@ -506,15 +471,12 @@ const ToastEditor: React.FC = () => {
     });
   }, []);
 
-  // Live change handler
   const handleSessionChange = useCallback(
     (key: keyof AdjustValues, value: number) => {
       setSessionValues((prev) => {
         const next = { ...prev, [key]: value };
-        // schedule rAF update
         scheduleApplySession(next);
 
-        // immediate panel label update
         const panel = adjustPanelRef.current;
         if (panel) {
           const valueSpan = panel.querySelector(
@@ -526,19 +488,14 @@ const ToastEditor: React.FC = () => {
         return next;
       });
     },
-    [scheduleApplySession]
-  );
+    []
+  ); // scheduleApplySession referenced through closure - acceptable
 
-  /**
-   * createAdjustPanel
-   * - Note: intentionally does NOT depend on sessionValues so it won't be recreated on every slider move.
-   * - Panel reads current numeric values from sessionRef when needed.
-   */
+  // createAdjustPanel (single creation, UI updates read sessionRef)
   const createAdjustPanel = useCallback(() => {
     if (!editorRef.current) return;
     if (!isAdjustPanelOpen) return;
 
-    // If panel already exists, just update UI and return (prevents flicker)
     const existing = editorRef.current.querySelector(
       ".tui-image-editor-adjust-panel"
     ) as HTMLDivElement | null;
@@ -554,6 +511,8 @@ const ToastEditor: React.FC = () => {
 
     const adjustPanel = document.createElement("div");
     adjustPanel.className = "tui-image-editor-adjust-panel";
+    adjustPanel.setAttribute("role", "region");
+    adjustPanel.setAttribute("aria-label", "Image Adjustments");
     adjustPanel.style.cssText = `
       position: absolute;
       top: 0;
@@ -578,7 +537,7 @@ const ToastEditor: React.FC = () => {
           <img src="${ICONS.adjust}" alt="" style="width: 18px; height: 18px; opacity: 0.8;">
           <h3 style="margin: 0; font-size: 15px; font-weight: 600; color: #333;">Adjust</h3>
         </div>
-        <button id="reset-adjustments" style="
+        <button id="reset-adjustments" aria-label="Reset adjustments" style="
           display: flex;
           align-items: center;
           gap: 6px;
@@ -612,7 +571,6 @@ const ToastEditor: React.FC = () => {
       { key: "hue", label: "Hue", min: -180, max: 180, step: 1 },
     ];
 
-    // Build sliders once
     adjustSliders.forEach(({ key, label, min, max, step }) => {
       const sessionVal = sessionRef.current[key as keyof AdjustValues];
       const sliderDiv = document.createElement("div");
@@ -630,7 +588,7 @@ const ToastEditor: React.FC = () => {
         ">
           <div style="display: flex; align-items: center; gap: 8px;">
             <img src="${
-              (ICONS as any)[key]
+              (ICONS as any)[key] || ICONS.brightness
             }" alt="" style="width: 16px; height: 16px; opacity: 0.7;">
             <span>${label}</span>
           </div>
@@ -652,6 +610,7 @@ const ToastEditor: React.FC = () => {
           max="${max}" 
           step="${step}" 
           value="${sessionVal}"
+          aria-label="${label}"
           style="
             width: 100%;
             height: 4px;
@@ -718,12 +677,12 @@ const ToastEditor: React.FC = () => {
       document.head.appendChild(style);
     }
 
-    // Attach listeners for sliders (only once per panel creation)
+    // Attach listeners for sliders (store them for cleanup)
     const adjustSlidersElements = slidersContainer.querySelectorAll(
       "input[type='range']"
     );
     adjustSlidersElements.forEach((el) => {
-      const id = el.id; // e.g. "brightness-slider"
+      const id = el.id;
       const key = id.replace("-slider", "") as keyof AdjustValues;
       const slider = el as HTMLInputElement;
       const valueSpan = adjustPanel.querySelector(
@@ -740,33 +699,71 @@ const ToastEditor: React.FC = () => {
       };
 
       slider.addEventListener("pointerdown", onPointerDown);
-      slider.addEventListener("mousedown", onPointerDown);
-      slider.addEventListener("touchstart", onPointerDown, { passive: true });
-      slider.addEventListener("input", onInput);
-
-      slider.addEventListener("focus", () => {
-        slider.style.boxShadow = "0 0 0 3px rgba(33,150,243,0.2)";
+      panelListenersRef.current.push({
+        el: slider,
+        type: "pointerdown",
+        handler: onPointerDown,
       });
-      slider.addEventListener("blur", () => {
+
+      slider.addEventListener("mousedown", onPointerDown);
+      panelListenersRef.current.push({
+        el: slider,
+        type: "mousedown",
+        handler: onPointerDown,
+      });
+
+      slider.addEventListener("touchstart", onPointerDown, {
+        passive: true,
+      } as any);
+      panelListenersRef.current.push({
+        el: slider,
+        type: "touchstart",
+        handler: onPointerDown,
+      });
+
+      slider.addEventListener("input", onInput);
+      panelListenersRef.current.push({
+        el: slider,
+        type: "input",
+        handler: onInput,
+      });
+
+      const onFocus = () => {
+        slider.style.boxShadow = "0 0 0 3px rgba(33,150,243,0.2)";
+      };
+      const onBlur = () => {
         slider.style.boxShadow = "none";
+      };
+      slider.addEventListener("focus", onFocus);
+      panelListenersRef.current.push({
+        el: slider,
+        type: "focus",
+        handler: onFocus,
+      });
+      slider.addEventListener("blur", onBlur);
+      panelListenersRef.current.push({
+        el: slider,
+        type: "blur",
+        handler: onBlur,
       });
     });
 
     const resetBtn = adjustPanel.querySelector("#reset-adjustments");
     if (resetBtn) {
-      resetBtn.addEventListener("click", () => {
-        resetSession();
+      const onReset = () => resetSession();
+      resetBtn.addEventListener("click", onReset);
+      panelListenersRef.current.push({
+        el: resetBtn,
+        type: "click",
+        handler: onReset,
       });
     }
 
     // append and persist ref
     editorContainer.appendChild(adjustPanel);
     adjustPanelRef.current = adjustPanel;
-
-    // ensure UI matches latest session values at mount
     updatePanelUI(sessionRef.current);
 
-    // ensure pointer events and focusability
     adjustPanel.tabIndex = -1;
     adjustPanel.style.pointerEvents = "auto";
   }, [
@@ -777,7 +774,6 @@ const ToastEditor: React.FC = () => {
     updatePanelUI,
   ]);
 
-  // Open/close panel effect — create once on open, remove once on close
   useEffect(() => {
     if (!editorRef.current) return;
 
@@ -789,7 +785,18 @@ const ToastEditor: React.FC = () => {
       );
       if (existingPanel) {
         try {
-          // remove event listeners by cloning node (safe cleanup)
+          // remove event listeners explicitly first
+          if (
+            panelListenersRef.current &&
+            panelListenersRef.current.length > 0
+          ) {
+            panelListenersRef.current.forEach(({ el, type, handler }) => {
+              try {
+                el.removeEventListener(type, handler as EventListener);
+              } catch (e) {}
+            });
+            panelListenersRef.current = [];
+          }
           existingPanel.parentElement?.removeChild(existingPanel);
         } catch (e) {
           try {
@@ -799,46 +806,114 @@ const ToastEditor: React.FC = () => {
         adjustPanelRef.current = null;
       }
     }
-    // we intentionally do NOT include sessionValues here to avoid re-running
   }, [isAdjustPanelOpen, createAdjustPanel]);
 
-  // Initialize editor once
+  // Main initialization & cleanup
   useEffect(() => {
     let resizeObs: ResizeObserver | null = null;
     let mounted = true;
 
+    async function attemptImportPaths() {
+      // Try several import entrypoints that people use in different bundlers
+      const tryPaths = [
+        "tui-image-editor",
+        "tui-image-editor/dist/tui-image-editor.esm.js",
+        "tui-image-editor/dist/tui-image-editor.js",
+      ];
+      for (const p of tryPaths) {
+        try {
+          const mod = await import(/* @vite-ignore */ p);
+          if (mod) return mod;
+        } catch (e) {
+          // swallow and try next
+          console.warn(`[import] failed for ${p}:`, e);
+        }
+      }
+      throw new Error("Dynamic import failed for all known paths");
+    }
+
     async function initEditor() {
       setLoading(true);
       setError(null);
-
       try {
+        // load CSS first
         await loadCssWithBackups(TOAST_CSS_BACKUPS);
         await loadCssWithBackups(TOAST_COLOR_PICKER_CSS);
 
         let Constructor: any = undefined;
+        // 1) Try to import locally (best)
         try {
-          const mod = await import("tui-image-editor");
-          Constructor = (mod as any).default ?? (mod as any).ImageEditor ?? mod;
+          const mod = await attemptImportPaths();
+          Constructor =
+            (mod as any).default ?? (mod as any).ImageEditor ?? (mod as any);
           console.info("[init] using local tui-image-editor import");
         } catch (importErr) {
           console.warn(
-            "[init] local import failed, using CDN fallback:",
+            "[init] local import failed, will attempt CDN fallback:",
             importErr
           );
-          await loadScriptWithBackups(TOAST_SCRIPT_BACKUPS);
-          Constructor = window.tui?.ImageEditor;
         }
+
+        // 2) If we don't have a constructor yet, load CDNs in correct order
+        if (typeof Constructor !== "function") {
+          // Ensure fabric and helper libs loaded first (order matters)
+          try {
+            if (!window.fabric) {
+              await loadScriptWithBackups([FABRIC_CDN], 20000);
+            } else {
+              console.info("[init] fabric already present");
+            }
+          } catch (e) {
+            console.warn("[init] fabric load failed:", e);
+          }
+
+          try {
+            if (!(window as any).tui) {
+              await loadScriptWithBackups([TUI_SNIPPET_CDN], 15000);
+            } else {
+              console.info("[init] tui code snippet already present");
+            }
+          } catch (e) {
+            console.warn("[init] tui-code-snippet load failed:", e);
+          }
+
+          try {
+            if (!(window as any).tui?.colorPicker) {
+              await loadScriptWithBackups([TUI_COLOR_PICKER_SCRIPT], 15000);
+            } else {
+              console.info("[init] tui-color-picker already present");
+            }
+          } catch (e) {
+            console.warn("[init] tui-color-picker load failed:", e);
+          }
+
+          // finally load tui-image-editor
+          await loadScriptWithBackups([TUI_IMAGE_EDITOR_CDN], 20000);
+
+          Constructor =
+            (window as any).tui?.ImageEditor ??
+            (window as any).tui?.ImageEditor;
+        }
+
+        // Diagnostic check
+        console.info("[init] globals after load:", {
+          fabric: !!window.fabric,
+          tui: !!window.tui,
+          tuiUtil: !!(window as any).tui?.util,
+          ImageEditor: !!(window as any).tui?.ImageEditor,
+        });
 
         if (typeof Constructor !== "function") {
           throw new Error("ImageEditor constructor not available");
         }
 
-        // Enhanced editor configuration for better performance and features
+        // instantiate
         instanceRef.current = new Constructor(editorRef.current, {
           includeUI: {
             loadImage: {
-              path: "https://picsum.photos/1200/800?random=1",
-              name: "Sample Image",
+              path:
+                sampleImage?.path ?? "https://picsum.photos/1200/800?random=1",
+              name: sampleImage?.name ?? "Sample Image",
             },
             menu: [
               "crop",
@@ -877,6 +952,63 @@ const ToastEditor: React.FC = () => {
           usageStatistics: false,
         });
 
+        // 🔧 Fix menubar alignment
+        if (!document.getElementById("tui-menu-alignment-fix")) {
+          const style = document.createElement("style");
+          style.id = "tui-menu-alignment-fix";
+          style.textContent = `
+    .tui-image-editor .tui-image-editor-menu {
+      display: flex !important;
+      align-items: center !important;
+      gap: 6px;
+      height: 48px;
+      padding: 0 8px;
+      box-sizing: border-box;
+    }
+    .tui-image-editor-menu .tui-image-editor-menu-item {
+      display: inline-flex !important;
+      align-items: center !important;
+      height: 100% !important;
+      margin: 0 !important;
+      padding: 0 6px !important;
+      box-sizing: border-box !important;
+    }
+    .tui-image-editor-menu .tui-image-editor-button {
+      display: inline-flex !important;
+      align-items: center !important;
+      justify-content: center;
+      height: 100%;
+      padding: 8px 10px;
+      gap: 8px;
+      background: transparent;
+      border: none;
+      box-sizing: border-box;
+    }
+    .tui-image-editor-menu .tui-image-editor-menu-icon {
+      display: inline-flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      line-height: 0;
+      width: 20px;
+      height: 20px;
+    }
+    .tui-image-editor-menu .tui-image-editor-menu-icon img,
+    .tui-image-editor-menu .tui-image-editor-menu-icon svg {
+      width: 18px;
+      height: 18px;
+      display: block;
+      vertical-align: middle;
+    }
+    .tui-image-editor-menu .tui-image-editor-menu-title {
+      line-height: 1;
+      font-size: 12px;
+      display: inline-block;
+      vertical-align: middle;
+    }
+  `;
+          document.head.appendChild(style);
+        }
+
         // Defensive: request willReadFrequently for canvas contexts
         try {
           const fabricCanvas = instanceRef.current._graphics?.getCanvas();
@@ -892,7 +1024,6 @@ const ToastEditor: React.FC = () => {
           trySetWillRead(fabricCanvas?.upperCanvasEl);
           trySetWillRead((fabricCanvas as any)?.cacheCanvasEl);
 
-          // Fabric tuning
           if (fabricCanvas) {
             fabricCanvas.selection = true;
             fabricCanvas.preserveObjectStacking = true;
@@ -972,12 +1103,11 @@ const ToastEditor: React.FC = () => {
           try {
             instanceRef.current.ui?.resizeEditor?.({ width, height });
 
-            // Ensure canvas dimensions are properly updated
             const canvas = instanceRef.current._graphics?.getCanvas();
             if (canvas) {
               canvas.setDimensions({
                 width: width - (panelVisibilityRef.current ? 280 : 0),
-                height: height - 60, // Account for menu bar
+                height: height - 60,
               });
               canvas.renderAll();
             }
@@ -1001,7 +1131,7 @@ const ToastEditor: React.FC = () => {
       }
     }
 
-    // Setup menu handling with improved adjust panel persistence
+    // Setup menu handling
     const setupMenuHandling = () => {
       const menuBar = editorRef.current?.querySelector(
         ".tui-image-editor-menu"
@@ -1022,7 +1152,7 @@ const ToastEditor: React.FC = () => {
         }
       });
 
-      // Create or reuse adjust menu item (aligned with other menu items)
+      // Create or reuse adjust menu item
       if (!menuBar.querySelector('[data-menu="adjust"]')) {
         const li = document.createElement("li");
         li.setAttribute("data-menu", "adjust");
@@ -1034,21 +1164,29 @@ const ToastEditor: React.FC = () => {
         li.style.marginLeft = "6px";
 
         li.innerHTML = `
-          <button class="tui-image-editor-button" title="Adjust" style="display:inline-flex;align-items:center;border:none;background:transparent;padding:8px;border-radius:4px;transition:all 0.2s ease;">
-            <div class="tui-image-editor-menu-icon" style="display:inline-flex;align-items:center;justify-content:center;margin-right:6px;">
-              <img src="${ICONS.adjust}" alt="Adjust" style="width:18px;height:18px;display:block;"/>
-            </div>
-            <span class="tui-image-editor-menu-title" style="font-size:12px;color:inherit;font-weight:500;">Adjust</span>
-          </button>
-        `;
+              <button class="tui-image-editor-button tui-adjust-btn" title="Adjust" aria-label="Adjust" style=" display:inline-flex;align-items:center;border:none;background:transparent;border-radius:4px;transition:all 0.18s ease;color: #8a8a8a;">
+                <div class="tui-image-editor-menu-icon" style="display:inline-flex;align-items:center;justify-content:center;margin-right:6px;line-height:0;">
+                  <!-- inline SVG using currentColor so CSS color controls it -->
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false" style="display:block;">
+                    <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.5" fill="none"/>
+                    <path d="M12 1v6M12 17v6M4.22 4.22l4.24 4.24M15.54 15.54l4.24 4.24M1 12h6M17 12h6M4.22 19.78l4.24-4.24M15.54 8.46l4.24-4.24" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </div>
+              </button>
+            `;
+
         menuBar.appendChild(li);
+        // 🔧 Normalize newly added menu item for alignment
+        li.style.display = "inline-flex";
+        li.style.alignItems = "center";
+        li.style.height = "100%";
+
         adjustMenuLiRef.current = li;
 
         const imgEl = li.querySelector("img") as HTMLImageElement | null;
         if (imgEl) imgEl.onerror = () => (imgEl.src = ICONS.adjust);
 
-        // Enhanced adjust button click handler
-        li.addEventListener("click", (e) => {
+        const liClickHandler = (e: MouseEvent) => {
           e.preventDefault();
           e.stopPropagation();
 
@@ -1066,11 +1204,8 @@ const ToastEditor: React.FC = () => {
             console.warn("Image check failed:", ex);
           }
 
-          // Toggle adjust panel without affecting other menu states
           setIsAdjustPanelOpen((prev) => {
             const next = !prev;
-
-            // Update visual state of adjust button only
             if (adjustMenuLiRef.current) {
               if (next) {
                 adjustMenuLiRef.current.classList.add(
@@ -1084,10 +1219,14 @@ const ToastEditor: React.FC = () => {
                 adjustMenuLiRef.current.style.background = "transparent";
               }
             }
-
             return next;
           });
-        });
+        };
+
+        li.addEventListener("click", liClickHandler);
+        (menuBar as any).__tuiMenuHandlers =
+          (menuBar as any).__tuiMenuHandlers || [];
+        (menuBar as any).__tuiMenuHandlers.push(liClickHandler);
       } else {
         const existing = menuBar.querySelector(
           '[data-menu="adjust"]'
@@ -1101,22 +1240,18 @@ const ToastEditor: React.FC = () => {
         }
       }
 
-      // Delegated handler that preserves adjust panel and re-applies session after TUI operations
       const delegatedHandler = (ev: Event) => {
         const target = ev.target as HTMLElement | null;
         if (!target) return;
-
         const menuItem = target.closest?.(
           ".tui-image-editor-menu-item"
         ) as HTMLElement | null;
         if (!menuItem) return;
-
         const menuName = menuItem.getAttribute("data-menu");
         if (!menuName) return;
 
         setCurrentActiveMenu(menuName);
 
-        // Keep adjust panel open even when clicking other menus. Just update their active visuals.
         if (menuName !== "adjust") {
           const allMenuItems = menuBar.querySelectorAll(
             ".tui-image-editor-menu-item"
@@ -1131,27 +1266,28 @@ const ToastEditor: React.FC = () => {
           menuItem.classList.add("tui-image-editor-menu-item-active");
           (menuItem as HTMLElement).style.background = "#f0f8ff";
 
-          // reapply preview after TUI finishes internal changes
           setTimeout(() => {
             reapplySessionToCurrentTargets();
           }, 100);
         }
       };
 
-      // Prevent duplicate handlers
       try {
         const existingHandlers = (menuBar as any).__tuiMenuHandlers || [];
         existingHandlers.forEach((handler: any) => {
-          menuBar.removeEventListener("click", handler, true);
+          try {
+            menuBar.removeEventListener("click", handler, true);
+          } catch (e) {}
         });
       } catch (e) {}
 
       menuBar.addEventListener("click", delegatedHandler, true);
-      (menuBar as any).__tuiMenuHandlers = [delegatedHandler];
+      (menuBar as any).__tuiMenuHandlers =
+        (menuBar as any).__tuiMenuHandlers || [];
+      (menuBar as any).__tuiMenuHandlers.push(delegatedHandler);
       menuBarListenerRef.current = delegatedHandler;
     };
 
-    // Setup enhanced canvas listeners
     const setupCanvasListeners = () => {
       try {
         const canvas = instanceRef.current._graphics?.getCanvas();
@@ -1247,7 +1383,9 @@ const ToastEditor: React.FC = () => {
         if (menuBar) {
           const handlers = (menuBar as any).__tuiMenuHandlers || [];
           handlers.forEach((handler: any) => {
-            menuBar.removeEventListener("click", handler, true);
+            try {
+              menuBar.removeEventListener("click", handler, true);
+            } catch (e) {}
           });
           delete (menuBar as any).__tuiMenuHandlers;
         }
@@ -1283,7 +1421,21 @@ const ToastEditor: React.FC = () => {
       }
       instanceRef.current = null;
 
-      // Remove panel
+      // Remove panel listeners we attached earlier
+      try {
+        if (panelListenersRef.current && panelListenersRef.current.length > 0) {
+          panelListenersRef.current.forEach(({ el, type, handler }) => {
+            try {
+              el.removeEventListener(type, handler as EventListener);
+            } catch (e) {}
+          });
+          panelListenersRef.current = [];
+        }
+      } catch (e) {
+        console.warn("Panel listeners cleanup failed:", e);
+      }
+
+      // Remove panel DOM
       try {
         const existingPanel = editorRef.current?.querySelector(
           ".tui-image-editor-adjust-panel"
@@ -1350,11 +1502,7 @@ const ToastEditor: React.FC = () => {
             Loading Image Editor...
           </div>
           <div
-            style={{
-              fontSize: "14px",
-              color: "#757575",
-              textAlign: "center",
-            }}
+            style={{ fontSize: "14px", color: "#757575", textAlign: "center" }}
           >
             Initializing advanced photo editing tools
           </div>
@@ -1402,7 +1550,6 @@ const ToastEditor: React.FC = () => {
         }}
       />
 
-      {/* Loading animation keyframes */}
       <style>{`
         @keyframes spin {
           0% { transform: rotate(0deg); }

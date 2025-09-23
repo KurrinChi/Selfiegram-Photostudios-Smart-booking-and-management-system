@@ -74,3 +74,17 @@ body {
   background-size: contain !important;
   background-repeat: no-repeat !important;
 }
+
+/* Chrome, Edge, Safari */
+.my-scrollable-element::-webkit-scrollbar {
+  width: 6px;
+}
+
+.my-scrollable-element::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.my-scrollable-element::-webkit-scrollbar-thumb {
+  background-color: #888;
+  border-radius: 6px;
+}
