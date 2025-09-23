@@ -347,9 +347,9 @@ class DashboardController extends Controller
                 'packages' => $packageData,
                 'companyInfo' => [
                     'name' => 'Selfiegram Photo Studios',
-                    'address' => 'Your Studio Address',
-                    'phone' => 'Your Phone Number',
-                    'email' => 'info@selfiegram.com'
+                    'address' => 'Malolos, Bulacan',
+                    'phone' => '0912345678',
+                    'email' => 'selfiegram@example.com'
                 ]
             ];
 
