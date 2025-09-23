@@ -25,6 +25,7 @@
     "leaflet": "^1.9.4",
     "leaflet-routing-machine": "^3.2.12",
     "lucide-react": "^0.516.0",
+    "qrcode.react": "^4.2.0",
     "react": "^19.1.0",
     "react-date-range": "^2.0.1",
     "react-day-picker": "^9.7.0",
