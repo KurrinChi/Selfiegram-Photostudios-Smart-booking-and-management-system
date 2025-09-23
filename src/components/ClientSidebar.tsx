@@ -15,6 +15,7 @@ import clsx from "clsx";
 interface SidebarProps {
   isOpen: boolean;
   toggle: () => void;
+  unreadCount: number; // Add unreadCount as a prop
 }
 
 const navLinks = [
@@ -27,7 +28,7 @@ const navLinks = [
   { to: "/client/history", label: "History", icon: Clock },
 ];
 
-const ClientSidebar = ({ isOpen, toggle }: SidebarProps) => {
+const ClientSidebar = ({ isOpen, toggle, unreadCount }: SidebarProps) => {
   const { pathname } = useLocation();
 
   return (
@@ -54,86 +55,91 @@ const ClientSidebar = ({ isOpen, toggle }: SidebarProps) => {
       </div>
 
       {/* Navigation */}
-      <nav className="flex flex-col p-4 space-y-2 items-start">
-        {navLinks.map(({ to, label, icon: Icon }) => {
-          const isActive = pathname === to;
-          const isAppointments = label === "Appointments";
+     <nav className="flex flex-col p-4 space-y-2 items-start">
+  {navLinks.map(({ to, label, icon: Icon }) => {
+    const isActive = pathname === to;
+    const isAppointments = label === "Appointments";
 
-          return (
-            <Link
-              key={to}
-              to={to}
-              onClick={toggle}
-              className={clsx(
-                "flex items-center gap-3 w-full p-2 rounded-md transition-all duration-200 group",
-                "hover:bg-gray-100 hover:translate-x-1",
-                {
-                  "mt-4 pt-2 border-t border-gray-300": isAppointments,
-                  "bg-gray-100 border-l-4 pl-2 font-semibold": isActive,
-                }
-              )}
-              style={
-                isActive ? { borderColor: "#212121", color: "#212121" } : {}
-              }
-            >
-              <Icon
-                className={clsx("w-5 h-5 transition-colors duration-200", {
-                  "text-[#212121]": isActive,
-                  "text-gray-500 group-hover:text-[#212121]": !isActive,
-                })}
-              />
-              <span
-                className={clsx("text-left transition-colors duration-200", {
-                  "text-[#212121]": isActive,
-                  "text-gray-700 group-hover:text-[#212121]": !isActive,
-                })}
-              >
-                {label}
-              </span>
-            </Link>
-          );
-        })}
+    return (
+      <Link
+        key={to}
+        to={to}
+        onClick={toggle}
+        className={clsx(
+          "flex items-center gap-3 w-full p-2 rounded-md transition-all duration-200 group",
+          "hover:bg-gray-100 hover:translate-x-1",
+          {
+            "mt-4 pt-2 border-t border-gray-300": isAppointments,
+            "bg-gray-100 border-l-4 pl-2 font-semibold": isActive,
+          }
+        )}
+        style={
+          isActive ? { borderColor: "#212121", color: "#212121" } : {}
+        }
+      >
+        <Icon
+          className={clsx("w-5 h-5 transition-colors duration-200", {
+            "text-[#212121]": isActive,
+            "text-gray-500 group-hover:text-[#212121]": !isActive,
+          })}
+        />
+        <span
+          className={clsx("text-left transition-colors duration-200", {
+            "text-[#212121]": isActive,
+            "text-gray-700 group-hover:text-[#212121]": !isActive,
+          })}
+        >
+          {label}
+        </span>
 
-        {/* Bottom Links */}
-        <div className="absolute bottom-8 px-4 space-y-2 left-0 w-full">
-          {(() => {
-            const settingsPath = "/client/profile";
-            const isActive = pathname === settingsPath;
+        {/* Add Red Dot for Notifications */}
+        {label === "Notifications" && unreadCount > 0 && (
+          <span className="ml-auto w-2 h-2 bg-red-500 rounded-full"></span>
+        )}
+      </Link>
+    );
+  })}
 
-            return (
-              <Link
-                to={settingsPath}
-                onClick={toggle}
-                className={clsx(
-                  "flex items-center gap-3 w-full p-2 rounded-md transition-all duration-200 group",
-                  "hover:bg-gray-100 hover:translate-x-1",
-                  {
-                    "bg-gray-100 border-l-4 pl-2 font-semibold": isActive,
-                  }
-                )}
-                style={
-                  isActive ? { borderColor: "#212121", color: "#212121" } : {}
-                }
-              >
-                <Settings
-                  className={clsx("w-5 h-5 transition-colors duration-200", {
-                    "text-[#212121]": isActive,
-                    "text-gray-500 group-hover:text-[#212121]": !isActive,
-                  })}
-                />
-                <span
-                  className={clsx("text-left transition-colors duration-200", {
-                    "text-[#212121]": isActive,
-                    "text-gray-700 group-hover:text-[#212121]": !isActive,
-                  })}
-                >
-                  Settings
-                </span>
-              </Link>
-            );
-          })()}
-        </div>
-      </nav>
+  {/* Bottom Links */}
+  <div className="absolute bottom-8 px-4 space-y-2 left-0 w-full">
+    {(() => {
+      const settingsPath = "/client/profile";
+      const isActive = pathname === settingsPath;
+
+      return (
+        <Link
+          to={settingsPath}
+          onClick={toggle}
+          className={clsx(
+            "flex items-center gap-3 w-full p-2 rounded-md transition-all duration-200 group",
+            "hover:bg-gray-100 hover:translate-x-1",
+            {
+              "bg-gray-100 border-l-4 pl-2 font-semibold": isActive,
+            }
+          )}
+          style={
+            isActive ? { borderColor: "#212121", color: "#212121" } : {}
+          }
+        >
+          <Settings
+            className={clsx("w-5 h-5 transition-colors duration-200", {
+              "text-[#212121]": isActive,
+              "text-gray-500 group-hover:text-[#212121]": !isActive,
+            })}
+          />
+          <span
+            className={clsx("text-left transition-colors duration-200", {
+              "text-[#212121]": isActive,
+              "text-gray-700 group-hover:text-[#212121]": !isActive,
+            })}
+          >
+            Settings
+          </span>
+        </Link>
+      );
+    })()}
+  </div>
+</nav>
     </aside>
   );
 };
