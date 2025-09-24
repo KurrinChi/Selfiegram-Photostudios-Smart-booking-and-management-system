@@ -140,8 +140,10 @@ export default function Notifications() {
         if (!res.ok) throw new Error("Failed to fetch notifications");
 
         const data = await res.json();
-          console.log("Fetched notifications:", data);
+        console.log("Fetched notifications:", data);
         setNotifications(data);
+
+        // You can calculate unread notifications here if needed, but it's not used
       } catch (err) {
         console.error("Error fetching notifications:", err);
       }
@@ -166,9 +168,11 @@ export default function Notifications() {
     // Update the local state to reflect the change
     setNotifications((prev) =>
       prev.map((n) =>
-        n.notificationID === id ? { ...n, starred: true } : n // Update the `starred` field for the clicked notification
+        n.notificationID === id ? { ...n, starred: true } : n
       )
     );
+
+    // Decrement unread count (removed because setUnreadCount is not defined)
   } catch (err) {
     console.error("Error marking notification as read:", err);
   }
@@ -264,6 +268,12 @@ useEffect(() => {
 }, [selected]);
 
 
+
+
+
+
+
+
   // Nested component for booking details
 const BookingDetails = ({ details }: { details: any }) => {
   const qrCodeRef = useRef<HTMLCanvasElement>(null);
@@ -353,22 +363,31 @@ const BookingDetails = ({ details }: { details: any }) => {
           {/* Notifications Table */}
           <table className="min-w-full table-auto text-left text-sm">
         <tbody>
-  {notifications.map((n) => (
-    <tr
-      key={n.notificationID}
-      className={`border-t border-gray-100 hover:bg-gray-50 transition-all cursor-pointer ${
-        n.starred ? "bg-gray-50" : "bg-white font-semibold"
-      }`} // Different styles for read (starred) and unread notifications
-      onClick={() => {
-        console.log("Notification ID:", n.notificationID);
-        setSelected(n);
-        markAsRead(n.notificationID); // Mark the notification as read when clicked
-      }}
-    >
-      {/* Title + Label + Message */}
+      {notifications.map((n) => (
+        <tr
+          key={n.notificationID}
+          className={`border-t border-gray-100 hover:bg-gray-50 transition-all cursor-pointer ${
+            n.starred ? "bg-gray-50" : "bg-white font-semibold"
+          }`} // Different styles for read (starred) and unread notifications
+          onClick={() => {
+            console.log("Notification ID:", n.notificationID);
+            setSelected(n);
+            markAsRead(n.notificationID); // Mark the notification as read when clicked
+          }}
+        >
+         {/* Red Dot for Unread Notifications */}
       <td className="p-4">
         <div className="flex items-center gap-2">
-          <span className="font-medium text-sm">{n.title}</span>
+          {!n.starred && (
+            <span className="w-2 h-2 bg-red-500 rounded-full" title="Unread"></span>
+          )}
+          <span
+            className={`text-sm ${
+              n.starred ? "font-normal text-gray-700" : "font-bold text-black"
+            }`}
+          >
+            {n.title}
+          </span>
           {n.label && (
             <span
               className={`text-xs px-2 py-0.5 rounded-full ${
@@ -387,26 +406,26 @@ const BookingDetails = ({ details }: { details: any }) => {
           {n.message}
         </p>
       </td>
+              
+          {/* Time */}
+          <td className="p-4 text-xs text-gray-500 whitespace-nowrap">
+            {formatDateTime(n.time)}
+          </td>
 
-      {/* Time */}
-      <td className="p-4 text-xs text-gray-500 whitespace-nowrap">
-        {formatDateTime(n.time)}
-      </td>
-
-      {/* Actions */}
-      <td
-        className="p-4 text-center flex gap-2 justify-center"
-        onClick={(e) => e.stopPropagation()} // Prevent row click when pressing buttons
-      >
-        <button
-          className="p-1.5 rounded-full hover:bg-gray-100"
-          onClick={() => setSelected(n)}
-        >
-          <Info className="w-4 h-4 text-gray-500" />
-        </button>
-      </td>
-    </tr>
-  ))}
+          {/* Actions */}
+          <td
+            className="p-4 text-center flex gap-2 justify-center"
+            onClick={(e) => e.stopPropagation()} // Prevent row click when pressing buttons
+          >
+            <button
+              className="p-1.5 rounded-full hover:bg-gray-100"
+              onClick={() => setSelected(n)}
+            >
+              <Info className="w-4 h-4 text-gray-500" />
+            </button>
+          </td>
+        </tr>
+      ))}
 </tbody>
           </table>
         </div>
@@ -454,5 +473,7 @@ const BookingDetails = ({ details }: { details: any }) => {
   </div>
       )}
     </div>
+    
   );
+  
 }

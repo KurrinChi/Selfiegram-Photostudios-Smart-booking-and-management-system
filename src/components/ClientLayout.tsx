@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { ReactNode } from "react";
 import ClientSidebar from "../components/ClientSidebar";
 import ClientHeader from "../components/ClientHeader";
 import ClientFooter from "../components/ClientFooter";
+import { fetchWithAuth } from "../utils/fetchWithAuth";
 
 interface ClientLayoutProps {
   children?: ReactNode;
@@ -11,6 +12,9 @@ interface ClientLayoutProps {
 const ClientLayout = ({ children }: ClientLayoutProps) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isAnimatingOut, setIsAnimatingOut] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0); // Manage unread count here
+
+  const API_URL = import.meta.env.VITE_API_URL;
 
   const handleSidebarClose = () => {
     setIsAnimatingOut(true);
@@ -19,6 +23,34 @@ const ClientLayout = ({ children }: ClientLayoutProps) => {
       setIsAnimatingOut(false);
     }, 300);
   };
+
+  // Fetch notifications and calculate unread count
+  useEffect(() => {
+    const fetchUnreadCount = async () => {
+      try {
+        const userID = localStorage.getItem("userID");
+        if (!userID) return;
+
+        const token = localStorage.getItem("token");
+        const res = await fetchWithAuth(`${API_URL}/api/notifications/${userID}`, {
+          headers: {
+            Authorization: token ? `Bearer ${token}` : "",
+            "Content-Type": "application/json",
+          },
+        });
+
+        if (!res.ok) throw new Error("Failed to fetch notifications");
+
+        const data = await res.json();
+        const unread = data.filter((n: any) => !n.starred).length; // Count unread notifications
+        setUnreadCount(unread); // Update unread count
+      } catch (err) {
+        console.error("Error fetching notifications:", err);
+      }
+    };
+
+    fetchUnreadCount();
+  }, []); // Run once on component mount
 
   return (
     <div className="bg-gray-100 font-sf">
@@ -33,7 +65,11 @@ const ClientLayout = ({ children }: ClientLayoutProps) => {
         <div className="flex flex-1 overflow-hidden">
           {/* Desktop Sidebar */}
           <div className="hidden md:flex w-64 shrink-0">
-            <ClientSidebar isOpen toggle={() => setSidebarOpen(false)} />
+            <ClientSidebar
+              isOpen
+              toggle={() => setSidebarOpen(false)}
+              unreadCount={unreadCount} // Pass unreadCount to the sidebar
+            />
           </div>
 
           {/* Mobile Sidebar */}
@@ -50,7 +86,11 @@ const ClientLayout = ({ children }: ClientLayoutProps) => {
                     : "animate-slideInLeft"
                 }`}
               >
-                <ClientSidebar isOpen toggle={handleSidebarClose} />
+                <ClientSidebar
+                  isOpen
+                  toggle={handleSidebarClose}
+                  unreadCount={unreadCount} // Pass unreadCount to the sidebar
+                />
               </div>
             </div>
           )}
