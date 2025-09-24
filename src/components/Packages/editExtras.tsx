@@ -765,14 +765,14 @@ export default function EditExtras() {
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 sm:mb-6 gap-3">
             <div>
               <h1
-                className="text-xl sm:text-2xl font-semibold"
-                style={{ color: P.dark }}
+                className="text-xl sm:text-2xl font-semibold ml-2 pl-12 sm:pl-0"
+                style={{ color: "#2b2b2b" }} // replacing P.dark with hex
               >
                 Add-Ons / Extras
               </h1>
             </div>
 
-            <div className="flex w-full sm:w-auto items-center gap-2">
+            <div className="flex w-full sm:w-auto items-center gap-2 pt-5 sm:pt-0">
               <input
                 className="rounded px-3 py-2 flex-1 sm:flex-none w-full sm:w-72"
                 placeholder="Search name, type or choices..."
@@ -940,7 +940,7 @@ export default function EditExtras() {
           </div>
         </div>
 
-        <div className="flex-[1]">
+        <div className="flex-[1] min-w-0 overflow-x-auto">
           <EditConceptStudio />
         </div>
       </div>
