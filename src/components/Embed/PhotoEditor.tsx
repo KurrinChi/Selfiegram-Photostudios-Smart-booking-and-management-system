@@ -1,6 +1,8 @@
 import React, { useRef, useEffect, useState } from "react";
 import type { HTMLAttributes } from "react";
 import { useCallback } from "react";
+import { useSearchParams } from "react-router-dom";
+
 declare global {
   interface Window {
     tui?: any;
@@ -149,6 +151,21 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
   const scheduledSessionRef = useRef<AdjustValues | null>(null);
   const panelVisibilityRef = useRef<boolean>(false);
   const menuBarListenerRef = useRef<((e: Event) => void) | null>(null);
+
+  //const [searchParams] = useSearchParams();
+
+  const backendUrl = import.meta.env.VITE_API_URL; // Replace with your backend URL
+  const urlParams = new URLSearchParams(location.search);
+  const imageUrl = `${backendUrl}${decodeURIComponent(urlParams.get("url") || "")}`;
+
+console.log("Resolved Image URL:", imageUrl); 
+
+  
+  useEffect(() => {
+  if (imageUrl) {
+    // re-init if needed
+  }
+}, [imageUrl]);
 
   // track listeners attached to the adjust panel so we can remove them cleanly
   const panelListenersRef = useRef<
@@ -840,6 +857,7 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
         await loadCssWithBackups(TOAST_CSS_BACKUPS);
         await loadCssWithBackups(TOAST_COLOR_PICKER_CSS);
 
+        
         let Constructor: any = undefined;
         // 1) Try to import locally (best)
         try {
@@ -912,7 +930,7 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
           includeUI: {
             loadImage: {
               path:
-                sampleImage?.path ?? "https://picsum.photos/1200/800?random=1",
+                 imageUrl || sampleImage?.path || "https://picsum.photos/1200/800?random=1",
               name: sampleImage?.name ?? "Sample Image",
             },
             menu: [

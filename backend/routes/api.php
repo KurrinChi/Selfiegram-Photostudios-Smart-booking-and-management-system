@@ -17,6 +17,8 @@
     use App\Http\Controllers\BookingRequestController;
     use App\Http\Controllers\GalleryController;
     use App\Http\Controllers\NotificationController;
+    use App\Http\Controllers\ImageController;
+  
     // Just for testing
     Route::middleware('api')->get('/test', function (Request $request) {
         return response()->json([
@@ -186,9 +188,15 @@
           Route::get('/booking-details', [NotificationController::class, 'getBookingDetails']);
           Route::get('/reschedule-details', [NotificationController::class, 'getRescheduleDetails']);
           Route::post('/notifications/{id}/mark-as-read', [NotificationController::class, 'markAsRead']);
+
+        //Client Gallery Page
+        Route::get('/user-images/{userID}', [ImageController::class, 'getUserImages']);
+        Route::post('/user-images/favorite/{imageID}', [ImageController::class, 'toggleFavorite']);
+       
     });
 
     //receipt
     Route::get('/receipt/{id}', [ReceiptController::class, 'show']);
-
+     Route::get('/image-url/{imageID}', [ImageController::class, 'getImageUrl']);
+        Route::get('/proxy-image', [ImageController::class, 'proxyImage']);
 ?>
