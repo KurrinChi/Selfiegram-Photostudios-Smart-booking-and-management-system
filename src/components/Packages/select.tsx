@@ -762,9 +762,12 @@ const SelectPackagePage = () => {
             {/* Determine visibility and interactivity */}
             {(() => {
               const setIdNum = Number(setData.setId);
-              const showStudioA = setIdNum !== 5 && setIdNum !== 6;; 
+              const showStudioA = setIdNum !== 5 && setIdNum !== 6;
               const enableStudioB =
-                setIdNum === 2 || setIdNum === 4 || setIdNum === 3 || setIdNum === 6;
+                setIdNum === 2 ||
+                setIdNum === 4 ||
+                setIdNum === 3 ||
+                setIdNum === 6;
 
               // Helper for mutual exclusivity if set 2
               const handleStudioASelect = () => {
@@ -1039,27 +1042,33 @@ const SelectPackagePage = () => {
                       {/* Quantity Input */}
                       <input
                         type="number"
-                      min={1}
-                      max={5}
-                      value={selectedAddons.find((a) => a.id === item.id)?.value || 1} // default 1
-                      onChange={(e) => {
-                        const value = parseInt(e.target.value, 10);
+                        min={1}
+                        max={5}
+                        value={
+                          selectedAddons.find((a) => a.id === item.id)?.value ||
+                          1
+                        } // default 1
+                        onChange={(e) => {
+                          const value = parseInt(e.target.value, 10);
 
-                        // Enforce the min and max limits
-                        if (value >= 1 && value <= 5) {
-                          handleAddonChange(item.id, value);
-                        }
-                      }}
-                      onBlur={(e) => {
-                        // Reset to min value if the input is empty or invalid
-                        if (!e.target.value || parseInt(e.target.value, 10) < 1) {
-                          handleAddonChange(item.id, 1);
-                        } else if (parseInt(e.target.value, 10) > 5) {
-                          handleAddonChange(item.id, 5);
-                        }
-                      }}
-                      onClick={(e) => e.stopPropagation()} // Prevent toggling
-                      className="w-16 border rounded p-1"
+                          // Enforce the min and max limits
+                          if (value >= 1 && value <= 5) {
+                            handleAddonChange(item.id, value);
+                          }
+                        }}
+                        onBlur={(e) => {
+                          // Reset to min value if the input is empty or invalid
+                          if (
+                            !e.target.value ||
+                            parseInt(e.target.value, 10) < 1
+                          ) {
+                            handleAddonChange(item.id, 1);
+                          } else if (parseInt(e.target.value, 10) > 5) {
+                            handleAddonChange(item.id, 5);
+                          }
+                        }}
+                        onClick={(e) => e.stopPropagation()} // Prevent toggling
+                        className="w-16 border rounded p-1"
                       />
 
                       {/* Total Price beside input */}
@@ -1313,10 +1322,9 @@ const SelectPackagePage = () => {
                   className="mt-1"
                 />
                 <span>
-                  <strong>I accept</strong>{" "}the Terms and Agreements
-            
-                  . By using our system and services, you agree to abide by the
-                  following rules and conditions.
+                  <strong>I accept</strong> the Terms and Agreements . By using
+                  our system and services, you agree to abide by the following
+                  rules and conditions.
                 </span>
               </label>
 
