@@ -1,4 +1,3 @@
-import { Menu } from "lucide-react";
 import React, { useRef, useEffect, useState } from "react";
 import type { HTMLAttributes } from "react";
 import { useCallback } from "react";
@@ -192,13 +191,13 @@ console.log("Resolved Image URL:", imageUrl);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isAdjustPanelOpen, setIsAdjustPanelOpen] = useState(false);
-  const [currentActiveMenu, setCurrentActiveMenu] = useState<string>("");
+  const [, setCurrentActiveMenu] = useState<string>("");
 
   useEffect(() => {
     panelVisibilityRef.current = isAdjustPanelOpen;
   }, [isAdjustPanelOpen]);
 
-  const formatValueForLabel = (key: keyof AdjustValues, val: number) => {
+  const formatValueForLabel = (_key: keyof AdjustValues, val: number) => {
     const abs = Math.abs(val);
     if (abs < 1) return val.toFixed(2);
     if (abs < 10) return val.toFixed(2);

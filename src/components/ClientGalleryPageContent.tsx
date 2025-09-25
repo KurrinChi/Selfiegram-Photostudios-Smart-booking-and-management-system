@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { ChevronDown, ChevronUp, Edit, X, Heart } from "lucide-react";
+import { Edit, X, Heart } from "lucide-react";
 import JSZip from "jszip";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
 
@@ -10,7 +10,7 @@ const ClientGalleryPageContent: React.FC = () => {
   const [galleryData, setGalleryData] = useState<
     { date: string; images: { id: string; url: string; edited?: boolean; isFavorite?: boolean }[] }[]
   >([]);
-  const [expandedDates, setExpandedDates] = useState<string[]>([]);
+
   const [previewImage, setPreviewImage] = useState<null | {
     id: string;
     url: string;
@@ -71,11 +71,7 @@ const ClientGalleryPageContent: React.FC = () => {
     }));
   };
 
-  const toggleDate = (date: string) => {
-    setExpandedDates((prev) =>
-      prev.includes(date) ? prev.filter((d) => d !== date) : [...prev, date]
-    );
-  };
+
 
   const toggleFavorite = async (id: string) => {
   try {
@@ -157,7 +153,7 @@ const ClientGalleryPageContent: React.FC = () => {
 
   
 
-  const handleDeleteSelected = async () => {
+  /*const handleDeleteSelected = async () => {
     try {
       const res = await fetchWithAuth(`${API_URL}/api/user-images/delete`, {
         method: "POST",
@@ -181,7 +177,7 @@ const ClientGalleryPageContent: React.FC = () => {
     } catch (err) {
       console.error("Error deleting images:", err);
     }
-  };
+  };*/
 
   const filteredData =
   activeTab === "Favorites"
@@ -226,86 +222,82 @@ const ClientGalleryPageContent: React.FC = () => {
             >
               Download
             </button>
+            {/* Delete Button 
             <button
               className="px-4 py-1 bg-red-500 text-white rounded-md hover:bg-red-600"
               onClick={handleDeleteSelected}
             >
               Delete
             </button>
+            */}
           </div>
         )}
       </div>
 
-      {filteredData.length === 0 ? (
-        <div className="text-center text-gray-500 mt-20">
-          <p className="text-lg font-medium mb-2">No photos yet</p>
-          <p className="text-sm">
-            Book a photo session now to start capturing memories!
-          </p>
-        </div>
-      ) : (
-        filteredData.map((group) => (
-          <div key={group.date} className="mb-6">
-            <button
-              className="flex justify-between items-center w-full text-left font-medium text-lg mb-2"
-              onClick={() => toggleDate(group.date)}
-            >
-              <span>{group.date}</span>
-              {expandedDates.includes(group.date) ? (
-                <ChevronUp className="w-4 h-4" />
-              ) : (
-                <ChevronDown className="w-4 h-4" />
-              )}
-            </button>
+    {filteredData.length === 0 ? (  
+  <div className="text-center text-gray-500 mt-20">
+    <p className="text-lg font-medium mb-2">No photos yet</p>
+    <p className="text-sm">
+      Book a photo session now to start capturing memories!
+    </p>
+  </div>
+) : (
+  filteredData.map((group) => (
+    <div key={group.date} className="mb-6">
+      {/* Date Header */}
+      <div className="flex justify-between items-center w-full text-left font-medium text-lg mb-2">
+        <span>{group.date}</span>
+      </div>
 
-            {expandedDates.includes(group.date) && (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                {group.images.map((img) => {
-                  const isSelected = selectedImages.includes(img.id);
-                  return (
-                    <div
-                      key={img.id}
-                      className={`relative rounded-lg overflow-hidden cursor-pointer transition-all duration-500 ease-in-out transform hover:scale-[1.03] flex items-center justify-center bg-white ${
-                        isSelected ? "ring-4 ring-black" : ""
-                      }`}
-                      onClick={() => handleSelectImage(img.id)}
-                    >
-                      <img
-                        src={img.url}
-                        alt=""
-                        className="max-w-full max-h-full object-contain"
-                      />
-                      <div className="absolute bottom-2 right-2 flex gap-2">
-                        <button
-                          className="p-1.5 rounded-full bg-gray-100 hover:bg-gray-200"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            toggleFavorite(img.id);
-                          }}
-                        >
-                         <Heart
-                          className={`w-5 h-5 ${img.isFavorite ? "text-pink-500" : "text-gray-500"}`}
-                          fill={img.isFavorite ? "currentColor" : "none"}
-                        />
-                        </button>
-                        <button
-                          className="p-1.5 rounded-full bg-gray-100 hover:bg-gray-200"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleEdit(img.id);
-                          }}
-                        >
-                          <Edit className="w-5 h-5 text-gray-500" />
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
+      {/* Images under the date */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+        {group.images.map((img) => {
+          const isSelected = selectedImages.includes(img.id);
+          return (
+            <div
+              key={img.id}
+              className={`relative rounded-lg overflow-hidden cursor-pointer transition-all duration-500 ease-in-out transform hover:scale-[1.03] flex items-center justify-center bg-white ${
+                isSelected ? "ring-4 ring-black" : ""
+              }`}
+              onClick={() => handleSelectImage(img.id)}
+            >
+              <img
+                src={img.url}
+                alt=""
+                className="max-w-full max-h-full object-contain"
+              />
+              <div className="absolute bottom-2 right-2 flex gap-2">
+                <button
+                  className="p-1.5 rounded-full bg-gray-100 hover:bg-gray-200"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleFavorite(img.id);
+                  }}
+                >
+                  <Heart
+                    className={`w-5 h-5 ${
+                      img.isFavorite ? "text-pink-500" : "text-gray-500"
+                    }`}
+                    fill={img.isFavorite ? "currentColor" : "none"}
+                  />
+                </button>
+                <button
+                  className="p-1.5 rounded-full bg-gray-100 hover:bg-gray-200"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleEdit(img.id);
+                  }}
+                >
+                  <Edit className="w-5 h-5 text-gray-500" />
+                </button>
               </div>
-            )}
-          </div>
-        ))
-      )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  ))
+)}
 
       {previewImage && (
         <div
