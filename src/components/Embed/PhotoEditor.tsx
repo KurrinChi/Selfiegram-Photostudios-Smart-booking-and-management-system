@@ -1,7 +1,7 @@
+import { Menu } from "lucide-react";
 import React, { useRef, useEffect, useState } from "react";
 import type { HTMLAttributes } from "react";
 import { useCallback } from "react";
-import { useSearchParams } from "react-router-dom";
 
 declare global {
   interface Window {
@@ -859,7 +859,7 @@ console.log("Resolved Image URL:", imageUrl);
         // load CSS first
         await loadCssWithBackups(TOAST_CSS_BACKUPS);
         await loadCssWithBackups(TOAST_COLOR_PICKER_CSS);
-
+        
         
         let Constructor: any = undefined;
         // 1) Try to import locally (best)
@@ -1477,14 +1477,57 @@ console.log("Resolved Image URL:", imageUrl);
     // run once
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  return (
+ return (
+    <div
+    style={{
+      width: "100%",
+      height: "100vh",
+      position: "relative",
+      background: "#ffffff", // Set the background to white
+      overflow: "hidden",
+      display: "flex",
+      flexDirection: "column", // Stack header and editor vertically
+    }}
+  >
+    {/* Header Section */}
+    <header className="w-full bg-white px-4 py-3 flex justify-between items-center shadow-sm">
+      <div className="flex items-center gap-3">
+       {/* Back Button */}
+    <button
+      onClick={() => window.history.back()} // Navigate back to the previous page
+      className="flex items-center gap-1 text-gray-600 hover:text-gray-800"
+    >
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        fill="none"
+        viewBox="0 0 24 24"
+        strokeWidth={1.5}
+        stroke="currentColor"
+        className="w-5 h-5"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M15.75 19.5L8.25 12l7.5-7.5"
+        />
+      </svg>
+      <span className="text-sm font-medium">Back</span>
+    </button>
+        <img src="/slfg.svg" alt="Selfie Gram Logo" className="w-13 ml-4" />
+        <h1 className="text-xs font-bold tracking-widest hidden md:block">
+          SELFIEGRAM PHOTO EDITOR POWERED BY TOAST UI
+        </h1>
+      </div>
+    </header>
+
+    {/* Editor Section */}
     <div
       style={{
-        width: "100%",
-        height: "100vh",
-        position: "relative",
-        background: "linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)",
-        overflow: "hidden",
+        flex: 1, // Take up the remaining space
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        padding: "16px",
       }}
     >
       {loading && (
@@ -1506,7 +1549,7 @@ console.log("Resolved Image URL:", imageUrl);
               width: "60px",
               height: "60px",
               border: "4px solid #e3f2fd",
-              borderTop: "4px solid #2196f3",
+              borderTop: "4px solid #000000ff",
               borderRadius: "50%",
               animation: "spin 1s linear infinite",
               marginBottom: "20px",
@@ -1516,14 +1559,18 @@ console.log("Resolved Image URL:", imageUrl);
             style={{
               fontSize: "18px",
               fontWeight: "600",
-              color: "#1565c0",
+              color: "#000000ff",
               marginBottom: "8px",
             }}
           >
             Loading Image Editor...
           </div>
           <div
-            style={{ fontSize: "14px", color: "#757575", textAlign: "center" }}
+            style={{
+              fontSize: "14px",
+              color: "#757575",
+              textAlign: "center",
+            }}
           >
             Initializing advanced photo editing tools
           </div>
@@ -1570,8 +1617,9 @@ console.log("Resolved Image URL:", imageUrl);
           boxShadow: "0 8px 32px rgba(0,0,0,0.1)",
         }}
       />
+    </div>
 
-      <style>{`
+    <style>{`
         @keyframes spin {
           0% { transform: rotate(0deg); }
           100% { transform: rotate(360deg); }
@@ -1580,8 +1628,8 @@ console.log("Resolved Image URL:", imageUrl);
           background: #f0f8ff !important;
         }
       `}</style>
-    </div>
-  );
+  </div>
+);
 };
 
 export default ToastEditor;
