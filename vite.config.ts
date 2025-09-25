@@ -8,5 +8,12 @@ export default defineConfig({
    server: {
     host: '0.0.0.0', // Allow access from local network
     port: 5173,      // Default port (you can change it if needed)
+      proxy: {
+      '/api': {
+        target: 'http://localhost:8000', // your Laravel backend
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, ''),
+      },
+    },
   },
 })

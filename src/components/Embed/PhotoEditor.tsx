@@ -156,7 +156,10 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
 
   const backendUrl = import.meta.env.VITE_API_URL; // Replace with your backend URL
   const urlParams = new URLSearchParams(location.search);
-  const imageUrl = `${backendUrl}${decodeURIComponent(urlParams.get("url") || "")}`;
+  const filePath = decodeURIComponent(urlParams.get("url") || "");
+const imageUrl = `${backendUrl}/api/proxy-image?path=${encodeURIComponent(
+  filePath.replace(/^\/storage\//, '')
+)}`;
 
 console.log("Resolved Image URL:", imageUrl); 
 

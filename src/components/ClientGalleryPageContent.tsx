@@ -32,7 +32,9 @@ const ClientGalleryPageContent: React.FC = () => {
     const groupedImages = groupImagesByDate(
       data.map((img: any) => ({
         id: img.imageID,
-        url: `${API_URL}${img.filePath}`,
+        url: `${API_URL}/api/proxy-image?path=${encodeURIComponent(
+        img.filePath.replace(/^\/storage\//, '')
+      )}`,
         date: new Date(img.uploadDate).toLocaleDateString("en-US", {
           year: "numeric",
           month: "long",
