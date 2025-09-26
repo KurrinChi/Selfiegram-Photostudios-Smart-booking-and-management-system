@@ -1,7 +1,6 @@
 import React, { useRef, useEffect, useState } from "react";
 import type { HTMLAttributes } from "react";
 import { useCallback } from "react";
-import { useLocation } from "react-router-dom";
 
 declare global {
   interface Window {
@@ -152,10 +151,13 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
   const panelVisibilityRef = useRef<boolean>(false);
   const menuBarListenerRef = useRef<((e: Event) => void) | null>(null);
 
+  //const [searchParams] = useSearchParams();
+
   const backendUrl = import.meta.env.VITE_API_URL; // Replace with your backend URL
-  const urlParams = new URLSearchParams(window.location.search);
-  const imageUrl = `${backendUrl}${decodeURIComponent(
-    urlParams.get("url") || ""
+  const urlParams = new URLSearchParams(location.search);
+  const filePath = decodeURIComponent(urlParams.get("url") || "");
+  const imageUrl = `${backendUrl}/api/proxy-image?path=${encodeURIComponent(
+    filePath.replace(/^\/storage\//, "")
   )}`;
 
   console.log("Resolved Image URL:", imageUrl);
@@ -506,9 +508,6 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
     },
     []
   ); // scheduleApplySession referenced through closure - acceptable
-
-  const location = useLocation();
-  const passedImageUrl = (location.state as { imageUrl?: string })?.imageUrl;
 
   // createAdjustPanel (single creation, UI updates read sessionRef)
   const createAdjustPanel = useCallback(() => {
@@ -931,7 +930,6 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
           includeUI: {
             loadImage: {
               path:
-                passedImageUrl ||
                 imageUrl ||
                 sampleImage?.path ||
                 "https://picsum.photos/1200/800?random=1",

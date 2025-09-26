@@ -1,13 +1,11 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { ChevronDown, ChevronUp, Edit, X, Heart } from "lucide-react";
+import { Edit, X, Heart } from "lucide-react";
 import JSZip from "jszip";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
 
 const TABS = ["Gallery", "Favorites"];
 
 const ClientGalleryPageContent: React.FC = () => {
-  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("Gallery");
   const [galleryData, setGalleryData] = useState<
     {
@@ -21,22 +19,14 @@ const ClientGalleryPageContent: React.FC = () => {
     }[]
   >([]);
 
-  const [expandedDates, setExpandedDates] = useState<string[]>([]);
-
   const [previewImage, setPreviewImage] = useState<null | {
     id: string;
     url: string;
   }>(null);
-  const [selectedImages, setSelectedImages] = useState<string[]>([]);
+  const [selectedImages, setSelectedImages] = useState<string[]>([]); // For multiple select
 
   const API_URL = import.meta.env.VITE_API_URL;
-  const userID = localStorage.getItem("userID");
-
-  const toggleDate = (date: string) => {
-    setExpandedDates((prev) =>
-      prev.includes(date) ? prev.filter((d) => d !== date) : [...prev, date]
-    );
-  };
+  const userID = localStorage.getItem("userID"); // Replace with actual user ID logic
 
   useEffect(() => {
     const fetchImages = async () => {
@@ -104,12 +94,15 @@ const ClientGalleryPageContent: React.FC = () => {
     try {
       const res = await fetchWithAuth(
         `${API_URL}/api/user-images/favorite/${id}`,
-        { method: "POST" }
+        {
+          method: "POST",
+        }
       );
       if (!res.ok) throw new Error("Failed to toggle favorite");
 
       const data = await res.json();
 
+      // Update the local state to reflect the new favorite status
       setGalleryData((prev) =>
         prev.map((group) => ({
           ...group,
@@ -123,33 +116,18 @@ const ClientGalleryPageContent: React.FC = () => {
     }
   };
 
-  const handleEdit = (img: { id: string; url: string }) => {
-    if (!img?.url) {
-      console.warn("handleEdit called without img.url");
-      return;
-    }
-
-    // If API_URL is present and img.url starts with it, remove the prefix.
-    // Otherwise treat the whole img.url as the "relativePath".
-    let relativePath = img.url;
-    if (API_URL && img.url.startsWith(API_URL)) {
-      relativePath = img.url.slice(API_URL.length);
-      // ensure it begins with a single leading slash
-      if (!relativePath.startsWith("/")) relativePath = "/" + relativePath;
-    }
-
-    // Build the navigation target
-    const encoded = encodeURIComponent(relativePath);
-
-    navigate(`/client/gallery/edit?url=${encoded}`, {
-      state: {
-        imageUrl: img.url,
-        imageId: img.id,
-        relativePath,
-      },
-    });
+  const fetchImageUrl = async (filename: string) => {
+    const response = await fetchWithAuth(
+      `http://192.168.1.214:8000/api/image-url/${filename}`
+    );
+    const data = await response.json();
+    return data.url;
   };
 
+  const handleEdit = async (filename: string) => {
+    const imageUrl = await fetchImageUrl(filename);
+    window.location.href = `/edit?url=${encodeURIComponent(imageUrl)}`;
+  };
   const handleSelectImage = (id: string) => {
     setSelectedImages((prev) =>
       prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
@@ -163,20 +141,27 @@ const ClientGalleryPageContent: React.FC = () => {
     const folder = zip.folder("selected-images");
 
     try {
+      // Fetch and add each selected image to the zip folder
       const imagePromises = selectedImages.map(async (id) => {
         const image = galleryData
           .flatMap((group) => group.images)
           .find((img) => img.id === id);
+
         if (image) {
-          const response = await fetch(image.url);
-          if (!response.ok)
-            return console.error(`Failed to fetch image with ID: ${id}`);
+          console.log("Fetching image:", image.url); // Debug the image URL
+          const response = await fetch(image.url); // Use fetchWithAuth here
+          if (!response.ok) {
+            console.error(`Failed to fetch image with ID: ${id}`);
+            return;
+          }
           const blob = await response.blob();
-          folder?.file(image.url.split("/").pop() || `image-${id}.jpg`, blob);
+          folder?.file(image.url.split("/").pop() || `image-${id}.jpg`, blob); // Add the image to the zip folder
         }
       });
 
       await Promise.all(imagePromises);
+
+      // Generate the zip file and trigger download
       const zipBlob = await zip.generateAsync({ type: "blob" });
       const link = document.createElement("a");
       link.href = URL.createObjectURL(zipBlob);
@@ -187,43 +172,49 @@ const ClientGalleryPageContent: React.FC = () => {
     }
   };
 
-  const handleDeleteSelected = async () => {
+  /*const handleDeleteSelected = async () => {
     try {
       const res = await fetchWithAuth(`${API_URL}/api/user-images/delete`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({ imageIDs: selectedImages }),
       });
 
       if (!res.ok) throw new Error("Failed to delete images");
 
+      // Remove deleted images from the gallery
       setGalleryData((prev) =>
         prev.map((group) => ({
           ...group,
-          images: group.images.filter(
-            (img) => !selectedImages.includes(img.id)
-          ),
+          images: group.images.filter((img) => !selectedImages.includes(img.id)),
         }))
       );
-      setSelectedImages([]);
+
+      setSelectedImages([]); // Clear selection
     } catch (err) {
       console.error("Error deleting images:", err);
     }
-  };
+  };*/
 
   const filteredData =
     activeTab === "Favorites"
       ? galleryData
           .map((group) => ({
             date: group.date,
-            images: group.images.filter((img) => img.isFavorite),
+            images: group.images.filter((img) => img.isFavorite), // Filter favorites
           }))
-          .filter((group) => group.images.length > 0)
+          .filter((group) => group.images.length > 0) // Remove empty groups
+      : activeTab === "Edited"
+      ? galleryData.map((group) => ({
+          date: group.date,
+          images: group.images.filter((img) => img.edited),
+        }))
       : galleryData;
 
   return (
     <div className="p-4 font-sf animate-fadeIn">
-      {/* Tabs */}
       <div className="flex justify-between items-center mb-4">
         <div className="flex gap-4">
           {TABS.map((tab) => (
@@ -241,7 +232,7 @@ const ClientGalleryPageContent: React.FC = () => {
           ))}
         </div>
 
-        {/* Multi-select actions */}
+        {/* Multiple Select Actions */}
         {selectedImages.length > 0 && (
           <div className="flex gap-2">
             <button
@@ -250,18 +241,18 @@ const ClientGalleryPageContent: React.FC = () => {
             >
               Download
             </button>
-
+            {/* Delete Button 
             <button
               className="px-4 py-1 bg-red-500 text-white rounded-md hover:bg-red-600"
               onClick={handleDeleteSelected}
             >
               Delete
             </button>
+            */}
           </div>
         )}
       </div>
 
-      {/* Gallery */}
       {filteredData.length === 0 ? (
         <div className="text-center text-gray-500 mt-20">
           <p className="text-lg font-medium mb-2">No photos yet</p>
@@ -272,70 +263,61 @@ const ClientGalleryPageContent: React.FC = () => {
       ) : (
         filteredData.map((group) => (
           <div key={group.date} className="mb-6">
-            <button
-              className="flex justify-between items-center w-full text-left font-medium text-lg mb-2"
-              onClick={() => toggleDate(group.date)}
-            >
+            {/* Date Header */}
+            <div className="flex justify-between items-center w-full text-left font-medium text-lg mb-2">
               <span>{group.date}</span>
-              {expandedDates.includes(group.date) ? (
-                <ChevronUp className="w-4 h-4" />
-              ) : (
-                <ChevronDown className="w-4 h-4" />
-              )}
-            </button>
+            </div>
 
-            {expandedDates.includes(group.date) && (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                {group.images.map((img) => {
-                  const isSelected = selectedImages.includes(img.id);
-                  return (
-                    <div
-                      key={img.id}
-                      className={`relative rounded-lg overflow-hidden cursor-pointer transition-all duration-500 ease-in-out transform hover:scale-[1.03] flex items-center justify-center bg-white ${
-                        isSelected ? "ring-4 ring-black" : ""
-                      }`}
-                      onClick={() => handleSelectImage(img.id)}
-                    >
-                      <img
-                        src={img.url}
-                        alt=""
-                        className="max-w-full max-h-full object-contain"
-                      />
-                      <div className="absolute bottom-2 right-2 flex gap-2">
-                        <button
-                          className="p-1.5 rounded-full bg-gray-100 hover:bg-gray-200"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            toggleFavorite(img.id);
-                          }}
-                        >
-                          <Heart
-                            className={`w-5 h-5 ${
-                              img.isFavorite ? "text-pink-500" : "text-gray-500"
-                            }`}
-                            fill={img.isFavorite ? "currentColor" : "none"}
-                          />
-                        </button>
-                        <button
-                          className="p-1.5 rounded-full bg-gray-100 hover:bg-gray-200"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleEdit({ id: img.id, url: img.url });
-                          }}
-                        >
-                          <Edit className="w-5 h-5 text-gray-500" />
-                        </button>
-                      </div>
+            {/* Images under the date */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+              {group.images.map((img) => {
+                const isSelected = selectedImages.includes(img.id);
+                return (
+                  <div
+                    key={img.id}
+                    className={`relative rounded-lg overflow-hidden cursor-pointer transition-all duration-500 ease-in-out transform hover:scale-[1.03] flex items-center justify-center bg-white ${
+                      isSelected ? "ring-4 ring-black" : ""
+                    }`}
+                    onClick={() => handleSelectImage(img.id)}
+                  >
+                    <img
+                      src={img.url}
+                      alt=""
+                      className="max-w-full max-h-full object-contain"
+                    />
+                    <div className="absolute bottom-2 right-2 flex gap-2">
+                      <button
+                        className="p-1.5 rounded-full bg-gray-100 hover:bg-gray-200"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleFavorite(img.id);
+                        }}
+                      >
+                        <Heart
+                          className={`w-5 h-5 ${
+                            img.isFavorite ? "text-pink-500" : "text-gray-500"
+                          }`}
+                          fill={img.isFavorite ? "currentColor" : "none"}
+                        />
+                      </button>
+                      <button
+                        className="p-1.5 rounded-full bg-gray-100 hover:bg-gray-200"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEdit(img.id);
+                        }}
+                      >
+                        <Edit className="w-5 h-5 text-gray-500" />
+                      </button>
                     </div>
-                  );
-                })}
-              </div>
-            )}
+                  </div>
+                );
+              })}
+            </div>
           </div>
         ))
       )}
 
-      {/* Preview Modal */}
       {previewImage && (
         <div
           className="fixed inset-0 bg-black/90 backdrop-blur-sm z-50 flex items-center justify-center"
@@ -348,6 +330,7 @@ const ClientGalleryPageContent: React.FC = () => {
             >
               <X className="w-6 h-6" />
             </button>
+
             <img
               src={previewImage.url}
               alt=""
