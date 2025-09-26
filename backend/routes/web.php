@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\DB;
 
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Response;
 
 Route::get('/db-test', function () {
     try {
@@ -38,4 +39,20 @@ Route::get('/test-mail', function () {
     Mail::to('demoprojectsystemuse@gmail.com')->send(new ForgotPassword($otp, $user));
 
     return 'Mail sent!';
+});
+
+//proxy for passing image url to editor
+Route::get('/api/proxy-image', function (\Illuminate\Http\Request $request) {
+    $path = $request->query('path'); 
+
+    // Full path to storage
+    $fullPath = storage_path('app/public/' . $path);
+
+    if (!file_exists($fullPath)) {
+        abort(404, 'Image not found');
+    }
+
+    return Response::file($fullPath, [
+        'Access-Control-Allow-Origin' => '*', // Allow frontend access
+    ]);
 });

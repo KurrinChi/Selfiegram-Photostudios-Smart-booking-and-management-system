@@ -52,6 +52,7 @@ class ImageController extends Controller
 
     return response()->json(['url' => $url]);
     }
+
     public function proxyImage(Request $request)
     {
         // Validate the request to ensure the `path` parameter is provided
@@ -71,6 +72,11 @@ class ImageController extends Controller
         $file = Storage::get($path);
         $mimeType = Storage::mimeType($path);
 
-        return response($file, Response::HTTP_OK)->header('Content-Type', $mimeType);
+        
+        return response($file, Response::HTTP_OK)
+            ->header('Content-Type', $mimeType)
+            ->header('Access-Control-Allow-Origin', '*') 
+            ->header('Access-Control-Allow-Methods', 'GET, OPTIONS')
+            ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
     }
 }

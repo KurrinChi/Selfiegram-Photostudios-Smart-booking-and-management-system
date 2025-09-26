@@ -20,7 +20,9 @@ const ClientGalleryPageContent: React.FC = () => {
       }[];
     }[]
   >([]);
+
   const [expandedDates, setExpandedDates] = useState<string[]>([]);
+
   const [previewImage, setPreviewImage] = useState<null | {
     id: string;
     url: string;
@@ -30,6 +32,12 @@ const ClientGalleryPageContent: React.FC = () => {
   const API_URL = import.meta.env.VITE_API_URL;
   const userID = localStorage.getItem("userID");
 
+  const toggleDate = (date: string) => {
+    setExpandedDates((prev) =>
+      prev.includes(date) ? prev.filter((d) => d !== date) : [...prev, date]
+    );
+  };
+
   useEffect(() => {
     const fetchImages = async () => {
       try {
@@ -38,17 +46,20 @@ const ClientGalleryPageContent: React.FC = () => {
 
         const data = await res.json();
 
+        // Group images by date
         const groupedImages = groupImagesByDate(
           data.map((img: any) => ({
             id: img.imageID,
-            url: `${API_URL}${img.filePath}`,
+            url: `${API_URL}/api/proxy-image?path=${encodeURIComponent(
+              img.filePath.replace(/^\/storage\//, "")
+            )}`,
             date: new Date(img.uploadDate).toLocaleDateString("en-US", {
               year: "numeric",
               month: "long",
               day: "numeric",
             }),
             edited: img.tag === "edited",
-            isFavorite: img.isFavorite === 1,
+            isFavorite: img.isFavorite === 1, // Map isFavorite field
           }))
         );
 
@@ -89,12 +100,6 @@ const ClientGalleryPageContent: React.FC = () => {
     }));
   };
 
-  const toggleDate = (date: string) => {
-    setExpandedDates((prev) =>
-      prev.includes(date) ? prev.filter((d) => d !== date) : [...prev, date]
-    );
-  };
-
   const toggleFavorite = async (id: string) => {
     try {
       const res = await fetchWithAuth(
@@ -118,17 +123,29 @@ const ClientGalleryPageContent: React.FC = () => {
     }
   };
 
-  // Fixed: Pass image data properly to the editor
   const handleEdit = (img: { id: string; url: string }) => {
-    // Extract the relative path from the full URL for the editor
-    const relativePath = img.url.replace(API_URL, "");
+    if (!img?.url) {
+      console.warn("handleEdit called without img.url");
+      return;
+    }
 
-    // Navigate with both state and URL parameter for maximum compatibility
-    navigate(`/client/gallery/edit?url=${encodeURIComponent(relativePath)}`, {
+    // If API_URL is present and img.url starts with it, remove the prefix.
+    // Otherwise treat the whole img.url as the "relativePath".
+    let relativePath = img.url;
+    if (API_URL && img.url.startsWith(API_URL)) {
+      relativePath = img.url.slice(API_URL.length);
+      // ensure it begins with a single leading slash
+      if (!relativePath.startsWith("/")) relativePath = "/" + relativePath;
+    }
+
+    // Build the navigation target
+    const encoded = encodeURIComponent(relativePath);
+
+    navigate(`/client/gallery/edit?url=${encoded}`, {
       state: {
         imageUrl: img.url,
         imageId: img.id,
-        relativePath: relativePath,
+        relativePath,
       },
     });
   };
@@ -233,6 +250,7 @@ const ClientGalleryPageContent: React.FC = () => {
             >
               Download
             </button>
+
             <button
               className="px-4 py-1 bg-red-500 text-white rounded-md hover:bg-red-600"
               onClick={handleDeleteSelected}
@@ -302,7 +320,7 @@ const ClientGalleryPageContent: React.FC = () => {
                           className="p-1.5 rounded-full bg-gray-100 hover:bg-gray-200"
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleEdit(img);
+                            handleEdit({ id: img.id, url: img.url });
                           }}
                         >
                           <Edit className="w-5 h-5 text-gray-500" />
