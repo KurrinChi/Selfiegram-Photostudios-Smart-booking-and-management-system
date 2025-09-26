@@ -74,7 +74,7 @@
                 'lname' => 'required|string|max:255',
                 'email' => 'required|email|unique:users,email',
                 'address' => 'required|string|max:255',
-                'contactNo' => 'required|string|max:20',
+                'contactNo' => 'required|string|size:11|regex:/^09\d{9}$/',
                 'gender' => 'required|string|max:20',
                 'birthday' => 'required|string|max:40'
             ]);
@@ -91,7 +91,7 @@
                 'contactNo' => $registerFields['contactNo'],
                 'usertype' => 'Customer',
                 'status' => '0',
-                'profilePicture' => '',
+                'profilePicture' =>  url('/storage/profile_photos/DefaultImage.png'),
                 'archive' => '1',
                 'gender' => $registerFields['gender'],
                 'birthday' => $registerFields['birthday'],

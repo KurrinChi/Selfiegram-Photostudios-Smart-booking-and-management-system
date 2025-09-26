@@ -1,9 +1,11 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
+import { fetchWithAuth } from "../utils/fetchWithAuth";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 interface UserProfile {
-  profilePicture?: string;
   fname: string;
   lname: string;
   username: string;
@@ -12,7 +14,6 @@ interface UserProfile {
   contactNo: string;
   birthday: string;
   gender: string;
-  userType: "Admin" | "Staff";
 }
 
 const ModalAssignRoleDialog: React.FC<{
@@ -20,7 +21,6 @@ const ModalAssignRoleDialog: React.FC<{
   onClose: () => void;
 }> = ({ isOpen, onClose }) => {
   const [profile, setProfile] = useState<UserProfile>({
-    profilePicture: "",
     fname: "",
     lname: "",
     username: "",
@@ -29,8 +29,9 @@ const ModalAssignRoleDialog: React.FC<{
     contactNo: "",
     birthday: "",
     gender: "",
-    userType: "Staff",
   });
+
+  const API_URL = import.meta.env.VITE_API_URL;
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
@@ -41,7 +42,27 @@ const ModalAssignRoleDialog: React.FC<{
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Updated profile:", profile);
+
+    fetchWithAuth(`${API_URL}/api/admin/users/create`, {
+      method: "POST",
+      body: JSON.stringify(profile),
+    })
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error("Failed to create profile");
+        }
+        return response.json();
+      })
+      .then((data) => {
+        console.log("Profile created:", data);
+        toast.success("Profile created successfully");
+        onClose();
+      })
+      .catch((error) => {
+        console.error("Error creating profile:", error);
+        toast.error("Failed to create profile");
+      });
+    console.log("created profile:", profile);
     onClose();
   };
 
@@ -91,6 +112,7 @@ const ModalAssignRoleDialog: React.FC<{
                     onChange={handleChange}
                     placeholder="First Name"
                     className="mt-1 w-full border rounded px-3 py-2 text-sm"
+                    required
                   />
                 </div>
                 <div>
@@ -102,6 +124,7 @@ const ModalAssignRoleDialog: React.FC<{
                     onChange={handleChange}
                     placeholder="Last Name"
                     className="mt-1 w-full border rounded px-3 py-2 text-sm"
+                    required
                   />
                 </div>
               </div>
@@ -117,6 +140,7 @@ const ModalAssignRoleDialog: React.FC<{
                     onChange={handleChange}
                     placeholder="Username"
                     className="mt-1 w-full border rounded px-3 py-2 text-sm"
+                    required
                   />
                 </div>
                 <div>
@@ -128,6 +152,7 @@ const ModalAssignRoleDialog: React.FC<{
                     onChange={handleChange}
                     placeholder="example@email.com"
                     className="mt-1 w-full border rounded px-3 py-2 text-sm"
+                    required
                   />
                 </div>
               </div>
@@ -142,6 +167,7 @@ const ModalAssignRoleDialog: React.FC<{
                   onChange={handleChange}
                   placeholder="Street, City, Country"
                   className="mt-1 w-full border rounded px-3 py-2 text-sm"
+                  required
                 />
               </div>
 
@@ -150,12 +176,18 @@ const ModalAssignRoleDialog: React.FC<{
                 <div>
                   <label className="text-sm text-gray-600">Phone</label>
                   <input
-                    type="text"
-                    name="contactNo"
-                    value={profile.contactNo}
-                    onChange={handleChange}
-                    placeholder="09XXXXXXXXX"
-                    className="mt-1 w-full border rounded px-3 py-2 text-sm"
+                  type="text"
+                  name="contactNo"
+                  value={profile.contactNo}
+                  onChange={(e) => {
+                    const onlyNums = e.target.value.replace(/\D/g, "");
+                    setProfile((prev) => ({ ...prev, contactNo: onlyNums }));
+                  }}
+                  placeholder="09XXXXXXXXX"
+                  className="mt-1 w-full border rounded px-3 py-2 text-sm"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  required
                   />
                 </div>
                 <div>
@@ -166,6 +198,7 @@ const ModalAssignRoleDialog: React.FC<{
                     value={profile.birthday}
                     onChange={handleChange}
                     className="mt-1 w-full border rounded px-3 py-2 text-sm"
+                    required
                   />
                 </div>
                 <div>
@@ -175,6 +208,7 @@ const ModalAssignRoleDialog: React.FC<{
                     value={profile.gender}
                     onChange={handleChange}
                     className="mt-1 w-full border rounded px-3 py-2 text-sm"
+                    required
                   >
                     <option value="">Select</option>
                     <option value="Male">Male</option>
@@ -182,20 +216,6 @@ const ModalAssignRoleDialog: React.FC<{
                     <option value="Other">Other</option>
                   </select>
                 </div>
-              </div>
-
-              {/* Occupation */}
-              <div>
-                <label className="text-sm text-gray-600">Occupation</label>
-                <select
-                  name="userType"
-                  value={profile.userType}
-                  onChange={handleChange}
-                  className="mt-1 w-full border rounded px-3 py-2 text-sm"
-                >
-                  <option value="Staff">Staff</option>
-                  <option value="Customer">Customer</option>
-                </select>
               </div>
 
               {/* Submit */}
@@ -209,6 +229,7 @@ const ModalAssignRoleDialog: React.FC<{
           </motion.div>
         </motion.div>
       )}
+      <ToastContainer position="bottom-right" />
     </AnimatePresence>
   );
 };

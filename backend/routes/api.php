@@ -102,6 +102,8 @@
         //admin user management
         Route::get('/admin/users', [UserController::class, 'users']);
         Route::get('/user-appointments/{userId}', [AppointmentController::class, 'getAppointmentsByUser']);
+        //Route::post('/admin/users/{id}/archive', [UserController::class, 'archiveUser']);
+        Route::post('admin/users/create', [UserController::class, 'createUser']);
 
         //admin dashboard
         Route::get('/admin/summary', [DashboardController::class, 'getSummary']);

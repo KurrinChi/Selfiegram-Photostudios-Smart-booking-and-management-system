@@ -6,6 +6,8 @@ import { AnimatePresence, motion } from "framer-motion";
 import UserDetailPanel from "./UserDetailPanel";
 import AssignRoleModal from "./ModalAssignRoleDialog.tsx";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 // Types & Mock Data
 interface Appointment {
@@ -75,6 +77,7 @@ const AdminUsersContent: React.FC = () => {
         setUsers(mappedUsers);
       } catch (error) {
         console.error("Failed to fetch users:", error);
+        toast.error("Failed to fetch users");
       }
     };
 
@@ -122,6 +125,7 @@ const AdminUsersContent: React.FC = () => {
         setUserAppointments((prev) => ({ ...prev, [selected.id]: data }));
       } catch (error) {
         console.error("Failed to fetch appointments:", error);
+        toast.error("Failed to fetch appointments");
       }
     };
 
@@ -145,11 +149,10 @@ const AdminUsersContent: React.FC = () => {
             <button
               key={r}
               onClick={() => setActiveRole(r)}
-              className={`pb-2 transition-colors ${
-                activeRole === r
+              className={`pb-2 transition-colors ${activeRole === r
                   ? "text-black"
                   : "text-gray-500 hover:text-black"
-              }`}
+                }`}
             >
               {r}
             </button>
@@ -173,7 +176,7 @@ const AdminUsersContent: React.FC = () => {
             className="px-3 py-1.5 text-xs bg-gray-300 rounded-md hover:bg-gray-600 hover:text-white transition-colors"
             onClick={() => setShowAssignModal(true)}
           >
-            + Assign Role
+            + Add User
           </button>
           <div className="relative w-64">
             <input
@@ -242,9 +245,8 @@ const AdminUsersContent: React.FC = () => {
           <button
             key={i}
             onClick={() => setPage(i + 1)}
-            className={`px-2 py-1 rounded ${
-              page === i + 1 ? "bg-black text-white" : "border"
-            }`}
+            className={`px-2 py-1 rounded ${page === i + 1 ? "bg-black text-white" : "border"
+              }`}
           >
             {i + 1}
           </button>
@@ -289,6 +291,7 @@ const AdminUsersContent: React.FC = () => {
           />
         )}
       </AnimatePresence>
+      <ToastContainer position="bottom-right" />
     </div>
   );
 };

@@ -15,6 +15,10 @@ export async function fetchWithAuth(url: string, options: RequestInit = {}) {
     headers.set("Content-Type", "application/json");
   }
 
+  if (!headers.has("Accept")) {
+  headers.set("Accept", "application/json");
+}
+
   const response = await fetch(url, {
     ...options,
     headers,

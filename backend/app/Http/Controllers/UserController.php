@@ -4,6 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\CreateStaff;
 
 class UserController extends Controller
 {
@@ -79,35 +83,79 @@ class UserController extends Controller
 
       
       if ($request->hasFile('photo')) {
-    try {
-        $file = $request->file('photo');
-        $filename = time() . '_' . $file->getClientOriginalName();
+        try {
+            $file = $request->file('photo');
+            $filename = time() . '_' . $file->getClientOriginalName();
 
-        \Log::info('Original file name: ' . $file->getClientOriginalName());
-        \Log::info('Storing as: ' . $filename);
+            \Log::info('Original file name: ' . $file->getClientOriginalName());
+            \Log::info('Storing as: ' . $filename);
 
-        
-        $path = $file->storeAs('profile_photos', $filename, 'public');
+            
+            $path = $file->storeAs('profile_photos', $filename, 'public');
 
-        if (!$path) {
-            \Log::error('File storage failed');
+            if (!$path) {
+                \Log::error('File storage failed');
+            }
+
+            \Log::info('File stored at: ' . $path);
+
+            $user->profilePicture = asset('storage/profile_photos/' . $filename);
+            $user->save();
+
+            } catch (\Exception $e) {
+                \Log::error('Photo upload error: ' . $e->getMessage());
+            }
         }
 
-        \Log::info('File stored at: ' . $path);
-
-        $user->profilePicture = asset('storage/profile_photos/' . $filename);
-        $user->save();
-
-    } catch (\Exception $e) {
-        \Log::error('Photo upload error: ' . $e->getMessage());
+            return response()->json([
+                'message' => 'Profile updated successfully',
+                'user' => $user,
+            ]);
     }
-}
 
-   
+    public function createUser(Request $request)
+    {
+        $profile = $request->validate([
+            'username'   => 'required|string|max:50|unique:users,username',
+            'fname'      => 'required|string|max:255',
+            'lname'      => 'required|string|max:255',
+            'email'      => 'required|email|unique:users,email',
+            'address'    => 'required|string|max:255',
+            'contactNo'  => ['required','regex:/^09\d{9}$/'],
+            'gender'     => 'required|string|max:20',
+            'birthday'   => 'required|string|max:40'
+        ]);
+
+        // Generate random password for new users
+        $randomPassword = Str::random(10);
+
+        $user = User::create([
+            'username'           => $profile['username'],
+            'password'           => bcrypt($randomPassword),
+            'fname'              => $profile['fname'],
+            'lname'              => $profile['lname'],
+            'email'              => $profile['email'],
+            'address'            => $profile['address'],
+            'contactNo'          => $profile['contactNo'],
+            'usertype'           => 'Staff',
+            'status'             => '0',
+            'profilePicture'     => url('/storage/profile_photos/DefaultImage.png'),
+            'archive'            => '1',
+            'gender'             => $profile['gender'],
+            'birthday'           => $profile['birthday'],
+            'email_verification' => Str::random(64),
+        ]);
+
+        try {
+            Mail::to($user->email)->send(new CreateStaff($user, $randomPassword));
+        } catch (\Exception $e) {
+            \Log::error('Email sending failed: ' . $e->getMessage());
+        }
 
         return response()->json([
-            'message' => 'Profile updated successfully',
-            'user' => $user,
+            'message' => 'User created successfully',
+            'user'    => $user
         ]);
     }
+
 }
