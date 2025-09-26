@@ -1,7 +1,7 @@
 import React, { useRef, useEffect, useState } from "react";
 import type { HTMLAttributes } from "react";
 import { useCallback } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 
 declare global {
   interface Window {
@@ -152,20 +152,19 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
   const panelVisibilityRef = useRef<boolean>(false);
   const menuBarListenerRef = useRef<((e: Event) => void) | null>(null);
 
-  //const [searchParams] = useSearchParams();
-
   const backendUrl = import.meta.env.VITE_API_URL; // Replace with your backend URL
-  const urlParams = new URLSearchParams(location.search);
-  const imageUrl = `${backendUrl}${decodeURIComponent(urlParams.get("url") || "")}`;
+  const urlParams = new URLSearchParams(window.location.search);
+  const imageUrl = `${backendUrl}${decodeURIComponent(
+    urlParams.get("url") || ""
+  )}`;
 
-console.log("Resolved Image URL:", imageUrl); 
+  console.log("Resolved Image URL:", imageUrl);
 
-  
   useEffect(() => {
-  if (imageUrl) {
-    // re-init if needed
-  }
-}, [imageUrl]);
+    if (imageUrl) {
+      // re-init if needed
+    }
+  }, [imageUrl]);
 
   // track listeners attached to the adjust panel so we can remove them cleanly
   const panelListenersRef = useRef<
@@ -507,6 +506,9 @@ console.log("Resolved Image URL:", imageUrl);
     },
     []
   ); // scheduleApplySession referenced through closure - acceptable
+
+  const location = useLocation();
+  const passedImageUrl = (location.state as { imageUrl?: string })?.imageUrl;
 
   // createAdjustPanel (single creation, UI updates read sessionRef)
   const createAdjustPanel = useCallback(() => {
@@ -857,7 +859,6 @@ console.log("Resolved Image URL:", imageUrl);
         await loadCssWithBackups(TOAST_CSS_BACKUPS);
         await loadCssWithBackups(TOAST_COLOR_PICKER_CSS);
 
-        
         let Constructor: any = undefined;
         // 1) Try to import locally (best)
         try {
@@ -930,7 +931,10 @@ console.log("Resolved Image URL:", imageUrl);
           includeUI: {
             loadImage: {
               path:
-                 imageUrl || sampleImage?.path || "https://picsum.photos/1200/800?random=1",
+                passedImageUrl ||
+                imageUrl ||
+                sampleImage?.path ||
+                "https://picsum.photos/1200/800?random=1",
               name: sampleImage?.name ?? "Sample Image",
             },
             menu: [

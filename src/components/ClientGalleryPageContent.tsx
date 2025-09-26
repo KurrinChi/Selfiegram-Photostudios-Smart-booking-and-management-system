@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { ChevronDown, ChevronUp, Edit, X, Heart } from "lucide-react";
 import JSZip from "jszip";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
@@ -6,54 +7,68 @@ import { fetchWithAuth } from "../utils/fetchWithAuth";
 const TABS = ["Gallery", "Favorites"];
 
 const ClientGalleryPageContent: React.FC = () => {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("Gallery");
   const [galleryData, setGalleryData] = useState<
-    { date: string; images: { id: string; url: string; edited?: boolean; isFavorite?: boolean }[] }[]
+    {
+      date: string;
+      images: {
+        id: string;
+        url: string;
+        edited?: boolean;
+        isFavorite?: boolean;
+      }[];
+    }[]
   >([]);
   const [expandedDates, setExpandedDates] = useState<string[]>([]);
   const [previewImage, setPreviewImage] = useState<null | {
     id: string;
     url: string;
   }>(null);
-  const [selectedImages, setSelectedImages] = useState<string[]>([]); // For multiple select
+  const [selectedImages, setSelectedImages] = useState<string[]>([]);
 
   const API_URL = import.meta.env.VITE_API_URL;
-  const userID = localStorage.getItem("userID"); // Replace with actual user ID logic
-  
+  const userID = localStorage.getItem("userID");
+
   useEffect(() => {
-   const fetchImages = async () => {
-  try {
-    const res = await fetchWithAuth(`${API_URL}/api/user-images/${userID}`);
-    if (!res.ok) throw new Error("Failed to fetch images");
+    const fetchImages = async () => {
+      try {
+        const res = await fetchWithAuth(`${API_URL}/api/user-images/${userID}`);
+        if (!res.ok) throw new Error("Failed to fetch images");
 
-    const data = await res.json();
+        const data = await res.json();
 
-    // Group images by date
-    const groupedImages = groupImagesByDate(
-      data.map((img: any) => ({
-        id: img.imageID,
-        url: `${API_URL}${img.filePath}`,
-        date: new Date(img.uploadDate).toLocaleDateString("en-US", {
-          year: "numeric",
-          month: "long",
-          day: "numeric",
-        }),
-        edited: img.tag === "edited",
-        isFavorite: img.isFavorite === 1, // Map isFavorite field
-      }))
-    );
+        const groupedImages = groupImagesByDate(
+          data.map((img: any) => ({
+            id: img.imageID,
+            url: `${API_URL}${img.filePath}`,
+            date: new Date(img.uploadDate).toLocaleDateString("en-US", {
+              year: "numeric",
+              month: "long",
+              day: "numeric",
+            }),
+            edited: img.tag === "edited",
+            isFavorite: img.isFavorite === 1,
+          }))
+        );
 
-    setGalleryData(groupedImages);
-  } catch (err) {
-    console.error("Error fetching images:", err);
-  }
-};
+        setGalleryData(groupedImages);
+      } catch (err) {
+        console.error("Error fetching images:", err);
+      }
+    };
 
     fetchImages();
   }, [userID]);
 
   const groupImagesByDate = (
-    images: { id: string; url: string; date: string; edited?: boolean; isFavorite?: boolean }[]
+    images: {
+      id: string;
+      url: string;
+      date: string;
+      edited?: boolean;
+      isFavorite?: boolean;
+    }[]
   ) => {
     const grouped: Record<
       string,
@@ -61,7 +76,12 @@ const ClientGalleryPageContent: React.FC = () => {
     > = {};
     images.forEach((img) => {
       if (!grouped[img.date]) grouped[img.date] = [];
-      grouped[img.date].push({ id: img.id, url: img.url, edited: img.edited, isFavorite: img.isFavorite });
+      grouped[img.date].push({
+        id: img.id,
+        url: img.url,
+        edited: img.edited,
+        isFavorite: img.isFavorite,
+      });
     });
     return Object.entries(grouped).map(([date, imgs]) => ({
       date,
@@ -76,128 +96,117 @@ const ClientGalleryPageContent: React.FC = () => {
   };
 
   const toggleFavorite = async (id: string) => {
-  try {
-    const res = await fetchWithAuth(`${API_URL}/api/user-images/favorite/${id}`, {
-      method: "POST",
+    try {
+      const res = await fetchWithAuth(
+        `${API_URL}/api/user-images/favorite/${id}`,
+        { method: "POST" }
+      );
+      if (!res.ok) throw new Error("Failed to toggle favorite");
+
+      const data = await res.json();
+
+      setGalleryData((prev) =>
+        prev.map((group) => ({
+          ...group,
+          images: group.images.map((img) =>
+            img.id === id ? { ...img, isFavorite: data.isFavorite } : img
+          ),
+        }))
+      );
+    } catch (err) {
+      console.error("Error toggling favorite:", err);
+    }
+  };
+
+  // Fixed: Pass image data properly to the editor
+  const handleEdit = (img: { id: string; url: string }) => {
+    // Extract the relative path from the full URL for the editor
+    const relativePath = img.url.replace(API_URL, "");
+
+    // Navigate with both state and URL parameter for maximum compatibility
+    navigate(`/client/gallery/edit?url=${encodeURIComponent(relativePath)}`, {
+      state: {
+        imageUrl: img.url,
+        imageId: img.id,
+        relativePath: relativePath,
+      },
     });
-    if (!res.ok) throw new Error("Failed to toggle favorite");
+  };
 
-    const data = await res.json();
-
-    // Update the local state to reflect the new favorite status
-    setGalleryData((prev) =>
-      prev.map((group) => ({
-        ...group,
-        images: group.images.map((img) =>
-          img.id === id ? { ...img, isFavorite: data.isFavorite } : img
-        ),
-      }))
-    );
-  } catch (err) {
-    console.error("Error toggling favorite:", err);
-  }
-};
-
-  const fetchImageUrl = async (filename: string) => {
-    const response = await fetchWithAuth(`http://192.168.1.214:8000/api/image-url/${filename}`);
-    const data = await response.json();
-    return data.url;
-};
-
-  const handleEdit = async (filename: string) => {
-    const imageUrl = await fetchImageUrl(filename);
-    window.location.href = `/edit?url=${encodeURIComponent(imageUrl)}`;
-};
   const handleSelectImage = (id: string) => {
     setSelectedImages((prev) =>
       prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
     );
   };
 
-  
- const handleDownloadSelected = async () => {
-  if (selectedImages.length === 0) return;
+  const handleDownloadSelected = async () => {
+    if (selectedImages.length === 0) return;
 
-  const zip = new JSZip();
-  const folder = zip.folder("selected-images");
+    const zip = new JSZip();
+    const folder = zip.folder("selected-images");
 
-  try {
-    // Fetch and add each selected image to the zip folder
-    const imagePromises = selectedImages.map(async (id) => {
-      const image = galleryData
-        .flatMap((group) => group.images)
-        .find((img) => img.id === id);
-
-      if (image) {
-        console.log("Fetching image:", image.url); // Debug the image URL
-        const response = await fetch(image.url); // Use fetchWithAuth here
-        if (!response.ok) {
-          console.error(`Failed to fetch image with ID: ${id}`);
-          return;
+    try {
+      const imagePromises = selectedImages.map(async (id) => {
+        const image = galleryData
+          .flatMap((group) => group.images)
+          .find((img) => img.id === id);
+        if (image) {
+          const response = await fetch(image.url);
+          if (!response.ok)
+            return console.error(`Failed to fetch image with ID: ${id}`);
+          const blob = await response.blob();
+          folder?.file(image.url.split("/").pop() || `image-${id}.jpg`, blob);
         }
-        const blob = await response.blob();
-        folder?.file(image.url.split("/").pop() || `image-${id}.jpg`, blob); // Add the image to the zip folder
-      }
-    });
+      });
 
-    await Promise.all(imagePromises);
-
-    // Generate the zip file and trigger download
-    const zipBlob = await zip.generateAsync({ type: "blob" });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(zipBlob);
-    link.download = "selected-images.zip";
-    link.click();
-  } catch (error) {
-    console.error("Error while downloading selected images:", error);
-  }
-};
-
-  
+      await Promise.all(imagePromises);
+      const zipBlob = await zip.generateAsync({ type: "blob" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(zipBlob);
+      link.download = "selected-images.zip";
+      link.click();
+    } catch (error) {
+      console.error("Error while downloading selected images:", error);
+    }
+  };
 
   const handleDeleteSelected = async () => {
     try {
       const res = await fetchWithAuth(`${API_URL}/api/user-images/delete`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ imageIDs: selectedImages }),
       });
 
       if (!res.ok) throw new Error("Failed to delete images");
 
-      // Remove deleted images from the gallery
       setGalleryData((prev) =>
         prev.map((group) => ({
           ...group,
-          images: group.images.filter((img) => !selectedImages.includes(img.id)),
+          images: group.images.filter(
+            (img) => !selectedImages.includes(img.id)
+          ),
         }))
       );
-
-      setSelectedImages([]); // Clear selection
+      setSelectedImages([]);
     } catch (err) {
       console.error("Error deleting images:", err);
     }
   };
 
   const filteredData =
-  activeTab === "Favorites"
-    ? galleryData
-        .map((group) => ({
-          date: group.date,
-          images: group.images.filter((img) => img.isFavorite), // Filter favorites
-        }))
-        .filter((group) => group.images.length > 0) // Remove empty groups
-    : activeTab === "Edited"
-    ? galleryData.map((group) => ({
-        date: group.date,
-        images: group.images.filter((img) => img.edited),
-      }))
-    : galleryData;
+    activeTab === "Favorites"
+      ? galleryData
+          .map((group) => ({
+            date: group.date,
+            images: group.images.filter((img) => img.isFavorite),
+          }))
+          .filter((group) => group.images.length > 0)
+      : galleryData;
 
   return (
     <div className="p-4 font-sf animate-fadeIn">
+      {/* Tabs */}
       <div className="flex justify-between items-center mb-4">
         <div className="flex gap-4">
           {TABS.map((tab) => (
@@ -215,7 +224,7 @@ const ClientGalleryPageContent: React.FC = () => {
           ))}
         </div>
 
-        {/* Multiple Select Actions */}
+        {/* Multi-select actions */}
         {selectedImages.length > 0 && (
           <div className="flex gap-2">
             <button
@@ -234,6 +243,7 @@ const ClientGalleryPageContent: React.FC = () => {
         )}
       </div>
 
+      {/* Gallery */}
       {filteredData.length === 0 ? (
         <div className="text-center text-gray-500 mt-20">
           <p className="text-lg font-medium mb-2">No photos yet</p>
@@ -281,16 +291,18 @@ const ClientGalleryPageContent: React.FC = () => {
                             toggleFavorite(img.id);
                           }}
                         >
-                         <Heart
-                          className={`w-5 h-5 ${img.isFavorite ? "text-pink-500" : "text-gray-500"}`}
-                          fill={img.isFavorite ? "currentColor" : "none"}
-                        />
+                          <Heart
+                            className={`w-5 h-5 ${
+                              img.isFavorite ? "text-pink-500" : "text-gray-500"
+                            }`}
+                            fill={img.isFavorite ? "currentColor" : "none"}
+                          />
                         </button>
                         <button
                           className="p-1.5 rounded-full bg-gray-100 hover:bg-gray-200"
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleEdit(img.id);
+                            handleEdit(img);
                           }}
                         >
                           <Edit className="w-5 h-5 text-gray-500" />
@@ -305,6 +317,7 @@ const ClientGalleryPageContent: React.FC = () => {
         ))
       )}
 
+      {/* Preview Modal */}
       {previewImage && (
         <div
           className="fixed inset-0 bg-black/90 backdrop-blur-sm z-50 flex items-center justify-center"
@@ -317,7 +330,6 @@ const ClientGalleryPageContent: React.FC = () => {
             >
               <X className="w-6 h-6" />
             </button>
-
             <img
               src={previewImage.url}
               alt=""
