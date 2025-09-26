@@ -60,10 +60,9 @@ const ModalAssignRoleDialog: React.FC<{
       })
       .catch((error) => {
         console.error("Error creating profile:", error);
-        toast.error("Failed to create profile");
+        toast.error("Failed to create profile", error);
       });
     console.log("created profile:", profile);
-    onClose();
   };
 
   return (
