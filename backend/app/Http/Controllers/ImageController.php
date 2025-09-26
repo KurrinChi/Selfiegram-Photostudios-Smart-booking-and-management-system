@@ -55,28 +55,51 @@ class ImageController extends Controller
 
     public function proxyImage(Request $request)
     {
-        // Validate the request to ensure the `path` parameter is provided
-        $request->validate([
-            'path' => 'required|string',
-        ]);
+       // Handle preflight OPTIONS request
+    if ($request->getMethod() === 'OPTIONS') {
+        return response('', 200)
+            ->header('Access-Control-Allow-Origin', '*')
+            ->header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+            ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With')
+            ->header('Access-Control-Max-Age', '86400');
+    }
 
-        // Get the image path from the query parameter
-        $path = $request->query('path');
+    // Validate the request to ensure the `path` parameter is provided
+    $request->validate([
+        'path' => 'required|string',
+    ]);
 
-        // Check if the file exists in storage
-        if (!Storage::exists($path)) {
-            return response()->json(['error' => 'Image not found'], Response::HTTP_NOT_FOUND);
-        }
+    // Get the image path from the query parameter
+    $path = $request->query('path');
 
+    // Sanitize the path to prevent directory traversal attacks
+    $path = str_replace(['../', '..\\'], '', $path);
+    
+    // Check if the file exists in storage
+    if (!Storage::exists($path)) {
+        \Log::error('Image not found: ' . $path);
+        return response()->json(['error' => 'Image not found', 'path' => $path], Response::HTTP_NOT_FOUND)
+            ->header('Access-Control-Allow-Origin', '*')
+            ->header('Access-Control-Allow-Methods', 'GET, OPTIONS')
+            ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    }
+
+    try {
         // Serve the file as a response
         $file = Storage::get($path);
         $mimeType = Storage::mimeType($path);
 
-        
         return response($file, Response::HTTP_OK)
             ->header('Content-Type', $mimeType)
-            ->header('Access-Control-Allow-Origin', '*') 
+            ->header('Access-Control-Allow-Origin', '*')
             ->header('Access-Control-Allow-Methods', 'GET, OPTIONS')
-            ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+            ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+            ->header('Cache-Control', 'public, max-age=31536000') // Cache for 1 year
+            ->header('Expires', gmdate('D, d M Y H:i:s', time() + 31536000) . ' GMT');
+    } catch (\Exception $e) {
+        \Log::error('Error serving image: ' . $e->getMessage());
+        return response()->json(['error' => 'Error serving image'], Response::HTTP_INTERNAL_SERVER_ERROR)
+            ->header('Access-Control-Allow-Origin', '*');
     }
+}
 }

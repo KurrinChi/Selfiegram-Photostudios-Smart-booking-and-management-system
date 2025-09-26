@@ -198,5 +198,6 @@
     //receipt
     Route::get('/receipt/{id}', [ReceiptController::class, 'show']);
      Route::get('/image-url/{imageID}', [ImageController::class, 'getImageUrl']);
-        Route::get('/proxy-image', [ImageController::class, 'proxyImage']);
+    Route::get('/proxy-image', [ImageController::class, 'proxyImage'])->name('proxy.image');
+Route::options('/proxy-image', [ImageController::class, 'proxyImage']); // Handle OPTIONS requests
 ?>

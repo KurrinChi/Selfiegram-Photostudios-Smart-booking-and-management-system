@@ -160,7 +160,6 @@ const imageUrl = `${backendUrl}/api/proxy-image?path=${encodeURIComponent(
   filePath.replace(/^\/storage\//, '')
 )}`;
 
-console.log("Resolved Image URL:", imageUrl); 
 
   
   useEffect(() => {

@@ -27,7 +27,7 @@ const ClientGalleryPageContent: React.FC = () => {
     if (!res.ok) throw new Error("Failed to fetch images");
 
     const data = await res.json();
-
+     console.log("Raw API data:", data);
     // Group images by date
     const groupedImages = groupImagesByDate(
       data.map((img: any) => ({
@@ -97,7 +97,7 @@ const ClientGalleryPageContent: React.FC = () => {
 };
 
   const fetchImageUrl = async (filename: string) => {
-    const response = await fetchWithAuth(`http://192.168.1.214:8000/api/image-url/${filename}`);
+    const response = await fetchWithAuth(`${API_URL}/api/image-url/${filename}`);
     const data = await response.json();
     return data.url;
 };
