@@ -20,7 +20,7 @@ const ClientGalleryPageContent: React.FC = () => {
       }[];
     }[]
   >([]);
-  const [expandedDates, setExpandedDates] = useState<string[]>([]);
+
   const [previewImage, setPreviewImage] = useState<null | {
     id: string;
     url: string;
@@ -38,17 +38,20 @@ const ClientGalleryPageContent: React.FC = () => {
 
         const data = await res.json();
 
+        // Group images by date
         const groupedImages = groupImagesByDate(
           data.map((img: any) => ({
             id: img.imageID,
-            url: `${API_URL}${img.filePath}`,
+            url: `${API_URL}/api/proxy-image?path=${encodeURIComponent(
+              img.filePath.replace(/^\/storage\//, "")
+            )}`,
             date: new Date(img.uploadDate).toLocaleDateString("en-US", {
               year: "numeric",
               month: "long",
               day: "numeric",
             }),
             edited: img.tag === "edited",
-            isFavorite: img.isFavorite === 1,
+            isFavorite: img.isFavorite === 1, // Map isFavorite field
           }))
         );
 
@@ -87,12 +90,6 @@ const ClientGalleryPageContent: React.FC = () => {
       date,
       images: imgs,
     }));
-  };
-
-  const toggleDate = (date: string) => {
-    setExpandedDates((prev) =>
-      prev.includes(date) ? prev.filter((d) => d !== date) : [...prev, date]
-    );
   };
 
   const toggleFavorite = async (id: string) => {
@@ -170,7 +167,7 @@ const ClientGalleryPageContent: React.FC = () => {
     }
   };
 
-  const handleDeleteSelected = async () => {
+  /*const handleDeleteSelected = async () => {
     try {
       const res = await fetchWithAuth(`${API_URL}/api/user-images/delete`, {
         method: "POST",
@@ -192,7 +189,7 @@ const ClientGalleryPageContent: React.FC = () => {
     } catch (err) {
       console.error("Error deleting images:", err);
     }
-  };
+  };*/
 
   const filteredData =
     activeTab === "Favorites"
@@ -233,12 +230,14 @@ const ClientGalleryPageContent: React.FC = () => {
             >
               Download
             </button>
+            {/* Delete Button 
             <button
               className="px-4 py-1 bg-red-500 text-white rounded-md hover:bg-red-600"
               onClick={handleDeleteSelected}
             >
               Delete
             </button>
+            */}
           </div>
         )}
       </div>
@@ -254,17 +253,10 @@ const ClientGalleryPageContent: React.FC = () => {
       ) : (
         filteredData.map((group) => (
           <div key={group.date} className="mb-6">
-            <button
-              className="flex justify-between items-center w-full text-left font-medium text-lg mb-2"
-              onClick={() => toggleDate(group.date)}
-            >
+            {/* Date Header */}
+            <div className="flex justify-between items-center w-full text-left font-medium text-lg mb-2">
               <span>{group.date}</span>
-              {expandedDates.includes(group.date) ? (
-                <ChevronUp className="w-4 h-4" />
-              ) : (
-                <ChevronDown className="w-4 h-4" />
-              )}
-            </button>
+            </div>
 
             {expandedDates.includes(group.date) && (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
@@ -302,7 +294,7 @@ const ClientGalleryPageContent: React.FC = () => {
                           className="p-1.5 rounded-full bg-gray-100 hover:bg-gray-200"
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleEdit(img);
+                            handleEdit(img.id);
                           }}
                         >
                           <Edit className="w-5 h-5 text-gray-500" />

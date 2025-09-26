@@ -188,13 +188,13 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isAdjustPanelOpen, setIsAdjustPanelOpen] = useState(false);
-  const [currentActiveMenu, setCurrentActiveMenu] = useState<string>("");
+  const [, setCurrentActiveMenu] = useState<string>("");
 
   useEffect(() => {
     panelVisibilityRef.current = isAdjustPanelOpen;
   }, [isAdjustPanelOpen]);
 
-  const formatValueForLabel = (key: keyof AdjustValues, val: number) => {
+  const formatValueForLabel = (_key: keyof AdjustValues, val: number) => {
     const abs = Math.abs(val);
     if (abs < 1) return val.toFixed(2);
     if (abs < 10) return val.toFixed(2);
@@ -1484,93 +1484,141 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
         width: "100%",
         height: "100vh",
         position: "relative",
-        background: "linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)",
+        background: "#ffffff", // Set the background to white
         overflow: "hidden",
+        display: "flex",
+        flexDirection: "column", // Stack header and editor vertically
       }}
     >
-      {loading && (
-        <div
-          style={{
-            position: "absolute",
-            inset: 0,
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 9999,
-            background: "rgba(255,255,255,0.95)",
-            backdropFilter: "blur(10px)",
-          }}
-        >
-          <div
-            style={{
-              width: "60px",
-              height: "60px",
-              border: "4px solid #e3f2fd",
-              borderTop: "4px solid #2196f3",
-              borderRadius: "50%",
-              animation: "spin 1s linear infinite",
-              marginBottom: "20px",
-            }}
-          />
-          <div
-            style={{
-              fontSize: "18px",
-              fontWeight: "600",
-              color: "#1565c0",
-              marginBottom: "8px",
-            }}
+      {/* Header Section */}
+      <header className="w-full bg-white px-4 py-3 flex justify-between items-center shadow-sm">
+        <div className="flex items-center gap-3">
+          {/* Back Button */}
+          <button
+            onClick={() => window.history.back()} // Navigate back to the previous page
+            className="flex items-center gap-1 text-gray-600 hover:text-gray-800"
           >
-            Loading Image Editor...
-          </div>
-          <div
-            style={{ fontSize: "14px", color: "#757575", textAlign: "center" }}
-          >
-            Initializing advanced photo editing tools
-          </div>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={1.5}
+              stroke="currentColor"
+              className="w-5 h-5"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M15.75 19.5L8.25 12l7.5-7.5"
+              />
+            </svg>
+            <span className="text-sm font-medium">Back</span>
+          </button>
+          <img src="/slfg.svg" alt="Selfie Gram Logo" className="w-13 ml-4" />
+          <h1 className="text-xs font-bold tracking-widest hidden md:block">
+            SELFIEGRAM PHOTO EDITOR POWERED BY TOAST UI
+          </h1>
         </div>
-      )}
+      </header>
 
-      {error && (
-        <div
-          style={{
-            position: "absolute",
-            top: "20px",
-            right: "20px",
-            background: "linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%)",
-            padding: "16px 20px",
-            borderRadius: "12px",
-            zIndex: 9999,
-            border: "1px solid #e57373",
-            boxShadow: "0 4px 12px rgba(244,67,54,0.3)",
-            maxWidth: "350px",
-          }}
-        >
-          <div
-            style={{
-              fontWeight: "600",
-              color: "#c62828",
-              marginBottom: "4px",
-              fontSize: "14px",
-            }}
-          >
-            ⚠️ Error
-          </div>
-          <div style={{ color: "#d32f2f", fontSize: "13px" }}>{error}</div>
-        </div>
-      )}
-
+      {/* Editor Section */}
       <div
-        ref={editorRef}
         style={{
-          width: "100%",
-          height: "100%",
-          position: "relative",
-          borderRadius: "12px",
-          overflow: "hidden",
-          boxShadow: "0 8px 32px rgba(0,0,0,0.1)",
+          flex: 1, // Take up the remaining space
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          padding: "16px",
         }}
-      />
+      >
+        {loading && (
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              zIndex: 9999,
+              background: "rgba(255,255,255,0.95)",
+              backdropFilter: "blur(10px)",
+            }}
+          >
+            <div
+              style={{
+                width: "60px",
+                height: "60px",
+                border: "4px solid #e3f2fd",
+                borderTop: "4px solid #000000ff",
+                borderRadius: "50%",
+                animation: "spin 1s linear infinite",
+                marginBottom: "20px",
+              }}
+            />
+            <div
+              style={{
+                fontSize: "18px",
+                fontWeight: "600",
+                color: "#000000ff",
+                marginBottom: "8px",
+              }}
+            >
+              Loading Image Editor...
+            </div>
+            <div
+              style={{
+                fontSize: "14px",
+                color: "#757575",
+                textAlign: "center",
+              }}
+            >
+              Initializing advanced photo editing tools
+            </div>
+          </div>
+        )}
+
+        {error && (
+          <div
+            style={{
+              position: "absolute",
+              top: "20px",
+              right: "20px",
+              background: "linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%)",
+              padding: "16px 20px",
+              borderRadius: "12px",
+              zIndex: 9999,
+              border: "1px solid #e57373",
+              boxShadow: "0 4px 12px rgba(244,67,54,0.3)",
+              maxWidth: "350px",
+            }}
+          >
+            <div
+              style={{
+                fontWeight: "600",
+                color: "#c62828",
+                marginBottom: "4px",
+                fontSize: "14px",
+              }}
+            >
+              ⚠️ Error
+            </div>
+            <div style={{ color: "#d32f2f", fontSize: "13px" }}>{error}</div>
+          </div>
+        )}
+
+        <div
+          ref={editorRef}
+          style={{
+            width: "100%",
+            height: "100%",
+            position: "relative",
+            borderRadius: "12px",
+            overflow: "hidden",
+            boxShadow: "0 8px 32px rgba(0,0,0,0.1)",
+          }}
+        />
+      </div>
 
       <style>{`
         @keyframes spin {
