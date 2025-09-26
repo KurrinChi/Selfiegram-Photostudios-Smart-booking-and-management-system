@@ -122,7 +122,7 @@ const ClientFavoritePageContent: React.FC = () => {
                   whileTap={{ scale: 5 }}
                   className="absolute top-3 right-3 z-20 w-8 h-8 rounded-full backdrop-blur-sm flex items-center justify-center transition"
                 >
-                  <Heart className="w-5 h-5 fill-pink-500 text-gray-600 transition-colors" />
+                  <Heart className="w-5 h-5  fill-pink-500 text-gray-600 transition-colors" />
                   <AnimatePresence>
                     <motion.div
                       key="burst"

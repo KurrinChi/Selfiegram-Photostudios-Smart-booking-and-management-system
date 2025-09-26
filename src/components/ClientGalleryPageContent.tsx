@@ -29,35 +29,35 @@ const ClientGalleryPageContent: React.FC = () => {
   const userID = localStorage.getItem("userID"); // Replace with actual user ID logic
 
   useEffect(() => {
-    const fetchImages = async () => {
-      try {
-        const res = await fetchWithAuth(`${API_URL}/api/user-images/${userID}`);
-        if (!res.ok) throw new Error("Failed to fetch images");
+   const fetchImages = async () => {
+  try {
+    const res = await fetchWithAuth(`${API_URL}/api/user-images/${userID}`);
+    if (!res.ok) throw new Error("Failed to fetch images");
 
-        const data = await res.json();
+    const data = await res.json();
 
-        // Group images by date
-        const groupedImages = groupImagesByDate(
-          data.map((img: any) => ({
-            id: img.imageID,
-            url: `${API_URL}/api/proxy-image?path=${encodeURIComponent(
-              img.filePath.replace(/^\/storage\//, "")
-            )}`,
-            date: new Date(img.uploadDate).toLocaleDateString("en-US", {
-              year: "numeric",
-              month: "long",
-              day: "numeric",
-            }),
-            edited: img.tag === "edited",
-            isFavorite: img.isFavorite === 1, // Map isFavorite field
-          }))
-        );
+    // Group images by date
+    const groupedImages = groupImagesByDate(
+      data.map((img: any) => ({
+        id: img.imageID,
+        url: `${API_URL}/api/proxy-image?path=${encodeURIComponent(
+        img.filePath.replace(/^\/storage\//, '')
+      )}`,
+        date: new Date(img.uploadDate).toLocaleDateString("en-US", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        }),
+        edited: img.tag === "edited",
+        isFavorite: img.isFavorite === 1, // Map isFavorite field
+      }))
+    );
 
-        setGalleryData(groupedImages);
-      } catch (err) {
-        console.error("Error fetching images:", err);
-      }
-    };
+    setGalleryData(groupedImages);
+  } catch (err) {
+    console.error("Error fetching images:", err);
+  }
+};
 
     fetchImages();
   }, [userID]);
@@ -118,7 +118,7 @@ const ClientGalleryPageContent: React.FC = () => {
 
   const fetchImageUrl = async (filename: string) => {
     const response = await fetchWithAuth(
-      `http://192.168.1.214:8000/api/image-url/${filename}`
+      `${API_URL}/api/image-url/${filename}`
     );
     const data = await response.json();
     return data.url;
