@@ -3,42 +3,39 @@ import ProtectedRoute from "./ProtectedRoute";
 import PublicRoute from "./PublicRoute";
 import { AnimatePresence } from "framer-motion";
 
-// Public Pages
 import Login from "./page/Login";
 import Register from "./page/Register";
 import RegisterInfoForm from "./page/RegisterInfo";
 import RegisterSuccess from "./page/RegisterSuccess";
-import LandingPage from "./components/LandingPage";
 
-// Admin Pages
-import AdminDashboardPage from "./page/admin/DashboardPage";
-import AdminUsersPage from "./page/admin/UsersPage";
-import AdminAppointmentsPage from "./page/admin/AppointmentsPage";
-import AdminSalesPage from "./page/admin/SalesPage";
-import AdminMessagesPage from "./page/admin/MessagesPage";
-import AdminProfilePage from "./page/admin/ProfilePage";
-import AdminGalleryPage from "./page/admin/GalleryPage";
-import AdminEditExtras from "./components/Packages/editExtras";
+import AdminDashboardPage from "./page/admin/DashboardPage.tsx";
+import AdminUsersPage from "./page/admin/UsersPage.tsx";
+import AdminAppointmentsPage from "./page/admin/AppointmentsPage.tsx";
+import AdminSalesPage from "./page/admin/SalesPage.tsx";
+import AdminMessagesPage from "./page/admin/MessagesPage.tsx";
+import AdminProfilePage from "./page/admin/ProfilePage.tsx";
+import AdminGalleryPage from "./page/admin/GalleryPage.tsx";
+import AdminEditExtras from "../src/components/Packages/editExtras.tsx";
 
-import AdminPackagesPage from "./page/admin/PackagesPage";
-import AdminPackageContent from "./components/AdminPackageContent";
-import AddPackagePage from "./components/Packages/add";
-import EditPackagePage from "./components/Packages/edit";
-import SelectPackagePage from "./components/Packages/select";
+import AdminPackagesPage from "./page/admin/PackagesPage.tsx";
+import AdminPackageContent from "../src/components/AdminPackageContent.tsx";
+import AddPackagePage from "../src/components/Packages/add.tsx";
+import EditPackagePage from "../src/components/Packages/edit.tsx";
+import SelectPackagePage from "../src/components/Packages/select.tsx";
 
-// Client Pages
-import ClientHomePage from "./page/client/HomePage";
-import ClientPackagesPage from "./page/client/PackagePage";
-import ClientFavoritesPage from "./page/client/FavoritePage";
-import ClientGalleryPageContent from "./components/ClientGalleryPageContent.tsx";
-import ClientGalleryPage from "./page/client/GalleryPage";
-import ClientInboxPage from "./page/client/InboxPage";
-import ClientAppointmentsPage from "./page/client/AppointmentsPage";
-import ClientHistoryPage from "./page/client/HistoryPage";
-import ClientSettingsPage from "./page/client/SettingsPage";
-import ClientPackagePageContent from "./components/ClientPackagePageContent";
-import ReceiptPage from "./page/client/ReceiptPage";
-import PhotoEditorAPI from "./components/Embed/PhotoEditor";
+// Client pages
+import ClientHomePage from "./page/client/HomePage.tsx";
+import ClientPackagesPage from "./page/client/PackagePage.tsx";
+import ClientFavoritesPage from "./page/client/FavoritePage.tsx";
+import ClientGalleryPage from "./page/client/GalleryPage.tsx";
+import ClientInboxPage from "./page/client/InboxPage.tsx";
+import ClientAppointmentsPage from "./page/client/AppointmentsPage.tsx";
+import ClientHistoryPage from "./page/client/HistoryPage.tsx";
+import ClientSettingsPage from "./page/client/SettingsPage.tsx";
+import ClientPackagePageContent from "./components/ClientPackagePageContent.tsx";
+import ReceiptPage from "./page/client/ReceiptPage.tsx";
+import PhotoEditorAPI from "./components/Embed/PhotoEditor.tsx";
+import LandingPage from "./components/LandingPage.tsx";
 
 const App = () => {
   const location = useLocation();
@@ -47,14 +44,6 @@ const App = () => {
     <AnimatePresence mode="wait">
       <Routes location={location} key={location.pathname}>
         {/* Public routes */}
-        <Route
-          path="/"
-          element={
-            <PublicRoute>
-              <LandingPage />
-            </PublicRoute>
-          }
-        />
         <Route
           path="/login"
           element={
@@ -87,7 +76,34 @@ const App = () => {
             </PublicRoute>
           }
         />
+        <Route
+          path="/"
+          element={
+            <PublicRoute>
+              <LandingPage />
+            </PublicRoute>
+          }
+        />
 
+        {/* Routes that are not found */}
+        <Route
+          path="*"
+          element={
+            <PublicRoute>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  height: "100vh",
+                }}
+              >
+                404 Not Found
+              </div>
+            </PublicRoute>
+          }
+        />
+        {/* <Route path="/" element={<ProtectedRoute><div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh" }}>Already Logged In</div></ProtectedRoute>} /> */}
         {/* Admin routes */}
         <Route
           path="/admin/dashboard"
@@ -137,6 +153,7 @@ const App = () => {
             </ProtectedRoute>
           }
         />
+
         <Route
           path="/admin/packages"
           element={
@@ -150,6 +167,7 @@ const App = () => {
           <Route path="edit/:id" element={<EditPackagePage />} />
           <Route path="select/:id" element={<SelectPackagePage />} />
         </Route>
+
         <Route
           path="/admin/packages/extras"
           element={
@@ -158,6 +176,7 @@ const App = () => {
             </ProtectedRoute>
           }
         />
+
         <Route
           path="/admin/gallery"
           element={
@@ -167,7 +186,7 @@ const App = () => {
           }
         />
 
-        {/* Client routes */}
+        {/* Client Routes */}
         <Route
           path="/client/home"
           element={
@@ -187,6 +206,7 @@ const App = () => {
           <Route index element={<ClientPackagePageContent />} />
           <Route path="select/:id" element={<SelectPackagePage />} />
         </Route>
+
         <Route
           path="/client/favorites"
           element={
@@ -195,7 +215,6 @@ const App = () => {
             </ProtectedRoute>
           }
         />
-
         <Route
           path="/client/gallery"
           element={
@@ -203,11 +222,7 @@ const App = () => {
               <ClientGalleryPage />
             </ProtectedRoute>
           }
-        >
-          <Route index element={<ClientGalleryPageContent />} />
-          <Route path="edit" element={<PhotoEditorAPI />} />
-        </Route>
-
+        />
         <Route
           path="/client/inbox"
           element={
@@ -241,25 +256,12 @@ const App = () => {
           }
         />
 
-        {/* Misc routes */}
-        <Route path="/receipt/booking/:bookingID" element={<ReceiptPage />} />
+        <Route path="/edit" element={<PhotoEditorAPI />} />
 
-        {/* 404 fallback */}
-        <Route
-          path="*"
-          element={
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "center",
-                alignItems: "center",
-                height: "100vh",
-              }}
-            >
-              404 Not Found
-            </div>
-          }
-        />
+        <Route path="/receipt/booking/:bookingID" element={<ReceiptPage />} />
+        {/* Fallback */}
+
+        <Route path="*" element={<LandingPage />} />
       </Routes>
     </AnimatePresence>
   );

@@ -160,13 +160,6 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
     filePath.replace(/^\/storage\//, "")
   )}`;
 
-  console.log("Resolved Image URL:", imageUrl);
-
-  useEffect(() => {
-    if (imageUrl) {
-      // re-init if needed
-    }
-  }, [imageUrl]);
 
   // track listeners attached to the adjust panel so we can remove them cleanly
   const panelListenersRef = useRef<
