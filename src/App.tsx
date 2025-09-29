@@ -36,6 +36,7 @@ import ClientPackagePageContent from "./components/ClientPackagePageContent.tsx"
 import ReceiptPage from "./page/client/ReceiptPage.tsx";
 import PhotoEditorAPI from "./components/Embed/PhotoEditor.tsx";
 import LandingPage from "./components/LandingPage.tsx";
+import { ToastContainer } from "react-toastify";
 
 const App = () => {
   const location = useLocation();
@@ -118,6 +119,7 @@ const App = () => {
           element={
             <ProtectedRoute allowedRoles={["Admin"]}>
               <AdminUsersPage />
+              <ToastContainer position="bottom-right" />
             </ProtectedRoute>
           }
         />
@@ -150,6 +152,7 @@ const App = () => {
           element={
             <ProtectedRoute allowedRoles={["Admin"]}>
               <AdminProfilePage />
+              <ToastContainer position="bottom-right" />
             </ProtectedRoute>
           }
         />
@@ -252,6 +255,7 @@ const App = () => {
           element={
             <ProtectedRoute allowedRoles={["Customer"]}>
               <ClientSettingsPage />
+              <ToastContainer position="bottom-right" />
             </ProtectedRoute>
           }
         />

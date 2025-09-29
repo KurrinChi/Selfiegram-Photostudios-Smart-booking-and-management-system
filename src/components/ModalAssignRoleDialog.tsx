@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
-import { toast, ToastContainer } from "react-toastify";
+import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
 interface UserProfile {
@@ -31,6 +31,8 @@ const ModalAssignRoleDialog: React.FC<{
     gender: "",
   });
 
+  const [loading, setLoading] = useState(false);
+
   const API_URL = import.meta.env.VITE_API_URL;
 
   const handleChange = (
@@ -42,6 +44,7 @@ const ModalAssignRoleDialog: React.FC<{
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setLoading(true);
 
     fetchWithAuth(`${API_URL}/api/admin/users/create`, {
       method: "POST",
@@ -55,13 +58,20 @@ const ModalAssignRoleDialog: React.FC<{
       })
       .then((data) => {
         console.log("Profile created:", data);
-        toast.success("Profile created successfully");
+        toast.success("Profile created successfully. Check email for verification.", { autoClose: 4000 });
+        setTimeout(() => {
+          window.location.reload();
+        }, 4000);
         onClose();
       })
       .catch((error) => {
         console.error("Error creating profile:", error);
-        toast.error("Failed to create profile", error);
+        toast.error("Failed to create profile", { autoClose: 3000 });
+      })
+      .finally(() => {
+        setLoading(false);
       });
+
     console.log("created profile:", profile);
   };
 
@@ -85,6 +95,7 @@ const ModalAssignRoleDialog: React.FC<{
             <button
               onClick={onClose}
               className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
+              disabled={loading}
             >
               <X className="w-5 h-5" />
             </button>
@@ -112,6 +123,7 @@ const ModalAssignRoleDialog: React.FC<{
                     placeholder="First Name"
                     className="mt-1 w-full border rounded px-3 py-2 text-sm"
                     required
+                    disabled={loading}
                   />
                 </div>
                 <div>
@@ -124,6 +136,7 @@ const ModalAssignRoleDialog: React.FC<{
                     placeholder="Last Name"
                     className="mt-1 w-full border rounded px-3 py-2 text-sm"
                     required
+                    disabled={loading}
                   />
                 </div>
               </div>
@@ -140,6 +153,7 @@ const ModalAssignRoleDialog: React.FC<{
                     placeholder="Username"
                     className="mt-1 w-full border rounded px-3 py-2 text-sm"
                     required
+                    disabled={loading}
                   />
                 </div>
                 <div>
@@ -152,6 +166,7 @@ const ModalAssignRoleDialog: React.FC<{
                     placeholder="example@email.com"
                     className="mt-1 w-full border rounded px-3 py-2 text-sm"
                     required
+                    disabled={loading}
                   />
                 </div>
               </div>
@@ -167,6 +182,7 @@ const ModalAssignRoleDialog: React.FC<{
                   placeholder="Street, City, Country"
                   className="mt-1 w-full border rounded px-3 py-2 text-sm"
                   required
+                  disabled={loading}
                 />
               </div>
 
@@ -175,18 +191,19 @@ const ModalAssignRoleDialog: React.FC<{
                 <div>
                   <label className="text-sm text-gray-600">Phone</label>
                   <input
-                  type="text"
-                  name="contactNo"
-                  value={profile.contactNo}
-                  onChange={(e) => {
-                    const onlyNums = e.target.value.replace(/\D/g, "");
-                    setProfile((prev) => ({ ...prev, contactNo: onlyNums }));
-                  }}
-                  placeholder="09XXXXXXXXX"
-                  className="mt-1 w-full border rounded px-3 py-2 text-sm"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  required
+                    type="text"
+                    name="contactNo"
+                    value={profile.contactNo}
+                    onChange={(e) => {
+                      const onlyNums = e.target.value.replace(/\D/g, "");
+                      setProfile((prev) => ({ ...prev, contactNo: onlyNums }));
+                    }}
+                    placeholder="09XXXXXXXXX"
+                    className="mt-1 w-full border rounded px-3 py-2 text-sm"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    required
+                    disabled={loading}
                   />
                 </div>
                 <div>
@@ -198,6 +215,7 @@ const ModalAssignRoleDialog: React.FC<{
                     onChange={handleChange}
                     className="mt-1 w-full border rounded px-3 py-2 text-sm"
                     required
+                    disabled={loading}
                   />
                 </div>
                 <div>
@@ -208,6 +226,7 @@ const ModalAssignRoleDialog: React.FC<{
                     onChange={handleChange}
                     className="mt-1 w-full border rounded px-3 py-2 text-sm"
                     required
+                    disabled={loading}
                   >
                     <option value="">Select</option>
                     <option value="Male">Male</option>
@@ -220,15 +239,40 @@ const ModalAssignRoleDialog: React.FC<{
               {/* Submit */}
               <button
                 type="submit"
-                className="w-full py-2 bg-black text-white rounded-md hover:opacity-80 text-sm font-medium"
+                className={`w-full py-2 flex justify-center items-center gap-2 text-white rounded-md text-sm font-medium ${loading
+                    ? "bg-gray-400 cursor-not-allowed"
+                    : "bg-black hover:opacity-80"
+                  }`}
+                disabled={loading}
               >
-                Add Profile
+                {loading && (
+                  <svg
+                    className="animate-spin h-4 w-4 text-white"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    ></circle>
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    ></path>
+                  </svg>
+                )}
+                {loading ? "Adding..." : "Add Profile"}
               </button>
             </form>
           </motion.div>
         </motion.div>
       )}
-      <ToastContainer position="bottom-right" />
     </AnimatePresence>
   );
 };

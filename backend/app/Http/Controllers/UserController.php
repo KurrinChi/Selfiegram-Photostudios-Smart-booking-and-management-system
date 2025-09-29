@@ -12,7 +12,7 @@ use App\Mail\CreateStaff;
 class UserController extends Controller
 {
     public function users() {
-        $users = User::select('userID', 'username', 'fname', 'lname', 'email', 'address', 'contactNo', 'userType', 'birthday', 'profilePicture')->get();
+        $users = User::select('userID', 'username', 'fname', 'lname', 'email', 'address', 'contactNo', 'userType', 'birthday', 'profilePicture', 'archive')->get();
 
         $users->transform(function ($user) {
             $user->name = $user->fname . ' ' . $user->lname;
@@ -157,5 +157,26 @@ class UserController extends Controller
             'user'    => $user
         ]);
     }
+
+    public function archiveUser($id)
+    {
+        $user = User::find($id);
+
+        if (!$user) {
+            return response()->json(['message' => 'User not found'], 404);
+        }
+
+        // Toggle archive: 0 = active, 1 = archived
+        $user->archive = $user->archive == 1 ? 0 : 1;
+        $user->save();
+
+        $status = $user->archive == 1 ? 'archived' : 'unarchived';
+
+        return response()->json([
+            'message' => "User {$status} successfully",
+            'archive' => $user->archive
+        ]);
+    }
+
 
 }

@@ -3,13 +3,13 @@ import React, { useMemo, useState, useEffect } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faEye, faSearch } from "@fortawesome/free-solid-svg-icons";
 import { AnimatePresence, motion } from "framer-motion";
+import { Archive, RefreshCw } from "lucide-react";
 import UserDetailPanel from "./UserDetailPanel";
 import AssignRoleModal from "./ModalAssignRoleDialog.tsx";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
-import { toast, ToastContainer } from "react-toastify";
+import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
-// Types & Mock Data
 interface Appointment {
   id: string;
   customerName: string;
@@ -26,6 +26,7 @@ interface Appointment {
 }
 
 interface User {
+  archive: number | string;
   id: string;
   profilePicture: string;
   name: string;
@@ -39,10 +40,8 @@ interface User {
 }
 
 const roles = ["Customer", "Staff"] as const;
-
 const API_URL = import.meta.env.VITE_API_URL;
 
-// Main Component
 const AdminUsersContent: React.FC = () => {
   const [activeRole, setActiveRole] =
     useState<(typeof roles)[number]>("Customer");
@@ -50,6 +49,7 @@ const AdminUsersContent: React.FC = () => {
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<User | null>(null);
   const [showAssignModal, setShowAssignModal] = useState(false);
+  const [confirmArchive, setConfirmArchive] = useState<User | null>(null);
   const pageSize = 10;
 
   const [users, setUsers] = useState<User[]>([]);
@@ -60,7 +60,6 @@ const AdminUsersContent: React.FC = () => {
         const response = await fetchWithAuth(`${API_URL}/api/admin/users`);
         const rawData = await response.json();
 
-        //for mapping, so that there will be no conflict here with the ones in the database!!!
         const mappedUsers: User[] = rawData.map((user: any) => ({
           id: user.userID.toString(),
           name: user.name,
@@ -72,6 +71,7 @@ const AdminUsersContent: React.FC = () => {
           birthday: user.birthday,
           age: user.age,
           profilePicture: user.profilePicture,
+          archive: Number(user.archive),
         }));
 
         setUsers(mappedUsers);
@@ -132,6 +132,34 @@ const AdminUsersContent: React.FC = () => {
     fetchAppointments();
   }, [selected]);
 
+  const confirmArchiveAction = async () => {
+    if (!confirmArchive) return;
+
+    try {
+      const res = await fetchWithAuth(
+        `${API_URL}/api/admin/users/${confirmArchive.id}/archive`,
+        { method: "POST" }
+      );
+      const data = await res.json();
+
+      if (res.ok) {
+        toast.success(data.message);
+        setUsers((prev) =>
+          prev.map((usr) =>
+            usr.id === confirmArchive.id ? { ...usr, archive: data.archive } : usr
+          )
+        );
+      } else {
+        toast.error("Failed to update archive status");
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Error updating archive status");
+    } finally {
+      setConfirmArchive(null);
+    }
+  };
+
   return (
     <div className="relative flex flex-col gap-6 p-4 md:p-6">
       {/* Header */}
@@ -141,7 +169,7 @@ const AdminUsersContent: React.FC = () => {
         </h1>
       </div>
 
-      {/* Tabs + Controls in a single row */}
+      {/* Tabs + Controls */}
       <div className="flex flex-wrap items-center justify-between gap-4 p-2 min-w-0">
         {/* Tabs */}
         <div className="relative flex-shrink-0 flex gap-4 text-center px-2 text-sm font-medium border-b border-gray-300 overflow-visible">
@@ -149,9 +177,7 @@ const AdminUsersContent: React.FC = () => {
             <button
               key={r}
               onClick={() => setActiveRole(r)}
-              className={`pb-2 transition-colors ${activeRole === r
-                  ? "text-black"
-                  : "text-gray-500 hover:text-black"
+              className={`pb-2 transition-colors ${activeRole === r ? "text-black" : "text-gray-500 hover:text-black"
                 }`}
             >
               {r}
@@ -176,7 +202,7 @@ const AdminUsersContent: React.FC = () => {
             className="px-3 py-1.5 text-xs bg-gray-300 rounded-md hover:bg-gray-600 hover:text-white transition-colors"
             onClick={() => setShowAssignModal(true)}
           >
-            + Add User
+            + Add Staff
           </button>
           <div className="relative w-64">
             <input
@@ -207,17 +233,30 @@ const AdminUsersContent: React.FC = () => {
           </thead>
           <tbody>
             {current.map((u) => (
-              <tr
-                key={u.id}
-                className="border-t hover:bg-gray-100 transition cursor-pointer"
-                onClick={() => setSelected(u)}
-              >
+              <tr key={u.id} className="border-t hover:bg-gray-100 transition">
                 <td className="px-4 py-3 whitespace-nowrap">{u.id}</td>
                 <td className="px-4 py-3">{u.name}</td>
                 <td className="px-4 py-3">{u.email}</td>
                 <td className="px-4 py-3">{u.role}</td>
-                <td className="px-4 py-3 text-right">
-                  <FontAwesomeIcon icon={faEye} />
+                <td className="px-4 py-3 text-right space-x-2">
+                  {/* View button */}
+                  <button
+                    className="px-2 py-1 text-xs bg-blue-500 text-white rounded-md hover:bg-blue-600 transition"
+                    onClick={() => setSelected(u)}
+                  >
+                    <FontAwesomeIcon icon={faEye} /> View
+                  </button>
+
+                  {/* Archive / Unarchive button → opens modal */}
+                  <button
+                    className={`px-2 py-1 text-xs rounded-md transition ${u.archive === 0
+                        ? "bg-green-500 text-white hover:bg-green-600"
+                        : "bg-red-500 text-white hover:bg-red-600"
+                      }`}
+                    onClick={() => setConfirmArchive(u)}
+                  >
+                    {u.archive === 0 ? "Unarchive" : "Archive"}
+                  </button>
                 </td>
               </tr>
             ))}
@@ -231,6 +270,50 @@ const AdminUsersContent: React.FC = () => {
           </tbody>
         </table>
       </div>
+
+      {/* ✅ Archive Confirmation Modal */}
+      {confirmArchive && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg p-6 w-96 text-center space-y-4">
+            <div
+              className={`mx-auto w-12 h-12 flex items-center justify-center rounded-full ${confirmArchive.archive === 1 ? "bg-red-100" : "bg-green-100"
+                }`}
+            >
+              {confirmArchive.archive === 1 ? (
+                <Archive className="text-red-600" />
+              ) : (
+                <RefreshCw className="text-green-600" />
+              )}
+            </div>
+            <h2 className="text-lg font-semibold">
+              {confirmArchive.archive === 1 ? "Archive User" : "Unarchive User"}
+            </h2>
+            <p className="text-sm text-gray-600">
+              {confirmArchive.archive === 1
+                ? "Are you sure you want to archive"
+                : "Are you sure you want to unarchive"}{" "}
+              <span className="font-semibold">{confirmArchive.name}</span>?
+            </p>
+            <div className="flex justify-between gap-4 pt-4">
+              <button
+                onClick={() => setConfirmArchive(null)}
+                className="w-full py-2 border rounded-md text-sm hover:bg-gray-100"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmArchiveAction}
+                className={`w-full py-2 text-white text-sm rounded-md ${confirmArchive.archive === 1
+                    ? "bg-red-600 hover:bg-red-700"
+                    : "bg-green-600 hover:bg-green-700"
+                  }`}
+              >
+                {confirmArchive.archive === 1 ? "Archive" : "Unarchive"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Pagination */}
       <div className="flex justify-end gap-2 text-xs">
@@ -270,7 +353,7 @@ const AdminUsersContent: React.FC = () => {
               profilePicture: selected.profilePicture,
               name: selected.name,
               username: selected.username,
-              age: selected.age, //need sa db ng age at bday
+              age: selected.age,
               birthday: selected.birthday,
               address: selected.address,
               email: selected.email,
@@ -291,7 +374,7 @@ const AdminUsersContent: React.FC = () => {
           />
         )}
       </AnimatePresence>
-      <ToastContainer position="bottom-right" />
+
     </div>
   );
 };

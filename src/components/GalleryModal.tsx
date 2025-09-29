@@ -327,44 +327,97 @@ const GalleryModal: React.FC<GalleryModalProps> = ({
 
         {/* Gallery Grid */}
         <div className="flex-1 overflow-y-auto p-4">
+          {/* No images at all */}
           {images.length === 0 ? (
             <p className="text-gray-500 text-center mt-20">
               No photos uploaded yet.
             </p>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-              {images.map((img) => {
-                const selected = selectedImages.includes(img.id);
-                return (
-                  <div
-                    key={img.id}
-                    className={`relative rounded-lg overflow-hidden border cursor-pointer group ${multiSelectMode && selected
-                      ? "ring-2 ring-blue-500"
-                      : "hover:shadow-md"
-                      }`}
-                    onClick={() => toggleSelect(img.id)}
-                  >
-                    <img
-                      src={img.url}
-                      alt=""
-                      className="w-full h-40 object-cover"
-                    />
-                    {!multiSelectMode && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleRemove(img.id);
-                        }}
-                        className="absolute top-2 right-2 p-1 bg-red-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition"
-                        disabled={uploading}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    )}
+            <>
+              {/* Pending Upload Section */}
+              {images.some((img) => img.isNew) && (
+                <>
+                  <h3 className="text-sm font-semibold text-gray-700 mb-2">Pending Upload</h3>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                    {images
+                      .filter((img) => img.isNew)
+                      .map((img) => {
+                        const selected = selectedImages.includes(img.id);
+                        return (
+                          <div
+                            key={img.id}
+                            className={`relative rounded-lg overflow-hidden border cursor-pointer group ${multiSelectMode && selected
+                                ? "ring-2 ring-blue-500"
+                                : "hover:shadow-md"
+                              }`}
+                            onClick={() => toggleSelect(img.id)}
+                          >
+                            <img
+                              src={img.url}
+                              alt=""
+                              className="w-full h-40 object-cover"
+                            />
+                            {!multiSelectMode && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleRemove(img.id);
+                                }}
+                                className="absolute top-2 right-2 p-1 bg-red-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition"
+                                disabled={uploading}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })}
                   </div>
-                );
-              })}
-            </div>
+                </>
+              )}
+
+              {/* Existing Images Section */}
+              {images.some((img) => !img.isNew) && (
+                <>
+                  <h3 className="text-sm font-semibold text-gray-700 mb-2 mt-6">Uploaded</h3>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mb-6">
+                    {images
+                      .filter((img) => !img.isNew)
+                      .map((img) => {
+                        const selected = selectedImages.includes(img.id);
+                        return (
+                          <div
+                            key={img.id}
+                            className={`relative rounded-lg overflow-hidden border cursor-pointer group ${multiSelectMode && selected
+                                ? "ring-2 ring-blue-500"
+                                : "hover:shadow-md"
+                              }`}
+                            onClick={() => toggleSelect(img.id)}
+                          >
+                            <img
+                              src={img.url}
+                              alt=""
+                              className="w-full h-40 object-cover"
+                            />
+                            {!multiSelectMode && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleRemove(img.id);
+                                }}
+                                className="absolute top-2 right-2 p-1 bg-red-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition"
+                                disabled={uploading}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })}
+                  </div>
+                </>
+              )}
+            </>
           )}
         </div>
 

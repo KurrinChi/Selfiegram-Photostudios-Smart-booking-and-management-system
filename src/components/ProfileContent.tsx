@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import type { ChangeEvent } from "react";
 import { useNavigate } from "react-router-dom";
-import { toast, ToastContainer } from "react-toastify";
+import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
 
@@ -335,8 +335,6 @@ const ProfileContents: React.FC = () => {
           Log Out
         </button>
       </div>
-
-      <ToastContainer position="bottom-right" />
     </div>
   );
 };
