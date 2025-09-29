@@ -6,6 +6,15 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Response;
 
+// Payment routes
+Route::get('/payment/cancel', function () {
+    return view('payment.cancel'); // You can create a simple cancel page
+})->name('payment.cancel');
+
+Route::get('/payment/success', function () {
+    return view('payment.success'); // You can create a simple success page
+})->name('payment.success');
+
 Route::get('/db-test', function () {
     try {
         DB::connection()->getPdo();

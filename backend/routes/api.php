@@ -17,15 +17,21 @@
     use App\Http\Controllers\BookingRequestController;
     use App\Http\Controllers\GalleryController;
     use App\Http\Controllers\NotificationController;
+    use App\Http\Controllers\PayMongoController;
+    use App\Http\Controllers\PayMongoWebhookController;
+    use App\Http\Controllers\TestPayMongoController;
     use App\Http\Controllers\ImageController;
-  
-    // Just for testing
+    
+    // Testing routes
     Route::middleware('api')->get('/test', function (Request $request) {
         return response()->json([
             'status' => 'success',
             'message' => 'API is working!',
         ]);
     });
+    
+    // Test PayMongo payment method extraction (for testing purposes)
+    Route::get('/test-paymongo-webhook', [TestPayMongoController::class, 'testWebhook']);
 
     // Test auth without role
     Route::middleware(['auth:sanctum'])->get('/test-auth', function (Request $request) {
@@ -71,6 +77,27 @@
             'user_type' => $user ? $user->userType : null,
             'request_data' => $request->all(),
             'headers' => $request->headers->all()
+        ]);
+    });
+
+    // Debug route WITHOUT auth to test basic connectivity
+    Route::post('/test-booking-no-auth', function (Request $request) {
+        return response()->json([
+            'message' => 'Test booking endpoint (no auth) reached successfully',
+            'method' => $request->method(),
+            'data' => $request->all()
+        ]);
+    });
+
+    // Test CORS preflight for bookings
+    Route::match(['options', 'post'], '/bookings-cors-test', function (Request $request) {
+        if ($request->isMethod('options')) {
+            return response()->json(['message' => 'CORS preflight successful']);
+        }
+        return response()->json([
+            'message' => 'POST request successful',
+            'method' => $request->method(),
+            'data' => $request->all()
         ]);
     });
 
@@ -175,11 +202,15 @@
         Route::get('/top-selling-packages', [HomeController::class, 'getTopSellingPackages']);
         Route::get('/feedbacks', [HomeController::class, 'getFeedbacks']);
 
-        //Client Booking/Transaction
-        Route::post('/bookings', [TransactionController::class, 'createBooking']);
+        //Client Booking/Transaction (moved out of Customer role temporarily)
         Route::get('/bookings/{id}', [TransactionController::class, 'showBooking']);
         Route::get('/booked-slots', [TransactionController::class, 'getBookedTimeSlots']);
+    });
 
+    // Original booking creation with conditional auth (allows OPTIONS, requires auth for POST)
+    Route::middleware(['auth:sanctum'])->group(function () {
+        Route::post('/bookings', [TransactionController::class, 'createBooking']);
+        Route::post('/payment/checkout', [TransactionController::class, 'createPaymentCheckout']);
 
         //Client Cancel and Reschedule Request
         Route::post('/booking-request/cancel', [BookingRequestController::class, 'storeCancelRequest']);
@@ -207,4 +238,12 @@
     Route::get('/receipt/{id}', [ReceiptController::class, 'show']);
      Route::get('/image-url/{imageID}', [ImageController::class, 'getImageUrl']);
         Route::get('/proxy-image', [ImageController::class, 'proxyImage']);
+
+    // PayMongo payment routes
+    Route::post('/payment/create-checkout', [PayMongoController::class, 'createCheckoutSession']);
+    Route::post('/payment/success', [PayMongoController::class, 'handlePaymentSuccess']);
+    Route::get('/payment/history/{bookingId}', [PayMongoController::class, 'getPaymentHistory']);
+
+    // PayMongo Webhook (no auth required)
+    Route::post('/paymongo/webhook', [PayMongoWebhookController::class, 'handleWebhook']);
 ?>

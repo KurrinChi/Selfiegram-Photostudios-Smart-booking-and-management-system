@@ -386,7 +386,7 @@ const SelectPackagePage = () => {
               id: item.id,
               label: item.label, // e.g., "Additional Backdrop"
               price: item.price ?? 0,
-              value: 1, // mark as active/selected
+              value: 0, // mark as NOT selected initially
               type: "dropdown",
               option: "WHITE", // default choice
             } as SelectedAddon,
@@ -402,7 +402,9 @@ const SelectPackagePage = () => {
         addon.id === id
           ? {
               ...addon,
-              value: addon.type === "dropdown" ? 1 : (value as number), // dropdown always 1
+              value: addon.type === "dropdown" 
+                ? (activeAddOns[id] ? 1 : 0) // Only set to 1 if actually activated
+                : (value as number),
               option: addon.type === "dropdown" ? (value as string) : undefined,
             }
           : addon
@@ -548,6 +550,11 @@ const SelectPackagePage = () => {
   }, [selectedDate]);
 
   const handleShowPreview = (paymentType: "deposit" | "full") => {
+    // Debug: Log current addon states
+    console.log("=== BOOKING PREVIEW DEBUG ===");
+    console.log("selectedAddons:", selectedAddons);
+    console.log("activeAddOns:", activeAddOns);
+    
     // Validate all fields
     if (
       !selectedDate ||
@@ -1119,15 +1126,14 @@ const SelectPackagePage = () => {
                                           id: item.id,
                                           label: item.label, // e.g. "Additional Backdrop"
                                           price: item.price ?? 0,
-                                          value: 1, // selected
+                                          value: activeAddOns[item.id] ? 1 : 0, // Only select if actually activated
                                           type: "dropdown",
                                           option: color.label, // "WHITE", "BLACK", etc.
                                         } as SelectedAddon,
                                       ];
                                     });
 
-                                    // keep rest of your logic
-                                    toggleAddOn(item.id, true);
+                                    // keep rest of your logic (removed auto-activation)
                                     setShowingColors((prev) => ({
                                       ...prev,
                                       [item.id]: false,
