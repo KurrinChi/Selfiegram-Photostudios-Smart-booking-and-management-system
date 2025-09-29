@@ -12,9 +12,10 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        $middleware->append(\Illuminate\Http\Middleware\HandleCors::class);
+        $middleware->prepend(\Illuminate\Http\Middleware\HandleCors::class);
          $middleware->alias([
             'role' => \App\Http\Middleware\RoleMiddleware::class,
+            'optional.auth' => \App\Http\Middleware\OptionalAuth::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
