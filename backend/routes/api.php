@@ -120,6 +120,12 @@
         Route::post('/appointments/reschedule', [AppointmentController::class, 'rescheduleAppointment']);
         Route::post('/appointments/completed', [AppointmentController::class, 'markAsCompleted']);
 
+        //admin booking requests
+        Route::get('/admin/booking-requests', [BookingRequestController::class, 'adminGetAllRequests']);
+        Route::post('/admin/booking-requests/{id}/confirm-reschedule', [BookingRequestController::class, 'confirmReschedule']);
+        Route::post('/admin/booking-requests/{id}/confirm-cancellation', [BookingRequestController::class, 'confirmCancellation']);
+        Route::post('/admin/booking-requests/{id}/decline-request', [BookingRequestController::class, 'decline']);
+
         //admin package management
         Route::get('/admin/packages-all', [PackageController::class, 'adminShowAll']);
         Route::get('/admin/packages/{id}', [PackageController::class, 'adminShow']);

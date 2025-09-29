@@ -21,4 +21,14 @@ class BookingRequest extends Model
         'status',
         'requestDate',
     ];
+
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'userID', 'userID');
+    }
+
+    public function booking()
+    {
+        return $this->belongsTo(Booking::class, 'bookingID', 'bookingID');
+    }
 }

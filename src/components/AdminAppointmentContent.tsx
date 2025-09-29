@@ -4,8 +4,7 @@ import DayView from "./CalendarViews/DayView";
 import WeekView from "./CalendarViews/WeekView";
 import TransactionModal from "./ModalAppointmentInfoDialog";
 import type { TransactionModalProps } from "./ModalAppointmentInfoDialog";
-import { ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+
 
 const AdminAppointmentContent: React.FC = () => {
   const [view, setView] = useState<"week" | "day">("week");
@@ -79,6 +78,7 @@ const AdminAppointmentContent: React.FC = () => {
           <AdminAppointmentSidebar
             currentDate={currentDate}
             onDateChange={setCurrentDate}
+            refreshAppointments={refreshAppointments}
           />
         </div>
       </div>
@@ -90,8 +90,6 @@ const AdminAppointmentContent: React.FC = () => {
         data={selectedAppointment}
         refreshAppointments={refreshAppointments}
       />
-
-      <ToastContainer position="bottom-right" />
     </div>
   );
 };
