@@ -198,6 +198,9 @@
         //Client Appointment Page
         Route::get('/appointments/{userID}', [AppointmentController::class, 'getAppointments']);
 
+        //Client Unavailable Dates (for booking/rescheduling)
+        Route::get('/unavailable-dates', [AppointmentController::class, 'getUnavailableDates']);
+
         //Client Home Page
         Route::get('/top-selling-packages', [HomeController::class, 'getTopSellingPackages']);
         Route::get('/feedbacks', [HomeController::class, 'getFeedbacks']);

@@ -182,5 +182,78 @@ class AppointmentController extends Controller
     return response()->json($appointments);
 }
 
+    /**
+     * Get unavailable dates for booking
+     * Returns dates that are fully booked or marked as unavailable
+     */
+    public function getUnavailableDates()
+    {
+        try {
+            // Get dates that are fully booked (assuming max 5 bookings per day)
+            $fullyBookedDates = DB::table('booking')
+                ->select('bookingDate')
+                ->where('status', '!=', 0) // Exclude cancelled bookings
+                ->groupBy('bookingDate')
+                ->havingRaw('COUNT(*) >= 5') // Adjust this number based on your capacity
+                ->pluck('bookingDate')
+                ->toArray();
+
+            // Get all existing booking dates (since you want ALL booking dates to be unavailable)
+            $existingBookingDates = DB::table('booking')
+                ->select('bookingDate')
+                ->where('status', '!=', 0) // Exclude cancelled bookings (status = 0)
+                ->distinct()
+                ->pluck('bookingDate')
+                ->toArray();
+
+            // Get dates where there are pending reschedule requests
+            $pendingRescheduleDates = DB::table('booking_request')
+                ->select('requestedDate as bookingDate')
+                ->where('status', 'pending')
+                ->where('requestType', 'reschedule')
+                ->whereNotNull('requestedDate')
+                ->pluck('bookingDate')
+                ->toArray();
+
+            // Get manually blocked dates (you can create a separate table for this)
+            // For now, we'll use a simple array or you can add a 'blocked_dates' table
+            $blockedDates = [
+                // Add any manually blocked dates here
+                // '2025-12-25', // Christmas
+                // '2025-01-01', // New Year
+            ];
+
+            // Combine all unavailable dates
+            $unavailableDates = array_unique(array_merge(
+                $existingBookingDates, // All existing booking dates
+                $pendingRescheduleDates,
+                $blockedDates
+            ));
+
+            // Remove any null or empty values and convert dates to string format
+            $unavailableDates = array_filter($unavailableDates, function($date) {
+                return !empty($date);
+            });
+
+            // Convert to proper date format if needed
+            $unavailableDates = array_map(function($date) {
+                return is_string($date) ? $date : $date->format('Y-m-d');
+            }, $unavailableDates);
+
+            return response()->json([
+                'success' => true,
+                'dates' => array_values($unavailableDates), // Re-index array
+                'message' => 'Unavailable dates retrieved successfully'
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error retrieving unavailable dates: ' . $e->getMessage(),
+                'dates' => []
+            ], 500);
+        }
+    }
+
 
 }

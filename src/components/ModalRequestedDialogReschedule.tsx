@@ -1,5 +1,4 @@
 import React from "react";
-import { format, parse } from "date-fns";
 import { CheckCircle } from "lucide-react";
 
 interface MModalRequestedDialogRescheduleProps {
@@ -32,7 +31,26 @@ const ModalRequestedDialogReschedule: React.FC<MModalRequestedDialogReschedulePr
       day: "numeric",
     });
   };
- const getBookingLabel = (bookingID: string, packageName: string) => {
+
+  const formatTime = (time: string) => {
+    // If time is already in 12-hour format, return as is
+    if (time.includes("AM") || time.includes("PM")) {
+      return time;
+    }
+    
+    // Convert 24-hour format to 12-hour format
+    const [hours, minutes] = time.split(":").map(Number);
+    const date = new Date();
+    date.setHours(hours, minutes || 0);
+
+    return date.toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    });
+  };
+
+  const getBookingLabel = (bookingID: string, packageName: string) => {
     const acronym = packageName
       .split(" ")
       .map((word) => word[0])
@@ -87,7 +105,7 @@ const ModalRequestedDialogReschedule: React.FC<MModalRequestedDialogReschedulePr
             {/* Booking Time */}
             <div className="mb-4 text-sm text-gray-500">
             <span className="font-semibold">Booking Time: </span>
-            {data.bookingTime}
+            {formatTime(data.bookingTime)}
             </div>
 
         {/* Message */}
