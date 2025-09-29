@@ -39,13 +39,13 @@
             if ($user->email_verification !== null) {
                 return response()->json([
                     'status' => 'failed',
-                    'message' => 'Please verify your email before logging in.'
+                    'message' => 'Invalid email or password'
                 ], 400);
             }
             if ($user->archive === 0) {
                 return response()->json([
                     'status' => 'failed',
-                    'message' => 'Your account is inactive. Please contact support.'
+                    'message' => 'Invalid email or password'
                 ], 403);
             }
 
