@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use App\Events\PaymentStatusUpdated;
+use App\Models\Notification;
 
 class PayMongoWebhookController extends Controller
 {
@@ -113,6 +115,9 @@ class PayMongoWebhookController extends Controller
             
             // Update booking payment status
             $this->updateBookingPaymentStatus($paymentSession->booking_id, $paymentSession->payment_type, $amount / 100, $paymentMethod);
+            
+            // Create payment notification
+            $this->createPaymentNotification($paymentSession->booking_id, $paymentSession->payment_type, $amount / 100, $paymentMethod);
             
             Log::info('Payment completed successfully', [
                 'payment_session_id' => $paymentSession->id,
@@ -251,6 +256,86 @@ class PayMongoWebhookController extends Controller
         }
         
         return $paymentMethod;
+    }
+    
+    /**
+     * Create payment notification and broadcast it
+     */
+    private function createPaymentNotification($bookingId, $paymentType, $amount, $paymentMethod)
+    {
+        try {
+            // Get booking and user details
+            $booking = DB::table('booking')
+                ->join('packages', 'booking.packageID', '=', 'packages.packageID')
+                ->where('booking.bookingID', $bookingId)
+                ->select(
+                    'booking.bookingID',
+                    'booking.userID',
+                    'booking.bookingDate',
+                    'booking.bookingStartTime',
+                    'booking.paymentStatus',
+                    'packages.name as packageName'
+                )
+                ->first();
+
+            if (!$booking) {
+                Log::warning('Booking not found for payment notification: ' . $bookingId);
+                return;
+            }
+
+            // Format the booking date and time
+            $bookingDate = \Carbon\Carbon::parse($booking->bookingDate)->format('F j, Y');
+            $bookingTime = \Carbon\Carbon::parse($booking->bookingStartTime)->format('g:i A');
+            
+            // Create dynamic message based on payment type
+            $paymentTypeText = '';
+            switch ($paymentType) {
+                case 'deposit':
+                    $paymentTypeText = 'deposit payment';
+                    break;
+                case 'full':
+                    $paymentTypeText = 'full payment';
+                    break;
+                case 'remaining':
+                    $paymentTypeText = 'remaining balance payment';
+                    break;
+                default:
+                    $paymentTypeText = 'payment';
+            }
+
+            $dynamicMessage = "Your {$paymentTypeText} of ₱" . number_format($amount, 2) . " for SFO#{$booking->bookingID} {$booking->packageName} (Booking Date: {$bookingDate} at {$bookingTime}) has been successfully processed via {$paymentMethod}.";
+
+            // Get payment transaction ID
+            $transactionId = DB::table('payment_transactions')->where('booking_id', $bookingId)->latest('created_at')->value('id') ?? 0;
+
+            // Create notification
+            $notification = Notification::create([
+                'userID' => $booking->userID,
+                'title' => 'Payment Successful! 💳',
+                'label' => 'Payment',
+                'message' => $dynamicMessage,
+                'time' => now(),
+                'starred' => 0,
+                'bookingID' => $bookingId,
+                'transID' => $transactionId,
+            ]);
+
+            // Broadcast the event via Pusher
+            broadcast(new PaymentStatusUpdated($booking->userID, $bookingId, $transactionId, $notification));
+
+            Log::info('Payment notification created and broadcasted', [
+                'booking_id' => $bookingId,
+                'user_id' => $booking->userID,
+                'payment_type' => $paymentType,
+                'amount' => $amount
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Failed to create payment notification', [
+                'booking_id' => $bookingId,
+                'error' => $e->getMessage()
+            ]);
+        }
     }
     
     /**

@@ -8,6 +8,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Carbon\Carbon;
 use App\Services\PayMongoService;
+use App\Events\BookingStatusUpdated;
+use App\Models\Notification;
 
 class TransactionController extends Controller
 {
@@ -189,6 +191,42 @@ class TransactionController extends Controller
             ]);
 
             DB::commit();
+
+            // Create booking notification
+            $bookingDetails = DB::table('booking')
+                ->join('packages', 'booking.packageID', '=', 'packages.packageID')
+                ->where('booking.bookingID', $bookingId)
+                ->select(
+                    'booking.bookingID',
+                    'booking.bookingDate',
+                    'booking.bookingStartTime',
+                    'packages.name as packageName'
+                )
+                ->first();
+
+            if ($bookingDetails) {
+                // Format the booking date and time
+                $bookingDate = \Carbon\Carbon::parse($bookingDetails->bookingDate)->format('F j, Y');
+                $bookingTime = \Carbon\Carbon::parse($bookingDetails->bookingStartTime)->format('g:i A');
+                
+                // Create dynamic message
+                $dynamicMessage = "Your booking for SFO#{$bookingDetails->bookingID} {$bookingDetails->packageName} has been confirmed for {$bookingDate} at {$bookingTime}.";
+
+                // Create notification
+                $notification = Notification::create([
+                    'userID' => $userId,
+                    'title' => 'Booking Confirmed',
+                    'label' => 'Booking',
+                    'message' => $dynamicMessage,
+                    'time' => now(),
+                    'starred' => 0,
+                    'bookingID' => $bookingId,
+                    'transID' => 0,
+                ]);
+
+                // Broadcast the event via Pusher
+                broadcast(new BookingStatusUpdated($userId, $bookingId, $notification));
+            }
 
             // Return booking details for the modal
             $booking = $this->getBookingDetails($bookingId);

@@ -46,6 +46,24 @@ export const useNotifications = (userID: number | null) => {
       console.log('New gallery notification added to state:', newNotification);
     });
 
+    // Listen for booking status updates
+    channel.bind('booking.status.updated', (data: any) => {
+      console.log('Received booking.status.updated event:', data);
+      const newNotification = data.notification;
+      setNotifications(prev => [newNotification, ...prev]);
+      
+      console.log('New booking notification added to state:', newNotification);
+    });
+
+    // Listen for payment status updates
+    channel.bind('payment.status.updated', (data: any) => {
+      console.log('Received payment.status.updated event:', data);
+      const newNotification = data.notification;
+      setNotifications(prev => [newNotification, ...prev]);
+      
+      console.log('New payment notification added to state:', newNotification);
+    });
+
     return () => {
       console.log(`Unsubscribing from private-user.${userID}`);
       channel.unbind_all();

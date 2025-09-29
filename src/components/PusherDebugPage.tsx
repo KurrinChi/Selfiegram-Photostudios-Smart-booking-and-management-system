@@ -155,6 +155,28 @@ const PusherDebugPage = () => {
     }
   };
 
+  const testBookingNotification = async () => {
+    addMessage('🔄 Testing booking notification...');
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/test-booking-notification`);
+      const data = await response.json();
+      addMessage(`✅ Booking notification response: ${JSON.stringify(data)}`);
+    } catch (error) {
+      addMessage(`❌ Booking notification error: ${error}`);
+    }
+  };
+
+  const testPaymentNotification = async () => {
+    addMessage('🔄 Testing payment notification...');
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/test-payment-notification`);
+      const data = await response.json();
+      addMessage(`✅ Payment notification response: ${JSON.stringify(data)}`);
+    } catch (error) {
+      addMessage(`❌ Payment notification error: ${error}`);
+    }
+  };
+
   const testSimpleSubscription = () => {
     addMessage('🔄 Testing simple private channel subscription...');
     
@@ -267,6 +289,18 @@ const PusherDebugPage = () => {
           className="bg-orange-500 text-white px-4 py-2 rounded hover:bg-orange-600"
         >
           Test Public Broadcast
+        </button>
+        <button
+          onClick={testBookingNotification}
+          className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+        >
+          Test Booking Notification
+        </button>
+        <button
+          onClick={testPaymentNotification}
+          className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
+        >
+          Test Payment Notification
         </button>
         <button
           onClick={testAuthEndpoint}

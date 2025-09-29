@@ -48,6 +48,8 @@ use Illuminate\Support\Facades\Mail;
 use App\Mail\ForgotPassword;
 use App\Models\User;
 use App\Events\GalleryImagesConfirmed;
+use App\Events\BookingStatusUpdated;
+use App\Events\PaymentStatusUpdated;
 use App\Models\Notification;
 
 //test pusher
@@ -136,6 +138,146 @@ Route::get('/test-pusher-public', function () {
         \Log::error('Public pusher test error: ' . $e->getMessage());
         return response()->json([
             'error' => $e->getMessage()
+        ], 500);
+    }
+});
+
+// Test booking notification
+Route::get('/test-booking-notification', function () {
+    try {
+        // Get booking and package details for test
+        $bookingDetails = DB::table('booking')
+            ->join('packages', 'booking.packageID', '=', 'packages.packageID')
+            ->where('booking.bookingID', 1) // Using bookingID 1 for test
+            ->select(
+                'booking.bookingID',
+                'booking.userID',
+                'booking.bookingDate',
+                'booking.bookingStartTime',
+                'packages.name as packageName'
+            )
+            ->first();
+
+        $dynamicMessage = 'Test booking notification'; // Default message
+        $userID = 3; // Default test user ID
+        
+        if ($bookingDetails) {
+            $userID = $bookingDetails->userID;
+            // Format the booking date and time
+            $bookingDate = \Carbon\Carbon::parse($bookingDetails->bookingDate)->format('F j, Y');
+            $bookingTime = \Carbon\Carbon::parse($bookingDetails->bookingStartTime)->format('g:i A');
+            
+            // Create dynamic message
+            $dynamicMessage = "Your booking for SFO#{$bookingDetails->bookingID} {$bookingDetails->packageName} has been confirmed for {$bookingDate} at {$bookingTime}.";
+        }
+
+        // Create a test notification
+        $notification = Notification::create([
+            'userID' => $userID,
+            'title' => 'Booking Confirmed! 📅',
+            'label' => 'Booking',
+            'message' => $dynamicMessage,
+            'time' => now(),
+            'starred' => 0,
+            'bookingID' => 1,
+            'transID' => 0,
+        ]);
+
+        // Log the notification
+        \Log::info('Created booking notification: ', $notification->toArray());
+
+        // Broadcast the event
+        $event = new BookingStatusUpdated($userID, 1, $notification);
+        broadcast($event);
+        
+        \Log::info('Booking event broadcasted successfully');
+
+        return response()->json([
+            'message' => 'Test booking notification broadcasted successfully!',
+            'notification' => $notification,
+        ]);
+    } catch (\Exception $e) {
+        \Log::error('Booking notification test error: ' . $e->getMessage());
+        return response()->json([
+            'error' => $e->getMessage(),
+            'line' => $e->getLine(),
+            'file' => $e->getFile()
+        ], 500);
+    }
+});
+
+// Test payment notification
+Route::get('/test-payment-notification', function () {
+    try {
+        // Get the current authenticated user ID (works for any logged-in user)
+        $currentUser = auth('sanctum')->user();
+        $userID = $currentUser ? $currentUser->userID : 3; // Fallback to 3 if not authenticated
+        
+        // Get booking and package details for the current user
+        $bookingDetails = DB::table('booking')
+            ->join('packages', 'booking.packageID', '=', 'packages.packageID')
+            ->where('booking.userID', $userID) // Use current user's ID
+            ->orderBy('booking.bookingID', 'desc')
+            ->select(
+                'booking.bookingID',
+                'booking.userID',
+                'booking.bookingDate',
+                'booking.bookingStartTime',
+                'packages.name as packageName'
+            )
+            ->first();
+
+        $dynamicMessage = 'Test payment notification'; // Default message
+        
+        if ($bookingDetails) {
+            $userID = $bookingDetails->userID;
+            $bookingID = $bookingDetails->bookingID;
+            // Format the booking date and time
+            $bookingDate = \Carbon\Carbon::parse($bookingDetails->bookingDate)->format('F j, Y');
+            $bookingTime = \Carbon\Carbon::parse($bookingDetails->bookingStartTime)->format('g:i A');
+            
+            // Create dynamic message
+            $dynamicMessage = "Your payment of ₱200.00 for SFO#{$bookingDetails->bookingID} {$bookingDetails->packageName} (Booking Date: {$bookingDate} at {$bookingTime}) has been successfully processed via PayMongo.";
+        } else {
+            // If user has no bookings, create a generic test notification
+            $bookingID = 0;
+            $dynamicMessage = "Test payment notification for user {$userID} - No bookings found, using generic message.";
+        }
+
+        // Create a test notification
+        $notification = Notification::create([
+            'userID' => $userID,
+            'title' => 'Payment Successful! 💳',
+            'label' => 'Payment',
+            'message' => $dynamicMessage,
+            'time' => now(),
+            'starred' => 0,
+            'bookingID' => $bookingID,
+            'transID' => 1,
+        ]);
+
+        // Log the notification
+        \Log::info('Created payment notification: ', $notification->toArray());
+
+        // Broadcast the event
+        $event = new PaymentStatusUpdated($userID, $bookingID, 1, $notification);
+        broadcast($event);
+        
+        \Log::info('Payment event broadcasted successfully');
+
+        return response()->json([
+            'message' => 'Test payment notification broadcasted successfully!',
+            'notification' => $notification,
+            'booking_details' => $bookingDetails,
+            'user_id' => $userID,
+            'booking_id_used' => $bookingDetails ? $bookingDetails->bookingID : 3,
+        ]);
+    } catch (\Exception $e) {
+        \Log::error('Payment notification test error: ' . $e->getMessage());
+        return response()->json([
+            'error' => $e->getMessage(),
+            'line' => $e->getLine(),
+            'file' => $e->getFile()
         ], 500);
     }
 });
