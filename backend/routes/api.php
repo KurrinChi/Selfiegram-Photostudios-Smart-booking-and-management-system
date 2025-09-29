@@ -41,7 +41,138 @@
             'message' => 'Authentication working!',
             'user' => $user ? $user->username : 'No user',
             'user_type' => $user ? $user->userType : 'No type',
+            'user_id' => $user ? $user->userID : 'No ID',
         ]);
+    });
+
+    // Simple log test endpoint
+    Route::get('/test-logs', function () {
+        \Log::info('Test log entry from /test-logs endpoint');
+        return response()->json(['message' => 'Log test completed']);
+    });
+
+    // Test broadcasting auth specifically
+    Route::middleware(['auth:sanctum'])->post('/test-broadcasting-auth', function (Request $request) {
+        try {
+            $user = auth('sanctum')->user();
+            if (!$user) {
+                return response()->json(['error' => 'No authenticated user'], 401);
+            }
+
+            $channelName = $request->input('channel_name');
+            $socketId = $request->input('socket_id');
+
+            \Log::info('Broadcasting auth test', [
+                'user_id' => $user->userID,
+                'channel' => $channelName,
+                'socket_id' => $socketId,
+                'user_type' => $user->userType
+            ]);
+
+            // Check if the channel matches the user pattern
+            if (preg_match('/^private-user\.(\d+)$/', $channelName, $matches)) {
+                $requestedUserId = (int)$matches[1];
+                $authorized = (int)$user->userID === $requestedUserId;
+
+                return response()->json([
+                    'authenticated' => true,
+                    'user_id' => $user->userID,
+                    'requested_user_id' => $requestedUserId,
+                    'authorized' => $authorized,
+                    'channel' => $channelName,
+                    'socket_id' => $socketId
+                ]);
+            }
+
+            return response()->json([
+                'authenticated' => true,
+                'user_id' => $user->userID,
+                'channel' => $channelName,
+                'socket_id' => $socketId,
+                'note' => 'Channel pattern does not match private-user.{id}'
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Broadcasting auth test error: ' . $e->getMessage());
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    });
+
+    // Main broadcasting auth route for Pusher (moved from web.php to avoid CSRF issues)
+    Route::middleware(['auth:sanctum'])->post('/broadcasting/auth', function (Request $request) {
+        try {
+            // Log incoming request details
+            \Log::info('Broadcasting auth request received', [
+                'method' => $request->method(),
+                'url' => $request->fullUrl(),
+                'headers' => $request->headers->all(),
+                'body' => $request->all(),
+                'user_authenticated' => auth('sanctum')->check(),
+                'user_id' => auth('sanctum')->user() ? auth('sanctum')->user()->userID : null
+            ]);
+
+            // Check if user is authenticated
+            $user = $request->user();
+            if (!$user) {
+                \Log::warning('Broadcasting auth failed: No authenticated user');
+                return response()->json(['error' => 'Unauthenticated'], 401);
+            }
+            
+            $channelName = $request->input('channel_name');
+            $socketId = $request->input('socket_id');
+            
+            // Log the auth attempt
+            \Log::info('Broadcasting auth attempt', [
+                'user_id' => $user->userID,
+                'channel' => $channelName,
+                'socket_id' => $socketId
+            ]);
+
+            // Manual channel authorization for private-user.{id} channels
+            if (preg_match('/^private-user\.(\d+)$/', $channelName, $matches)) {
+                $requestedUserId = (int)$matches[1];
+                $authorized = (int)$user->userID === $requestedUserId;
+                
+                if ($authorized) {
+                    // Create the auth signature manually (Pusher format)
+                    $authKey = config('broadcasting.connections.pusher.key');
+                    $authSecret = config('broadcasting.connections.pusher.secret');
+                    $stringToSign = $socketId . ':' . $channelName;
+                    $signature = hash_hmac('sha256', $stringToSign, $authSecret);
+                    $authString = $authKey . ':' . $signature;
+                    
+                    \Log::info('Broadcasting auth successful', [
+                        'user_id' => $user->userID,
+                        'channel' => $channelName,
+                        'auth_string' => $authString
+                    ]);
+                    
+                    return response()->json([
+                        'auth' => $authString
+                    ]);
+                } else {
+                    \Log::warning('Broadcasting auth failed: User not authorized for channel', [
+                        'user_id' => $user->userID,
+                        'requested_user_id' => $requestedUserId,
+                        'channel' => $channelName
+                    ]);
+                    return response()->json(['error' => 'Unauthorized for this channel'], 403);
+                }
+            }
+            
+            \Log::warning('Broadcasting auth failed: Unknown channel pattern', [
+                'channel' => $channelName
+            ]);
+            return response()->json(['error' => 'Unknown channel pattern'], 403);
+            
+        } catch (\Exception $e) {
+            \Log::error('Broadcasting auth error: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ]);
+            return response()->json(['error' => 'Auth failed: ' . $e->getMessage()], 403);
+        }
     });
 
     // Test report data endpoint with minimal data
@@ -168,6 +299,7 @@
         Route::post('/admin/upload', [GalleryController::class, 'uploadImage']);
         Route::get('/admin/images/{userID}', [GalleryController::class, 'getImagesByUser']);
         Route::delete('/admin/images/delete', [GalleryController::class, 'deleteImages']);
+        Route::post('/admin/images/confirm', [GalleryController::class, 'confirmImages']);
     });
 
     // Protected routes (user must be logged in) CUSTOMER

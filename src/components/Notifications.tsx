@@ -1,11 +1,15 @@
 import { useEffect, useRef, useState } from "react";
-import { Info, X, Download } from "lucide-react";
+import { Info, X, Download, Image } from "lucide-react";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
 import { QRCodeCanvas } from "qrcode.react"; // Import QRCodeCanvas from qrcode.react
+import { useNotifications } from "../utils/useNotifications";
+import { toast } from "react-toastify";
+import { useNavigate } from "react-router-dom";
+
 type Notification = {
   notificationID: number;
   title: string;
-  label?: "Booking" | "Payment" | "Reschedule" | "Cancellation" | "Reminder" | "Promotion" | "System";
+  label?: "Booking" | "Payment" | "Reschedule" | "Cancellation" | "Reminder" | "Promotion" | "System" | "Gallery";
   message: string;
   time: string;
   starred?: boolean;
@@ -71,6 +75,7 @@ const labelColors: Record<string, string> = {
   Reminder: "bg-purple-100 text-purple-600",
   Promotion: "bg-pink-100 text-pink-600",
   System: "bg-black text-white",
+  Gallery: "bg-indigo-100 text-indigo-600",
 };
 const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
@@ -117,40 +122,66 @@ const formatDate = (dateStr: string) => {
 export default function Notifications() {
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [selected, setSelected] = useState<Notification | null>(null);
-  const [bookingDetails, setBookingDetails] = useState<any | null>(null);
+    const [bookingDetails, setBookingDetails] = useState<any | null>(null);
+    
+    const userID = localStorage.getItem("userID");
+    const API_URL = import.meta.env.VITE_API_URL;
+    const navigate = useNavigate();
 
-   const API_URL = import.meta.env.VITE_API_URL;
+    // Use Pusher hook for real-time notifications
+    const { notifications: pusherNotifications } = useNotifications(userID ? parseInt(userID) : null);
 
-  useEffect(() => {
-    const fetchNotifications = async () => {
-      try {
-        const userID = localStorage.getItem("userID"); // ✅ fetch userID from localStorage
-        if (!userID) return;
-
-        // If you have a fetchWithAuth wrapper
-
-        const token = localStorage.getItem("token"); // Bearer token if required
-        const res = await fetchWithAuth(`${API_URL}/api/notifications/${userID}`, {
-          headers: {
-            Authorization: token ? `Bearer ${token}` : "",
-            "Content-Type": "application/json",
-          },
-        });
-
-        if (!res.ok) throw new Error("Failed to fetch notifications");
-
-        const data = await res.json();
-        console.log("Fetched notifications:", data);
-        setNotifications(data);
-
-        // You can calculate unread notifications here if needed, but it's not used
-      } catch (err) {
-        console.error("Error fetching notifications:", err);
-      }
+    const handleViewGallery = () => {
+        navigate('/client/gallery');
     };
 
-    fetchNotifications();
-  }, []);
+    useEffect(() => {
+        const fetchNotifications = async () => {
+            try {
+                if (!userID) return;
+
+                const token = localStorage.getItem("token");
+                const res = await fetchWithAuth(`${API_URL}/api/notifications/${userID}`, {
+                    headers: {
+                        Authorization: token ? `Bearer ${token}` : "",
+                        "Content-Type": "application/json",
+                    },
+                });
+
+                if (!res.ok) throw new Error("Failed to fetch notifications");
+
+                const data = await res.json();
+                console.log("Fetched notifications:", data);
+                setNotifications(data);
+            } catch (err) {
+                console.error("Error fetching notifications:", err);
+            }
+        };
+
+        fetchNotifications();
+    }, []);
+
+    // Merge existing notifications with new Pusher notifications
+    useEffect(() => {
+        if (pusherNotifications.length > 0) {
+            console.log('Pusher notifications received:', pusherNotifications);
+            setNotifications(prev => {
+                const existingIds = prev.map(n => n.notificationID);
+                const newNotifications = pusherNotifications.filter(n => !existingIds.includes(n.notificationID));
+                console.log('Adding new notifications:', newNotifications);
+                
+                if (newNotifications.length > 0) {
+                    // Show toast for new notifications
+                    newNotifications.forEach(notification => {
+                        toast.success(`New notification: ${notification.title}`, { autoClose: 3000 });
+                    });
+                    
+                    return [...newNotifications, ...prev];
+                }
+                return prev;
+            });
+        }
+    }, [pusherNotifications]);
 
 
   const markAsRead = async (id: number) => {
@@ -455,6 +486,19 @@ const BookingDetails = ({ details }: { details: any }) => {
     <p className="mt-4 text-gray-700 text-sm leading-relaxed">
       {selected.message}
     </p>
+
+    {/* Gallery Button for Gallery notifications */}
+    {selected.label === "Gallery" && (
+      <div className="mt-4">
+        <button
+          onClick={handleViewGallery}
+          className="flex items-center gap-2 px-4 py-2 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 transition-colors"
+        >
+          <Image className="w-5 h-5" />
+          View Gallery
+        </button>
+      </div>
+    )}
 
     {/* Nested Booking Details Component */}
     {["Booking", "Reschedule"].includes(selected.label || "") && selected.bookingID && (

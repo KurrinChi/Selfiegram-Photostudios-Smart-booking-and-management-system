@@ -36,6 +36,7 @@ import ClientPackagePageContent from "./components/ClientPackagePageContent.tsx"
 import ReceiptPage from "./page/client/ReceiptPage.tsx";
 import PhotoEditorAPI from "./components/Embed/PhotoEditor.tsx";
 import LandingPage from "./components/LandingPage.tsx";
+import PusherDebugPage from "./components/PusherDebugPage.tsx";
 import { ToastContainer } from "react-toastify";
 
 const App = () => {
@@ -262,6 +263,7 @@ const App = () => {
         />
 
         <Route path="/edit" element={<PhotoEditorAPI />} />
+        <Route path="/pusher-debug" element={<PusherDebugPage />} />
 
         <Route path="/receipt/booking/:bookingID" element={<ReceiptPage />} />
         {/* Fallback */}

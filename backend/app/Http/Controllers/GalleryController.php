@@ -7,6 +7,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\File;
+use App\Events\GalleryImagesConfirmed;
+use App\Models\Notification;
 
 class GalleryController extends Controller
 {
@@ -140,6 +142,77 @@ class GalleryController extends Controller
         DB::table('user_images')->whereIn('imageID', $imageIDs)->delete();
 
         return response()->json(['message' => 'Images deleted successfully']);
+    }
+
+    public function confirmImages(Request $request)
+    {
+        $request->validate([
+            'userID' => 'required|integer',
+            'bookingID' => 'required|integer',
+            'imageIDs' => 'required|array',
+            'imageIDs.*' => 'integer',
+        ]);
+
+        $userID = $request->input('userID');
+        $bookingID = $request->input('bookingID');
+        $imageIDs = $request->input('imageIDs');
+        $imageCount = count($imageIDs);
+
+        // Verify images belong to the user
+        $validImages = DB::table('user_images')
+            ->whereIn('imageID', $imageIDs)
+            ->where('userID', $userID)
+            ->count();
+
+        if ($validImages !== $imageCount) {
+            return response()->json(['error' => 'Invalid image selection'], 400);
+        }
+
+        // Get booking and package details
+        $bookingDetails = DB::table('booking')
+            ->join('packages', 'booking.packageID', '=', 'packages.packageID')
+            ->where('booking.bookingID', $bookingID)
+            ->where('booking.userID', $userID)
+            ->select(
+                'booking.bookingID',
+                'booking.bookingDate',
+                'booking.bookingStartTime',
+                'packages.name as packageName'
+            )
+            ->first();
+
+        if (!$bookingDetails) {
+            return response()->json(['error' => 'Booking not found'], 404);
+        }
+
+        // Format the booking date and time
+        $bookingDate = \Carbon\Carbon::parse($bookingDetails->bookingDate)->format('F j, Y');
+        $bookingTime = \Carbon\Carbon::parse($bookingDetails->bookingStartTime)->format('g:i A');
+        
+        // Create dynamic message
+        $dynamicMessage = "Your digital copies from SFO#{$bookingDetails->bookingID} {$bookingDetails->packageName} (Booking Date: {$bookingDate} at {$bookingTime}) have been added to your gallery available for download.";
+
+        // Create notification
+        $notification = Notification::create([
+            'userID' => $userID,
+            'title' => 'Your photos are ready! 📸',
+            'label' => 'Gallery',
+            'message' => $dynamicMessage,
+            'time' => now(),
+            'starred' => 0,
+            'bookingID' => $bookingID,
+            'transID' => 0,
+        ]);
+
+        // Broadcast the event via Pusher
+        broadcast(new GalleryImagesConfirmed($userID, $bookingID, $imageCount, $notification));
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Images confirmed successfully',
+            'notification' => $notification,
+            'imageCount' => $imageCount
+        ]);
     }
 
 

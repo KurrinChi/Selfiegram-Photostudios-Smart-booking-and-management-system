@@ -180,7 +180,7 @@ const GalleryModal: React.FC<GalleryModalProps> = ({
     );
   };
 
-  // Upload images
+  // Upload images and notify customer
   const handleConfirmUpload = async () => {
     if (!booking) return;
 
@@ -191,6 +191,9 @@ const GalleryModal: React.FC<GalleryModalProps> = ({
     setUploading(true);
 
     try {
+      const uploadedImageIDs: string[] = [];
+
+      // Upload all new images first
       for (const img of newImages) {
         const formData = new FormData();
         formData.append("file", img.file!);
@@ -207,16 +210,40 @@ const GalleryModal: React.FC<GalleryModalProps> = ({
         }
 
         const uploadedImage = await res.json();
+        uploadedImageIDs.push(uploadedImage.imageID);
 
         setImages((prev) =>
           prev.map((image) =>
             image.id === img.id
-              ? { id: uploadedImage.id, url: uploadedImage.fileUrl, isNew: false }
+              ? { id: uploadedImage.imageID, url: uploadedImage.fileUrl, isNew: false }
               : image
           )
         );
       }
-      toast.success("Image uploaded successfully!", { autoClose: 2800 });
+
+      // After successful upload, automatically notify customer
+      if (uploadedImageIDs.length > 0) {
+        const confirmRes = await fetchWithAuth(`${API_URL}/api/admin/images/confirm`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            userID: booking.userID,
+            bookingID: booking.id,
+            imageIDs: uploadedImageIDs,
+          }),
+        });
+
+        if (!confirmRes.ok) {
+          console.warn("Images uploaded but failed to notify customer");
+          toast.success("Images uploaded successfully!", { autoClose: 2800 });
+        } else {
+          const confirmResult = await confirmRes.json();
+          toast.success(`Images uploaded and customer notified! (${confirmResult.imageCount} images)`, { autoClose: 3000 });
+        }
+      }
+
       setTimeout(() => {
         onClose();
       }, 3000);
@@ -290,7 +317,7 @@ const GalleryModal: React.FC<GalleryModalProps> = ({
               uploading || images.filter((img) => img.isNew).length === 0
             }
           >
-            Confirm Upload
+            Upload & Notify Customer
           </button>
 
           {multiSelectMode ? (
