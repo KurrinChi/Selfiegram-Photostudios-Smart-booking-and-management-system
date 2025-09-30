@@ -64,6 +64,14 @@ export const useNotifications = (userID: number | null) => {
       console.log('New payment notification added to state:', newNotification);
     });
 
+    // Listen for booking requests (reschedule/cancellation) for admins
+    channel.bind('booking.request.submitted', (data: any) => {
+      console.log('Received booking.request.submitted event:', data);
+      const newNotification = data.notification;
+      setNotifications(prev => [newNotification, ...prev]);
+      console.log('New booking request notification added to state:', newNotification);
+    });
+
     return () => {
       console.log(`Unsubscribing from private-user.${userID}`);
       channel.unbind_all();

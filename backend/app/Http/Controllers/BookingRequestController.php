@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\DB;
 use App\Models\User;
 use App\Models\Booking;
 use App\Models\Packages;
+use App\Events\BookingRequestSubmitted;
 
 class BookingRequestController extends Controller
 {
@@ -40,6 +41,19 @@ class BookingRequestController extends Controller
                 ->update(['status' => 3]);
 
             DB::commit();
+
+            // Broadcast to all admins (after commit)
+            $adminIds = User::where('userType', 'Admin')->pluck('userID')->all();
+            $payload = [
+                'type' => 'Cancellation',
+                'requestID' => $cancelRequest->requestID,
+                'bookingID' => $cancelRequest->bookingID,
+                'userID' => $cancelRequest->userID,
+                'status' => $cancelRequest->status,
+                'requestDate' => $cancelRequest->requestDate,
+                'message' => 'A cancellation request has been submitted.',
+            ];
+            event(new BookingRequestSubmitted($adminIds, ['notification' => $payload]));
 
             return response()->json([
                 'message' => 'Cancel request submitted and booking updated successfully.',
@@ -123,6 +137,22 @@ class BookingRequestController extends Controller
 
             DB::commit();
 
+            // Broadcast to all admins (after commit)
+            $adminIds = User::where('userType', 'Admin')->pluck('userID')->all();
+            $payload = [
+                'type' => 'Reschedule',
+                'requestID' => $rescheduleRequest->requestID,
+                'bookingID' => $rescheduleRequest->bookingID,
+                'userID' => $rescheduleRequest->userID,
+                'requestedDate' => $rescheduleRequest->requestedDate,
+                'requestedStartTime' => $rescheduleRequest->requestedStartTime,
+                'requestedEndTime' => $rescheduleRequest->requestedEndTime,
+                'status' => $rescheduleRequest->status,
+                'requestDate' => $rescheduleRequest->requestDate,
+                'message' => 'A reschedule request has been submitted.',
+            ];
+            event(new BookingRequestSubmitted($adminIds, ['notification' => $payload]));
+
             return response()->json([
                 'message' => 'Reschedule request submitted and booking updated successfully.',
                 'data' => $rescheduleRequest,
@@ -195,6 +225,22 @@ class BookingRequestController extends Controller
                 ->update(['status' => 4]);
 
             DB::commit();
+
+            // Broadcast to all admins (after commit)
+            $adminIds = User::where('userType', 'Admin')->pluck('userID')->all();
+            $payload = [
+                'type' => 'Reschedule',
+                'requestID' => $bookingRequestID,
+                'bookingID' => $request->bookingID,
+                'userID' => $request->userID,
+                'requestedDate' => $request->requestedDate,
+                'requestedStartTime' => $startTime,
+                'requestedEndTime' => $endTime,
+                'status' => 'pending',
+                'requestDate' => now()->toDateTimeString(),
+                'message' => 'A reschedule request has been submitted.',
+            ];
+            event(new BookingRequestSubmitted($adminIds, ['notification' => $payload]));
 
             return response()->json([
                 'success' => true,

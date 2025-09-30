@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   format,
   startOfWeek,
@@ -18,6 +18,7 @@ import "react-day-picker/dist/style.css";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import pusher from "../utils/pusher";
 
 // Define types
 type NotificationType = "reschedule" | "cancellation" | "decline";
@@ -65,50 +66,83 @@ const AdminAppointmentSidebar: React.FC<AdminAppointmentSidebarProps> = ({
   );
 
   // Fetch booking requests
-  useEffect(() => {
-    const fetchRequests = async () => {
-      try {
-        const res = await fetchWithAuth(`${API_URL}/api/admin/booking-requests`, {
-          headers: { Accept: "application/json" },
-        });
-        const data = await res.json();
+  const fetchRequests = useCallback(async () => {
+    try {
+      const res = await fetchWithAuth(`${API_URL}/api/admin/booking-requests`, {
+        headers: { Accept: "application/json" },
+      });
+      const data = await res.json();
 
-        if (res.ok && Array.isArray(data.data)) {
-          const mapped = data.data.map((req: any) => ({
-            id: req.requestID,
-            type:
-              req.requestType === "reschedule" ? "reschedule" : "cancellation",
-            icon: req.requestType === "reschedule" ? CalendarClock : XCircle,
-            message:
-              req.requestType === "reschedule"
-                ? <>Client <strong>{req.user.fname} {req.user.lname}</strong> requested to <strong>reschedule</strong> an appointment.</>
-                : <>Client <strong>{req.user.fname} {req.user.lname}</strong> requested <strong>cancellation</strong>.</>,
-            requiresAction: true,
-            clientName: req.user
-              ? `${req.user.fname} ${req.user.lname}`
-              : "Unknown Client",
-            requestDate: req.requestDate,
-            requestedDate: req.requestedDate,
-            requestedStartTime: req.requestedStartTime,
-            requestedEndTime: req.requestedEndTime,
-            reason: req.reason,
-            bookingID: req.booking?.bookingID,
-            bookingDate: req.booking?.bookingDate,
-            bookingStartTime: req.booking?.bookingStartTime,
-            packageName: req.booking?.packages.name,
-            bookingEndTime: req.booking?.bookingEndTime,
-          }));
-          setNotifications(mapped);
-        } else {
-          console.error("Failed to fetch booking requests:", data.message);
-        }
-      } catch (error) {
-        console.error("Error fetching booking requests:", error);
+      if (res.ok && Array.isArray(data.data)) {
+        const mapped = data.data.map((req: any) => ({
+          id: req.requestID,
+          type: req.requestType === "reschedule" ? "reschedule" : "cancellation",
+          icon: req.requestType === "reschedule" ? CalendarClock : XCircle,
+          message:
+            req.requestType === "reschedule"
+              ? (
+                <>Client <strong>{req.user.fname} {req.user.lname}</strong> requested to <strong>reschedule</strong> an appointment.</>
+              ) : (
+                <>Client <strong>{req.user.fname} {req.user.lname}</strong> requested <strong>cancellation</strong>.</>
+              ),
+          requiresAction: true,
+          clientName: req.user ? `${req.user.fname} ${req.user.lname}` : "Unknown Client",
+          requestDate: req.requestDate,
+          requestedDate: req.requestedDate,
+          requestedStartTime: req.requestedStartTime,
+          requestedEndTime: req.requestedEndTime,
+          reason: req.reason,
+          bookingID: req.booking?.bookingID,
+          bookingDate: req.booking?.bookingDate,
+          bookingStartTime: req.booking?.bookingStartTime,
+          packageName: req.booking?.packages.name,
+          bookingEndTime: req.booking?.bookingEndTime,
+        }));
+        setNotifications(mapped);
+      } else {
+        console.error("Failed to fetch booking requests:", data.message);
       }
+    } catch (error) {
+      console.error("Error fetching booking requests:", error);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchRequests();
+  }, [fetchRequests]);
+
+  // Real-time subscription for admins: refresh list when a new request arrives
+  useEffect(() => {
+    const userID = localStorage.getItem("userID");
+    if (!userID) {
+      console.warn("AdminAppointmentSidebar: Missing userID in localStorage; skipping Pusher subscription.");
+      return;
+    }
+
+    const channelName = `private-user.${userID}`;
+    // Reuse existing channel if present to avoid duplicate subscriptions
+    const channel = (pusher as any).channel(channelName) || pusher.subscribe(channelName);
+
+    // Deduplicate events in case of double-binds or rapid duplicates
+    const seenKeys = new Set<string>();
+
+    const handler = (data: any) => {
+      const payload = data?.notification || {};
+      const key = `${payload?.type || ""}|${payload?.requestID || ""}|${payload?.requestDate || ""}`;
+      if (seenKeys.has(key)) {
+        return;
+      }
+      seenKeys.add(key);
+      // No toast requested; just refresh the list
+      fetchRequests();
     };
 
-    fetchRequests();
-  }, []);
+    channel.bind("booking.request.submitted", handler);
+
+    return () => {
+      channel.unbind("booking.request.submitted", handler);
+    };
+  }, [fetchRequests]);
 
   const getWeekOfMonth = (date: Date) => {
     const first = new Date(date.getFullYear(), date.getMonth(), 1);
