@@ -160,15 +160,21 @@ class TransactionController extends Controller
             // Store add-ons data if any
             if (!empty($addonsData)) {
                 foreach ($addonsData as $addon) {
-                    DB::table('booking_addons')->insert([
-                        'booking_id' => $newBookingId,
-                        'addon_id' => $addon['addon_id'],
-                        'quantity' => $addon['quantity'],
-                        'price' => $addon['price'],
-                        'total' => $addon['total'],
-                        'created_at' => Carbon::now(),
-                        'updated_at' => Carbon::now()
-                    ]);
+                    // Map frontend addon IDs to database addOnID
+                    $addOnID = $this->mapAddonIdToDatabase($addon['addon_id']);
+                    if ($addOnID) {
+                        // Get the next bookingAddOnID
+                        $maxAddOnId = DB::table('booking_add_ons')->max('bookingAddOnID') ?? 0;
+                        $newAddOnId = $maxAddOnId + 1;
+                        
+                        DB::table('booking_add_ons')->insert([
+                            'bookingAddOnID' => $newAddOnId,
+                            'bookingID' => $newBookingId,
+                            'addOnID' => $addOnID,
+                            'quantity' => $addon['quantity'],
+                            'price' => $addon['price']
+                        ]);
+                    }
                 }
             }
 
@@ -304,8 +310,14 @@ class TransactionController extends Controller
         $formattedTime = $this->formatTimeTo12Hour($booking->time);
 
         // Get booking addons
-        $addons = DB::table('booking_addons')
-            ->where('booking_id', $bookingId)
+        $addons = DB::table('booking_add_ons')
+            ->join('package_add_ons', 'booking_add_ons.addOnID', '=', 'package_add_ons.addOnID')
+            ->where('booking_add_ons.bookingID', $bookingId)
+            ->select(
+                'booking_add_ons.*',
+                'package_add_ons.addOn as addon_name',
+                'package_add_ons.addOnPrice as addon_price'
+            )
             ->get()
             ->toArray();
 
@@ -433,6 +445,34 @@ class TransactionController extends Controller
         ];
 
         return $addons[$addonId] ?? null;
+    }
+
+    /**
+     * Map frontend addon IDs to database addOnID values
+     */
+    private function mapAddonIdToDatabase($frontendAddonId)
+    {
+        // If the frontend is sending numeric IDs directly (like "50", "60", "70")
+        // these correspond to actual database addOnID values
+        if (is_numeric($frontendAddonId)) {
+            $numericId = (int)$frontendAddonId;
+            // Validate that this is a valid addon ID from our database
+            $validAddonIds = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
+            return in_array($numericId, $validAddonIds) ? $numericId : null;
+        }
+        
+        // Legacy mapping for string-based addon IDs (if frontend sends these)
+        $addonMapping = [
+            'pax' => 20,        // Addl Pax
+            'portrait' => 10,   // Addl Portrait Picture  
+            'grid' => 30,       // Addl Grid Picture
+            'a4' => 40,         // Addl A4 Picture
+            'backdrop' => 50,   // Addl Backdrop
+            'digital' => 60,    // All digital copies
+            'extra5' => 70      // Addl 5 mins
+        ];
+
+        return $addonMapping[$frontendAddonId] ?? null;
     }
 
     /**
@@ -591,6 +631,391 @@ class TransactionController extends Controller
                 'success' => false,
                 'error' => $e->getMessage()
             ];
+        }
+    }
+
+    /**
+     * Create pending booking that stores booking data and creates payment session
+     * This method creates actual booking with pending status until payment is successful
+     */
+    public function createPendingBooking(Request $request)
+    {
+        try {
+            $request->validate([
+                'package_id' => 'required|integer',
+                'booking_date' => 'required|date',  
+                'time_slot' => 'required|string',
+                'name' => 'required|string|max:255',
+                'contact' => 'required|string|max:20',
+                'email' => 'required|email|max:255',
+                'address' => 'required|string|max:500',
+                'payment_mode' => 'nullable|string',
+                'payment_type' => 'nullable|string|in:deposit,full',
+                'addons.*.id' => 'required_with:addons|string',
+                'addons.*.value' => 'required_with:addons|numeric|min:0',
+                'studio_selection' => 'nullable'
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'error' => 'Validation failed',
+                'details' => $e->errors(),
+                'received_data' => $request->all()
+            ], 422);
+        }
+
+        \Log::info('Creating pending booking with payload:', $request->all());
+
+        try {
+            DB::beginTransaction();
+
+            // Get package details
+            $package = DB::table('packages')->where('packageID', $request->package_id)->first();
+            if (!$package) {
+                return response()->json(['error' => 'Package not found'], 404);
+            }
+
+            // Calculate totals
+            $packagePrice = $package->price;
+            $addonsTotal = 0;
+            $addonsData = [];
+
+            if ($request->has('addons') && is_array($request->addons)) {
+                foreach ($request->addons as $addon) {
+                    if (isset($addon['id']) && isset($addon['value']) && $addon['value'] > 0) {
+                        // Use addon details from frontend if available, otherwise get from predefined list
+                        $addonPrice = isset($addon['price']) ? (float)$addon['price'] : null;
+                        $addonType = isset($addon['type']) ? $addon['type'] : 'spinner';
+                        
+                        if (!$addonPrice) {
+                            $addonDetails = $this->getAddonDetails($addon['id']);
+                            if ($addonDetails) {
+                                $addonPrice = $addonDetails['price'];
+                                $addonType = $addonDetails['type'];
+                            }
+                        }
+                        
+                        if ($addonPrice) {
+                            $quantity = (int)$addon['value'];
+                            $addonTotal = $addonType === 'spinner' ? $addonPrice * $quantity : $addonPrice;
+                            $addonsTotal += $addonTotal;
+                            
+                            $addonsData[] = [
+                                'addon_id' => $addon['id'],
+                                'quantity' => $quantity,
+                                'price' => $addonPrice,
+                                'total' => $addonTotal,
+                                'type' => $addonType,
+                                'option' => isset($addon['option']) ? $addon['option'] : null
+                            ];
+                        }
+                    }
+                }
+            }
+
+            $total = $packagePrice + $addonsTotal;
+            $paymentType = $request->payment_type ?? 'deposit';
+            $amount = $paymentType === 'full' ? $total : 200.00; // Default deposit amount
+
+            // Parse time slot
+            $timeSlot = explode(' - ', $request->time_slot);
+            $startTime = $this->parseTimeSlot($timeSlot[0]);
+            $endTime = $this->addHourToTime($startTime);
+
+            // Get user ID from auth
+            $user = auth('sanctum')->user();
+            $userId = $user ? $user->userID : null;
+
+            if (!$userId) {
+                // For testing: use a default user ID when not authenticated
+                $userId = 1; // Assuming user ID 1 exists
+                \Log::info('Using default user ID for testing: ' . $userId);
+            }
+
+            // Get the next bookingID since auto-increment might not be working
+            $maxBookingId = DB::table('booking')->max('bookingID') ?? 0;
+            $newBookingId = $maxBookingId + 1;
+
+            // Prepare studio selection data
+            $studioSelection = null;
+            if ($request->has('studio_selection') && $request->studio_selection) {
+                $studioSelection = json_encode($request->studio_selection);
+            }
+
+            $paidAmount = $amount; // Amount to be paid now
+            $remainingBalance = $total - $paidAmount;
+
+            // Create booking record with PENDING PAYMENT status
+            DB::table('booking')->insert([
+                'bookingID' => $newBookingId,
+                'userID' => $userId,
+                'packageID' => (int)$request->package_id,
+                'customerName' => $request->name,
+                'customerEmail' => $request->email,
+                'customerAddress' => $request->address,
+                'customerContactNo' => $request->contact,
+                'bookingDate' => $request->booking_date,
+                'bookingStartTime' => $startTime,
+                'bookingEndTime' => $endTime,
+                'subTotal' => $packagePrice,
+                'total' => $total,
+                'receivedAmount' => 0.00, // No payment received yet
+                'rem' => $total, // Full amount remaining
+                'paymentMethod' => 'PayMongo', // Will be updated when payment completes
+                'paymentStatus' => 0, // 0 = pending payment
+                'status' => 1, // 1 = pending approval (waiting for payment)
+                'date' => Carbon::now()->toDateString(),
+                'studio_selection' => $studioSelection,
+                'addons_total' => $addonsTotal
+            ]);
+
+            // Store add-ons data if any
+            if (!empty($addonsData)) {
+                \Log::info('Processing addons data', [
+                    'addons_count' => count($addonsData),
+                    'addons_data' => $addonsData
+                ]);
+                
+                foreach ($addonsData as $addon) {
+                    // Map frontend addon IDs to database addOnID
+                    $addOnID = $this->mapAddonIdToDatabase($addon['addon_id']);
+                    
+                    \Log::info('Addon mapping', [
+                        'frontend_id' => $addon['addon_id'],
+                        'mapped_database_id' => $addOnID,
+                        'quantity' => $addon['quantity'],
+                        'price' => $addon['price']
+                    ]);
+                    
+                    if ($addOnID) {
+                        // Get the next bookingAddOnID
+                        $maxAddOnId = DB::table('booking_add_ons')->max('bookingAddOnID') ?? 0;
+                        $newAddOnId = $maxAddOnId + 1;
+                        
+                        DB::table('booking_add_ons')->insert([
+                            'bookingAddOnID' => $newAddOnId,
+                            'bookingID' => $newBookingId,
+                            'addOnID' => $addOnID,
+                            'quantity' => $addon['quantity'],
+                            'price' => $addon['price']
+                        ]);
+                        
+                        \Log::info('Addon inserted successfully', [
+                            'booking_add_on_id' => $newAddOnId,
+                            'booking_id' => $newBookingId,
+                            'addon_id' => $addOnID
+                        ]);
+                    } else {
+                        \Log::warning('Addon mapping failed', [
+                            'frontend_id' => $addon['addon_id'],
+                            'addon_data' => $addon
+                        ]);
+                    }
+                }
+            } else {
+                \Log::info('No addons data to process');
+            }
+
+            // Create PayMongo checkout session
+            $frontendUrl = env('FRONTEND_URL', env('APP_URL'));
+            $checkoutSession = $this->payMongoService->createCheckoutSession(
+                $amount, // PayMongoService will convert to centavos
+                "Booking for {$package->name}",
+                $frontendUrl . '/payment-success',
+                $frontendUrl . '/payment-cancelled',
+                ['booking_id' => $newBookingId]
+            );
+
+            if ($checkoutSession['success']) {
+                // Extract the actual session data from the response
+                $sessionData = $checkoutSession['data']['data'];
+                $sessionId = $sessionData['id'];
+                $checkoutUrl = $sessionData['attributes']['checkout_url'];
+                
+                // Store payment session referencing the actual booking
+                $paymentSessionId = DB::table('payment_sessions')->insertGetId([
+                    'booking_id' => $newBookingId,
+                    'checkout_session_id' => $sessionId,
+                    'payment_type' => $paymentType,
+                    'amount' => $amount,
+                    'status' => 'pending',
+                    'created_at' => now(),
+                    'updated_at' => now()
+                ]);
+
+                DB::commit();
+
+                \Log::info('Pending booking and payment session created', [
+                    'booking_id' => $newBookingId,
+                    'payment_session_id' => $paymentSessionId,
+                    'checkout_session_id' => $sessionId,
+                    'amount' => $amount
+                ]);
+
+                // Get booking details for frontend compatibility
+                $booking = $this->getBookingDetails($newBookingId);
+
+                return response()->json([
+                    'success' => true,
+                    'checkout_url' => $checkoutUrl,
+                    'session_id' => $sessionId,
+                    'booking_id' => $newBookingId,
+                    'id' => $newBookingId, // Add id field for frontend compatibility
+                    'payment_session_id' => $paymentSessionId,
+                    'booking' => $booking, // Add full booking object
+                    'message' => 'Pending booking created. Complete payment to confirm booking.'
+                ]);
+            } else {
+                return response()->json([
+                    'error' => 'Failed to create checkout session',
+                    'message' => $checkoutSession['error']
+                ], 400);
+            }
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Log::error('Pending booking creation failed', [
+                'error' => $e->getMessage(),
+                'package_id' => $request->package_id ?? 'unknown',
+                'trace' => $e->getTraceAsString(),
+                'line' => $e->getLine(),
+                'file' => $e->getFile()
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'error' => 'Pending booking creation failed',
+                'message' => $e->getMessage(),
+                'debug_info' => [
+                    'error_line' => $e->getLine(),
+                    'error_file' => basename($e->getFile()),
+                    'package_id' => $request->package_id ?? 'unknown'
+                ]
+            ], 500);
+        }
+    }
+
+    /**
+     * Create PayMongo checkout session without storing booking in database
+     * Booking will be created only after successful payment webhook
+     */
+    public function createCheckoutSession(Request $request)
+    {
+        try {
+            $request->validate([
+                'package_id' => 'required|integer',
+                'booking_date' => 'required|date',
+                'time_slot' => 'required|string',
+                'name' => 'required|string|max:255',
+                'contact' => 'required|string|max:20',
+                'email' => 'required|email|max:255',
+                'address' => 'required|string|max:500',
+                'payment_type' => 'required|string|in:deposit,full',
+                'total_amount' => 'required|numeric',
+                'amount_to_pay' => 'required|numeric',
+                'addons' => 'nullable|array',
+                'studio_selection' => 'nullable'
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Validation failed',
+                'details' => $e->errors()
+            ], 422);
+        }
+
+        try {
+            // Get package details for validation
+            $package = DB::table('packages')->where('packageID', $request->package_id)->first();
+            if (!$package) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Package not found'
+                ], 404);
+            }
+
+            $amount = $request->amount_to_pay;
+            
+            // Create booking data to store in checkout session metadata
+            $bookingMetadata = [
+                'booking_data' => json_encode([
+                    'package_id' => $request->package_id,
+                    'package_name' => $package->name,
+                    'booking_date' => $request->booking_date,
+                    'time_slot' => $request->time_slot,
+                    'customer_name' => $request->name,
+                    'customer_email' => $request->email,
+                    'customer_address' => $request->address,
+                    'customer_contact' => $request->contact,
+                    'payment_type' => $request->payment_type,
+                    'total_amount' => $request->total_amount,
+                    'amount_to_pay' => $amount,
+                    'addons' => $request->addons ?? [],
+                    'studio_selection' => $request->studio_selection,
+                    'created_at' => now()->toISOString()
+                ])
+            ];
+
+            // Create PayMongo checkout session
+            $frontendUrl = env('FRONTEND_URL', env('APP_URL'));
+            $checkoutSession = $this->payMongoService->createCheckoutSession(
+                $amount, // PayMongoService will convert to centavos
+                "Selfiegram Booking - {$package->name}",
+                $frontendUrl . '/payment-success',
+                $frontendUrl . '/payment-cancelled',
+                $bookingMetadata
+            );
+
+            if ($checkoutSession['success']) {
+                // Extract session data
+                $sessionData = $checkoutSession['data']['data'];
+                $sessionId = $sessionData['id'];
+                $checkoutUrl = $sessionData['attributes']['checkout_url'];
+
+                // Store payment session for tracking (without booking_id since booking doesn't exist yet)
+                $paymentSessionId = DB::table('payment_sessions')->insertGetId([
+                    'booking_id' => null, // Will be updated after booking creation
+                    'checkout_session_id' => $sessionId,
+                    'payment_type' => $request->payment_type,
+                    'amount' => $amount,
+                    'status' => 'pending',
+                    'booking_data' => json_encode($request->all()), // Store booking data here temporarily
+                    'created_at' => now(),
+                    'updated_at' => now()
+                ]);
+
+                \Log::info('Checkout session created without booking', [
+                    'payment_session_id' => $paymentSessionId,
+                    'checkout_session_id' => $sessionId,
+                    'amount' => $amount,
+                    'package_name' => $package->name
+                ]);
+
+                return response()->json([
+                    'success' => true,
+                    'checkout_url' => $checkoutUrl,
+                    'session_id' => $sessionId,
+                    'payment_session_id' => $paymentSessionId,
+                    'message' => 'Checkout session created. Complete payment to create booking.'
+                ]);
+            } else {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Failed to create checkout session',
+                    'message' => $checkoutSession['error']
+                ], 400);
+            }
+
+        } catch (\Exception $e) {
+            \Log::error('Checkout session creation failed', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'error' => 'Checkout session creation failed',
+                'message' => $e->getMessage()
+            ], 500);
         }
     }
 }

@@ -58,7 +58,6 @@ interface AddOn {
   required?: boolean;
 }
 const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
-const RECEIPT_URL = import.meta.env.VITE_URL;
 function getContrastColor(hex: string) {
   const c = hex.substring(1); // remove #
   const rgb = parseInt(c, 16); // convert rrggbb to decimal
@@ -74,7 +73,6 @@ const TransactionModalBooking: React.FC<TransactionModalProps> = ({
   onSaved,
   data,
   previewData,
-  onBookingComplete,
   tags,
   addons = [], 
   selectedAddons
@@ -171,8 +169,8 @@ if (isPreviewMode && previewData) {
 
     setIsProcessing(true);
     try {
-      // First create the booking
-      const bookingPayload = {
+      // Prepare booking data for temporary storage
+      const bookingData = {
         package_id: previewData.packageId,
         booking_date: previewData.bookingDate,
         time_slot: previewData.time,
@@ -180,7 +178,7 @@ if (isPreviewMode && previewData) {
         contact: previewData.contact,
         email: previewData.email,
         address: previewData.address,
-        payment_mode: 'PayMongo', // Set to PayMongo
+        payment_mode: 'PayMongo',
         payment_type: previewData.paymentType,
         addons: selectedAddons.filter(addon => addon.value > 0).map((addon) => ({ 
           id: addon.id, 
@@ -190,64 +188,47 @@ if (isPreviewMode && previewData) {
           option: addon.option || null
         })),
         studio_selection: tags && tags.length > 0 ? tags[0] : null,
+        total_amount: overallTotal,
+        amount_to_pay: previewData.paymentType === 'full' ? overallTotal : 200.00
       };
 
-      console.log('Creating booking with PayMongo payment...');
-      const bookingResponse = await fetchWithAuth(`${API_URL}/api/bookings`, {
+      // Store booking data temporarily in session storage
+      sessionStorage.setItem('pendingBookingData', JSON.stringify(bookingData));
+
+      console.log('Creating PayMongo checkout session with temporary booking data...');
+      
+      // Create PayMongo checkout session without storing booking in database
+      const checkoutResponse = await fetchWithAuth(`${API_URL}/api/payment/create-checkout-session`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(bookingPayload),
+        body: JSON.stringify(bookingData),
       });
 
-      const result = await bookingResponse.json();
-      console.log('Booking created:', result);
-      console.log('Full booking response:', result);
-      console.log('Response status:', bookingResponse.status);
-      console.log('Response OK:', bookingResponse.ok);
+      const result = await checkoutResponse.json();
+      console.log('Checkout session response:', result);
 
-      if (bookingResponse.ok) {
-        // Now create PayMongo checkout session
-        const paymentPayload = {
-          booking_id: result.booking.id,
-          payment_type: previewData.paymentType
-        };
-
-        console.log('Creating PayMongo checkout session...');
-        const paymentResponse = await fetchWithAuth(`${API_URL}/api/payment/checkout`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(paymentPayload),
-        });
-
-        const paymentResult = await paymentResponse.json();
-        console.log('PayMongo response:', paymentResult);
-
-        if (paymentResponse.ok && paymentResult.success) {
-          // Redirect to PayMongo checkout page
-          console.log('Redirecting to:', paymentResult.checkout_url);
-          window.location.href = paymentResult.checkout_url;
-          
-          // Call onBookingComplete with the booking data
-          if (onBookingComplete) {
-            onBookingComplete(result.booking);
-          }
-          
-          onClose(); // Close the modal
-        } else {
-          console.error('PayMongo checkout session failed:', paymentResult);
-          toast.error(paymentResult.message || "Failed to create checkout session");
-        }
+      if (checkoutResponse.ok && result.success) {
+        // Store session info for tracking
+        sessionStorage.setItem('paymentSessionId', result.session_id);
+        
+        // Redirect to PayMongo checkout page
+        console.log('Redirecting to:', result.checkout_url);
+        window.location.href = result.checkout_url;
+        
+        onClose(); // Close the modal
       } else {
-        console.error('Booking creation failed:', result);
-        toast.error(result.message || result.error || "Failed to create booking");
+        console.error('PayMongo checkout session failed:', result);
+        toast.error(result.message || "Failed to create checkout session");
+        // Clear temporary data on failure
+        sessionStorage.removeItem('pendingBookingData');
       }
     } catch (error) {
       console.error("Payment checkout failed:", error);
       toast.error("Failed to initiate payment. Please try again.");
+      // Clear temporary data on failure
+      sessionStorage.removeItem('pendingBookingData');
     } finally {
       setIsProcessing(false);
     }
