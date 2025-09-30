@@ -10,13 +10,13 @@ import { motion, AnimatePresence } from "framer-motion";
 import type { Tag } from "../../types";
 import type { SelectedAddon } from "../../typeSelect";
 import TransactionModalBooking from "../ModalTransactionDialogBooking";
-import TermsDialog from "../TermsDialog";
 
 interface AddOn {
   id: string;
   label: string;
   price: number;
-  type: "spinner" | "checkbox" | "dropdown";
+  // Match existing consumers (e.g., SelectedAddon mapping and Modal props)
+  type: "single" | "multiple" | "dropdown";
   options?: string[]; // for dropdown only
 }
 
@@ -28,7 +28,8 @@ interface Concept {
 type FetchedAddOn = {
   addOnID: number;
   addOn: string;
-  addOnPrice: string;
+  addOnPrice: string | number;
+  type?: string; // DB: 'single' | 'multiple' | 'spinner' | ''
 };
 interface PackageSet {
   setId: string;
@@ -159,7 +160,7 @@ const SelectPackagePage = () => {
   const [previewData, setPreviewData] = useState<PreviewBookingData | null>(
     null
   );
-  const [isTermsDialogOpen, setIsTermsDialogOpen] = useState(false);
+  // const [isTermsDialogOpen, setIsTermsDialogOpen] = useState(false);
 
   const [agreedToPayment, setAgreedToPayment] = useState(false); // For Down Payment Agreement
 
@@ -223,53 +224,13 @@ const SelectPackagePage = () => {
     }
   }, [id]);
 
-  const addOnsMap: Record<number, AddOn> = {
-    20: { id: "pax", label: "Addl pax", price: 129, type: "spinner" },
-    10: {
-      id: "portrait",
-      label: "Addl Portrait Picture",
-      price: 49,
-      type: "spinner",
-    },
-    30: { id: "grid", label: "Addl Grid Picture", price: 69, type: "spinner" },
-    40: { id: "a4", label: "Addl A4 Picture", price: 129, type: "spinner" },
-    50: {
-      id: "backdrop",
-      label: "Addl Backdrop",
-      price: 129,
-      type: "dropdown",
-      options: ["Floral", "Modern", "Classic"],
-    },
-    60: {
-      id: "digital",
-      label: "All digital copies",
-      price: 199,
-      type: "checkbox",
-    },
-    70: { id: "extra5", label: "Addl 5 mins", price: 129, type: "checkbox" },
-    80: {
-      id: "photo20",
-      label: "Photographer service for 20mins",
-      price: 599,
-      type: "checkbox",
-    },
-    90: {
-      id: "photo60",
-      label: "Photographer service for 1hr",
-      price: 1699,
-      type: "checkbox",
-    },
-    100: {
-      id: "makeup",
-      label: "Professional Hair & Make up",
-      price: 1699,
-      type: "checkbox",
-    },
+  // DB type -> UI type mapping
+  const mapDbTypeToUi = (dbType?: string): AddOn["type"] => {
+    const t = (dbType || "").toLowerCase();
+    if (t === "multiple" || t === "spinner") return "multiple"; // quantity style
+    if (t === "dropdown") return "dropdown";
+    return "single"; // default for 'single' or empty
   };
-  const addonArray: AddOn[] = addOns.map((a) => ({
-    ...a,
-    value: 0,
-  }));
   const [selectedAddons, setSelectedAddons] = useState<SelectedAddon[]>([]);
   useEffect(() => {
     const fetchAddOns = async () => {
@@ -284,16 +245,17 @@ const SelectPackagePage = () => {
           ? result.data
           : [];
 
-        // Merge fetched add-ons with static definitions
-        const mergedAddOns: AddOn[] = arrayData
-          .map((dbItem) => {
-            const staticDef = addOnsMap[dbItem.addOnID];
-            if (!staticDef) return null; // ignore unknown IDs
-            return { ...staticDef, price: Number(dbItem.addOnPrice) };
-          })
-          .filter((item): item is AddOn => Boolean(item)); // type-safe filter
+        // Build add-ons directly from DB
+        const built: AddOn[] = arrayData.map((db) => ({
+          id: String(db.addOnID),
+          label: db.addOn,
+          price: Number(db.addOnPrice),
+          type: mapDbTypeToUi(db.type),
+          // If this is your backdrop add-on and you want dynamic options later,
+          // you can add options here once backend provides them.
+        }));
 
-        setAddOns(mergedAddOns);
+        setAddOns(built);
       } catch (error) {
         console.error("Error fetching add-ons:", error);
       }
@@ -302,33 +264,9 @@ const SelectPackagePage = () => {
     if (id) fetchAddOns();
   }, [id]);
 
-  const toggleAddOn = (id: string, forceActive?: boolean, type?: string) => {
-    setActiveAddOns((prev) => {
-      const isActive =
-        typeof forceActive === "boolean" ? forceActive : !prev[id];
-
-      // If activating a dropdown, set default color at index 0
-      if (isActive && type === "dropdown" && colorOptions.length > 0) {
-        const firstColor = colorOptions[0];
-        setSelectedColors((prevColors) => ({
-          ...prevColors,
-          [id]: firstColor,
-        }));
-        handleDropdownChange(id, firstColor.label); // store the label in selectedAddons
-      }
-
-      // If deactivating, remove selected color
-      if (!isActive) {
-        setSelectedColors((prevColors) => {
-          const copy = { ...prevColors };
-          delete copy[id];
-          return copy;
-        });
-      }
-
-      return { ...prev, [id]: isActive };
-    });
-  };
+  // const toggleAddOn = (id: string, forceActive?: boolean, type?: string) => {
+  //   // toggleAddOn not used; using toggleCheckboxAddon for all add-ons
+  // };
 
   /*// 4️⃣ Update quantity for spinner AddOns
   const handleQuantityChange = (id: string, value: number) => {
@@ -345,18 +283,7 @@ const SelectPackagePage = () => {
       }));
     };*/
 
-  const [quantities, setQuantities] = useState<{ [id: string]: number }>({});
-
-  // ✅ Initialize spinners with qty=1 but NOT active
-  useEffect(() => {
-    const initial: { [id: string]: number } = {};
-    addOns.forEach((item) => {
-      if (item.type === "spinner") {
-        initial[item.id] = 1;
-      }
-    });
-    setQuantities(initial);
-  }, []);
+  // Spinner quantities are tracked via selectedAddons; no separate quantities state.
 
   useEffect(() => {
     // Loop through your add-ons (if you have them as props or state)
@@ -397,19 +324,46 @@ const SelectPackagePage = () => {
   }, [addOns]);
 
   const handleAddonChange = (id: string, value?: string | number) => {
-    setSelectedAddons((prev) =>
-      prev.map((addon) =>
-        addon.id === id
-          ? {
-              ...addon,
-              value: addon.type === "dropdown" 
-                ? (activeAddOns[id] ? 1 : 0) // Only set to 1 if actually activated
-                : (value as number),
-              option: addon.type === "dropdown" ? (value as string) : undefined,
-            }
-          : addon
-      )
-    );
+    const addOnMeta = addOns.find((a) => a.id === id);
+    const numeric = typeof value === "number" ? value : parseInt(String(value || 0), 10);
+    const clampedQty = isNaN(numeric) ? 1 : Math.min(Math.max(numeric, 1), 5);
+
+    setSelectedAddons((prev) => {
+      const exists = prev.find((a) => a.id === id);
+      if (exists) {
+        return prev.map((addon) =>
+          addon.id === id
+            ? {
+                ...addon,
+                value: addon.type === "dropdown" ? (activeAddOns[id] ? 1 : 0) : clampedQty,
+                option: addon.type === "dropdown" ? (value as string) : addon.option,
+              }
+            : addon
+        );
+      }
+
+      // If not exists yet, create a new SelectedAddon entry (for quantity edits especially)
+      if (!addOnMeta) return prev;
+
+      let selectedType: SelectedAddon["type"] = "checkbox";
+      if (addOnMeta.type === "dropdown") selectedType = "dropdown";
+      else if (addOnMeta.type === "multiple") selectedType = "spinner";
+
+      const newEntry: SelectedAddon = {
+        id: addOnMeta.id,
+        label: addOnMeta.label,
+        price: addOnMeta.price,
+        type: selectedType,
+        value: selectedType === "dropdown" ? (activeAddOns[id] ? 1 : 0) : clampedQty,
+        ...(selectedType === "dropdown" ? { option: String(value ?? "WHITE") } : {}),
+      };
+      return [...prev, newEntry];
+    });
+
+    // Auto-activate multiples when quantity is set
+    if (addOnMeta?.type === "multiple") {
+      setActiveAddOns((prev) => ({ ...prev, [id]: true }));
+    }
   };
 
   // For toggling checkboxes
@@ -426,7 +380,26 @@ const SelectPackagePage = () => {
         } else if (newActive) {
           const newAddon = addOns.find((a) => a.id === id);
           if (!newAddon) return prevAddons;
-          return [...prevAddons, { ...newAddon, value: 1 }];
+          // Map AddOn type to SelectedAddon type
+          let selectedAddonType: SelectedAddon["type"];
+          if (newAddon.type === "dropdown") {
+            selectedAddonType = "dropdown";
+          } else if (newAddon.type === "multiple") {
+            selectedAddonType = "spinner";
+          } else {
+            selectedAddonType = "checkbox";
+          }
+          return [
+            ...prevAddons,
+            {
+              id: newAddon.id,
+              label: newAddon.label,
+              price: newAddon.price,
+              value: selectedAddonType === "spinner" ? 1 : 1,
+              type: selectedAddonType,
+              ...(selectedAddonType === "dropdown" ? { option: "WHITE" } : {}),
+            } as SelectedAddon,
+          ];
         }
         return prevAddons;
       });
@@ -435,12 +408,7 @@ const SelectPackagePage = () => {
     });
   };
 
-  // For spinners
-  const handleSpinnerChange = (id: string, qty: number) => {
-    setSelectedAddons((prev) =>
-      prev.map((a) => (a.id === id ? { ...a, value: qty } : a))
-    );
-  };
+  // For spinners (quantity changes handled inline via handleAddonChange)
 
   // For dropdowns
   const handleDropdownChange = (id: string, selectedLabel: string) => {
@@ -840,11 +808,7 @@ const SelectPackagePage = () => {
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       setSelectedColorA(color.id);
-
-                                      const label =
-                                        colorOptions.find(
-                                          (c) => c.id === color.id
-                                        )?.label || "Color";
+                                      // use colorOptions directly; no temp label var
                                       setTags((prev) => {
                                         const colorObj = colorOptions.find(
                                           (c) => c.id === color.id
@@ -1000,9 +964,7 @@ const SelectPackagePage = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             {addOns.map((item) => {
               const isActive = !!activeAddOns[item.id];
-              const qty = quantities[item.id] || 0;
-              const totalPrice =
-                item.type === "spinner" ? item.price * qty : item.price;
+              // total price is computed inline below using selectedAddons
 
               return (
                 <button
@@ -1044,7 +1006,7 @@ const SelectPackagePage = () => {
                   </div>
 
                   {/* Control Area */}
-                  {item.type === "spinner" && (
+                  {item.type === "multiple" && (
                     <div className="flex items-center justify-between gap-2">
                       {/* Quantity Input */}
                       <input
