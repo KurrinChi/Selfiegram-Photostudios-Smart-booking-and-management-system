@@ -3,6 +3,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class PackageController extends Controller
 {
@@ -82,19 +83,22 @@ class PackageController extends Controller
 
     public function adminShowAll()
     {
+        $selects = [
+            'packages.packageID as id',
+            'packages.name as title',
+            'packages.price',
+            'package_images.imagePath',
+            'package_types.typeName as tag',
+            'packages.status'
+        ];
+        if (Schema::hasColumn('packages', 'duration')) {
+            array_splice($selects, 3, 0, ['packages.duration as duration']); // insert after title
+        }
         $raw = DB::table('packages')
             ->leftJoin('package_images', 'packages.packageID', '=', 'package_images.packageID')
             ->leftJoin('package_type_mapping', 'packages.packageID', '=', 'package_type_mapping.packageID')
             ->leftJoin('package_types', 'package_type_mapping.typeID', '=', 'package_types.typeID')
-            ->select(
-                'packages.packageID as id',
-                'packages.name as title',
-                'packages.duration as duration',
-                'packages.price',
-                'package_images.imagePath',
-                'package_types.typeName as tag',
-                'packages.status'
-            )
+            ->select($selects)
             ->get();
 
         $grouped = $raw->groupBy('id');
@@ -118,6 +122,22 @@ class PackageController extends Controller
 
    public function adminShow($id)
     {
+        $detailSelects = [
+            'packages.packageID as id',
+            'packages.name as title',
+            'packages.price',
+            'packages.description',
+            'package_images.imageID',
+            'package_images.imagePath',
+            'package_types.typeName as tag',
+            'packages.status',
+            'package_add_ons.addOn',
+            'package_add_ons.addOnID',
+            'package_sets.setName'
+        ];
+        if (Schema::hasColumn('packages', 'duration')) {
+            array_splice($detailSelects, 2, 0, ['packages.duration as duration']);
+        }
         $raw = DB::table('packages')
             ->where('packages.status', 1)
             ->where('packages.packageID', $id)
@@ -127,20 +147,7 @@ class PackageController extends Controller
             ->leftJoin('package_sets', 'packages.setID', '=', 'package_sets.setID')
             ->leftJoin('package_add_on_mapping', 'packages.packageID', '=', 'package_add_on_mapping.packageID')
             ->leftJoin('package_add_ons', 'package_add_on_mapping.addOnID', '=', 'package_add_ons.addOnID')
-            ->select(
-                'packages.packageID as id',
-                'packages.name as title',
-                'packages.duration as duration',
-                'packages.price',
-                'packages.description',
-                'package_images.imageID',
-                'package_images.imagePath',
-                'package_types.typeName as tag',
-                'packages.status',
-                'package_add_ons.addOn',
-                'package_add_ons.addOnID',
-                'package_sets.setName'
-            )
+            ->select($detailSelects)
             ->get();
 
         if ($raw->isEmpty()) {
@@ -489,15 +496,32 @@ class PackageController extends Controller
     {
         try {
         // Make sure $id comes from the route: /api/packages/{id}/addons
+            $addOnSelects = ['pa.addOnID', 'pa.addOn', 'pa.addOnPrice', 'pa.type'];
+            // Support both camelCase and snake_case column naming (in case columns were added manually)
+            $hasMinCamel = Schema::hasColumn('package_add_ons', 'minQuantity');
+            $hasMinSnake = Schema::hasColumn('package_add_ons', 'min_quantity');
+            $hasMaxCamel = Schema::hasColumn('package_add_ons', 'maxQuantity');
+            $hasMaxSnake = Schema::hasColumn('package_add_ons', 'max_quantity');
+
+            if ($hasMinCamel) {
+                $addOnSelects[] = 'pa.minQuantity as minQuantity';
+            } elseif ($hasMinSnake) {
+                $addOnSelects[] = 'pa.min_quantity as minQuantity';
+            }
+            if ($hasMaxCamel) {
+                $addOnSelects[] = 'pa.maxQuantity as maxQuantity';
+            } elseif ($hasMaxSnake) {
+                $addOnSelects[] = 'pa.max_quantity as maxQuantity';
+            }
             $addOns = DB::table('package_add_ons as pa')
                 ->join('package_add_on_mapping as pam', 'pa.addOnID', '=', 'pam.addOnID')
                 ->where('pam.packageID', $id)
-                ->select('pa.addOnID', 'pa.addOn', 'pa.addOnPrice', 'pa.type')
+                ->select($addOnSelects)
                 ->get()
                 ->map(function ($row) {
-                    // Fallback mapping for legacy data where type is not yet set correctly
-                    $derived = $row->type;
-                    if (!$derived || $derived === '' || $derived === 'single') {
+                    // Fallback mapping only if DB type is missing/empty (do not override explicit values)
+                    $derived = is_string($row->type) ? strtolower(trim($row->type)) : $row->type;
+                    if ($derived === null || $derived === '') {
                         // quantity add-ons
                         if (in_array($row->addOnID, [10, 20, 30, 40])) {
                             $derived = 'multiple';
@@ -529,13 +553,29 @@ class PackageController extends Controller
     public function getAllAddOns()
     {
         try {
+            $addOnSelects = ['pa.addOnID', 'pa.addOn', 'pa.addOnPrice', 'pa.type'];
+            $hasMinCamel = Schema::hasColumn('package_add_ons', 'minQuantity');
+            $hasMinSnake = Schema::hasColumn('package_add_ons', 'min_quantity');
+            $hasMaxCamel = Schema::hasColumn('package_add_ons', 'maxQuantity');
+            $hasMaxSnake = Schema::hasColumn('package_add_ons', 'max_quantity');
+
+            if ($hasMinCamel) {
+                $addOnSelects[] = 'pa.minQuantity as minQuantity';
+            } elseif ($hasMinSnake) {
+                $addOnSelects[] = 'pa.min_quantity as minQuantity';
+            }
+            if ($hasMaxCamel) {
+                $addOnSelects[] = 'pa.maxQuantity as maxQuantity';
+            } elseif ($hasMaxSnake) {
+                $addOnSelects[] = 'pa.max_quantity as maxQuantity';
+            }
             $addOns = DB::table('package_add_ons as pa')
-                ->select('pa.addOnID', 'pa.addOn', 'pa.addOnPrice', 'pa.type')
+                ->select($addOnSelects)
                 ->get()
                 ->map(function ($row) {
-                    // Fallback mapping for legacy data where type is not yet set correctly
-                    $derived = $row->type;
-                    if (!$derived || $derived === '' || $derived === 'single') {
+                    // Fallback mapping only if DB type is missing/empty (do not override explicit values)
+                    $derived = is_string($row->type) ? strtolower(trim($row->type)) : $row->type;
+                    if ($derived === null || $derived === '') {
                         if (in_array($row->addOnID, [10, 20, 30, 40])) {
                             $derived = 'multiple';
                         }

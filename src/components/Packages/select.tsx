@@ -17,6 +17,9 @@ interface AddOn {
   price: number;
   // Match existing consumers (e.g., SelectedAddon mapping and Modal props)
   type: "single" | "multiple" | "dropdown";
+  // For quantity-based add-ons (type: multiple)
+  minQty?: number;
+  maxQty?: number;
   options?: string[]; // for dropdown only
 }
 
@@ -30,6 +33,8 @@ type FetchedAddOn = {
   addOn: string;
   addOnPrice: string | number;
   type?: string; // DB: 'single' | 'multiple' | 'spinner' | ''
+  minQuantity?: number | string; // optional from API
+  maxQuantity?: number | string; // optional from API
 };
 interface PackageSet {
   setId: string;
@@ -246,14 +251,47 @@ const SelectPackagePage = () => {
           : [];
 
         // Build add-ons directly from DB
-        const built: AddOn[] = arrayData.map((db) => ({
-          id: String(db.addOnID),
-          label: db.addOn,
-          price: Number(db.addOnPrice),
-          type: mapDbTypeToUi(db.type),
-          // If this is your backdrop add-on and you want dynamic options later,
-          // you can add options here once backend provides them.
-        }));
+        const built: AddOn[] = arrayData.map((db) => {
+          const uiType = mapDbTypeToUi(db.type);
+          const toNum = (v: unknown): number | undefined => {
+            if (v === null || v === undefined || v === "") return undefined;
+            const n = typeof v === "string" ? Number(v) : typeof v === "number" ? v : NaN;
+            return Number.isFinite(n) && n > 0 ? n : undefined;
+          };
+          const minQ = toNum(db.minQuantity) ?? 1; // only fallback here
+          const rawMax = toNum(db.maxQuantity);
+          // Explicitly allow max when >= min; otherwise treat as unlimited (undefined)
+          const maxQ = rawMax !== undefined && rawMax >= minQ ? rawMax : undefined;
+
+          return {
+            id: String(db.addOnID),
+            label: db.addOn,
+            price: Number(db.addOnPrice),
+            type: uiType,
+            minQty: uiType === "multiple" ? minQ : undefined,
+            maxQty: uiType === "multiple" ? maxQ : undefined,
+          } as AddOn;
+        });
+
+        // Debug logging: show mapping from DB type -> UI type
+        try {
+          console.groupCollapsed("AddOns mapping (DB -> UI)");
+          console.table(
+            arrayData.map((db) => ({
+              id: db.addOnID,
+              label: db.addOn,
+              price: Number(db.addOnPrice),
+              dbType: (db.type || "").toString() || "(empty)",
+              uiType: mapDbTypeToUi(db.type),
+              minQuantity: db.minQuantity ?? 1,
+              maxQuantity: db.maxQuantity ?? '(unlimited)',
+            }))
+          );
+          console.log("Built AddOns (UI):", built);
+          console.groupEnd();
+        } catch (_) {
+          // no-op logging failure
+        }
 
         setAddOns(built);
       } catch (error) {
@@ -326,7 +364,9 @@ const SelectPackagePage = () => {
   const handleAddonChange = (id: string, value?: string | number) => {
     const addOnMeta = addOns.find((a) => a.id === id);
     const numeric = typeof value === "number" ? value : parseInt(String(value || 0), 10);
-    const clampedQty = isNaN(numeric) ? 1 : Math.min(Math.max(numeric, 1), 5);
+  const minQ = addOnMeta?.minQty ?? 1;
+  const maxQ = addOnMeta?.maxQty ?? Number.POSITIVE_INFINITY;
+  const clampedQty = isNaN(numeric) ? minQ : Math.min(Math.max(numeric, minQ), maxQ);
 
     setSelectedAddons((prev) => {
       const exists = prev.find((a) => a.id === id);
@@ -345,7 +385,7 @@ const SelectPackagePage = () => {
       // If not exists yet, create a new SelectedAddon entry (for quantity edits especially)
       if (!addOnMeta) return prev;
 
-      let selectedType: SelectedAddon["type"] = "checkbox";
+  let selectedType: SelectedAddon["type"] = "checkbox";
       if (addOnMeta.type === "dropdown") selectedType = "dropdown";
       else if (addOnMeta.type === "multiple") selectedType = "spinner";
 
@@ -395,7 +435,7 @@ const SelectPackagePage = () => {
               id: newAddon.id,
               label: newAddon.label,
               price: newAddon.price,
-              value: selectedAddonType === "spinner" ? 1 : 1,
+              value: selectedAddonType === "spinner" ? (newAddon.minQty ?? 1) : 1,
               type: selectedAddonType,
               ...(selectedAddonType === "dropdown" ? { option: "WHITE" } : {}),
             } as SelectedAddon,
@@ -1011,33 +1051,34 @@ const SelectPackagePage = () => {
                       {/* Quantity Input */}
                       <input
                         type="number"
-                        min={1}
-                        max={5}
+                        min={item.minQty ?? 1}
+                        {...(item.maxQty ? { max: item.maxQty } : {})}
                         value={
                           selectedAddons.find((a) => a.id === item.id)?.value ||
-                          1
-                        } // default 1
+                          (item.minQty ?? 1)
+                        }
                         onChange={(e) => {
-                          const value = parseInt(e.target.value, 10);
-
-                          // Enforce the min and max limits
-                          if (value >= 1 && value <= 5) {
-                            handleAddonChange(item.id, value);
-                          }
+                          const entered = parseInt(e.target.value, 10);
+                          const minQ = item.minQty ?? 1;
+                          const maxQ = item.maxQty ?? Number.POSITIVE_INFINITY;
+                          const clamped = isNaN(entered)
+                            ? minQ
+                            : Math.min(Math.max(entered, minQ), maxQ);
+                          handleAddonChange(item.id, clamped);
                         }}
                         onBlur={(e) => {
-                          // Reset to min value if the input is empty or invalid
-                          if (
-                            !e.target.value ||
-                            parseInt(e.target.value, 10) < 1
-                          ) {
-                            handleAddonChange(item.id, 1);
-                          } else if (parseInt(e.target.value, 10) > 5) {
-                            handleAddonChange(item.id, 5);
+                          const parsed = parseInt(e.target.value, 10);
+                          const minQ = item.minQty ?? 1;
+                          const maxQ = item.maxQty ?? Number.POSITIVE_INFINITY;
+                          const clamped = isNaN(parsed)
+                            ? minQ
+                            : Math.min(Math.max(parsed, minQ), maxQ);
+                          if (clamped !== parsed) {
+                            handleAddonChange(item.id, clamped);
                           }
                         }}
-                        onClick={(e) => e.stopPropagation()} // Prevent toggling
-                        className="w-16 border rounded p-1"
+                        onClick={(e) => e.stopPropagation()}
+                        className="w-20 border rounded p-1"
                       />
 
                       {/* Total Price beside input */}
