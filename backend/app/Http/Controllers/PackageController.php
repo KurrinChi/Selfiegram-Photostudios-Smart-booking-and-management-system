@@ -492,8 +492,24 @@ class PackageController extends Controller
             $addOns = DB::table('package_add_ons as pa')
                 ->join('package_add_on_mapping as pam', 'pa.addOnID', '=', 'pam.addOnID')
                 ->where('pam.packageID', $id)
-                ->select('pa.addOnID', 'pa.addOn', 'pa.addOnPrice')
-                ->get();
+                ->select('pa.addOnID', 'pa.addOn', 'pa.addOnPrice', 'pa.type')
+                ->get()
+                ->map(function ($row) {
+                    // Fallback mapping for legacy data where type is not yet set correctly
+                    $derived = $row->type;
+                    if (!$derived || $derived === '' || $derived === 'single') {
+                        // quantity add-ons
+                        if (in_array($row->addOnID, [10, 20, 30, 40])) {
+                            $derived = 'multiple';
+                        }
+                        // dropdown add-on (backdrop)
+                        if ($row->addOnID == 50) {
+                            $derived = 'dropdown';
+                        }
+                    }
+                    $row->type = $derived ?: 'single';
+                    return $row;
+                });
 
                 return response()->json([
                     'success' => true,
@@ -514,8 +530,22 @@ class PackageController extends Controller
     {
         try {
             $addOns = DB::table('package_add_ons as pa')
-                ->select('pa.addOnID', 'pa.addOn', 'pa.addOnPrice')
-                ->get();
+                ->select('pa.addOnID', 'pa.addOn', 'pa.addOnPrice', 'pa.type')
+                ->get()
+                ->map(function ($row) {
+                    // Fallback mapping for legacy data where type is not yet set correctly
+                    $derived = $row->type;
+                    if (!$derived || $derived === '' || $derived === 'single') {
+                        if (in_array($row->addOnID, [10, 20, 30, 40])) {
+                            $derived = 'multiple';
+                        }
+                        if ($row->addOnID == 50) {
+                            $derived = 'dropdown';
+                        }
+                    }
+                    $row->type = $derived ?: 'single';
+                    return $row;
+                });
 
                 return response()->json([
                     'success' => true,

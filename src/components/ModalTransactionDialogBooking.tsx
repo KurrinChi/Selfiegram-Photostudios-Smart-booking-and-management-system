@@ -53,7 +53,7 @@ interface TransactionModalProps {
 interface AddOn {
   id: string;
   label: string;
- type: "spinner" | "checkbox" | "dropdown";
+ type: "single" | "multiple" | "dropdown";
   value?: number; // the numeric input
   required?: boolean;
 }
