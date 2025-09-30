@@ -18,14 +18,13 @@ const ModalRescheduleDialog: React.FC<ModalRescheduleDialogProps> = ({
   isOpen,
   onClose,
   onSubmit,
-  bookingID, // Reserved for future booking-specific validations
-  userID, // Reserved for future user permission checks
+  // bookingID, // Reserved for future booking-specific validations
+  // userID, // Reserved for future user permission checks
 }) => {
   const [reason, setReason] = useState("");
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
-  const [unavailableDates, setUnavailableDates] = useState<Date[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [bookedSlots, setBookedSlots] = useState<string[]>([]);
   
   const timeSlots = [
     "9 AM", "10 AM", "11 AM",
@@ -34,28 +33,7 @@ const ModalRescheduleDialog: React.FC<ModalRescheduleDialogProps> = ({
     "6 PM", "7 PM",
   ];
 
-  // Fetch unavailable dates from the backend
-  useEffect(() => {
-    const fetchUnavailableDates = async () => {
-      try {
-        setLoading(true);
-        const response = await fetchWithAuth(`${API_URL}/api/unavailable-dates`);
-        if (response.ok) {
-          const data = await response.json();
-          const dates = data.dates?.map((dateStr: string) => new Date(dateStr)) || [];
-          setUnavailableDates(dates);
-        }
-      } catch (error) {
-        console.error("Error fetching unavailable dates:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (isOpen) {
-      fetchUnavailableDates();
-    }
-  }, [isOpen]);
+  // (Removed unavailable-dates fetch; time-slot layer drives availability)
 
   // Reset form when modal opens
   useEffect(() => {
@@ -75,40 +53,84 @@ const ModalRescheduleDialog: React.FC<ModalRescheduleDialogProps> = ({
     return isSameDay(date, today);
   }
 
-  // Check if date is in the past
-  function isPastDate(date: Date) {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const checkDate = new Date(date);
-    checkDate.setHours(0, 0, 0, 0);
-    return checkDate < today;
-  }
+  // (removed generic past-date; we use PH-based past-date below)
 
-  // Check if date is a weekend (Saturday = 6, Sunday = 0)
-  function isWeekend(date: Date) {
-    const day = date.getDay();
-    return day === 0 || day === 6;
-  }
+  // (weekend helper removed; not used)
 
-  // Check if date is unavailable
-  function isUnavailable(date: Date) {
-    return unavailableDates.some(unavailableDate => isSameDay(date, unavailableDate));
-  }
+  // (date-level unavailability not styled; time-slot layer handles availability)
 
-  // Check if date is too close (less than 24 hours advance notice)
-  function isTooSoon(date: Date) {
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    tomorrow.setHours(0, 0, 0, 0);
-    const checkDate = new Date(date);
-    checkDate.setHours(0, 0, 0, 0);
-    return checkDate < tomorrow;
-  }
+  // (removed 24-hour lead restriction)
 
-  // Disable certain dates
+    // Get today's date in Philippine Standard Time (Asia/Manila)
+    function getTodayInPH(): Date {
+      const fmt = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Asia/Manila',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      });
+      const parts = fmt.format(new Date()); // YYYY-MM-DD
+      const [y, m, d] = parts.split('-').map((v) => parseInt(v, 10));
+      return new Date(y, (m || 1) - 1, d || 1); // Local Date at midnight, representing PH calendar date
+    }
+
+    // Check if date is in the past relative to PH date
+    function isPastDatePH(date: Date) {
+      const phToday = getTodayInPH();
+      phToday.setHours(0, 0, 0, 0);
+      const checkDate = new Date(date);
+      checkDate.setHours(0, 0, 0, 0);
+      return checkDate < phToday;
+    }
+  // Only disable past dates (Philippine time)
   function isDisabled(date: Date) {
-    return isPastDate(date) || isUnavailable(date) || isTooSoon(date);
+    return isPastDatePH(date);
   }
+
+  // Convert server 12-hour time (e.g., "09:00 AM") to slot label (e.g., "9 AM")
+  function normalizeServerTimeToSlotLabel(serverTime: string): string {
+    const match = serverTime.match(/^(\d{1,2}):\d{2}\s*(AM|PM)$/i);
+    if (!match) return serverTime;
+    let hour = parseInt(match[1], 10);
+    const ampm = match[2].toUpperCase();
+    if (hour === 0) hour = 12;
+    return `${hour} ${ampm}`;
+  }
+
+  // Load booked slots for the selected date
+  useEffect(() => {
+    const fetchBooked = async () => {
+      if (!selectedDate) {
+        setBookedSlots([]);
+        return;
+      }
+      try {
+        const dateStr = formatDateToString(selectedDate);
+        const res = await fetchWithAuth(`${API_URL}/api/booked-slots?date=${dateStr}`);
+        if (!res.ok) {
+          setBookedSlots([]);
+          return;
+        }
+        const data = await res.json();
+        const slots: string[] = Array.isArray(data.bookedSlots) ? data.bookedSlots : [];
+        const normalized = slots.map(normalizeServerTimeToSlotLabel);
+        setBookedSlots(normalized);
+
+        // If all time slots are booked, clear any selected time; also clear if the selected slot became booked
+        const allBooked = timeSlots.every(s => normalized.includes(s));
+        if (allBooked) {
+          setSelectedTime(null);
+        } else if (selectedTime && normalized.includes(selectedTime)) {
+          setSelectedTime(null);
+        }
+      } catch (e) {
+        console.error('Error fetching booked slots:', e);
+      }
+    };
+
+    fetchBooked();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedDate]);
 
   function to24Hour(time12h: string) {
     try {
@@ -186,6 +208,12 @@ const ModalRescheduleDialog: React.FC<ModalRescheduleDialogProps> = ({
       return;
     }
 
+    // Safety: ensure selected time is still available at submit time
+    if (!!selectedTime && bookedSlots.includes(selectedTime)) {
+      toast.error("The selected time slot has just been booked. Please choose another.");
+      return;
+    }
+
     // Additional validation for the selected date
     if (isDisabled(selectedDate)) {
       toast.error("The selected date is not available. Please choose another date.");
@@ -231,39 +259,27 @@ if (!isOpen) return null;
 
         <div className="flex flex-col lg:flex-row justify-center gap-8">
           <div className="lg:w-1/2">
-            {loading ? (
-              <div className="flex justify-center items-center h-64">
-                <div className="text-gray-500">Loading available dates...</div>
-              </div>
-            ) : (
+            {
               <DayPicker
                 mode="single"
                 selected={selectedDate}
                 onSelect={(date) => {
-                  if (date && !isDisabled(date)) {
+                  if (date) {
                     setSelectedDate(date);
                     setSelectedTime(null); // Reset time selection when date changes
-                  } else if (date && isDisabled(date)) {
-                    toast.warning("This date is not available for booking.");
                   }
                 }}
-                disabled={isDisabled}
                 captionLayout="label"
-                fromDate={new Date()} // Start from today
+                fromDate={getTodayInPH()} // Start from PH today
                 toDate={new Date(new Date().setMonth(new Date().getMonth() + 3))} // 3 months ahead
+                disabled={isDisabled}
                 modifiers={{
                   selected: (d) => !!selectedDate && isSameDay(d, selectedDate),
                   today: (d) => isToday(d),
-            
-                  unavailable: (d) => isUnavailable(d),
-                  tooSoon: (d) => isTooSoon(d),
                 }}
                 modifiersClassNames={{
                   selected: "bg-gray-800 text-white",
                   today: "font-bold text-black bg-gray-100 rounded-xl",
-             
-                  unavailable: "text-red-500 bg-red-100 line-through",
-                  tooSoon: "text-orange-400 bg-orange-100 line-through",
                 }}
                 classNames={{
                   caption: "text-sm text-black",
@@ -273,11 +289,11 @@ if (!isOpen) return null;
                   day_disabled: "text-gray-300 cursor-not-allowed",
                 }}
               />
-            )}
+            }
             
             {/* Date Selection Help Text */}
             <div className="mt-2 text-xs text-gray-500">
-              <p>• Red dates are fully booked or unavailable</p>
+              <p>• Select a date; unavailable time slots will be disabled.</p>
             </div>
           </div>
 
@@ -290,10 +306,13 @@ if (!isOpen) return null;
                 <button
                   key={slot}
                   onClick={() => setSelectedTime(slot)}
+                  disabled={!selectedDate || bookedSlots.includes(slot)}
                   className={`py-3 px-2 text-xs font-medium rounded-md transition text-center whitespace-nowrap ${
-                    selectedTime === slot
-                      ? "bg-black text-white"
-                      : "bg-gray-100 hover:bg-gray-200 text-gray-700"
+                    !selectedDate || bookedSlots.includes(slot)
+                      ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+                      : selectedTime === slot
+                        ? "bg-black text-white"
+                        : "bg-gray-100 hover:bg-gray-200 text-gray-700"
                   }`}
                   title={slot} // Add tooltip to show full time
                 >
@@ -301,6 +320,11 @@ if (!isOpen) return null;
                 </button>
               ))}
             </div>
+            {selectedDate && timeSlots.every(s => bookedSlots.includes(s)) && (
+              <div className="mt-3 text-sm text-red-600">
+                All time slots are fully booked for this date.
+              </div>
+            )}
             
             {/* Selected time display */}
             {selectedTime && (
@@ -363,19 +387,21 @@ if (!isOpen) return null;
               reason.trim().length < 10 ||
               !selectedDate ||
               !selectedTime ||
-              (selectedDate && isDisabled(selectedDate))
+              (selectedDate && isDisabled(selectedDate)) ||
+              (!!selectedTime && bookedSlots.includes(selectedTime))
             }
             className={`w-full py-2 text-sm rounded-md ml-4 transition-all ${
               !reason.trim() ||
               reason.trim().length < 10 ||
               !selectedDate ||
               !selectedTime ||
-              (selectedDate && isDisabled(selectedDate))
+              (selectedDate && isDisabled(selectedDate)) ||
+              (!!selectedTime && bookedSlots.includes(selectedTime))
                 ? "bg-gray-300 text-gray-500 cursor-not-allowed"
                 : "bg-black text-white hover:opacity-80"
             }`}
           >
-            {loading ? "Please wait..." : "Confirm Reschedule"}
+            Confirm Reschedule
           </button>
         </div>
       </div>

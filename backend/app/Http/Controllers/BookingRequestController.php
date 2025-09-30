@@ -9,6 +9,8 @@ use App\Models\User;
 use App\Models\Booking;
 use App\Models\Packages;
 use App\Events\BookingRequestSubmitted;
+use App\Models\Notification;
+use App\Events\BookingStatusUpdated;
 
 class BookingRequestController extends Controller
 {
@@ -332,6 +334,28 @@ class BookingRequestController extends Controller
             $booking->bookingEndTime = $request->requestedEndTime;
             $booking->save();
 
+            // Create client notification and broadcast in real-time
+            $bookingDate = \Carbon\Carbon::parse($booking->bookingDate)->format('F j, Y');
+            // bookingStartTime in DB is H:i:s
+            $bookingTime = \DateTime::createFromFormat('H:i:s', $booking->bookingStartTime);
+            $formattedTime = $bookingTime ? $bookingTime->format('g:i A') : $booking->bookingStartTime;
+
+            $message = "Your reschedule request for SFO#{$booking->bookingID} has been approved. New schedule: {$bookingDate} at {$formattedTime}.";
+
+            $notification = Notification::create([
+                'userID' => $request->userID,
+                'title' => 'Reschedule Approved',
+                'label' => 'Reschedule',
+                'message' => $message,
+                'time' => now(),
+                'starred' => 0,
+                'bookingID' => $booking->bookingID,
+                'transID' => 0,
+            ]);
+
+            // Push to user's private channel so Notifications.tsx receives it
+            broadcast(new BookingStatusUpdated($request->userID, $booking->bookingID, $notification));
+
             return response()->json([
                 'message' => 'Reschedule confirmed successfully.',
                 'data' => $request
@@ -358,6 +382,26 @@ class BookingRequestController extends Controller
             // Update booking status to 3 (cancelled)
             $booking->status = 3;
             $booking->save();
+
+            // Create client notification and broadcast in real-time
+            $bookingDate = \Carbon\Carbon::parse($booking->bookingDate)->format('F j, Y');
+            $bookingTimeDT = \DateTime::createFromFormat('H:i:s', $booking->bookingStartTime);
+            $bookingTime = $bookingTimeDT ? $bookingTimeDT->format('g:i A') : $booking->bookingStartTime;
+
+            $message = "Your cancellation request for SFO#{$booking->bookingID} has been approved. Your booking on {$bookingDate} at {$bookingTime} is now cancelled.";
+
+            $notification = Notification::create([
+                'userID' => $request->userID,
+                'title' => 'Cancellation Approved',
+                'label' => 'Cancellation',
+                'message' => $message,
+                'time' => now(),
+                'starred' => 0,
+                'bookingID' => $booking->bookingID,
+                'transID' => 0,
+            ]);
+
+            broadcast(new BookingStatusUpdated($request->userID, $booking->bookingID, $notification));
 
             return response()->json([
                 'message' => 'Cancellation confirmed successfully.',
@@ -390,6 +434,38 @@ class BookingRequestController extends Controller
 
         $request->status = 'declined';
         $request->save();
+
+        // Notify the user of the decline with appropriate label and message
+        $booking = Booking::find($request->bookingID);
+        $bookingDate = $booking ? \Carbon\Carbon::parse($booking->bookingDate)->format('F j, Y') : null;
+        $bookingTimeDT = ($booking && $booking->bookingStartTime) ? \DateTime::createFromFormat('H:i:s', $booking->bookingStartTime) : null;
+        $bookingTime = $bookingTimeDT ? $bookingTimeDT->format('g:i A') : null;
+
+        if ($request->requestType === 'reschedule') {
+            $title = 'Reschedule Declined';
+            $label = 'Reschedule';
+            $message = "Your reschedule request for SFO#{$request->bookingID} has been declined.";
+        } else { // cancel
+            $title = 'Cancellation Declined';
+            $label = 'Cancellation';
+            $message = "Your cancellation request for SFO#{$request->bookingID} has been declined.";
+        }
+        if ($bookingDate && $bookingTime) {
+            $message .= " Original schedule remains on {$bookingDate} at {$bookingTime}.";
+        }
+
+        $notification = Notification::create([
+            'userID' => $request->userID,
+            'title' => $title,
+            'label' => $label,
+            'message' => $message,
+            'time' => now(),
+            'starred' => 0,
+            'bookingID' => $request->bookingID,
+            'transID' => 0,
+        ]);
+
+        broadcast(new BookingStatusUpdated($request->userID, $request->bookingID, $notification));
 
         return response()->json([
             'message' => 'Booking request successfully declined.',
