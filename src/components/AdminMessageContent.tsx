@@ -3,6 +3,7 @@ import React, {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type JSX,
 } from "react";
@@ -18,20 +19,19 @@ import {
   Reply as ReplyIcon,
   X as XIcon,
   Plus as PlusIcon,
-  Settings as SettingsIcon,
-  Layers as FoldersIcon,
   ArrowLeft as ArrowLeft,
 } from "lucide-react";
 
 /**
  * AdminEmailApp.tsx
- * - Layout references provided image (left vertical icon bar, middle list, right viewer)
- * - Removed "archive" feature entirely
- * - Removed CC and attachments from compose
- * - Compose is Gmail-style bottom-right popover (toggle, minimize, close)
- * - Action buttons: Reply, Reply All (if desired), Delete (moves to Trash), Star
- *
- * Requirements: React + TypeScript, TailwindCSS, framer-motion, lucide-react
+ * - Consolidated single-file version with multiple fixes:
+ *   - preserves selected email when emails update
+ *   - clears simulated delivery timer on unmount
+ *   - parses 'from' when replying / reply-all
+ *   - debounced search input and improved search/filter layout
+ *   - accessible email list items (buttons), ARIA labels
+ *   - keyboard shortcuts: c (compose), j/k (next/prev), r (reply)
+ *   - prevents send without recipients (To)
  */
 
 /* ----------------------------- Types ---------------------------------- */
@@ -60,6 +60,7 @@ const makeId = (pref = "id") =>
 const timeShort = (iso?: string) => {
   if (!iso) return "";
   const d = new Date(iso);
+  if (isNaN(d.getTime())) return "";
   const now = new Date();
   const diff = now.getTime() - d.getTime();
   const days = Math.floor(diff / (1000 * 60 * 60 * 24));
@@ -67,6 +68,11 @@ const timeShort = (iso?: string) => {
     return d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
   if (days < 7) return d.toLocaleDateString([], { weekday: "short" });
   return d.toLocaleDateString([], { month: "short", day: "numeric" });
+};
+
+const extractAddress = (raw: string) => {
+  const m = raw.match(/<([^>]+)>/);
+  return m ? m[1] : raw.trim();
 };
 
 /* --------------------------- Initial data ------------------------------ */
@@ -129,8 +135,9 @@ export default function AdminEmailApp(): JSX.Element {
   );
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  // search + filter in middle column
+  // search + filter in middle column (debounced)
   const [searchQuery, setSearchQuery] = useState("");
+  const [q, setQ] = useState(""); // immediate input
   const [listTab, setListTab] = useState<"all" | "read" | "unread">("all");
 
   // compose (no cc, no attachments)
@@ -146,14 +153,24 @@ export default function AdminEmailApp(): JSX.Element {
     body: "",
   });
 
+  // refs
+  const deliveryTimerRef = useRef<number | null>(null);
+
   // derived
   const selectedEmail = useMemo(
     () => emails.find((e) => e.id === selectedEmailId) ?? null,
     [emails, selectedEmailId]
   );
 
+  // debounced search effect
+  useEffect(() => {
+    const id = window.setTimeout(() => setSearchQuery(q.trim()), 250);
+    return () => clearTimeout(id);
+  }, [q]);
+
+  // filtered emails for the middle list
   const filteredEmails = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
+    const ql = searchQuery.toLowerCase();
     return emails
       .filter((e) => e.mailbox === selectedMailbox)
       .filter((e) => {
@@ -162,29 +179,50 @@ export default function AdminEmailApp(): JSX.Element {
         return true;
       })
       .filter((e) => {
-        if (!q) return true;
+        if (!ql) return true;
         return (
-          e.subject.toLowerCase().includes(q) ||
-          e.body.toLowerCase().includes(q) ||
-          e.from.toLowerCase().includes(q)
+          e.subject.toLowerCase().includes(ql) ||
+          e.body.toLowerCase().includes(ql) ||
+          e.from.toLowerCase().includes(ql)
         );
       })
       .sort((a, b) => +new Date(b.time) - +new Date(a.time));
   }, [emails, selectedMailbox, searchQuery, listTab]);
 
-  // when mailbox changes, select first
+  /* ---------------------------- selection rules ------------------------ */
+
+  // When mailbox changes or emails update: keep current selection when possible.
   useEffect(() => {
     const list = emails.filter((e) => e.mailbox === selectedMailbox);
-    setSelectedEmailId(list[0]?.id ?? null);
-  }, [selectedMailbox, emails]);
+    const stillExists =
+      selectedEmailId &&
+      emails.some(
+        (e) => e.id === selectedEmailId && e.mailbox === selectedMailbox
+      );
+    if (!stillExists) {
+      setSelectedEmailId(list[0]?.id ?? null);
+    }
+  }, [selectedMailbox, emails, selectedEmailId]);
 
-  // mark selected as read
+  // mark selected as read (only if unread)
   useEffect(() => {
     if (!selectedEmailId) return;
     setEmails((prev) =>
-      prev.map((p) => (p.id === selectedEmailId ? { ...p, unread: false } : p))
+      prev.some((e) => e.id === selectedEmailId && e.unread)
+        ? prev.map((p) =>
+            p.id === selectedEmailId ? { ...p, unread: false } : p
+          )
+        : prev
     );
   }, [selectedEmailId]);
+
+  // clear timers on unmount
+  useEffect(() => {
+    return () => {
+      if (deliveryTimerRef.current)
+        window.clearTimeout(deliveryTimerRef.current);
+    };
+  }, []);
 
   /* ---------------------------- compose logic -------------------------- */
 
@@ -227,15 +265,26 @@ export default function AdminEmailApp(): JSX.Element {
   }, []);
 
   const sendCompose = useCallback(() => {
+    // Validate recipients: must have at least one
     const cw = composeDraft;
+    const recipients = cw.to
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+    if (recipients.length === 0) {
+      // Simple UX: don't send without recip; you could show toast or confirm
+      // For now, block sending
+      // eslint-disable-next-line no-alert
+      alert("Please add at least one recipient in 'To' before sending.");
+      return;
+    }
+
     if (!cw.to.trim() && !cw.subject.trim() && !cw.body.trim()) return;
     const sent: Email = {
       id: makeId("e"),
       from: "me <me@example.com>",
-      to: cw.to
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean),
+      to: recipients,
       subject: cw.subject || "(no subject)",
       body: cw.body,
       time: new Date().toISOString(),
@@ -243,12 +292,18 @@ export default function AdminEmailApp(): JSX.Element {
       unread: false,
       starred: false,
     };
+
     setEmails((prev) =>
       [sent, ...prev].sort((a, b) => +new Date(b.time) - +new Date(a.time))
     );
 
-    // simulate delivered copy to inbox
-    setTimeout(() => {
+    // simulate delivered copy to inbox (clear any previous timer)
+    if (deliveryTimerRef.current) {
+      window.clearTimeout(deliveryTimerRef.current);
+      deliveryTimerRef.current = null;
+    }
+
+    deliveryTimerRef.current = window.setTimeout(() => {
       const delivered: Email = {
         ...sent,
         id: makeId("e"),
@@ -308,6 +363,8 @@ export default function AdminEmailApp(): JSX.Element {
   }, []);
 
   const permanentlyDelete = useCallback((emailId: string) => {
+    const confirmDeletion = window.confirm("Delete this message forever?");
+    if (!confirmDeletion) return;
     setEmails((prev) => prev.filter((e) => e.id !== emailId));
     setSelectedEmailId(null);
   }, []);
@@ -320,24 +377,64 @@ export default function AdminEmailApp(): JSX.Element {
 
   const replyTo = useCallback(
     (email: Email) => {
+      const to = extractAddress(email.from);
       const body = `\n\n---\nOn ${new Date(email.time).toLocaleString()}, ${
         email.from
       } wrote:\n${email.body}`;
-      toggleCompose({ to: email.from, subject: `Re: ${email.subject}`, body });
+      toggleCompose({ to, subject: `Re: ${email.subject}`, body });
     },
     [toggleCompose]
   );
 
   const replyAll = useCallback(
     (email: Email) => {
-      const recipients = [email.from, ...(email.to || [])].join(", ");
+      const own = "me@example.com";
+      const recipients = [extractAddress(email.from), ...(email.to || [])]
+        .map((s) => s.trim())
+        .filter(Boolean)
+        .filter((r) => r !== own);
+      const unique = Array.from(new Set(recipients)).join(", ");
       const body = `\n\n---\nOn ${new Date(email.time).toLocaleString()}, ${
         email.from
       } wrote:\n${email.body}`;
-      toggleCompose({ to: recipients, subject: `Re: ${email.subject}`, body });
+      toggleCompose({ to: unique, subject: `Re: ${email.subject}`, body });
     },
     [toggleCompose]
   );
+
+  /* ---------------------------- keyboard UX --------------------------- */
+  useEffect(() => {
+    const handler = (ev: KeyboardEvent) => {
+      // ignore keyboard shortcuts if focus is in an input/textarea
+      const tag = (ev.target as HTMLElement)?.tagName?.toLowerCase();
+      if (tag === "input" || tag === "textarea") return;
+
+      if (ev.key === "c") {
+        ev.preventDefault();
+        toggleCompose();
+      } else if (ev.key === "j") {
+        // next email
+        ev.preventDefault();
+        const idx = filteredEmails.findIndex((e) => e.id === selectedEmailId);
+        const next =
+          filteredEmails[
+            Math.min(filteredEmails.length - 1, Math.max(0, idx + 1))
+          ];
+        if (next) setSelectedEmailId(next.id);
+      } else if (ev.key === "k") {
+        // prev email
+        ev.preventDefault();
+        const idx = filteredEmails.findIndex((e) => e.id === selectedEmailId);
+        const prev = filteredEmails[Math.max(0, idx - 1)];
+        if (prev) setSelectedEmailId(prev.id);
+      } else if (ev.key === "r") {
+        ev.preventDefault();
+        if (selectedEmail) replyTo(selectedEmail);
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [filteredEmails, selectedEmailId, selectedEmail, replyTo, toggleCompose]);
 
   /* ------------------------------- render ------------------------------- */
 
@@ -346,37 +443,11 @@ export default function AdminEmailApp(): JSX.Element {
       {/* Left vertical icon bar + labels (like reference) */}
       <aside className="flex flex-col">
         <div className="flex flex-row h-full">
-          {/* Icons column */}
-          <div className="w-16 bg-[#111] flex flex-col items-center py-4 gap-6">
-            <div className="w-10 h-10 rounded-md bg-white flex items-center justify-center text-[#111] font-bold">
-              d
-            </div>
-            <button className="p-2 rounded hover:bg-[#222] text-white">
-              <MailIcon className="w-5 h-5" />
-            </button>
-            <button className="p-2 rounded hover:bg-[#222] text-white">
-              <FoldersIcon className="w-5 h-5" />
-            </button>
-            <button className="p-2 rounded hover:bg-[#222] text-white">
-              <SettingsIcon className="w-5 h-5" />
-            </button>
-            <div className="mt-auto p-2 text-white opacity-70">
-              <XIcon className="w-5 h-5 rotate-90" />
-            </div>
-          </div>
-
           {/* Labels + mailbox list */}
-          <div className="w-64 border-r border-slate-100 bg-white px-4 py-6">
+          <div className="w-64 border-r border-slate-100 bg-white px-4 py-6 ">
             <div className="flex items-center justify-between mb-4">
-              <div className="text-lg font-semibold">Email</div>
-              <button
-                className="p-1 rounded hover:bg-slate-50"
-                title="New folder"
-              >
-                <PlusIcon className="w-4 h-4" />
-              </button>
+              <div className="text-lg font-semibold ml-1">Email</div>
             </div>
-
             <nav className="flex flex-col gap-2">
               {MAILBOXES.map((mb) => {
                 const count = emails.filter(
@@ -392,6 +463,8 @@ export default function AdminEmailApp(): JSX.Element {
                         ? "bg-slate-50 font-medium"
                         : "text-slate-800"
                     }`}
+                    aria-pressed={selectedMailbox === mb.id}
+                    aria-label={`Open ${mb.name}`}
                   >
                     <div className="flex items-center gap-3">
                       <Icon className="w-4 h-4" />
@@ -406,18 +479,6 @@ export default function AdminEmailApp(): JSX.Element {
                 );
               })}
             </nav>
-
-            <div className="mt-6">
-              <div className="text-xs text-slate-500">Folders</div>
-              <div className="mt-2 flex flex-col gap-2">
-                <button className="text-sm text-slate-700 rounded px-2 py-1 text-left hover:bg-slate-50">
-                  Add Folder
-                </button>
-                <button className="text-sm text-slate-700 rounded px-2 py-1 text-left hover:bg-slate-50">
-                  Client
-                </button>
-              </div>
-            </div>
           </div>
         </div>
       </aside>
@@ -426,29 +487,30 @@ export default function AdminEmailApp(): JSX.Element {
       <main className="flex-1 min-w-0 border-r border-slate-100 bg-white">
         <div className="px-6 py-6">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold">Inbox</h2>
-            <button
-              className="p-2 rounded-full bg-[#111] text-white"
-              onClick={() => toggleCompose()}
-            >
-              <PlusIcon className="w-4 h-4" />
-            </button>
+            <h2 className="text-xl font-semibold">
+              {MAILBOXES.find((m) => m.id === selectedMailbox)?.name ?? "Mail"}
+            </h2>
           </div>
 
-          {/* Search + add */}
-          <div className="mt-4 flex items-center gap-3">
-            <div className="flex-1 relative">
+          {/* Search (top) + Filters (below) */}
+          <div className="mt-4 flex flex-col gap-3">
+            {/* Search bar */}
+            <div className="relative w-full">
               <SearchIcon className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#999]" />
               <input
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
                 placeholder="Search"
-                className="w-full pl-10 pr-3 py-2 rounded-full border border-slate-100 text-sm"
+                className="block w-full pl-10 pr-3 py-2 rounded-full border border-slate-100 text-sm"
+                aria-label="Search messages"
               />
             </div>
+
+            {/* Tabs */}
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setListTab("all")}
+                aria-pressed={listTab === "all"}
                 className={`px-3 py-1 rounded-full text-sm ${
                   listTab === "all"
                     ? "bg-[#111] text-white"
@@ -457,8 +519,10 @@ export default function AdminEmailApp(): JSX.Element {
               >
                 All
               </button>
+
               <button
                 onClick={() => setListTab("read")}
+                aria-pressed={listTab === "read"}
                 className={`px-3 py-1 rounded-full text-sm ${
                   listTab === "read"
                     ? "bg-[#111] text-white"
@@ -467,8 +531,10 @@ export default function AdminEmailApp(): JSX.Element {
               >
                 Read
               </button>
+
               <button
                 onClick={() => setListTab("unread")}
+                aria-pressed={listTab === "unread"}
                 className={`px-3 py-1 rounded-full text-sm ${
                   listTab === "unread"
                     ? "bg-[#111] text-white"
@@ -486,15 +552,17 @@ export default function AdminEmailApp(): JSX.Element {
               <div className="p-6 text-sm text-slate-500">No messages</div>
             ) : (
               filteredEmails.map((e) => (
-                <div
+                <button
                   key={e.id}
                   onClick={() => setSelectedEmailId(e.id)}
-                  className={`px-4 py-3 border-b border-slate-100 cursor-pointer hover:bg-slate-50 ${
+                  className={`w-full text-left px-4 py-3 border-b border-slate-100 cursor-pointer hover:bg-slate-50 ${
                     selectedEmailId === e.id ? "bg-slate-50" : ""
                   }`}
+                  aria-pressed={selectedEmailId === e.id}
                 >
                   <div className="flex items-start gap-3">
                     <div className="w-10 h-10 rounded-full bg-[#f3f3f3] flex items-center justify-center text-sm font-semibold text-[#212121]">
+                      {/* initial based on display name */}
                       {e.from.charAt(0).toUpperCase()}
                     </div>
                     <div className="flex-1 min-w-0">
@@ -526,7 +594,7 @@ export default function AdminEmailApp(): JSX.Element {
                       </div>
                     </div>
                   </div>
-                </div>
+                </button>
               ))
             )}
           </div>
@@ -535,14 +603,16 @@ export default function AdminEmailApp(): JSX.Element {
 
       {/* Right column: viewer */}
       <aside className="w-[60%] min-w-[420px] bg-white">
-        <div className="px-8 py-6">
+        <div className="px-2 py-1">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="ml-4 flex items-center gap-1 border-b border-slate-200 pb-2">
+            <div className="flex w-full items-center justify-between border-b border-slate-200 pb-2">
+              <div className="text-sm text-slate-400">Yesterday</div>
+              <div className="flex items-center gap-1">
                 {/* Reply */}
                 <button
                   onClick={() => selectedEmail && replyTo(selectedEmail)}
                   className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-slate-100 transition"
+                  aria-label="Reply"
                 >
                   <ReplyIcon className="w-4 h-4" />
                   <span className="hidden sm:inline text-sm">Reply</span>
@@ -559,6 +629,7 @@ export default function AdminEmailApp(): JSX.Element {
                         selectedEmail && restoreFromTrash(selectedEmail.id)
                       }
                       className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-slate-100 transition"
+                      aria-label="Restore"
                     >
                       <ArrowLeft className="w-4 h-4" />
                       <span className="hidden sm:inline text-sm">Restore</span>
@@ -568,6 +639,7 @@ export default function AdminEmailApp(): JSX.Element {
                         selectedEmail && permanentlyDelete(selectedEmail.id)
                       }
                       className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-red-50 text-red-600 hover:text-red-700 transition"
+                      aria-label="Delete forever"
                     >
                       <TrashIcon className="w-4 h-4" />
                       <span className="hidden sm:inline text-sm">
@@ -581,6 +653,7 @@ export default function AdminEmailApp(): JSX.Element {
                       selectedEmail && moveToTrash(selectedEmail.id)
                     }
                     className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-red-50 text-red-600 hover:text-red-700 transition"
+                    aria-label="Delete"
                   >
                     <TrashIcon className="w-4 h-4" />
                     <span className="hidden sm:inline text-sm">Delete</span>
@@ -595,6 +668,7 @@ export default function AdminEmailApp(): JSX.Element {
                       ? "text-yellow-500 hover:bg-yellow-50"
                       : "hover:bg-slate-100"
                   }`}
+                  aria-label={selectedEmail?.starred ? "Unstar" : "Star"}
                 >
                   <StarIcon className="w-4 h-4" />
                   <span className="hidden sm:inline text-sm">
@@ -603,8 +677,6 @@ export default function AdminEmailApp(): JSX.Element {
                 </button>
               </div>
             </div>
-
-            <div className="text-sm text-slate-400">Yesterday</div>
           </div>
 
           {/* message viewer */}
@@ -649,6 +721,7 @@ export default function AdminEmailApp(): JSX.Element {
               transition={{ duration: 0.12 }}
               className="w-[520px] bg-white border border-slate-100 rounded-xl shadow-lg overflow-hidden flex flex-col"
               role="dialog"
+              aria-label="Compose new message"
             >
               <div className="px-4 py-3 bg-[#f8f8f8] flex items-center justify-between gap-2">
                 <div className="font-medium">New message</div>
@@ -656,7 +729,7 @@ export default function AdminEmailApp(): JSX.Element {
                   <button
                     onClick={() => setComposeMinimized((s) => !s)}
                     className="p-1 rounded hover:bg-slate-100"
-                    aria-label="minimize"
+                    aria-label="Minimize"
                   >
                     <svg
                       className="w-4 h-4"
@@ -676,6 +749,7 @@ export default function AdminEmailApp(): JSX.Element {
                   <button
                     onClick={closeCompose}
                     className="p-1 rounded hover:bg-slate-100"
+                    aria-label="Close"
                   >
                     <XIcon className="w-4 h-4" />
                   </button>
@@ -699,6 +773,7 @@ export default function AdminEmailApp(): JSX.Element {
                     }
                     placeholder="To"
                     className="w-full border border-slate-100 rounded px-3 py-2 text-sm outline-none"
+                    aria-label="To"
                   />
                   <input
                     value={composeDraft.subject}
@@ -710,6 +785,7 @@ export default function AdminEmailApp(): JSX.Element {
                     }
                     placeholder="Subject"
                     className="w-full border border-slate-100 rounded px-3 py-2 text-sm outline-none"
+                    aria-label="Subject"
                   />
                   <textarea
                     value={composeDraft.body}
@@ -718,19 +794,22 @@ export default function AdminEmailApp(): JSX.Element {
                     }
                     placeholder="Message..."
                     className="w-full min-h-[120px] border border-slate-100 rounded px-3 py-2 text-sm outline-none resize-none"
+                    aria-label="Message body"
                   />
                   <div className="flex items-center justify-between gap-3">
-                    <div />
                     <div className="flex items-center gap-2">
                       <button
                         onClick={saveDraft}
-                        className="px-3 py-2 rounded-md border hover:bg-slate-100 text-sm"
+                        className="px-3 py-1 rounded-md text-sm hover:bg-slate-100"
                       >
-                        Save
+                        Save draft
                       </button>
+                    </div>
+                    <div className="flex items-center gap-2">
                       <button
                         onClick={sendCompose}
                         className="px-4 py-2 rounded-md bg-[#212121] text-white"
+                        aria-label="Send message"
                       >
                         Send
                       </button>
