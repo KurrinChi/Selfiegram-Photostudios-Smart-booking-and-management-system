@@ -49,6 +49,7 @@ class UserController extends Controller
                 'fname' => $user->fname,
                 'lname' => $user->lname,
                 'email' => $user->email,
+                'address' => $user->address,
                 'contactNo' => $user->contactNo,
                 'birthday' => $user->birthday, // ✅ corrected from 'birthdate'
                 'gender' => $user->gender,

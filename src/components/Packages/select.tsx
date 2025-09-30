@@ -188,6 +188,28 @@ const SelectPackagePage = () => {
 
   const [setData, setSetData] = useState<PackageSet | null>(null);
 
+  // Prefill personal details from authenticated user
+  useEffect(() => {
+    const prefillUser = async () => {
+      try {
+        const userID = localStorage.getItem("userID");
+        if (!userID) return;
+        const res = await fetchWithAuth(`${API_URL}/api/users/${userID}`);
+        if (!res.ok) return;
+        const u = await res.json();
+        // Build a display name; fall back as needed
+        const displayName = [u.fname, u.lname].filter(Boolean).join(" ") || u.username || "";
+        setName((prev) => (prev ? prev : displayName));
+        setEmail((prev) => (prev ? prev : (u.email || "")));
+        setContact((prev) => (prev ? prev : (u.contactNo || "")));
+        setAddress((prev) => (prev ? prev : (u.address || "")));
+      } catch (e) {
+        console.warn("Could not prefill user details:", e);
+      }
+    };
+    prefillUser();
+  }, []);
+
   /*const hasPlain = !!setData?.concepts?.some(
       (c) => (c.type || "").toString().toLowerCase() === "plain"
     );*/
