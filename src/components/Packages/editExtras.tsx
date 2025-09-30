@@ -4,13 +4,14 @@ import {
   Plus,
   Edit,
   Trash,
-  ArrowUp,
-  ArrowDown,
-  AlertTriangle,
   Check,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import EditConceptStudio from "../EditConceptStudio.tsx";
+import { fetchWithAuth } from "../../utils/fetchWithAuth";
+import { toast, ToastContainer } from "react-toastify";
+
+const API_URL = import.meta.env.VITE_API_URL;
 
 /* ---------- Soft palette (low contrast) ---------- */
 const P = {
@@ -27,7 +28,7 @@ const P = {
   invalidBorder: "#fca5a5",
 };
 
-type AddonType = "single" | "multiple" | "spinner";
+type AddonType = "single" | "multiple" | "dropdown";
 
 type Choice = {
   id: string;
@@ -44,17 +45,14 @@ type Addon = {
   price: number;
   active: boolean;
   type: AddonType;
-  defaultQty?: number;
-  step?: number;
-  maxQty?: number;
-  spinnerMin?: number;
-  spinnerMax?: number;
+  min_quantity: number;
+  max_quantity: number;
   choices?: Choice[];
   description?: string;
   createdAt: string;
 };
 
-const STORAGE_KEY = "admin_addons_v_spinner_ui";
+
 
 function uid(prefix = "x") {
   return `${prefix}-${Date.now()}-${Math.floor(Math.random() * 9999)}`;
@@ -150,12 +148,6 @@ function ConfirmDialog({
         aria-labelledby="confirm-title"
       >
         <div className="flex items-start gap-3">
-          <div style={{ marginTop: 2 }}>
-            <AlertTriangle
-              size={20}
-              style={{ color: destructive ? P.danger : P.warnBorder }}
-            />
-          </div>
           <div className="flex-1 min-w-0">
             <h3
               id="confirm-title"
@@ -198,43 +190,40 @@ function ConfirmDialog({
   );
 }
 
-/* ---------------- Main component ---------------- */
 export default function EditExtras() {
-  const [addons, setAddons] = useState<Addon[]>(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) return JSON.parse(raw) as Addon[];
-    } catch {}
-    return [
-      {
-        id: uid("addon"),
-        name: "Extra 30 Minutes",
-        price: 500,
-        active: true,
-        type: "single",
-        description: "Extend session by 30 minutes.",
-        createdAt: new Date().toISOString(),
-      },
-      {
-        id: uid("addon"),
-        name: "Props Package",
-        price: 800,
-        active: false,
-        type: "multiple",
-        defaultQty: 1,
-        step: 1,
-        maxQty: 10,
-        description: "Add props to the shoot (per set).",
-        createdAt: new Date().toISOString(),
-      },
-    ];
-  });
+  const [addons, setAddons] = useState<Addon[]>([]);
 
+  // Fetch add-ons from backend instead of localStorage
   useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(addons));
-    } catch {}
-  }, [addons]);
+    const fetchAddons = async () => {
+      try {
+        const res = await fetchWithAuth(`${API_URL}/api/admin/package-add-ons`);
+        if (!res.ok) throw new Error("Failed to fetch add-ons");
+
+        const data = await res.json();
+
+        // Adapt backend fields → frontend shape if necessary
+        const mapped = data.map((a: any) => ({
+          id: a.addOnID, // from DB
+          name: a.addOn,
+          price: parseFloat(a.addOnPrice),
+          type: a.type,
+          description: a.description,
+          active: a.active ?? true,
+          min_quantity: a.min_quantity,
+          step: a.step,
+          max_quantity: a.max_quantity,
+          createdAt: a.created_at,
+        }));
+
+        setAddons(mapped);
+      } catch (err: any) {
+        toast.error(err.message || "Something went wrong");
+      }
+    };
+
+    fetchAddons();
+  }, []);
 
   /* UI state */
   const [query, setQuery] = useState("");
@@ -253,22 +242,20 @@ export default function EditExtras() {
     name: "",
     price: "0",
     type: "single" as AddonType,
-    step: "1",
-    spinnerMin: "1",
-    spinnerMax: "5",
-    defaultQty: "1",
-    maxQty: "10",
+
+    min_quantity: "1",
+    max_quantity: "10",
     description: "",
     choicesRows: [] as Choice[],
   };
+
   const [form, setForm] = useState(() => ({ ...initialForm }));
 
   const [errors, setErrors] = useState<{
     name?: string;
     price?: string;
-    defaultQty?: string;
-    step?: string;
-    maxQty?: string;
+    min_quantity?: string;
+    max_quantity?: string;
     choices?: Record<string, string>;
   }>({});
 
@@ -292,7 +279,7 @@ export default function EditExtras() {
   }, [addons, query]);
 
   /* helpers: spinner existence & whether current edit is the spinner */
-  const existingSpinner = addons.find((a) => a.type === "spinner");
+  const existingSpinner = addons.find((a) => a.type === "dropdown");
   const editingIsSpinner =
     editingId && toId(existingSpinner?.id) === toId(editingId);
 
@@ -309,21 +296,17 @@ export default function EditExtras() {
     const targetId = toId(id);
     const found = addons.find((x) => toId(x.id) === targetId);
     if (!found) return;
-    if (found.active) return; // preserve previous behavior: don't edit active items
     setEditingId(targetId);
     setForm({
       name: found.name,
       price: String(found.price),
       type: found.type,
-      step: String(found.step ?? 1),
-      spinnerMin: String(found.spinnerMin ?? 1),
-      spinnerMax: String(found.spinnerMax ?? 5),
-      defaultQty: String(found.defaultQty ?? 1),
-      maxQty: String(found.maxQty ?? 10),
+      min_quantity: String(found.min_quantity ?? 1),
+      max_quantity: String(found.max_quantity ?? 10),
       description: found.description ?? "",
       choicesRows:
-        found.type === "spinner" &&
-        (!found.choices || found.choices.length === 0)
+        found.type === "dropdown" &&
+          (!found.choices || found.choices.length === 0)
           ? DEFAULT_BACKDROP_COLORS.map((c) => ({ ...c, id: uid("c") }))
           : (found.choices || []).map((c) => ({ ...c })),
     });
@@ -344,73 +327,37 @@ export default function EditExtras() {
   }
 
   /* perform deletion after confirmation */
-  function doDeleteConfirmed(id?: string | null) {
+  async function doDeleteConfirmed(id?: string | null) {
     setConfirmState({ open: false });
     if (!id) return;
+
     const tid = toId(id);
-    setAddons((s) => s.filter((a) => toId(a.id) !== tid));
+
+    try {
+      // API request
+      const res = await fetchWithAuth(`${API_URL}/api/admin/package-add-ons/${tid}/delete`, {
+        method: "DELETE",
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to delete add-on");
+      }
+
+      // Update state only on success
+      setAddons((s) => s.filter((a) => toId(a.id) !== tid));
+      toast.success("Add-on deleted successfully!");
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to delete add-on. Please try again.");
+    }
   }
+
+
 
   function closeConfirm() {
     setConfirmState({ open: false });
   }
 
-  /* choice helpers */
-  function addChoiceRow() {
-    setForm((s) => ({
-      ...s,
-      choicesRows: [
-        ...s.choicesRows,
-        {
-          id: uid("c"),
-          label: "",
-          value: "",
-          multiplier: undefined,
-          priceOverride: undefined,
-          default: s.choicesRows.length === 0,
-        },
-      ],
-    }));
-  }
-  function updateChoiceRow(id: string, patch: Partial<Choice>) {
-    const tid = toId(id);
-    setForm((s) => ({
-      ...s,
-      choicesRows: s.choicesRows.map((r) =>
-        toId(r.id) === tid ? { ...r, ...patch } : r
-      ),
-    }));
-    setTimeout(() => validateChoiceRow(id), 0);
-  }
-  function removeChoiceRow(id: string) {
-    const tid = toId(id);
-    setForm((s) => ({
-      ...s,
-      choicesRows: s.choicesRows.filter((r) => toId(r.id) !== tid),
-    }));
-    setErrors((e) => {
-      const next = { ...e };
-      if (next.choices) {
-        delete next.choices[tid];
-        if (Object.keys(next.choices).length === 0) delete next.choices;
-      }
-      return next;
-    });
-  }
-  function moveChoiceRow(id: string, dir: "up" | "down") {
-    const tid = toId(id);
-    setForm((s) => {
-      const rows = [...s.choicesRows];
-      const i = rows.findIndex((r) => toId(r.id) === tid);
-      if (i === -1) return s;
-      const j = dir === "up" ? i - 1 : i + 1;
-      if (j < 0 || j >= rows.length) return s;
-      const tmp = rows[j];
-      rows[j] = rows[i];
-      rows[i] = tmp;
-      return { ...s, choicesRows: rows };
-    });
-  }
 
   /* ---------- Validation ---------- */
 
@@ -445,32 +392,16 @@ export default function EditExtras() {
 
   function validateMultipleFields() {
     let ok = true;
-    const stepNum = Number(form.step || 0);
-    const defaultNum = Number(form.defaultQty || 0);
-    const maxNum = Number(form.maxQty || 0);
-
-    if (
-      !Number.isFinite(stepNum) ||
-      stepNum < 1 ||
-      !Number.isInteger(stepNum)
-    ) {
-      setErrors((e) => ({ ...e, step: "Step must be an integer ≥ 1" }));
-      ok = false;
-    } else {
-      setErrors((e) => {
-        const next = { ...e };
-        delete next.step;
-        return next;
-      });
-    }
+    const defaultNum = Number(form.min_quantity || 0);
+    const maxNum = Number(form.max_quantity || 0);
 
     if (!Number.isFinite(maxNum) || maxNum < 1 || !Number.isInteger(maxNum)) {
-      setErrors((e) => ({ ...e, maxQty: "Max must be an integer ≥ 1" }));
+      setErrors((e) => ({ ...e, max_quantity: "Max must be an integer ≥ 1" }));
       ok = false;
     } else {
       setErrors((e) => {
         const next = { ...e };
-        delete next.maxQty;
+        delete next.max_quantity;
         return next;
       });
     }
@@ -482,19 +413,19 @@ export default function EditExtras() {
     ) {
       setErrors((e) => ({
         ...e,
-        defaultQty: "Default must be an integer ≥ 1",
+        min_quantity: "Default must be an integer ≥ 1",
       }));
       ok = false;
     } else if (Number.isFinite(maxNum) && defaultNum > maxNum) {
       setErrors((e) => ({
         ...e,
-        defaultQty: "Default cannot be greater than Max",
+        min_quantity: "Default cannot be greater than Max",
       }));
       ok = false;
     } else {
       setErrors((e) => {
         const next = { ...e };
-        delete next.defaultQty;
+        delete next.min_quantity;
         return next;
       });
     }
@@ -547,14 +478,13 @@ export default function EditExtras() {
     } else {
       setErrors((e) => {
         const next = { ...e };
-        delete next.step;
-        delete next.maxQty;
-        delete next.defaultQty;
+        delete next.max_quantity;
+        delete next.min_quantity;
         return next;
       });
     }
 
-    if (form.type === "spinner") {
+    if (form.type === "dropdown") {
       const results = form.choicesRows.map((r) => validateChoiceRow(r.id));
       checks.push(results.every(Boolean));
     } else {
@@ -565,8 +495,8 @@ export default function EditExtras() {
       });
     }
 
-    if (form.type === "spinner") {
-      const spinner = addons.find((a) => a.type === "spinner");
+    if (form.type === "dropdown") {
+      const spinner = addons.find((a) => a.type === "dropdown");
       if (spinner && (!editingId || toId(spinner.id) !== toId(editingId))) {
         checks.push(false);
       }
@@ -576,104 +506,81 @@ export default function EditExtras() {
   }
 
   /* ---------- Submit ---------- */
-  function handleSubmit(e?: React.FormEvent) {
+  async function handleSubmit(e?: React.FormEvent) {
     if (e) e.preventDefault();
 
-    if (!validateAll()) {
-      return;
-    }
+    if (!validateAll()) return;
 
     const priceNum = Number(form.price || 0);
     if (!Number.isFinite(priceNum)) return alert("Price must be numeric");
 
-    const spinner = addons.find((a) => a.type === "spinner");
-    if (form.type === "spinner") {
+    // check spinner uniqueness
+    const spinner = addons.find((a) => a.type === "dropdown");
+    if (form.type === "dropdown") {
       if (!editingId && spinner) {
-        return alert(
+        return toast.error(
           "A backdrop (spinner) add-on already exists. There can only be one backdrop add-on."
         );
       }
       if (editingId && spinner && toId(spinner.id) !== toId(editingId)) {
-        return alert(
+        return toast.error(
           "A backdrop (spinner) add-on already exists. You cannot change this add-on to a spinner while another spinner exists."
         );
       }
     }
 
-    const base: Partial<Addon> = {
-      name: form.name.trim(),
-      price: priceNum,
-      type: form.type,
-      description: form.description.trim(),
-    };
+    // prepare payload for API
+  const payload = {
+    addOn: form.name.trim(),
+    addOnPrice: priceNum,
+    type:
+      form.type === "dropdown"
+        ? "spinner"
+        : form.type === "multiple"
+        ? "multiple"
+        : "single",
+    min_quantity: form.type === "multiple" ? Number(form.min_quantity) : 1,
+    max_quantity: form.type === "multiple" ? Number(form.max_quantity) : 1,
+  };
 
-    if (form.type === "spinner") {
-      const choicesRaw = form.choicesRows || [];
-      const normalized: Choice[] = choicesRaw
-        .map((r) => ({
-          id: r.id || uid("c"),
-          label: (r.label || String(r.value || "")).trim(),
-          value: String(r.value || "").trim(),
-          multiplier:
-            r.multiplier !== undefined && r.multiplier !== null
-              ? Number(r.multiplier)
-              : undefined,
-          priceOverride:
-            r.priceOverride !== undefined && r.priceOverride !== null
-              ? Number(r.priceOverride)
-              : undefined,
-          default: !!r.default,
-        }))
-        .filter((r) => {
-          const v = String(r.value).trim();
-          return r.label !== "" && v !== "" && HEX_RE.test(v);
+    try {
+      let res: Response;
+      let saved: any;
+
+      if (editingId) {
+        // update existing
+        const tid = toId(editingId);
+        res = await fetchWithAuth(`${API_URL}/api/admin/package-add-ons/${tid}`, {
+          method: "PUT",
+          body: JSON.stringify(payload),
         });
+        if (!res.ok) throw new Error("Update failed");
+        saved = await res.json();
 
-      base.choices =
-        normalized.length > 0
-          ? normalized
-          : DEFAULT_BACKDROP_COLORS.map((c) => ({ ...c, id: uid("c") }));
+        setAddons((s) =>
+          s.map((a) => (toId(a.id) === tid ? { ...a, ...saved } : a))
+        );
+        toast.success("Add-on updated successfully!");
+      } else {
+        // create new
+        res = await fetchWithAuth(`${API_URL}/api/admin/package-add-ons/add`, {
+          method: "POST",
+          body: JSON.stringify(payload),
+        });
+        if (!res.ok) throw new Error("Create failed");
+        saved = await res.json();
 
-      base.spinnerMin = undefined;
-      base.spinnerMax = undefined;
-      base.defaultQty = undefined;
-      base.step = undefined;
-      base.maxQty = undefined;
-    } else if (form.type === "multiple") {
-      base.defaultQty = Math.max(1, Number(form.defaultQty || 1));
-      base.step = Math.max(1, Number(form.step || 1));
-      base.maxQty = Math.max(1, Number(form.maxQty || 1));
-      if ((base.defaultQty ?? 1) > (base.maxQty ?? 1))
-        base.defaultQty = base.maxQty;
-      base.spinnerMin = undefined;
-      base.spinnerMax = undefined;
-      base.choices = undefined;
-    } else {
-      base.defaultQty = undefined;
-      base.step = undefined;
-      base.maxQty = undefined;
-      base.spinnerMin = undefined;
-      base.spinnerMax = undefined;
-      base.choices = undefined;
+        setAddons((s) => [saved, ...s]);
+        toast.success("Add-on created successfully!");
+      }
+
+      closeModal();
+    } catch (err) {
+      console.error(err);
+      toast.error("Something went wrong while saving add-on.");
     }
-
-    if (editingId) {
-      const tid = toId(editingId);
-      setAddons((s) =>
-        s.map((a) => (toId(a.id) === tid ? ({ ...a, ...base } as Addon) : a))
-      );
-    } else {
-      const newOne: Addon = {
-        ...(base as Addon),
-        id: uid("addon"),
-        active: true,
-        createdAt: new Date().toISOString(),
-      };
-      setAddons((s) => [newOne, ...s]);
-    }
-
-    closeModal();
   }
+
 
   function closeModal() {
     setIsModalOpen(false);
@@ -682,12 +589,7 @@ export default function EditExtras() {
     setErrors({});
   }
 
-  function toggleActive(id: string) {
-    const tid = toId(id);
-    setAddons((s) =>
-      s.map((a) => (toId(a.id) === tid ? { ...a, active: !a.active } : a))
-    );
-  }
+
 
   useEffect(() => {
     const qUpdate: Record<string, number> = { ...selectedQuantities };
@@ -699,26 +601,20 @@ export default function EditExtras() {
       const aid = toId(a.id);
       if (a.type === "multiple") {
         if (!(aid in qUpdate)) {
-          qUpdate[aid] = a.defaultQty ?? 1;
+          qUpdate[aid] = a.min_quantity ?? 1;
           changed = true;
         } else {
-          const max = a.maxQty ?? Number.POSITIVE_INFINITY;
-          const step = a.step ?? 1;
           let val = Math.max(1, qUpdate[aid]);
-          if (val > max) val = max;
-          val = Math.round(val / step) * step || step;
           if (qUpdate[aid] !== val) {
             qUpdate[aid] = val;
             changed = true;
           }
         }
-      } else if (a.type === "spinner") {
+      } else if (a.type === "dropdown") {
         if (!(aid in sUpdate)) {
           if (a.choices && a.choices.length > 0) {
             const def = a.choices.find((c) => !!c.default) ?? a.choices[0];
             sUpdate[aid] = def?.value ?? def?.label ?? a.choices[0].value;
-          } else {
-            sUpdate[aid] = a.spinnerMin ?? 1;
           }
           changed = true;
         } else {
@@ -730,14 +626,6 @@ export default function EditExtras() {
             if (!found) {
               const def = a.choices.find((c) => !!c.default) ?? a.choices[0];
               sUpdate[aid] = def?.value ?? def?.label ?? a.choices[0].value;
-              changed = true;
-            }
-          } else {
-            const curNum = Number(sUpdate[aid]);
-            const min = a.spinnerMin ?? 1;
-            const max = a.spinnerMax ?? 5;
-            if (!Number.isFinite(curNum) || curNum < min || curNum > max) {
-              sUpdate[aid] = min;
               changed = true;
             }
           }
@@ -766,7 +654,7 @@ export default function EditExtras() {
             <div>
               <h1
                 className="text-xl sm:text-2xl font-semibold ml-2 pl-12 sm:pl-0"
-                style={{ color: "#2b2b2b" }} // replacing P.dark with hex
+                style={{ color: "#2b2b2b" }}
               >
                 Add-Ons / Extras
               </h1>
@@ -814,132 +702,87 @@ export default function EditExtras() {
                 No add-ons found.
               </div>
             ) : (
-              filtered.map((item) => {
-                const isActive = !!item.active;
-                const cardBg = isActive ? P.dark : P.surface;
-                const cardColor = isActive ? P.surface : P.dark;
-
-                return (
-                  <motion.div
-                    key={item.id}
-                    initial={{ opacity: 0, y: 6 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -6 }}
-                    layout
-                    className="flex flex-col sm:flex-row sm:items-center sm:justify-between rounded p-3 gap-3 sm:gap-0"
-                    style={{
-                      border: `1px solid ${P.border}`,
-                      background: cardBg,
-                      color: cardColor,
-                    }}
-                  >
-                    <div className="flex items-center gap-4 w-full">
-                      <div className="flex-1 min-w-0">
-                        <div
-                          className="font-medium truncate"
-                          style={{ color: cardColor }}
-                        >
-                          {item.name}
-                        </div>
-                        <div
-                          className="text-sm truncate"
-                          style={{ color: isActive ? P.subtle : P.muted }}
-                        >
-                          {item.type === "spinner"
-                            ? "Backdrop (color selector)"
-                            : item.type === "multiple"
+              filtered.map((item) => (
+                <motion.div
+                  key={item.id}
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -6 }}
+                  layout
+                  className="flex flex-col sm:flex-row sm:items-center sm:justify-between rounded p-3 gap-3 sm:gap-0"
+                  style={{
+                    border: `1px solid ${P.border}`,
+                    background: P.surface,
+                    color: P.dark,
+                  }}
+                >
+                  <div className="flex items-center gap-4 w-full">
+                    <div className="flex-1 min-w-0">
+                      <div
+                        className="font-medium truncate"
+                        style={{ color: P.dark }}
+                      >
+                        {item.name}
+                      </div>
+                      <div
+                        className="text-sm truncate"
+                        style={{ color: P.muted }}
+                      >
+                        {item.type === "dropdown"
+                          ? "Backdrop (color selector)"
+                          : item.type === "multiple"
                             ? "Per-unit"
                             : "One-time"}{" "}
-                          • {currency(item.price)}
-                        </div>
+                        • {currency(item.price)}
                       </div>
                     </div>
+                  </div>
 
-                    <div className="flex items-center gap-2">
-                      {item.type === "spinner" && (
-                        <div
-                          style={{
-                            background: P.warnBg,
-                            border: `1px solid ${P.warnBorder}`,
-                            padding: "4px 8px",
-                            borderRadius: 999,
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: 6,
-                            color: P.dark,
-                            fontSize: 12,
-                          }}
-                          title="This add-on is the backdrop selector"
-                        >
-                          <Check size={12} />
-                          Backdrop
-                        </div>
-                      )}
-
-                      <button
-                        onClick={() => toggleActive(item.id)}
-                        aria-pressed={isActive}
-                        title={isActive ? "Active" : "Inactive"}
-                        className="relative inline-flex items-center rounded-full p-2"
+                  <div className="flex items-center gap-2">
+                    {item.type === "dropdown" && (
+                      <div
                         style={{
-                          width: 56,
-                          height: 34,
-                          background: isActive ? "#333" : P.subtle,
-                          border: `1px solid ${P.border}`,
-                        }}
-                      >
-                        <span
-                          aria-hidden
-                          style={{
-                            display: "block",
-                            width: 26,
-                            height: 26,
-                            borderRadius: 9999,
-                            transform: isActive
-                              ? "translateX(22px)"
-                              : "translateX(0px)",
-                            background: isActive ? "#FAFAFA" : "#9ca3af",
-                            transition:
-                              "transform 180ms cubic-bezier(.2,.9,.2,1), background 180ms",
-                          }}
-                        />
-                      </button>
-
-                      <button
-                        onClick={() => {
-                          if (!item.active) openEdit(item.id);
-                        }}
-                        title={
-                          item.active ? "Cannot edit while active" : "Edit"
-                        }
-                        disabled={item.active}
-                        aria-disabled={item.active}
-                        className="p-2 rounded"
-                        style={{
+                          background: P.warnBg,
+                          border: `1px solid ${P.warnBorder}`,
+                          padding: "4px 8px",
+                          borderRadius: 999,
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 6,
                           color: P.dark,
-                          opacity: item.active ? 0.45 : 1,
-                          cursor: item.active ? "not-allowed" : "pointer",
+                          fontSize: 12,
                         }}
+                        title="This add-on is the backdrop selector"
                       >
-                        <Edit size={18} />
-                      </button>
+                        <Check size={12} />
+                        Backdrop
+                      </div>
+                    )}
 
-                      <button
-                        onClick={() => requestDelete(item.id)}
-                        title="Delete"
-                        className="p-2 rounded"
-                        style={{ color: P.danger }}
-                      >
-                        <Trash size={18} />
-                      </button>
-                    </div>
-                  </motion.div>
-                );
-              })
+                    <button
+                      type="button"
+                      onClick={() => openEdit(item.id)}
+                      title="Edit"
+                      className="p-2 rounded"
+                      style={{ color: P.dark }}
+                    >
+                      <Edit size={18} />
+                    </button>
+
+                    <button
+                      onClick={() => requestDelete(item.id)}
+                      title="Delete"
+                      className="p-2 rounded"
+                      style={{ color: P.danger }}
+                    >
+                      <Trash size={18} />
+                    </button>
+                  </div>
+                </motion.div>
+              ))
             )}
           </div>
         </div>
-
         <div className="flex-[1] min-w-0 overflow-x-auto">
           <EditConceptStudio />
         </div>
@@ -1084,12 +927,12 @@ export default function EditExtras() {
                         onChange={(e) => {
                           const newType = e.target.value as AddonType;
                           const spinner = addons.find(
-                            (a) => a.type === "spinner"
+                            (a) => a.type === "dropdown"
                           );
-                          if (newType === "spinner" && !editingId && spinner)
+                          if (newType === "dropdown" && !editingId && spinner)
                             return;
                           if (
-                            newType === "spinner" &&
+                            newType === "dropdown" &&
                             editingId &&
                             spinner &&
                             toId(spinner.id) !== toId(editingId)
@@ -1100,11 +943,11 @@ export default function EditExtras() {
                             ...s,
                             type: newType,
                             choicesRows:
-                              newType === "spinner" && !editingId && !spinner
+                              newType === "dropdown" && !editingId && !spinner
                                 ? DEFAULT_BACKDROP_COLORS.map((c) => ({
-                                    ...c,
-                                    id: uid("c"),
-                                  }))
+                                  ...c,
+                                  id: uid("c"),
+                                }))
                                 : s.choicesRows,
                           }));
 
@@ -1112,13 +955,12 @@ export default function EditExtras() {
                             if (newType !== "multiple") {
                               setErrors((e) => {
                                 const next = { ...e };
-                                delete next.step;
-                                delete next.maxQty;
-                                delete next.defaultQty;
+                                delete next.max_quantity;
+                                delete next.min_quantity;
                                 return next;
                               });
                             }
-                            if (newType !== "spinner") {
+                            if (newType !== "dropdown") {
                               setErrors((e) => {
                                 const next = { ...e };
                                 delete next.choices;
@@ -1139,150 +981,70 @@ export default function EditExtras() {
                           multiple — Per-unit / quantity
                         </option>
                         <option
-                          value="spinner"
+                          value="dropdown"
                           disabled={!!existingSpinner && !editingIsSpinner}
                         >
                           spinner — Backdrop color selector (only one)
                         </option>
                       </select>
 
-                      {existingSpinner &&
-                        !editingIsSpinner &&
-                        form.type !== "spinner" && (
-                          <div className="mt-2 flex items-center gap-3">
-                            <div
-                              style={{
-                                background: P.warnBg,
-                                border: `1px solid ${P.warnBorder}`,
-                                padding: "6px 8px",
-                                borderRadius: 8,
-                                display: "inline-flex",
-                                alignItems: "center",
-                                gap: 8,
-                              }}
-                            >
-                              <AlertTriangle size={14} />
-                              <div style={{ fontSize: 13, color: P.dark }}>
-                                Backdrop exists — edit it instead.
-                              </div>
-                            </div>
-                            <div className="ml-auto">
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  if (existingSpinner)
-                                    openEdit(existingSpinner.id);
-                                }}
-                                className="px-3 py-1 rounded"
-                                style={{
-                                  border: `1px solid ${P.border}`,
-                                  background: P.surface,
-                                }}
-                              >
-                                Edit Backdrop
-                              </button>
-                            </div>
-                          </div>
-                        )}
+
 
                       <p className="text-xs mt-1" style={{ color: P.muted }}>
                         {form.type === "single"
                           ? "One-time fee"
                           : form.type === "multiple"
-                          ? "Per-unit (use step & max)"
-                          : "Backdrop color selector — only one backdrop allowed"}
+                            ? "Per-unit (use step & max)"
+                            : "Backdrop color selector — only one backdrop allowed"}
                       </p>
                     </div>
                   </div>
 
                   {form.type === "multiple" && (
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <label
                           className="block text-sm font-medium"
                           style={{ color: P.dark }}
                         >
-                          Default Quantity
+                          Minimum Quantity
                         </label>
                         <input
                           type="number"
                           min={1}
                           className="w-full rounded px-3 py-2"
-                          value={form.defaultQty}
+                          value={form.min_quantity}
                           onChange={(e) => {
                             setForm((s) => ({
                               ...s,
-                              defaultQty: e.target.value,
+                              min_quantity: e.target.value,
                             }));
                             setTimeout(validateMultipleFields, 0);
                           }}
-                          aria-invalid={!!errors.defaultQty}
+                          aria-invalid={!!errors.min_quantity}
                           style={{
-                            ...(errors.defaultQty
+                            ...(errors.min_quantity
                               ? {
-                                  border: `1px solid ${P.invalidBorder}`,
-                                  background: P.invalid,
-                                }
+                                border: `1px solid ${P.invalidBorder}`,
+                                background: P.invalid,
+                              }
                               : {
-                                  border: `1px solid ${P.border}`,
-                                  background: P.surface,
-                                }),
+                                border: `1px solid ${P.border}`,
+                                background: P.surface,
+                              }),
                             color: P.dark,
                           }}
                         />
-                        {errors.defaultQty && (
+                        {errors.min_quantity && (
                           <div
                             className="text-xs mt-1"
                             style={{ color: P.danger }}
                           >
-                            {errors.defaultQty}
+                            {errors.min_quantity}
                           </div>
                         )}
                         <p className="text-xs" style={{ color: P.muted }}>
-                          Initial qty
-                        </p>
-                      </div>
-
-                      <div>
-                        <label
-                          className="block text-sm font-medium"
-                          style={{ color: P.dark }}
-                        >
-                          Step
-                        </label>
-                        <input
-                          type="number"
-                          min={1}
-                          className="w-full rounded px-3 py-2"
-                          value={form.step}
-                          onChange={(e) => {
-                            setForm((s) => ({ ...s, step: e.target.value }));
-                            setTimeout(validateMultipleFields, 0);
-                          }}
-                          aria-invalid={!!errors.step}
-                          style={{
-                            ...(errors.step
-                              ? {
-                                  border: `1px solid ${P.invalidBorder}`,
-                                  background: P.invalid,
-                                }
-                              : {
-                                  border: `1px solid ${P.border}`,
-                                  background: P.surface,
-                                }),
-                            color: P.dark,
-                          }}
-                        />
-                        {errors.step && (
-                          <div
-                            className="text-xs mt-1"
-                            style={{ color: P.danger }}
-                          >
-                            {errors.step}
-                          </div>
-                        )}
-                        <p className="text-xs" style={{ color: P.muted }}>
-                          Quantity increments
+                          Initial quantity
                         </p>
                       </div>
 
@@ -1297,31 +1059,31 @@ export default function EditExtras() {
                           type="number"
                           min={1}
                           className="w-full rounded px-3 py-2"
-                          value={form.maxQty}
+                          value={form.max_quantity}
                           onChange={(e) => {
-                            setForm((s) => ({ ...s, maxQty: e.target.value }));
+                            setForm((s) => ({ ...s, max_quantity: e.target.value }));
                             setTimeout(validateMultipleFields, 0);
                           }}
-                          aria-invalid={!!errors.maxQty}
+                          aria-invalid={!!errors.max_quantity}
                           style={{
-                            ...(errors.maxQty
+                            ...(errors.max_quantity
                               ? {
-                                  border: `1px solid ${P.invalidBorder}`,
-                                  background: P.invalid,
-                                }
+                                border: `1px solid ${P.invalidBorder}`,
+                                background: P.invalid,
+                              }
                               : {
-                                  border: `1px solid ${P.border}`,
-                                  background: P.surface,
-                                }),
+                                border: `1px solid ${P.border}`,
+                                background: P.surface,
+                              }),
                             color: P.dark,
                           }}
                         />
-                        {errors.maxQty && (
+                        {errors.max_quantity && (
                           <div
                             className="text-xs mt-1"
                             style={{ color: P.danger }}
                           >
-                            {errors.maxQty}
+                            {errors.max_quantity}
                           </div>
                         )}
                         <p className="text-xs" style={{ color: P.muted }}>
@@ -1331,7 +1093,7 @@ export default function EditExtras() {
                     </div>
                   )}
 
-                  {form.type === "spinner" && (
+                  {form.type === "dropdown" && (
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
                         <label
@@ -1341,261 +1103,86 @@ export default function EditExtras() {
                           Backdrop Colors (hex)
                         </label>
                         <div className="text-xs" style={{ color: P.muted }}>
-                          Add or edit hex values. Use color picker or type a
-                          hex.
+                          Predefined hex values (view only).
                         </div>
                       </div>
 
-                      {existingSpinner && !editingIsSpinner && (
-                        <div
-                          style={{
-                            background: P.warnBg,
-                            border: `1px solid ${P.warnBorder}`,
-                            padding: 12,
-                            borderRadius: 8,
-                            display: "flex",
-                            gap: 12,
-                            alignItems: "center",
-                          }}
-                        >
-                          <AlertTriangle />
-                          <div style={{ fontSize: 14, color: P.dark }}>
-                            A Backdrop already exists. Edit the existing
-                            backdrop if you want to change colors.
-                          </div>
-                          <div
-                            style={{
-                              marginLeft: "auto",
-                              display: "flex",
-                              alignItems: "center",
-                              gap: 8,
-                            }}
-                          >
-                            <button
-                              type="button"
-                              onClick={() => {
-                                if (existingSpinner)
-                                  openEdit(existingSpinner.id);
-                              }}
-                              className="px-3 py-1 rounded"
-                              style={{
-                                border: `1px solid ${P.border}`,
-                                background: P.surface,
-                              }}
-                            >
-                              Edit Backdrop
-                            </button>
-                          </div>
-                        </div>
-                      )}
-
-                      <div className="mt-2 space-y-2">
+                      <div className="mt-2">
                         <AnimatePresence>
-                          {form.choicesRows.map((row, idx) => {
-                            const curHex =
-                              row.value && String(row.value).startsWith("#")
-                                ? String(row.value)
-                                : "#ffffff";
-                            const rowErr = errors.choices?.[toId(row.id)];
-                            return (
-                              <motion.div
-                                key={row.id}
-                                initial={{ opacity: 0, y: 6 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: -6 }}
-                                layout
-                                className="flex flex-col sm:flex-row items-start sm:items-center gap-2 rounded p-2"
-                                style={{
-                                  border: `1px solid ${P.border}`,
-                                  background: P.surface,
-                                }}
-                              >
-                                <div className="flex gap-2 w-full sm:w-auto">
-                                  <input
-                                    aria-label={`Label ${idx + 1}`}
-                                    value={row.label}
-                                    onChange={(e) =>
-                                      updateChoiceRow(row.id, {
-                                        label: e.target.value,
-                                      })
-                                    }
-                                    placeholder="Label (e.g. WHITE)"
-                                    className="w-full sm:w-28 rounded px-2 py-1"
-                                    style={{
-                                      border: `1px solid ${
-                                        rowErr ? P.invalidBorder : P.border
-                                      }`,
-                                    }}
-                                  />
-                                  <input
-                                    aria-label={`Hex value ${idx + 1}`}
-                                    value={toStr(row.value)}
-                                    onChange={(e) =>
-                                      updateChoiceRow(row.id, {
-                                        value: e.target.value,
-                                      })
-                                    }
-                                    placeholder="#rrggbb"
-                                    className="w-full sm:w-28 rounded px-2 py-1"
-                                    style={{
-                                      border: `1px solid ${
-                                        rowErr ? P.invalidBorder : P.border
-                                      }`,
-                                    }}
-                                  />
-                                </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            {form.choicesRows.map((row) => {
+                              const curHex =
+                                row.value && String(row.value).startsWith("#")
+                                  ? String(row.value)
+                                  : "#ffffff";
+                              return (
+                                <motion.div
+                                  key={row.id}
+                                  initial={{ opacity: 0, y: 6 }}
+                                  animate={{ opacity: 1, y: 0 }}
+                                  exit={{ opacity: 0, y: -6 }}
+                                  layout
+                                  className="flex flex-col sm:flex-row items-start sm:items-center gap-2 rounded p-2"
+                                  style={{
+                                    border: `1px solid ${P.border}`,
+                                    background: P.surface,
+                                  }}
+                                >
+                                  <div className="flex gap-2 w-full sm:w-auto">
+                                    <input
+                                      disabled
+                                      value={row.label}
+                                      placeholder="Label"
+                                      className="w-full sm:w-28 rounded px-2 py-1 bg-gray-100 cursor-not-allowed"
+                                      style={{
+                                        border: `1px solid ${P.border}`,
+                                        color: P.dark,
+                                      }}
+                                    />
+                                    <input
+                                      disabled
+                                      value={row.value}
+                                      placeholder="#rrggbb"
+                                      className="w-full sm:w-28 rounded px-2 py-1 bg-gray-100 cursor-not-allowed"
+                                      style={{
+                                        border: `1px solid ${P.border}`,
+                                        color: P.dark,
+                                      }}
+                                    />
+                                  </div>
 
-                                <div className="flex items-center gap-2 w-full sm:w-auto">
-                                  <input
-                                    type="color"
-                                    aria-label={`Pick color ${idx + 1}`}
-                                    value={curHex}
-                                    onChange={(e) =>
-                                      updateChoiceRow(row.id, {
-                                        value: e.target.value,
-                                        label:
-                                          row.label ||
-                                          e.target.value.toUpperCase(),
-                                      })
-                                    }
-                                    className="w-12 h-8 rounded border"
-                                    style={{ border: `1px solid ${P.border}` }}
-                                  />
-
-                                  <div
-                                    className="flex items-center gap-2 ml-auto sm:ml-0"
-                                    style={{ minWidth: 160 }}
-                                  >
-                                    <div className="hidden sm:flex items-center gap-1">
-                                      <button
-                                        type="button"
-                                        onClick={() =>
-                                          moveChoiceRow(row.id, "up")
-                                        }
-                                        className="p-1 rounded"
-                                        title="Move up"
-                                      >
-                                        <ArrowUp size={14} />
-                                      </button>
-                                      <button
-                                        type="button"
-                                        onClick={() =>
-                                          moveChoiceRow(row.id, "down")
-                                        }
-                                        className="p-1 rounded"
-                                        title="Move down"
-                                      >
-                                        <ArrowDown size={14} />
-                                      </button>
-                                    </div>
-
-                                    <label
-                                      className="flex items-center gap-1 text-sm"
-                                      style={{ color: P.muted }}
-                                    >
-                                      <input
-                                        type="checkbox"
-                                        checked={!!row.default}
-                                        onChange={(e) =>
-                                          updateChoiceRow(row.id, {
-                                            default: e.target.checked
-                                              ? true
-                                              : false,
-                                          })
-                                        }
-                                        onClick={() => {
-                                          setForm((s) => ({
-                                            ...s,
-                                            choicesRows: s.choicesRows.map(
-                                              (r) => ({
-                                                ...r,
-                                                default:
-                                                  toId(r.id) === toId(row.id),
-                                              })
-                                            ),
-                                          }));
-                                        }}
-                                      />
-                                      <span className="text-xs">default</span>
-                                    </label>
-
+                                  <div className="flex items-center gap-2 w-full sm:w-auto">
                                     <div
                                       className="w-8 h-6 rounded border"
                                       title={String(row.value)}
                                       style={{
-                                        background:
-                                          String(row.value) || "#ffffff",
+                                        background: curHex,
                                         border: `1px solid ${P.border}`,
                                       }}
                                     />
-
-                                    <button
-                                      type="button"
-                                      onClick={() => removeChoiceRow(row.id)}
-                                      className="px-2 py-1 rounded"
-                                      style={{ color: P.danger }}
-                                      title="Remove color"
-                                    >
-                                      Remove
-                                    </button>
+                                    {row.default && (
+                                      <span
+                                        className="text-xs px-2 py-1 rounded"
+                                        style={{
+                                          background: P.surface,
+                                          border: `1px solid ${P.border}`,
+                                          color: P.muted,
+                                        }}
+                                      >
+                                        Default
+                                      </span>
+                                    )}
                                   </div>
-                                </div>
-
-                                {rowErr && (
-                                  <div
-                                    className="text-xs mt-1"
-                                    style={{ color: P.danger }}
-                                  >
-                                    {rowErr}
-                                  </div>
-                                )}
-                              </motion.div>
-                            );
-                          })}
+                                </motion.div>
+                              );
+                            })}
+                          </div>
                         </AnimatePresence>
-
-                        <div>
-                          <button
-                            type="button"
-                            onClick={addChoiceRow}
-                            className="px-3 py-2 rounded w-full sm:w-auto"
-                            style={{
-                              border: `1px solid ${P.border}`,
-                              background: P.surface,
-                            }}
-                          >
-                            + Add color
-                          </button>
-                        </div>
-                        <p className="text-xs mt-1" style={{ color: P.muted }}>
-                          Tip: use the color picker to choose hex values
-                          quickly.
-                        </p>
                       </div>
+
                     </div>
                   )}
 
-                  <div>
-                    <label
-                      className="block text-sm font-medium"
-                      style={{ color: P.dark }}
-                    >
-                      Description (optional)
-                    </label>
-                    <textarea
-                      className="w-full rounded px-3 py-2"
-                      rows={3}
-                      value={form.description}
-                      onChange={(e) =>
-                        setForm((s) => ({ ...s, description: e.target.value }))
-                      }
-                      style={{
-                        border: `1px solid ${P.border}`,
-                        background: P.surface,
-                        color: P.dark,
-                      }}
-                    />
-                  </div>
                 </div>
 
                 <div
@@ -1623,18 +1210,18 @@ export default function EditExtras() {
                       className="px-4 py-2 rounded w-full sm:w-auto"
                       style={{ background: P.dark, color: P.surface }}
                       disabled={
-                        form.type === "spinner" &&
+                        form.type === "dropdown" &&
                         !!existingSpinner &&
                         !editingIsSpinner
                       }
                     >
-                      {form.type === "spinner" &&
-                      !!existingSpinner &&
-                      !editingIsSpinner
+                      {form.type === "dropdown" &&
+                        !!existingSpinner &&
+                        !editingIsSpinner
                         ? "Backdrop Exists"
                         : editingId
-                        ? "Save Changes"
-                        : "Create Add-On"}
+                          ? "Save Changes"
+                          : "Create Add-On"}
                     </motion.button>
                   </div>
                 </div>
@@ -1648,12 +1235,12 @@ export default function EditExtras() {
       <ConfirmDialog
         open={confirmState.open}
         title={confirmState.title}
-        description={confirmState.description}
         confirmLabel="Delete"
         destructive
         onCancel={closeConfirm}
         onConfirm={() => doDeleteConfirmed(confirmState.targetId ?? null)}
       />
+      <ToastContainer position="bottom-right" />
     </AdminLayout>
   );
 }
