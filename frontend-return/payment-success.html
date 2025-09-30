@@ -4,66 +4,20 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Payment Successful - Selfiegram</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="bg-gray-50 min-h-screen flex items-center justify-center">
-    <div class="max-w-md w-full bg-white shadow-lg rounded-lg p-8 text-center">
-        <div class="mb-6">
-            <div class="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
-                <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                </svg>
-            </div>
-            <h1 class="text-2xl font-bold text-gray-900 mb-2">Payment Successful!</h1>
-            <p class="text-gray-600">Thank you for your payment. Your booking has been confirmed.</p>
-        </div>
-
-        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-            <p class="text-sm text-blue-800">
-                <strong>What's next?</strong><br>
-                You will receive a confirmation email shortly with your booking details.
-            </p>
-        </div>
-
-        <div class="space-y-4">
-            <button 
-                onclick="goHome()" 
-                class="w-full bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 transition duration-200"
-            >
-                Return to Home
-            </button>
-            
-            <button 
-                onclick="viewBookings()" 
-                class="w-full border border-gray-300 text-gray-700 py-3 px-4 rounded-lg hover:bg-gray-50 transition duration-200"
-            >
-                View My Bookings
-            </button>
-        </div>
-
-        <div class="mt-6 text-sm text-gray-500">
-            <p>Questions? Contact us at <a href="mailto:support@selfiegram.com" class="text-blue-600 hover:underline">support@selfiegram.com</a></p>
-        </div>
-    </div>
-
-    <script>
-        function goHome() {
-            // Redirect to home with success message
-            window.location.href = 'http://127.0.0.1:5173?payment=success';
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
         }
-
-        function viewBookings() {
-            // Redirect to bookings/history page
-            window.location.href = 'http://127.0.0.1:5173/history?payment=success';
-        }
-
-        // Auto redirect after 10 seconds
-        setTimeout(() => {
-            goHome();
-        }, 10000);
-    </script>
-</body>
-</html>
+        .container {
+            background: white;
+            padding: 40px;
             border-radius: 10px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
             text-align: center;

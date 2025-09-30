@@ -19,6 +19,7 @@
     use App\Http\Controllers\NotificationController;
     use App\Http\Controllers\PayMongoController;
     use App\Http\Controllers\PayMongoWebhookController;
+    use App\Http\Controllers\TestPayMongoController;
     use App\Http\Controllers\ImageController;
     use App\Http\Controllers\PackageAddOnController;
     
@@ -29,6 +30,9 @@
             'message' => 'API is working!',
         ]);
     });
+    
+    // Test PayMongo payment method extraction (for testing purposes)
+    Route::get('/test-paymongo-webhook', [TestPayMongoController::class, 'testWebhook']);
 
     // Test auth without role
     Route::middleware(['auth:sanctum'])->get('/test-auth', function (Request $request) {
@@ -349,7 +353,6 @@
     // Original booking creation with conditional auth (allows OPTIONS, requires auth for POST)
     Route::middleware(['auth:sanctum'])->group(function () {
         Route::post('/bookings', [TransactionController::class, 'createBooking']);
-        Route::post('/pending-booking', [TransactionController::class, 'createPendingBooking']);
         Route::post('/payment/checkout', [TransactionController::class, 'createPaymentCheckout']);
 
         //Client Cancel and Reschedule Request
@@ -381,85 +384,9 @@
 
     // PayMongo payment routes
     Route::post('/payment/create-checkout', [PayMongoController::class, 'createCheckoutSession']);
-    Route::post('/payment/create-checkout-session', [TransactionController::class, 'createCheckoutSession']); // Payment-first flow
     Route::post('/payment/success', [PayMongoController::class, 'handlePaymentSuccess']);
     Route::get('/payment/history/{bookingId}', [PayMongoController::class, 'getPaymentHistory']);
 
     // PayMongo Webhook (no auth required)
     Route::post('/paymongo/webhook', [PayMongoWebhookController::class, 'handleWebhook']);
-
-    // Test webhook simulation for local development (no auth required)
-    Route::post('/test/webhook-simulate/{sessionId}', function ($sessionId) {
-        // Simulate PayMongo webhook payload
-        $webhookPayload = [
-            'data' => [
-                'id' => 'evt_test_' . uniqid(),
-                'type' => 'event',
-                'attributes' => [
-                    'type' => 'checkout_session.payment.paid',
-                    'data' => [
-                        'id' => $sessionId,
-                        'type' => 'checkout_session',
-                        'attributes' => [
-                            'payment_intent' => [
-                                'id' => 'pi_test_' . uniqid()
-                            ],
-                            'line_items' => [
-                                [
-                                    'amount' => 95700, // Will be divided by 100 in webhook
-                                    'payment_method_used' => 'gcash'
-                                ]
-                            ]
-                        ]
-                    ]
-                ]
-            ]
-        ];
-
-        // Create request with simulated webhook data
-        $request = new \Illuminate\Http\Request();
-        $request->merge($webhookPayload);
-
-        // Call the webhook controller
-        $webhookController = new PayMongoWebhookController();
-        $response = $webhookController->handleWebhook($request);
-
-        return response()->json([
-            'message' => 'Webhook simulation completed',
-            'webhook_response' => $response->getData(),
-            'session_id' => $sessionId
-        ]);
-    });
-
-    // Check payment session status (no auth required)
-    Route::get('/test/payment-session/{sessionId}', function ($sessionId) {
-        $paymentSession = \DB::table('payment_sessions')
-            ->where('checkout_session_id', $sessionId)
-            ->first();
-
-        if (!$paymentSession) {
-            return response()->json(['error' => 'Payment session not found'], 404);
-        }
-
-        $booking = null;
-        $addons = [];
-        if ($paymentSession->booking_id) {
-            $booking = \DB::table('booking')
-                ->where('bookingID', $paymentSession->booking_id)
-                ->first();
-                
-            $addons = \DB::table('booking_add_ons')
-                ->join('package_add_ons', 'booking_add_ons.addOnID', '=', 'package_add_ons.addOnID')
-                ->where('booking_add_ons.bookingID', $paymentSession->booking_id)
-                ->select('booking_add_ons.*', 'package_add_ons.addOn as addon_name')
-                ->get();
-        }
-
-        return response()->json([
-            'payment_session' => $paymentSession,
-            'booking' => $booking,
-            'addons' => $addons,
-            'booking_data' => $paymentSession->booking_data ? json_decode($paymentSession->booking_data, true) : null
-        ]);
-    });
 ?>
