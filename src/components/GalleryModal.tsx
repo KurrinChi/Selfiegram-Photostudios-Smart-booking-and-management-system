@@ -47,7 +47,7 @@ const GalleryModal: React.FC<GalleryModalProps> = ({
   // Fetch already uploaded images when modal opens
   useEffect(() => {
     if (isOpen && booking) {
-      fetchImagesForBooking(booking.userID as number);
+      fetchImagesForBooking(booking.userID as number, booking.packageID as number);
     } else {
       setImages([]);
       setMultiSelectMode(false);
@@ -55,9 +55,9 @@ const GalleryModal: React.FC<GalleryModalProps> = ({
     }
   }, [isOpen, booking]);
 
-  const fetchImagesForBooking = async (userID: number) => {
+  const fetchImagesForBooking = async (userID: number, packageID: number) => {
     try {
-      const res = await fetchWithAuth(`${API_URL}/api/admin/images/${userID}`);
+      const res = await fetchWithAuth(`${API_URL}/api/admin/images/${userID}/${packageID}`);
       if (!res.ok) throw new Error("Failed to fetch images");
       const data: { id: string; url: string }[] = await res.json();
 
@@ -374,8 +374,8 @@ const GalleryModal: React.FC<GalleryModalProps> = ({
                           <div
                             key={img.id}
                             className={`relative rounded-lg overflow-hidden border cursor-pointer group ${multiSelectMode && selected
-                                ? "ring-2 ring-blue-500"
-                                : "hover:shadow-md"
+                              ? "ring-2 ring-blue-500"
+                              : "hover:shadow-md"
                               }`}
                             onClick={() => toggleSelect(img.id)}
                           >
@@ -407,41 +407,55 @@ const GalleryModal: React.FC<GalleryModalProps> = ({
               {images.some((img) => !img.isNew) && (
                 <>
                   <h3 className="text-sm font-semibold text-gray-700 mb-2 mt-6">Uploaded</h3>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mb-6">
-                    {images
+
+                  {Object.entries(
+                    images
                       .filter((img) => !img.isNew)
-                      .map((img) => {
-                        const selected = selectedImages.includes(img.id);
-                        return (
-                          <div
-                            key={img.id}
-                            className={`relative rounded-lg overflow-hidden border cursor-pointer group ${multiSelectMode && selected
-                                ? "ring-2 ring-blue-500"
-                                : "hover:shadow-md"
-                              }`}
-                            onClick={() => toggleSelect(img.id)}
-                          >
-                            <img
-                              src={img.url}
-                              alt=""
-                              className="w-full h-40 object-cover"
-                            />
-                            {!multiSelectMode && (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleRemove(img.id);
-                                }}
-                                className="absolute top-2 right-2 p-1 bg-red-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition"
-                                disabled={uploading}
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            )}
-                          </div>
-                        );
-                      })}
-                  </div>
+                      .reduce((acc, img) => {
+                        // Group by packageID + packageName
+                        const key = `${booking?.packageID ?? "Unknown"} – ${booking?.packageName ?? "N/A"}`;
+                        if (!acc[key]) acc[key] = [];
+                        acc[key].push(img);
+                        return acc;
+                      }, {} as Record<string, ImageItem[]>)
+                  ).map(([groupKey, groupImgs]) => (
+                    <div key={groupKey} className="mb-6">
+                      <h4 className="text-xs font-medium text-gray-500 mb-2">{groupKey}</h4>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                        {groupImgs.map((img) => {
+                          const selected = selectedImages.includes(img.id);
+                          return (
+                            <div
+                              key={img.id}
+                              className={`relative rounded-lg overflow-hidden border cursor-pointer group ${multiSelectMode && selected
+                                  ? "ring-2 ring-blue-500"
+                                  : "hover:shadow-md"
+                                }`}
+                              onClick={() => toggleSelect(img.id)}
+                            >
+                              <img
+                                src={img.url}
+                                alt=""
+                                className="w-full h-40 object-cover"
+                              />
+                              {!multiSelectMode && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleRemove(img.id);
+                                  }}
+                                  className="absolute top-2 right-2 p-1 bg-red-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition"
+                                  disabled={uploading}
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
                 </>
               )}
             </>
