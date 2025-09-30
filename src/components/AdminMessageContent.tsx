@@ -9,7 +9,6 @@ import React, {
 } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Mail as MailIcon,
   Send as SendIcon,
   FileText as FileTextIcon,
   Trash2 as TrashIcon,
@@ -133,7 +132,6 @@ export default function AdminEmailApp(): JSX.Element {
   const [selectedEmailId, setSelectedEmailId] = useState<string | null>(
     emails[0]?.id ?? null
   );
-  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // search + filter in middle column (debounced)
   const [searchQuery, setSearchQuery] = useState("");
@@ -382,22 +380,6 @@ export default function AdminEmailApp(): JSX.Element {
         email.from
       } wrote:\n${email.body}`;
       toggleCompose({ to, subject: `Re: ${email.subject}`, body });
-    },
-    [toggleCompose]
-  );
-
-  const replyAll = useCallback(
-    (email: Email) => {
-      const own = "me@example.com";
-      const recipients = [extractAddress(email.from), ...(email.to || [])]
-        .map((s) => s.trim())
-        .filter(Boolean)
-        .filter((r) => r !== own);
-      const unique = Array.from(new Set(recipients)).join(", ");
-      const body = `\n\n---\nOn ${new Date(email.time).toLocaleString()}, ${
-        email.from
-      } wrote:\n${email.body}`;
-      toggleCompose({ to: unique, subject: `Re: ${email.subject}`, body });
     },
     [toggleCompose]
   );

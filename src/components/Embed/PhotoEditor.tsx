@@ -160,7 +160,6 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
     filePath.replace(/^\/storage\//, "")
   )}`;
 
-
   // track listeners attached to the adjust panel so we can remove them cleanly
   const panelListenersRef = useRef<
     Array<{
@@ -960,8 +959,8 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
               "submenu.activeLabel.color": "#fff",
             },
           },
-          cssMaxWidth: 1000,
-          cssMaxHeight: 700,
+          cssMaxWidth: 10000,
+          cssMaxHeight: 10000,
           usageStatistics: false,
         });
 
