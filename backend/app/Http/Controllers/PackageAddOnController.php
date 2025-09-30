@@ -17,7 +17,7 @@ class PackageAddOnController extends Controller
     {
         $validated = $request->validate([
             'addOn' => 'required|string|max:255',
-            'addOnPrice' => 'required|numeric|min:0',
+            'addOnPrice' => 'required|numeric|min:1',
             'type' => 'required|in:single,multiple,spinner',
             'min_quantity' => 'nullable|integer|min:1',
             'max_quantity' => 'nullable|integer|min:1',
@@ -39,7 +39,10 @@ class PackageAddOnController extends Controller
 
         $addon = PackageAddOn::create($validated);
 
-        return response()->json($addon, 201);
+        return response()->json([
+            'message' => 'Addon created successfully!',
+            'addon' => $addon
+        ], 201);
     }
 
 
@@ -49,14 +52,18 @@ class PackageAddOnController extends Controller
 
         $validated = $request->validate([
             'addOn' => 'required|string|max:255',
-            'addOnPrice' => 'required|numeric|min:0',
+            'addOnPrice' => 'required|numeric|min:1',
             'type' => 'required|in:single,multiple,spinner',
             'min_quantity' => 'integer|min:1',
             'max_quantity' => 'integer|min:1',
         ]);
 
         $addon->update($validated);
-        return response()->json($addon);
+        
+        return response()->json([
+            'message' => 'Addon updated successfully!',
+            'addon' => $addon
+        ]);
     }
 
     public function destroy($id)

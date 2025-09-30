@@ -259,7 +259,6 @@ export default function EditExtras() {
     choices?: Record<string, string>;
   }>({});
 
-  /* Confirm dialog state (delete only) */
   const [confirmState, setConfirmState] = useState<{
     open: boolean;
     targetId?: string | null;
@@ -278,7 +277,6 @@ export default function EditExtras() {
     );
   }, [addons, query]);
 
-  /* helpers: spinner existence & whether current edit is the spinner */
   const existingSpinner = addons.find((a) => a.type === "dropdown");
   const editingIsSpinner =
     editingId && toId(existingSpinner?.id) === toId(editingId);
@@ -352,12 +350,9 @@ export default function EditExtras() {
     }
   }
 
-
-
   function closeConfirm() {
     setConfirmState({ open: false });
   }
-
 
   /* ---------- Validation ---------- */
 
@@ -505,7 +500,7 @@ export default function EditExtras() {
     return checks.every(Boolean);
   }
 
-  /* ---------- Submit ---------- */
+  //submittt
   async function handleSubmit(e?: React.FormEvent) {
     if (e) e.preventDefault();
 
@@ -530,18 +525,18 @@ export default function EditExtras() {
     }
 
     // prepare payload for API
-  const payload = {
-    addOn: form.name.trim(),
-    addOnPrice: priceNum,
-    type:
-      form.type === "dropdown"
-        ? "spinner"
-        : form.type === "multiple"
-        ? "multiple"
-        : "single",
-    min_quantity: form.type === "multiple" ? Number(form.min_quantity) : 1,
-    max_quantity: form.type === "multiple" ? Number(form.max_quantity) : 1,
-  };
+    const payload = {
+      addOn: form.name.trim(),
+      addOnPrice: priceNum,
+      type:
+        form.type === "dropdown"
+          ? "spinner"
+          : form.type === "multiple"
+            ? "multiple"
+            : "single",
+      min_quantity: form.type === "multiple" ? Number(form.min_quantity) : 1,
+      max_quantity: form.type === "multiple" ? Number(form.max_quantity) : 1,
+    };
 
     try {
       let res: Response;
@@ -552,26 +547,41 @@ export default function EditExtras() {
         const tid = toId(editingId);
         res = await fetchWithAuth(`${API_URL}/api/admin/package-add-ons/${tid}`, {
           method: "PUT",
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
         });
-        if (!res.ok) throw new Error("Update failed");
+
+        if (!res.ok) {
+          const errorData = await res.json();
+          toast.error(errorData.message || "Update failed");
+          return;
+        }
         saved = await res.json();
 
         setAddons((s) =>
-          s.map((a) => (toId(a.id) === tid ? { ...a, ...saved } : a))
+          s.map((a) => (toId(a.id) === tid ? { ...a, ...saved.addon } : a))
         );
-        toast.success("Add-on updated successfully!");
+
+        toast.success(saved.message); // ✅ message from backend
       } else {
         // create new
         res = await fetchWithAuth(`${API_URL}/api/admin/package-add-ons/add`, {
           method: "POST",
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
         });
-        if (!res.ok) throw new Error("Create failed");
+
+        if (!res.ok) {
+          const errorData = await res.json();
+          toast.error(errorData.message || "Create failed");
+          return;
+        }
+
         saved = await res.json();
 
-        setAddons((s) => [saved, ...s]);
-        toast.success("Add-on created successfully!");
+        setAddons((s) => [saved.addon, ...s]);
+
+        toast.success(saved.message); // ✅ message from backend
       }
 
       closeModal();
