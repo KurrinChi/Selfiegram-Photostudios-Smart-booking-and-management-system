@@ -21,6 +21,7 @@
     use App\Http\Controllers\PayMongoWebhookController;
     use App\Http\Controllers\TestPayMongoController;
     use App\Http\Controllers\ImageController;
+    use App\Http\Controllers\PackageAddOnController;
     
     // Testing routes
     Route::middleware('api')->get('/test', function (Request $request) {
@@ -293,6 +294,13 @@
         Route::post('/admin/packages/{id}/archive', [PackageController::class, 'archivePackage']);
         Route::post('/admin/update-package/{id}', [PackageController::class, 'updatePackage']);
         Route::post('/admin/add-package', [PackageController::class, 'addPackage']);
+
+        //admin edit extras
+        Route::post('/admin/package-add-ons/add', [PackageAddOnController::class, 'store']);
+        Route::put('/admin/package-add-ons/{id}', [PackageAddOnController::class, 'update']);
+        Route::delete('/admin/package-add-ons/{id}/delete', [PackageAddOnController::class, 'destroy']);
+        Route::get('/admin/package-add-ons', [PackageAddOnController::class, 'index']);
+
 
         //admin gallery page
         Route::get('/admin/completed-appointments', [GalleryController::class, 'completedAppointments']);
