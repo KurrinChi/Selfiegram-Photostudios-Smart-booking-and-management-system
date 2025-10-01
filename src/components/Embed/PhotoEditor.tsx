@@ -917,7 +917,6 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
           throw new Error("ImageEditor constructor not available");
         }
 
-        // instantiate
         instanceRef.current = new Constructor(editorRef.current, {
           includeUI: {
             loadImage: {
