@@ -146,7 +146,9 @@ const AdminUsersContent: React.FC = () => {
         toast.success(data.message);
         setUsers((prev) =>
           prev.map((usr) =>
-            usr.id === confirmArchive.id ? { ...usr, archive: data.archive } : usr
+            usr.id === confirmArchive.id
+              ? { ...usr, archive: data.archive }
+              : usr
           )
         );
       } else {
@@ -177,8 +179,11 @@ const AdminUsersContent: React.FC = () => {
             <button
               key={r}
               onClick={() => setActiveRole(r)}
-              className={`pb-2 transition-colors ${activeRole === r ? "text-black" : "text-gray-500 hover:text-black"
-                }`}
+              className={`pb-2 transition-colors ${
+                activeRole === r
+                  ? "text-black"
+                  : "text-gray-500 hover:text-black"
+              }`}
             >
               {r}
             </button>
@@ -220,7 +225,7 @@ const AdminUsersContent: React.FC = () => {
       </div>
 
       {/* Table */}
-      <div className="relative overflow-x-auto rounded-lg border border-gray-200">
+      <div className="relative overflow-x-auto overflow-y-auto h-[calc(90vh-160px)] rounded-lg border border-gray-200">
         <table className="min-w-full text-left text-xs">
           <thead className="bg-gray-50 text-gray-600">
             <tr>
@@ -239,7 +244,6 @@ const AdminUsersContent: React.FC = () => {
                 <td className="px-4 py-3">{u.email}</td>
                 <td className="px-4 py-3">{u.role}</td>
                 <td className="px-4 py-3 text-right space-x-2">
-                  {/* View button */}
                   <button
                     className="px-2 py-1 text-xs bg-blue-500 text-white rounded-md hover:bg-blue-600 transition"
                     onClick={() => setSelected(u)}
@@ -247,12 +251,12 @@ const AdminUsersContent: React.FC = () => {
                     <FontAwesomeIcon icon={faEye} /> View
                   </button>
 
-                  {/* Archive / Unarchive button → opens modal */}
                   <button
-                    className={`px-2 py-1 text-xs rounded-md transition ${u.archive === 0
+                    className={`px-2 py-1 text-xs rounded-md transition ${
+                      u.archive === 0
                         ? "bg-green-500 text-white hover:bg-green-600"
                         : "bg-red-500 text-white hover:bg-red-600"
-                      }`}
+                    }`}
                     onClick={() => setConfirmArchive(u)}
                   >
                     {u.archive === 0 ? "Unarchive" : "Archive"}
@@ -276,8 +280,9 @@ const AdminUsersContent: React.FC = () => {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-lg p-6 w-96 text-center space-y-4">
             <div
-              className={`mx-auto w-12 h-12 flex items-center justify-center rounded-full ${confirmArchive.archive === 1 ? "bg-red-100" : "bg-green-100"
-                }`}
+              className={`mx-auto w-12 h-12 flex items-center justify-center rounded-full ${
+                confirmArchive.archive === 1 ? "bg-red-100" : "bg-green-100"
+              }`}
             >
               {confirmArchive.archive === 1 ? (
                 <Archive className="text-red-600" />
@@ -303,10 +308,11 @@ const AdminUsersContent: React.FC = () => {
               </button>
               <button
                 onClick={confirmArchiveAction}
-                className={`w-full py-2 text-white text-sm rounded-md ${confirmArchive.archive === 1
+                className={`w-full py-2 text-white text-sm rounded-md ${
+                  confirmArchive.archive === 1
                     ? "bg-red-600 hover:bg-red-700"
                     : "bg-green-600 hover:bg-green-700"
-                  }`}
+                }`}
               >
                 {confirmArchive.archive === 1 ? "Archive" : "Unarchive"}
               </button>
@@ -328,8 +334,9 @@ const AdminUsersContent: React.FC = () => {
           <button
             key={i}
             onClick={() => setPage(i + 1)}
-            className={`px-2 py-1 rounded ${page === i + 1 ? "bg-black text-white" : "border"
-              }`}
+            className={`px-2 py-1 rounded ${
+              page === i + 1 ? "bg-black text-white" : "border"
+            }`}
           >
             {i + 1}
           </button>
@@ -374,7 +381,6 @@ const AdminUsersContent: React.FC = () => {
           />
         )}
       </AnimatePresence>
-
     </div>
   );
 };

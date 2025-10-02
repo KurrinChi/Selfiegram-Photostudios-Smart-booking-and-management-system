@@ -473,7 +473,7 @@ const AdminSalesContent: React.FC = () => {
 
       {/* Table */}
       <div className="overflow-x-auto rounded-lg border">
-        <table className="min-w-full text-xs">
+        <table className="min-w-full text-xs h-[calc(90vh-120px)]">
           <thead className="bg-gray-100 text-left text-gray-600">
             <tr>
               <th className="px-4 py-2">ID</th>

@@ -1,114 +1,154 @@
-import React, { useState, useEffect } from "react";
-import { Edit, X, Heart } from "lucide-react";
+// ClientGalleryPageContent.tsx
+import React, { useEffect, useState } from "react";
+import { Edit, X, Heart, HeartOff } from "lucide-react";
 import JSZip from "jszip";
-import { fetchWithAuth } from "../utils/fetchWithAuth";
+import { fetchWithAuth } from "../utils/fetchWithAuth"; // adjust path if needed
 
+/* ----------------------------- Types ----------------------------- */
+type ImageItem = {
+  id: string;
+  url: string;
+  date: string; // formatted display date, e.g. "October 1, 2025"
+  edited?: boolean;
+  isFavorite?: boolean;
+  packageName?: string;
+};
+
+type GroupImage = {
+  id: string;
+  url: string;
+  edited?: boolean;
+  isFavorite?: boolean;
+};
+
+type PackageGroup = {
+  packageName: string;
+  images: GroupImage[];
+};
+
+type DateGroup = {
+  date: string;
+  packages: PackageGroup[];
+};
+
+/* --------------------------- Constants --------------------------- */
 const TABS = ["Gallery", "Favorites"];
 
+/* --------------------------- Component --------------------------- */
 const ClientGalleryPageContent: React.FC = () => {
-  const [activeTab, setActiveTab] = useState("Gallery");
-  const [galleryData, setGalleryData] = useState<
-    {
-      date: string;
-      images: {
-        id: string;
-        url: string;
-        edited?: boolean;
-        isFavorite?: boolean;
-      }[];
-    }[]
-  >([]);
-
+  const [activeTab, setActiveTab] = useState<string>("Gallery");
+  const [galleryData, setGalleryData] = useState<DateGroup[]>([]);
+  const [selectedImages, setSelectedImages] = useState<string[]>([]);
   const [previewImage, setPreviewImage] = useState<null | {
     id: string;
     url: string;
   }>(null);
-  const [selectedImages, setSelectedImages] = useState<string[]>([]); // For multiple select
+  const [openPackageMap, setOpenPackageMap] = useState<Record<string, boolean>>(
+    {}
+  ); // key: `${date}__${packageName}`
 
   const API_URL = import.meta.env.VITE_API_URL;
-  const userID = localStorage.getItem("userID"); // Replace with actual user ID logic
+  const userID = localStorage.getItem("userID");
 
+  /* ------------------------- Fetch & Group ------------------------- */
   useEffect(() => {
     const fetchImages = async () => {
       try {
         const res = await fetchWithAuth(`${API_URL}/api/user-images/${userID}`);
         if (!res.ok) throw new Error("Failed to fetch images");
-
         const data = await res.json();
 
-        // Group images by date
-        const groupedImages = groupImagesByDate(
-          data.map((img: any) => ({
-            id: img.imageID,
-            url: `${API_URL}/api/proxy-image?path=${encodeURIComponent(
-              img.filePath.replace(/^\/storage\//, "")
-            )}`,
-            date: new Date(img.uploadDate).toLocaleDateString("en-US", {
-              year: "numeric",
-              month: "long",
-              day: "numeric",
-            }),
-            edited: img.tag === "edited",
-            isFavorite: img.isFavorite === 1, // Map isFavorite field
-          }))
-        );
+        const mapped: ImageItem[] = (data || []).map((img: any) => ({
+          id: String(img.imageID),
+          url: `${API_URL}/api/proxy-image?path=${encodeURIComponent(
+            (img.filePath || "").replace(/^\/storage\//, "")
+          )}`,
+          date: new Date(img.uploadDate).toLocaleDateString("en-US", {
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+          }),
+          edited: img.tag === "edited",
+          isFavorite: img.isFavorite === 1 || img.isFavorite === true,
+          packageName: img.packageName ?? "Uncategorized",
+        }));
 
-        setGalleryData(groupedImages);
+        const grouped = groupByDateAndPackage(mapped);
+        setGalleryData(grouped);
+
+        // default: collapse packages for minimal UI
+        const initialOpen: Record<string, boolean> = {};
+        grouped.forEach((dg) =>
+          dg.packages.forEach(
+            (pg) => (initialOpen[`${dg.date}__${pg.packageName}`] = false)
+          )
+        );
+        setOpenPackageMap(initialOpen);
       } catch (err) {
         console.error("Error fetching images:", err);
       }
     };
 
     fetchImages();
-  }, [userID]);
+  }, [API_URL, userID]);
 
-  const groupImagesByDate = (
-    images: {
-      id: string;
-      url: string;
-      date: string;
-      edited?: boolean;
-      isFavorite?: boolean;
-    }[]
-  ) => {
-    const grouped: Record<
-      string,
-      { id: string; url: string; edited?: boolean; isFavorite?: boolean }[]
-    > = {};
+  const groupByDateAndPackage = (images: ImageItem[]): DateGroup[] => {
+    const byDate: Record<string, ImageItem[]> = {};
     images.forEach((img) => {
-      if (!grouped[img.date]) grouped[img.date] = [];
-      grouped[img.date].push({
-        id: img.id,
-        url: img.url,
-        edited: img.edited,
-        isFavorite: img.isFavorite,
-      });
+      const k = img.date;
+      if (!byDate[k]) byDate[k] = [];
+      byDate[k].push(img);
     });
-    return Object.entries(grouped).map(([date, imgs]) => ({
-      date,
-      images: imgs,
-    }));
+
+    const dateGroups: DateGroup[] = Object.entries(byDate).map(
+      ([date, imgs]) => {
+        const byPackage: Record<string, GroupImage[]> = {};
+        imgs.forEach((img) => {
+          const pkg = img.packageName ?? "Uncategorized";
+          if (!byPackage[pkg]) byPackage[pkg] = [];
+          byPackage[pkg].push({
+            id: img.id,
+            url: img.url,
+            edited: img.edited,
+            isFavorite: img.isFavorite,
+          });
+        });
+
+        const packages: PackageGroup[] = Object.entries(byPackage).map(
+          ([packageName, images]) => ({ packageName, images })
+        );
+        return { date, packages };
+      }
+    );
+
+    // sort dates (newest first) where possible
+    dateGroups.sort((a, b) => {
+      const ta = Date.parse(a.date) || 0;
+      const tb = Date.parse(b.date) || 0;
+      return tb - ta;
+    });
+
+    return dateGroups;
   };
 
+  /* --------------------------- Actions ---------------------------- */
   const toggleFavorite = async (id: string) => {
     try {
       const res = await fetchWithAuth(
         `${API_URL}/api/user-images/favorite/${id}`,
-        {
-          method: "POST",
-        }
+        { method: "POST" }
       );
       if (!res.ok) throw new Error("Failed to toggle favorite");
-
       const data = await res.json();
-
-      // Update the local state to reflect the new favorite status
       setGalleryData((prev) =>
-        prev.map((group) => ({
-          ...group,
-          images: group.images.map((img) =>
-            img.id === id ? { ...img, isFavorite: data.isFavorite } : img
-          ),
+        prev.map((dg) => ({
+          ...dg,
+          packages: dg.packages.map((pg) => ({
+            ...pg,
+            images: pg.images.map((img) =>
+              img.id === id ? { ...img, isFavorite: data.isFavorite } : img
+            ),
+          })),
         }))
       );
     } catch (err) {
@@ -120,14 +160,20 @@ const ClientGalleryPageContent: React.FC = () => {
     const response = await fetchWithAuth(
       `${API_URL}/api/image-url/${filename}`
     );
+    if (!response.ok) throw new Error("Failed to fetch image url");
     const data = await response.json();
     return data.url;
   };
 
   const handleEdit = async (filename: string) => {
-    const imageUrl = await fetchImageUrl(filename);
-    window.location.href = `/edit?url=${encodeURIComponent(imageUrl)}`;
+    try {
+      const imageUrl = await fetchImageUrl(filename);
+      window.location.href = `/edit?url=${encodeURIComponent(imageUrl)}`;
+    } catch (err) {
+      console.error("Failed to open editor:", err);
+    }
   };
+
   const handleSelectImage = (id: string) => {
     setSelectedImages((prev) =>
       prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
@@ -136,95 +182,83 @@ const ClientGalleryPageContent: React.FC = () => {
 
   const handleDownloadSelected = async () => {
     if (selectedImages.length === 0) return;
-
     const zip = new JSZip();
     const folder = zip.folder("selected-images");
-
     try {
-      // Fetch and add each selected image to the zip folder
       const imagePromises = selectedImages.map(async (id) => {
-        const image = galleryData
-          .flatMap((group) => group.images)
-          .find((img) => img.id === id);
-
-        if (image) {
-          console.log("Fetching image:", image.url); // Debug the image URL
-          const response = await fetch(image.url); // Use fetchWithAuth here
+        const img = galleryData
+          .flatMap((dg) => dg.packages.flatMap((pg) => pg.images))
+          .find((i) => i.id === id);
+        if (img) {
+          const response = await fetch(img.url);
           if (!response.ok) {
-            console.error(`Failed to fetch image with ID: ${id}`);
+            console.error("Failed to fetch", img.url);
             return;
           }
           const blob = await response.blob();
-          folder?.file(image.url.split("/").pop() || `image-${id}.jpg`, blob); // Add the image to the zip folder
+          folder?.file(img.url.split("/").pop() || `image-${id}.jpg`, blob);
         }
       });
 
       await Promise.all(imagePromises);
-
-      // Generate the zip file and trigger download
       const zipBlob = await zip.generateAsync({ type: "blob" });
       const link = document.createElement("a");
       link.href = URL.createObjectURL(zipBlob);
       link.download = "selected-images.zip";
       link.click();
+      URL.revokeObjectURL(link.href);
     } catch (error) {
       console.error("Error while downloading selected images:", error);
     }
   };
 
-  /*const handleDeleteSelected = async () => {
-    try {
-      const res = await fetchWithAuth(`${API_URL}/api/user-images/delete`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ imageIDs: selectedImages }),
-      });
+  const togglePackageOpen = (date: string, packageName: string) => {
+    const key = `${date}__${packageName}`;
+    setOpenPackageMap((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
 
-      if (!res.ok) throw new Error("Failed to delete images");
-
-      // Remove deleted images from the gallery
-      setGalleryData((prev) =>
-        prev.map((group) => ({
-          ...group,
-          images: group.images.filter((img) => !selectedImages.includes(img.id)),
-        }))
-      );
-
-      setSelectedImages([]); // Clear selection
-    } catch (err) {
-      console.error("Error deleting images:", err);
-    }
-  };*/
-
+  /* --------------------------- Filters ---------------------------- */
   const filteredData =
     activeTab === "Favorites"
       ? galleryData
-          .map((group) => ({
-            date: group.date,
-            images: group.images.filter((img) => img.isFavorite), // Filter favorites
+          .map((dg) => ({
+            date: dg.date,
+            packages: dg.packages
+              .map((pg) => ({
+                packageName: pg.packageName,
+                images: pg.images.filter((img) => img.isFavorite),
+              }))
+              .filter((pg) => pg.images.length > 0),
           }))
-          .filter((group) => group.images.length > 0) // Remove empty groups
+          .filter((dg) => dg.packages.length > 0)
       : activeTab === "Edited"
-      ? galleryData.map((group) => ({
-          date: group.date,
-          images: group.images.filter((img) => img.edited),
-        }))
+      ? galleryData
+          .map((dg) => ({
+            date: dg.date,
+            packages: dg.packages.map((pg) => ({
+              packageName: pg.packageName,
+              images: pg.images.filter((img) => img.edited),
+            })),
+          }))
+          .filter((dg) => dg.packages.some((pg) => pg.images.length > 0))
       : galleryData;
 
+  const isSelected = (id: string) => selectedImages.includes(id);
+
+  /* ----------------------------- Render ---------------------------- */
   return (
-    <div className="p-4 font-sf animate-fadeIn">
-      <div className="flex justify-between items-center mb-4">
-        <div className="flex gap-4">
+    <div className="p-4 font-sans">
+      {/* Top bar */}
+      <div className="flex items-center justify-between gap-4 mb-4">
+        <div className="flex gap-2">
           {TABS.map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`text-sm px-4 py-1 rounded-full border transition-all duration-200 ${
+              className={`text-sm px-3 py-1 rounded-full transition-colors duration-120 border ${
                 activeTab === tab
-                  ? "bg-black text-white border-black"
-                  : "text-black border-gray-300 hover:border-black"
+                  ? "bg-slate-900 text-white border-transparent"
+                  : "bg-white text-slate-700 border-slate-200"
               }`}
             >
               {tab}
@@ -232,109 +266,190 @@ const ClientGalleryPageContent: React.FC = () => {
           ))}
         </div>
 
-        {/* Multiple Select Actions */}
-        {selectedImages.length > 0 && (
-          <div className="flex gap-2">
+        <div className="flex items-center gap-3">
+          {selectedImages.length > 0 && (
+            <div className="text-sm text-slate-600">
+              {selectedImages.length} selected
+            </div>
+          )}
+          {selectedImages.length > 0 && (
             <button
-              className="px-4 py-1 bg-gray-800 text-white rounded-md hover:bg-black"
               onClick={handleDownloadSelected}
+              className="text-sm px-3 py-1 bg-slate-900 text-white rounded-md"
             >
               Download
             </button>
-            {/* Delete Button 
-            <button
-              className="px-4 py-1 bg-red-500 text-white rounded-md hover:bg-red-600"
-              onClick={handleDeleteSelected}
-            >
-              Delete
-            </button>
-            */}
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
+      {/* Empty state */}
       {filteredData.length === 0 ? (
-        <div className="text-center text-gray-500 mt-20">
+        <div className="flex flex-col items-center justify-center py-20 text-center text-slate-500">
           <p className="text-lg font-medium mb-2">No photos yet</p>
-          <p className="text-sm">
-            Book a photo session now to start capturing memories!
+          <p className="text-sm max-w-xs">
+            Book a photo session now to start capturing memories.
           </p>
         </div>
       ) : (
-        filteredData.map((group) => (
-          <div key={group.date} className="mb-6">
-            {/* Date Header */}
-            <div className="flex justify-between items-center w-full text-left font-medium text-lg mb-2">
-              <span>{group.date}</span>
-            </div>
+        filteredData.map((dateGroup) => (
+          <section key={dateGroup.date} className="mb-6">
+            {/* Packages */}
+            <div className="space-y-4">
+              {dateGroup.packages.map((pkg) => {
+                const key = `${dateGroup.date}__${pkg.packageName}`;
+                const open = !!openPackageMap[key];
+                const total = pkg.images.length;
+                const selectedCount = pkg.images.filter((i) =>
+                  selectedImages.includes(i.id)
+                ).length;
 
-            {/* Images under the date */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-              {group.images.map((img) => {
-                const isSelected = selectedImages.includes(img.id);
                 return (
                   <div
-                    key={img.id}
-                    className={`relative rounded-lg overflow-hidden cursor-pointer transition-all duration-500 ease-in-out transform hover:scale-[1.03] flex items-center justify-center bg-white ${
-                      isSelected ? "ring-4 ring-black" : ""
-                    }`}
-                    onClick={() => handleSelectImage(img.id)}
+                    key={key}
+                    className="rounded-md bg-white shadow-sm overflow-hidden"
                   >
-                    <img
-                      src={img.url}
-                      alt=""
-                      className="max-w-full max-h-full object-contain"
-                    />
-                    <div className="absolute bottom-2 right-2 flex gap-2">
-                      <button
-                        className="p-1.5 rounded-full bg-gray-100 hover:bg-gray-200"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          toggleFavorite(img.id);
-                        }}
-                      >
-                        <Heart
-                          className={`w-5 h-5 ${
-                            img.isFavorite ? "text-pink-500" : "text-gray-500"
+                    {/* Package header - date on the left, chevron on right */}
+                    <div
+                      className="flex items-center justify-between px-4 py-3 cursor-pointer"
+                      onClick={() =>
+                        togglePackageOpen(dateGroup.date, pkg.packageName)
+                      }
+                    >
+                      <div className="flex items-center gap-3">
+                        {/* package name and counts */}
+                        <div>
+                          <div className="text-sm font-medium text-slate-800">
+                            {pkg.packageName}
+                          </div>
+                          <div className="text-xs text-slate-400">
+                            {total} photos{" "}
+                            {selectedCount > 0 && `• ${selectedCount} selected`}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-3">
+                        <div
+                          className={`transition-transform ${
+                            open ? "rotate-180" : "rotate-0"
                           }`}
-                          fill={img.isFavorite ? "currentColor" : "none"}
-                        />
-                      </button>
-                      <button
-                        className="p-1.5 rounded-full bg-gray-100 hover:bg-gray-200"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleEdit(img.id);
-                        }}
-                      >
-                        <Edit className="w-5 h-5 text-gray-500" />
-                      </button>
+                        >
+                          <svg
+                            className="w-4 h-4 text-slate-500"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                          >
+                            <path
+                              d="M6 9l6 6 6-6"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                          </svg>
+                        </div>
+                      </div>
+
+                      {/* DATE (now inside header, left side) */}
+                      <div className="text-sm text-slate-500 w-[160px] truncate">
+                        {dateGroup.date}
+                      </div>
                     </div>
+
+                    {/* Images grid */}
+                    {open && (
+                      <div className="p-3 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 bg-white">
+                        {pkg.images.map((img) => {
+                          const selected = isSelected(img.id);
+                          return (
+                            <div
+                              key={img.id}
+                              onClick={() => handleSelectImage(img.id)}
+                              className={`relative rounded-md overflow-hidden bg-slate-50 cursor-pointer border ${
+                                selected
+                                  ? "ring-2 ring-slate-900 border-transparent"
+                                  : "border-transparent"
+                              }`}
+                            >
+                              <img
+                                src={img.url}
+                                alt=""
+                                className="w-full h-44 object-cover"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setPreviewImage({ id: img.id, url: img.url });
+                                }}
+                              />
+
+                              {/* top-right action pills */}
+                              <div className="absolute inset-0 flex items-start justify-end p-2 pointer-events-none">
+                                <div className="pointer-events-auto flex gap-2">
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      toggleFavorite(img.id);
+                                    }}
+                                    className="p-1 bg-white rounded-full shadow-sm"
+                                    aria-label="Toggle favorite"
+                                  >
+                                    {img.isFavorite ? (
+                                      <Heart className="w-4 h-4 text-rose-500" />
+                                    ) : (
+                                      <HeartOff className="w-4 h-4 text-slate-400" />
+                                    )}
+                                  </button>
+
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleEdit(img.id);
+                                    }}
+                                    className="p-1 bg-white rounded-full shadow-sm"
+                                    aria-label="Edit image"
+                                  >
+                                    <Edit className="w-4 h-4 text-slate-500" />
+                                  </button>
+                                </div>
+                              </div>
+
+                              {/* bottom-left small indicator */}
+                              <div className="absolute left-2 bottom-2">
+                                <div
+                                  className={`w-4 h-4 rounded-sm border ${
+                                    selected
+                                      ? "bg-slate-900 border-transparent"
+                                      : "bg-white border-slate-200"
+                                  }`}
+                                />
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 );
               })}
             </div>
-          </div>
+          </section>
         ))
       )}
 
+      {/* Preview modal */}
       {previewImage && (
-        <div
-          className="fixed inset-0 bg-black/90 backdrop-blur-sm z-50 flex items-center justify-center"
-          tabIndex={0}
-        >
-          <div className="relative w-full h-full flex items-center justify-center">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
+          <div className="relative w-full max-w-4xl max-h-[90vh]">
             <button
               onClick={() => setPreviewImage(null)}
-              className="absolute top-4 right-4 text-white hover:text-gray-300"
+              className="absolute top-2 right-2 z-10 bg-white rounded-full p-1 shadow"
             >
-              <X className="w-6 h-6" />
+              <X className="w-5 h-5 text-slate-700" />
             </button>
-
             <img
               src={previewImage.url}
               alt=""
-              className="object-contain max-h-full max-w-full rounded-xl transition-all duration-300"
+              className="w-full h-full object-contain rounded-md"
             />
           </div>
         </div>

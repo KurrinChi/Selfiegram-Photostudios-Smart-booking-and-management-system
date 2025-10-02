@@ -6,15 +6,16 @@ import "react-date-range/dist/styles.css";
 import "react-date-range/dist/theme/default.css";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faSearch } from "@fortawesome/free-solid-svg-icons";
+
 const ITEMS_PER_PAGE = 8;
 const API_URL = import.meta.env.VITE_API_URL;
 
-const AdminGalleryContent = () => {
+const AdminGalleryContent: React.FC = () => {
   const [historyData, setHistoryData] = useState<any[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [showModal, setShowModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState<any | null>(null);
-  const [search, setSearch] = useState(""); // Added search state
+  const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
 
   useEffect(() => {
@@ -24,11 +25,11 @@ const AdminGalleryContent = () => {
         const response = await axios.get(
           `${API_URL}/api/admin/completed-appointments`,
           {
-            headers: { Authorization: `Bearer ${token}` },
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
           }
         );
 
-        const data = response.data as any[];
+        const data = Array.isArray(response.data) ? response.data : [];
 
         const formatted = data.map((item: any) => ({
           id: item.id,
@@ -38,11 +39,11 @@ const AdminGalleryContent = () => {
           packageName: item.package,
           image: null,
           dateTime: item.bookingDate,
-          price: `₱${parseFloat(item.price).toFixed(2)}`,
+          price: `₱${parseFloat(item.price ?? 0).toFixed(2)}`,
           customerName: item.customerName,
           bookingStartTime: item.bookingStartTime,
           bookingEndTime: item.bookingEndTime,
-          status: item.status
+          status: item.status,
         }));
 
         setHistoryData(formatted);
@@ -51,7 +52,7 @@ const AdminGalleryContent = () => {
           "Failed to fetch history, using placeholder data:",
           error
         );
-
+        // optionally setHistoryData with fallback mock data here
       }
     };
 
@@ -63,8 +64,21 @@ const AdminGalleryContent = () => {
     .filter((item) => {
       if (!search) return true;
       const query = search.toLowerCase();
-      return Object.values(item).some((val) =>
-        String(val).toLowerCase().includes(query)
+      // only check stringifiable fields to avoid "[object Object]" matches
+      return (
+        String(item.id).toLowerCase().includes(query) ||
+        String(item.packageName ?? "")
+          .toLowerCase()
+          .includes(query) ||
+        String(item.customerName ?? "")
+          .toLowerCase()
+          .includes(query) ||
+        String(item.username ?? "")
+          .toLowerCase()
+          .includes(query) ||
+        String(item.dateTime ?? "")
+          .toLowerCase()
+          .includes(query)
       );
     })
     .sort((a, b) => {
@@ -72,28 +86,33 @@ const AdminGalleryContent = () => {
         return new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime();
       }
       if (statusFilter === "Package") {
-        return a.packageName.localeCompare(b.packageName);
+        return (a.packageName ?? "").localeCompare(b.packageName ?? "");
       }
       if (statusFilter === "Customer") {
-        return (a.customerName || "").localeCompare(b.customerName || "");
+        return (a.customerName ?? "").localeCompare(b.customerName ?? "");
       }
       return 0;
     });
 
-  // pagination 
+  // pagination
   const paginatedData = filteredData.slice(
     (currentPage - 1) * ITEMS_PER_PAGE,
     currentPage * ITEMS_PER_PAGE
   );
-  const totalPages = Math.ceil(filteredData.length / ITEMS_PER_PAGE);
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredData.length / ITEMS_PER_PAGE)
+  );
 
   const handleView = (item: any) => {
     setSelectedItem(item);
     setShowModal(true);
   };
 
-  const formatTime = (time: string) => {
+  const formatTime = (time?: string) => {
+    if (!time) return "N/A";
     const date = new Date(`1970-01-01T${time}`);
+    if (Number.isNaN(date.getTime())) return time;
     return date.toLocaleTimeString("en-US", {
       hour: "numeric",
       minute: "2-digit",
@@ -101,8 +120,10 @@ const AdminGalleryContent = () => {
     });
   };
 
-  const formatDate = (dateStr: string) => {
+  const formatDate = (dateStr?: string) => {
+    if (!dateStr) return "N/A";
     const date = new Date(dateStr);
+    if (Number.isNaN(date.getTime())) return dateStr;
     return date.toLocaleDateString("en-US", {
       year: "numeric",
       month: "long",
@@ -111,22 +132,22 @@ const AdminGalleryContent = () => {
   };
 
   const getBookingLabel = (bookingID: number, packageName: string) => {
-    const acronym = packageName
+    const acronym = (packageName ?? "")
       .split(" ")
-      .map((word) => word[0])
+      .map((word) => (word ? word[0] : ""))
       .join("")
       .toUpperCase();
     return `${acronym}#${bookingID}`;
   };
 
   return (
-    <div className="p-4 animate-fadeIn ">
+    <div className="p-4 animate-fadeIn">
       <h1 className="text-lg sm:text-xl font-semibold pl-12 sm:pl-2 mb-5">
         Customer Gallery
       </h1>
 
       {/* Filters */}
-      <div className="flex flex-wrap gap-3 text-xs items-center ">
+      <div className="flex flex-wrap gap-3 text-xs items-center mb-4">
         <div className="relative">
           <FontAwesomeIcon
             icon={faSearch}
@@ -134,88 +155,102 @@ const AdminGalleryContent = () => {
           />
           <input
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setCurrentPage(1);
+            }}
             placeholder="Search"
-            className="pl-7 pr-3 py-2 border rounded-md w-48"
+            className="pl-7 pr-3 py-2 border rounded-md w-48 text-sm"
           />
         </div>
 
         <select
           value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          className="px-2 pr-4 py-2 border rounded-md"
+          onChange={(e) => {
+            setStatusFilter(e.target.value);
+            setCurrentPage(1);
+          }}
+          className="px-2 pr-4 py-2 border rounded-md text-sm"
         >
-          <option>Filter By:</option>
+          <option>All</option>
           <option>Most Recent</option>
           <option>Package</option>
           <option>Customer</option>
         </select>
       </div>
 
-      <div className="bg-white rounded-2xl shadow-md overflow-x-auto h-[calc(100vh-20vh)]">
-        <table className="min-w-full table-auto text-left text-sm">
-          <thead className="bg-gray-50 text-gray-700 font-semibold">
-            <tr>
-              <th className="p-4">ID</th>
-              <th className="p-4">Package Name</th>
-              <th className="p-4">Customer Name</th>
-              <th className="p-4">Booking Date</th>
-              <th className="p-4">Booking Time</th>
-              <th className="p-4 text-center">Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {paginatedData.map((item, idx) => (
-              <tr
-                key={idx}
-                className="border-t border-gray-100 hover:bg-gray-50 transition-all"
-              >
-                {/* ID */}
-                <td className="p-4">
-                  {getBookingLabel(item.id, item.packageName)}
-                </td>
-
-                {/* Package Name */}
-                <td className="p-4">{item.packageName}</td>
-
-                {/* Customer Name */}
-                <td className="p-4">
-                  {item.customerName ? (
-                    item.customerName
-                  ) : (
-                    <em className="text-gray-400">N/A</em>
-                  )}
-                </td>
-
-                {/* Date */}
-                <td className="p-4">{formatDate(item.dateTime)}</td>
-
-                {/* Time */}
-                <td className="p-4">
-                  {item.bookingStartTime && item.bookingEndTime
-                    ? `${formatTime(item.bookingStartTime)} - ${formatTime(
-                        item.bookingEndTime
-                      )}`
-                    : "N/A"}
-                </td>
-
-                {/* Action buttons */}
-                <td className="p-4 text-center flex gap-2 justify-center">
-                  <button
-                    onClick={() => handleView(item)} // 👈 Make sure this exists
-                    className="p-2 text-gray-600 hover:text-blue-800"
-                    title="Upload Photos"
-                  >
-                    <Upload className="w-4 h-4" />
-                  </button>
-                </td>
+      <div className="bg-white rounded-2xl shadow-md flex flex-col h-[calc(90vh-70px)]">
+        {/* Scrollable table */}
+        <div className="overflow-auto flex-1">
+          <table className="min-w-full table-auto text-left text-sm border-collapse">
+            <thead className="bg-gray-50 text-gray-700 font-semibold">
+              <tr className="h-[40px]">
+                <th className="px-2 py-1 text-xs">ID</th>
+                <th className="px-2 py-1 text-xs">Package Name</th>
+                <th className="px-2 py-1 text-xs">Customer Name</th>
+                <th className="px-2 py-1 text-xs">Booking Date</th>
+                <th className="px-2 py-1 text-xs">Booking Time</th>
+                <th className="px-2 py-1 text-xs text-center">Action</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
 
-        {/* Pagination */}
-        <div className="flex justify-end items-center gap-2 px-4 py-3 bottom-0">
+            <tbody>
+              {paginatedData.length === 0 ? (
+                <tr className="h-[40px]">
+                  <td
+                    colSpan={6}
+                    className="px-2 text-xs text-center text-gray-400"
+                  >
+                    No records found.
+                  </td>
+                </tr>
+              ) : (
+                paginatedData.map((item, idx) => (
+                  <tr
+                    key={item.id ?? idx}
+                    className="border-t border-gray-100 hover:bg-gray-50 transition-all h-[40px]"
+                  >
+                    <td className="px-2 align-middle text-xs truncate">
+                      {getBookingLabel(item.id, item.packageName)}
+                    </td>
+                    <td className="px-2 align-middle text-xs truncate">
+                      {item.packageName ?? ""}
+                    </td>
+                    <td className="px-2 align-middle text-xs truncate">
+                      {item.customerName ?? (
+                        <em className="text-gray-400">N/A</em>
+                      )}
+                    </td>
+                    <td className="px-2 align-middle text-xs truncate">
+                      {formatDate(item.dateTime)}
+                    </td>
+                    <td className="px-2 align-middle text-xs truncate">
+                      {item.bookingStartTime && item.bookingEndTime
+                        ? `${formatTime(item.bookingStartTime)} - ${formatTime(
+                            item.bookingEndTime
+                          )}`
+                        : "N/A"}
+                    </td>
+                    <td className="px-2 text-center">
+                      <div className="flex justify-center items-center">
+                        <button
+                          onClick={() => handleView(item)}
+                          className="p-1 text-gray-600 hover:text-blue-800"
+                          title="Upload Photos"
+                        >
+                          <Upload className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Pagination fixed at bottom */}
+        <div className="flex justify-end items-center gap-2 px-4 py-3 ">
           <button
             onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
             disabled={currentPage === 1}
@@ -223,6 +258,9 @@ const AdminGalleryContent = () => {
           >
             &lt;
           </button>
+          <div className="text-xs text-gray-600">
+            {currentPage} / {totalPages}
+          </div>
           <button
             onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
             disabled={currentPage === totalPages}
