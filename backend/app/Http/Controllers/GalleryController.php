@@ -101,12 +101,13 @@ class GalleryController extends Controller
     }
 
 
-    public function getImagesByUser($userID,$packageID)
+    public function getImagesByUser($userID,$packageID,$bookingID)
     {
         // Fetch images for the user, selecting imageID and filePath
         $images = DB::table('user_images')
             ->where('userID', $userID)
             ->where('packageID', $packageID)
+            ->where('booking_id', $bookingID)
             ->select('imageID', 'filePath')
             ->get();
 

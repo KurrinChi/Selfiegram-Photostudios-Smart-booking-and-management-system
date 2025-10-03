@@ -47,7 +47,7 @@ const GalleryModal: React.FC<GalleryModalProps> = ({
   // Fetch already uploaded images when modal opens
   useEffect(() => {
     if (isOpen && booking) {
-      fetchImagesForBooking(booking.userID as number, booking.packageID as number);
+      fetchImagesForBooking(booking.userID as number, booking.packageID as number, booking.id as number);
     } else {
       setImages([]);
       setMultiSelectMode(false);
@@ -55,9 +55,9 @@ const GalleryModal: React.FC<GalleryModalProps> = ({
     }
   }, [isOpen, booking]);
 
-  const fetchImagesForBooking = async (userID: number, packageID: number) => {
+  const fetchImagesForBooking = async (userID: number, packageID: number, bookingID: number) => {
     try {
-      const res = await fetchWithAuth(`${API_URL}/api/admin/images/${userID}/${packageID}`);
+      const res = await fetchWithAuth(`${API_URL}/api/admin/images/${userID}/${packageID}/${bookingID}`);
       if (!res.ok) throw new Error("Failed to fetch images");
       const data: { id: string; url: string }[] = await res.json();
 

@@ -305,7 +305,7 @@
         //admin gallery page
         Route::get('/admin/completed-appointments', [GalleryController::class, 'completedAppointments']);
         Route::post('/admin/upload', [GalleryController::class, 'uploadImage']);
-        Route::get('/admin/images/{userID}/{packageID}', [GalleryController::class, 'getImagesByUser']);
+        Route::get('/admin/images/{userID}/{packageID}/{bookingID}', [GalleryController::class, 'getImagesByUser']);
         Route::delete('/admin/images/delete', [GalleryController::class, 'deleteImages']);
         Route::post('/admin/images/confirm', [GalleryController::class, 'confirmImages']);
     });
