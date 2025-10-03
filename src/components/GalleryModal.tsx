@@ -199,6 +199,7 @@ const GalleryModal: React.FC<GalleryModalProps> = ({
         formData.append("file", img.file!);
         formData.append("userID", booking.userID.toString());
         formData.append("packageID", booking.packageID.toString());
+        formData.append("bookingID", booking.id.toString());
 
         const res = await fetchWithAuth(`${API_URL}/api/admin/upload`, {
           method: "POST",

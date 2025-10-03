@@ -50,6 +50,7 @@ class GalleryController extends Controller
             'isPrivate' => 'nullable|boolean',
             'tag' => 'nullable|string',
             'isFavorite' => 'nullable|boolean',
+            'bookingID' => 'required|integer',
         ]);
 
         $file = $request->file('file');
@@ -84,6 +85,7 @@ class GalleryController extends Controller
         $imageID = DB::table('user_images')->insertGetId([
             'userID' => $request->userID,
             'packageID' => $request->packageID,
+            'booking_id' => $request->bookingID,
             'fileName' => $originalName,
             'filePath' => $relativePath,
             'uploadDate' => now(),

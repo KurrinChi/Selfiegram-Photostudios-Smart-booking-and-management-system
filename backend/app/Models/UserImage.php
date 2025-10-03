@@ -15,6 +15,7 @@ class UserImage extends Model
     protected $fillable = [
         'userID',
         'packageID',
+        'booking_id',
         'fileName',
         'filePath',
         'uploadDate',
