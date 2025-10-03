@@ -77,7 +77,7 @@ const ChatWidget: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [showDialog, setShowDialog] = useState(false); 
-  const [broadcastReceived, setBroadcastReceived] = useState(false); // real-time confirmation
+  const [, setBroadcastReceived] = useState(false); // real-time confirmation
   const closeTimerRef = useRef<number | null>(null);
 
   const clearCloseTimer = () => {
