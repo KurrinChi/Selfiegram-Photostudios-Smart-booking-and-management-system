@@ -47,11 +47,6 @@ const getBookingLabel = (transactionID: number, packageName: string) => {
   return `${acronym}#${transactionID}`;
 };
 
-/**
- * PortalDateRangePicker
- * - Renders DateRange into document.body so it's not clipped by parent overflow.
- * - Positions itself under the anchor element.
- */
 type PortalDateRangePickerProps = {
   open: boolean;
   anchorRef: React.RefObject<HTMLElement | null>;
@@ -156,6 +151,7 @@ const AdminSalesContent: React.FC = () => {
   const [pageSize, setPageSize] = useState(10);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [selectedSale, setSelectedSale] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
   const [range, setRange] = useState<Range[]>([
     {
@@ -170,6 +166,7 @@ const AdminSalesContent: React.FC = () => {
   const API_URL = import.meta.env.VITE_API_URL;
 
   useEffect(() => {
+    setLoading(true);
     fetchWithAuth(`${API_URL}/api/sales`)
       .then((res) => res.json())
       .then((data) => {
@@ -193,7 +190,8 @@ const AdminSalesContent: React.FC = () => {
         }));
         setSales(parsedData);
       })
-      .catch((err) => console.error("Failed fetching sales:", err));
+      .catch((err) => console.error("Failed fetching sales:", err))
+      .finally(() => setLoading(false));
   }, [API_URL]);
 
   // unique packages
@@ -237,9 +235,9 @@ const AdminSalesContent: React.FC = () => {
       const matchesDate =
         hasStart && hasEnd
           ? isWithinInterval(saleDate, {
-              start: range[0].startDate as Date,
-              end: range[0].endDate as Date,
-            })
+            start: range[0].startDate as Date,
+            end: range[0].endDate as Date,
+          })
           : true;
 
       return matchesSearch && matchesStatus && matchesPackage && matchesDate;
@@ -285,9 +283,9 @@ const AdminSalesContent: React.FC = () => {
         <body>
           <h2>Sales Report</h2>
           <h5>${format(
-            range[0].startDate ?? new Date(),
-            "MMM dd yyyy"
-          )} - ${format(range[0].endDate ?? new Date(), "MMM dd yyyy")}</h5>
+      range[0].startDate ?? new Date(),
+      "MMM dd yyyy"
+    )} - ${format(range[0].endDate ?? new Date(), "MMM dd yyyy")}</h5>
           <div class="summary">
             <p><strong>Completed:</strong> ${completedCount}</p>
             <p><strong>Pending:</strong> ${pendingCount}</p>
@@ -310,8 +308,8 @@ const AdminSalesContent: React.FC = () => {
             </thead>
             <tbody>
               ${filtered
-                .map(
-                  (s) => `
+        .map(
+          (s) => `
                 <tr>
                   <td>${getBookingLabel(s.transactionID, s.package)}</td>
                   <td>${s.customerName}</td>
@@ -319,16 +317,16 @@ const AdminSalesContent: React.FC = () => {
                   <td>${s.contactNo || "-"}</td>
                   <td>${s.package}</td>
                   <td>${format(
-                    parseISO(s.transactionDate),
-                    "MMMM d, yyyy"
-                  )}</td>
+            parseISO(s.transactionDate),
+            "MMMM d, yyyy"
+          )}</td>
                   <td>${s.downPayment.toFixed(2)}</td>
                   <td>${s.balance.toFixed(2)}</td>
                   <td>${s.totalAmount.toFixed(2)}</td>
                   <td>${s.paymentStatus}</td>
                 </tr>`
-                )
-                .join("")}
+        )
+        .join("")}
             </tbody>
             <tfoot>
               <tr>
@@ -471,122 +469,148 @@ const AdminSalesContent: React.FC = () => {
         </div>
       </div>
 
-      {/* Table */}
-      <div className="overflow-x-auto rounded-lg border">
-        <table className="min-w-full text-xs h-[calc(90vh-120px)]">
-          <thead className="bg-gray-100 text-left text-gray-600">
-            <tr>
-              <th className="px-4 py-2">ID</th>
-              <th className="px-4 py-2">Customer Name</th>
-              <th className="px-4 py-2">Package</th>
-              <th className="px-4 py-2">Date</th>
-              <th className="px-4 py-2">Payment</th>
-              <th className="px-4 py-2">Balance</th>
-              <th className="px-4 py-2">Total Amount</th>
-              <th className="px-4 py-2">Payment Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {paginated.map((s, idx) => (
-              <tr
-                key={idx}
-                className="border-t hover:bg-gray-50 cursor-pointer"
-                onClick={() =>
-                  setSelectedSale({
-                    id: s.transactionID,
-                    customerName: s.customerName,
-                    email: s.email,
-                    address: s.address,
-                    contact: s.contactNo,
-                    package: s.package,
-                    bookingDate: s.bookingDate,
-                    transactionDate: s.transactionDate,
-                    time: s.time,
-                    subtotal: s.totalAmount,
-                    price: s.price,
-                    balance: s.balance,
-                    feedback: s.feedback,
-                    rating: s.rating,
-                  })
-                }
-              >
-                <td className="px-4 py-2 whitespace-nowrap">
-                  {getBookingLabel(s.transactionID, s.package)}
-                </td>
-                <td className="px-4 py-2">{s.customerName}</td>
-                <td className="px-4 py-2">{s.package}</td>
-                <td className="px-4 py-2 whitespace-nowrap">
-                  {format(parseISO(s.transactionDate), "MMMM d, yyyy")}
-                </td>
-                <td className="px-4 py-2">
-                  {Number(s.downPayment).toFixed(2)}
-                </td>
-                <td className="px-4 py-2">{Number(s.balance).toFixed(2)}</td>
-                <td className="px-4 py-2">
-                  {Number(s.totalAmount).toFixed(2)}
-                </td>
-                <td className="px-4 py-2">
-                  <span
-                    className={`px-2 py-1 rounded-md text-xs font-medium ${
-                      s.paymentStatus === "Completed"
-                        ? "bg-green-100 text-green-600"
-                        : s.paymentStatus === "Cancelled"
-                        ? "bg-red-100 text-red-600"
-                        : "bg-yellow-100 text-yellow-600"
-                    }`}
-                  >
-                    {s.paymentStatus}
-                  </span>
-                </td>
+      {/* Table container */}
+      <div className="bg-white rounded-2xl shadow-md flex flex-col h-[calc(90vh-70px)]">
+        {/* Scrollable table */}
+        <div className="overflow-auto flex-1">
+          <table className="min-w-full table-auto text-left text-sm border-collapse">
+            <thead className="bg-gray-50 text-gray-700 font-semibold">
+              <tr className="h-[40px]">
+                <th className="px-4 py-2 text-xs">ID</th>
+                <th className="px-4 py-2 text-xs">Customer Name</th>
+                <th className="px-4 py-2 text-xs">Package</th>
+                <th className="px-4 py-2 text-xs">Date</th>
+                <th className="px-4 py-2 text-xs">Payment</th>
+                <th className="px-4 py-2 text-xs">Balance</th>
+                <th className="px-4 py-2 text-xs">Total Amount</th>
+                <th className="px-4 py-2 text-xs">Payment Status</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
 
-      {/* Pagination */}
-      <div className="flex flex-wrap items-center justify-between text-xs mt-4">
-        <span>
-          Showing {(page - 1) * pageSize + 1}-
-          {Math.min(page * pageSize, filtered.length)} of {filtered.length}
-        </span>
-        <div className="flex items-center gap-2">
-          <button
-            disabled={page === 1}
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-            className="px-2 py-1 border rounded disabled:opacity-50"
-          >
-            {"<"}
-          </button>
-          {Array.from({ length: totalPages }, (_, i) => (
-            <button
-              key={i}
-              onClick={() => setPage(i + 1)}
-              className={`px-2 py-1 rounded ${
-                page === i + 1 ? "bg-black text-white" : "border"
-              }`}
-            >
-              {i + 1}
-            </button>
-          ))}
-          <button
-            disabled={page === totalPages}
-            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-            className="px-2 py-1 border rounded disabled:opacity-50"
-          >
-            {">"}
-          </button>
-          <select
-            value={pageSize}
-            onChange={(e) => setPageSize(Number(e.target.value))}
-            className="px-2 py-1 border rounded"
-          >
-            {[5, 10, 20, 50].map((size) => (
-              <option key={size} value={size}>
-                {size}/Page
-              </option>
-            ))}
-          </select>
+            <tbody>
+              {loading ? (
+                <tr>
+                  <td
+                    colSpan={8}
+                    className="text-center text-gray-500 py-10 text-sm"
+                  >
+                    Loading sales...
+                  </td>
+                </tr>
+              ) : paginated.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={8}
+                    className="text-center text-gray-400 py-10 text-sm"
+                  >
+                    No sales found.
+                  </td>
+                </tr>
+              ) : (
+                paginated.map((s, idx) => (
+                  <tr
+                    key={idx}
+                    onClick={() =>
+                      setSelectedSale({
+                        id: s.transactionID,
+                        customerName: s.customerName,
+                        email: s.email,
+                        address: s.address,
+                        contact: s.contactNo,
+                        package: s.package,
+                        bookingDate: s.bookingDate,
+                        transactionDate: s.transactionDate,
+                        time: s.time,
+                        subtotal: s.totalAmount,
+                        price: s.price,
+                        balance: s.balance,
+                        feedback: s.feedback,
+                        rating: s.rating,
+                      })
+                    }
+                    className="border-t border-gray-100 hover:bg-gray-50 cursor-pointer transition"
+                  >
+                    <td className="px-6 py-4 text-sm font-medium text-gray-800">
+                      {getBookingLabel(s.transactionID, s.package)}
+                    </td>
+                    <td className="px-6 py-4 text-sm">{s.customerName}</td>
+                    <td className="px-6 py-4 text-sm">{s.package}</td>
+                    <td className="px-6 py-4 text-sm">
+                      {format(parseISO(s.transactionDate), "MMMM d, yyyy")}
+                    </td>
+                    <td className="px-6 py-4 text-sm">{s.downPayment.toFixed(2)}</td>
+                    <td className="px-6 py-4 text-sm">{s.balance.toFixed(2)}</td>
+                    <td className="px-6 py-4 text-sm">{s.totalAmount.toFixed(2)}</td>
+                    <td className="px-6 py-4 text-sm">
+                      <span
+                        className={`px-3 py-1.5 rounded-full text-xs font-medium ${s.paymentStatus === "Completed"
+                          ? "bg-green-100 text-green-700"
+                          : s.paymentStatus === "Cancelled"
+                            ? "bg-red-100 text-red-700"
+                            : "bg-yellow-100 text-yellow-700"
+                          }`}
+                      >
+                        {s.paymentStatus}
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Pagination at bottom like Gallery */}
+        <div className="flex justify-between items-center gap-3 px-4 py-10 bg-gray-50 text-sm rounded-b-2xl">
+          {/* Showing count */}
+          <span className="text-gray-600">
+            Showing {(page - 1) * pageSize + 1} -{" "}
+            {Math.min(page * pageSize, filtered.length)} of {filtered.length}
+          </span>
+
+          {/* Rows per page + Prev/Next */}
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <label htmlFor="pageSize" className="text-gray-600 text-xs">
+                Rows per page:
+              </label>
+              <select
+                id="pageSize"
+                value={pageSize}
+                onChange={(e) => {
+                  setPageSize(Number(e.target.value));
+                  setPage(1);
+                }}
+                className="border rounded-md px-2 py-1 text-xs"
+              >
+                {[5, 10, 20, 50].map((size) => (
+                  <option key={size} value={size}>
+                    {size}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page === 1}
+                className="px-3 py-1 rounded-lg bg-gray-100 hover:bg-gray-200 transition disabled:opacity-50"
+              >
+                &lt;
+              </button>
+              <div className="text-xs text-gray-600">
+                {page} / {totalPages}
+              </div>
+              <button
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages}
+                className="px-3 py-1 rounded-lg bg-gray-100 hover:bg-gray-200 transition disabled:opacity-50"
+              >
+                &gt;
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 

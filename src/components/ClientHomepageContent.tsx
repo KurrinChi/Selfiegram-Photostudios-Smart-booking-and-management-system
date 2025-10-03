@@ -2,9 +2,11 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
-import { Star } from "lucide-react";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faStar as fasStar, faStarHalfAlt } from "@fortawesome/free-solid-svg-icons";
+import { faStar as farStar } from "@fortawesome/free-regular-svg-icons";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
-import FeedbackSection from "./FeedbackSection"; 
+import FeedbackSection from "./FeedbackSection";
 
 interface Package {
   id: string;
@@ -68,7 +70,7 @@ const ClientHomepageContent = () => {
             title: pkg.title,
             price: parseFloat(pkg.price),
             image: pkg.image,
-            rating: Math.round(pkg.rating || 0),
+            rating: parseFloat(pkg.rating) || 0,
           }))
         );
       } catch (err) {
@@ -76,29 +78,29 @@ const ClientHomepageContent = () => {
       }
     };
 
-   const fetchFeedbacks = async () => {
-  try {
-    const res = await fetchWithAuth(`${API_URL}/api/feedbacks`);
-    const data = await res.json();
+    const fetchFeedbacks = async () => {
+      try {
+        const res = await fetchWithAuth(`${API_URL}/api/feedbacks`);
+        const data = await res.json();
 
-     console.log("Feedback data from backend:", data);
-     
-    setFeedbacks(
-      data.map((fb: any) => ({
-        id: fb.id,
-        username: fb.username,
-        profilePic: fb.user_image,
-        packageName: fb.package_name,
-        bookingDate: fb.bookingDate,
-        bookingTime: fb.booking_time,
-        feedback: fb.feedback,
-        rating: fb.rating,
-      }))
-    );
-  } catch (err) {
-    console.error("Failed to fetch feedbacks:", err);
-  }
-};
+        console.log("Feedback data from backend:", data);
+
+        setFeedbacks(
+          data.map((fb: any) => ({
+            id: fb.id,
+            username: fb.username,
+            profilePic: fb.user_image,
+            packageName: fb.package_name,
+            bookingDate: fb.bookingDate,
+            bookingTime: fb.booking_time,
+            feedback: fb.feedback,
+            rating: fb.rating,
+          }))
+        );
+      } catch (err) {
+        console.error("Failed to fetch feedbacks:", err);
+      }
+    };
 
     fetchTopPackages();
     fetchFeedbacks();
@@ -214,14 +216,18 @@ const ClientHomepageContent = () => {
                   ₱{pkg.price.toFixed(2)}
                 </p>
                 <div className="flex items-center gap-1">
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <Star
-                      key={i}
-                      size={14}
-                      fill={i < pkg.rating ? "#f59e0b" : "none"}
-                      stroke="#f59e0b"
-                    />
-                  ))}
+                  {Array.from({ length: 5 }).map((_, i) => {
+                    const full = i + 1 <= Math.floor(pkg.rating);
+                    const half = !full && i + 0.5 <= pkg.rating;
+                    return (
+                      <FontAwesomeIcon
+                        key={i}
+                        icon={full ? fasStar : half ? faStarHalfAlt : farStar}
+                        className="text-amber-400 text-sm"
+                      />
+                    );
+                  })}
+                  <span className="ml-1 text-xs text-gray-500">({pkg.rating.toFixed(1)})</span>
                 </div>
                 <button className="mt-2 w-full py-2 text-xs bg-gray-100 rounded-md hover:bg-gray-200">
                   BOOK NOW
@@ -234,8 +240,8 @@ const ClientHomepageContent = () => {
 
       {/* Feedback Section */}
       <div className="max-w-6xl mx-auto">
-        <FeedbackSection feedbacks={feedbacks}/>
-       
+        <FeedbackSection feedbacks={feedbacks} />
+
       </div>
     </div>
   );

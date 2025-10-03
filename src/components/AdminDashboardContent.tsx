@@ -22,6 +22,7 @@ import {
   faArrowUp,
   faArrowDown,
   faSearch,
+  faStarHalfAlt,
   faStar as fasStar,
 } from "@fortawesome/free-solid-svg-icons";
 import { faStar as farStar } from "@fortawesome/free-regular-svg-icons";
@@ -106,15 +107,20 @@ const TrendArrow: React.FC<{ up: boolean }> = ({ up }) => (
 // ⭐ Read‑only star rating (no click interaction)
 const StarRating: React.FC<{ value: number }> = ({ value }) => (
   <div className="flex gap-1">
-    {Array.from({ length: 5 }).map((_, idx) => (
-      <FontAwesomeIcon
-        key={idx}
-        icon={idx < value ? fasStar : farStar}
-        className="text-amber-400 text-xs"
-      />
-    ))}
+    {Array.from({ length: 5 }).map((_, idx) => {
+      const full = idx + 1 <= Math.floor(value);
+      const half = !full && idx + 0.5 <= value;
+      return (
+        <FontAwesomeIcon
+          key={idx}
+          icon={full ? fasStar : half ? faStarHalfAlt : farStar}
+          className="text-amber-400 text-xs"
+        />
+      );
+    })}
   </div>
 );
+
 
 // -----------------------------------------------------------------------------
 // Main Component

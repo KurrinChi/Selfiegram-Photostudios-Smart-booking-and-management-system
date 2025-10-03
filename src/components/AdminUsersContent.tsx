@@ -1,8 +1,6 @@
-// components/UserManagement.tsx
 import React, { useMemo, useState, useEffect } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faEye, faSearch } from "@fortawesome/free-solid-svg-icons";
-import { AnimatePresence, motion } from "framer-motion";
 import { Archive, RefreshCw } from "lucide-react";
 import UserDetailPanel from "./UserDetailPanel";
 import AssignRoleModal from "./ModalAssignRoleDialog.tsx";
@@ -43,8 +41,7 @@ const roles = ["Customer", "Staff"] as const;
 const API_URL = import.meta.env.VITE_API_URL;
 
 const AdminUsersContent: React.FC = () => {
-  const [activeRole, setActiveRole] =
-    useState<(typeof roles)[number]>("Customer");
+  const [activeRole, setActiveRole] = useState<(typeof roles)[number]>("Customer");
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<User | null>(null);
@@ -53,9 +50,12 @@ const AdminUsersContent: React.FC = () => {
   const pageSize = 10;
 
   const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(false); // loading state for users
 
+  // Fetch users on component mount
   useEffect(() => {
     const fetchUsers = async () => {
+      setLoading(true);
       try {
         const response = await fetchWithAuth(`${API_URL}/api/admin/users`);
         const rawData = await response.json();
@@ -78,6 +78,8 @@ const AdminUsersContent: React.FC = () => {
       } catch (error) {
         console.error("Failed to fetch users:", error);
         toast.error("Failed to fetch users");
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -109,23 +111,23 @@ const AdminUsersContent: React.FC = () => {
     if (page > totalPages) setPage(1);
   }, [page, totalPages]);
 
-  const [userAppointments, setUserAppointments] = useState<
-    Record<string, Appointment[]>
-  >({});
+  const [userAppointments, setUserAppointments] = useState<Record<string, Appointment[]>>({});
+  const [appointmentLoading, setAppointmentLoading] = useState(false); // loading for appointments
 
   useEffect(() => {
     if (!selected) return;
 
     const fetchAppointments = async () => {
+      setAppointmentLoading(true);
       try {
-        const res = await fetchWithAuth(
-          `${API_URL}/api/user-appointments/${selected.id}`
-        );
+        const res = await fetchWithAuth(`${API_URL}/api/user-appointments/${selected.id}`);
         const data = await res.json();
         setUserAppointments((prev) => ({ ...prev, [selected.id]: data }));
       } catch (error) {
         console.error("Failed to fetch appointments:", error);
         toast.error("Failed to fetch appointments");
+      } finally {
+        setAppointmentLoading(false);
       }
     };
 
@@ -136,19 +138,16 @@ const AdminUsersContent: React.FC = () => {
     if (!confirmArchive) return;
 
     try {
-      const res = await fetchWithAuth(
-        `${API_URL}/api/admin/users/${confirmArchive.id}/archive`,
-        { method: "POST" }
-      );
+      const res = await fetchWithAuth(`${API_URL}/api/admin/users/${confirmArchive.id}/archive`, {
+        method: "POST",
+      });
       const data = await res.json();
 
       if (res.ok) {
         toast.success(data.message);
         setUsers((prev) =>
           prev.map((usr) =>
-            usr.id === confirmArchive.id
-              ? { ...usr, archive: data.archive }
-              : usr
+            usr.id === confirmArchive.id ? { ...usr, archive: data.archive } : usr
           )
         );
       } else {
@@ -162,46 +161,38 @@ const AdminUsersContent: React.FC = () => {
     }
   };
 
+  useEffect(() => {
+    setPage(1);
+  }, [activeRole, query]);
+
+  useEffect(() => {
+    return () => {
+      setSelected(null);
+    };
+  }, []);
+
   return (
     <div className="relative flex flex-col gap-6 p-4 md:p-6">
-      {/* Header */}
       <div className="flex items-center justify-between gap-4">
-        <h1 className="text-lg sm:text-xl font-semibold pl-12 sm:pl-0">
-          User Management
-        </h1>
+        <h1 className="text-lg sm:text-xl font-semibold pl-12 sm:pl-0">User Management</h1>
       </div>
 
-      {/* Tabs + Controls */}
       <div className="flex flex-wrap items-center justify-between gap-4 p-2 min-w-0">
-        {/* Tabs */}
-        <div className="relative flex-shrink-0 flex gap-4 text-center px-2 text-sm font-medium border-b border-gray-300 overflow-visible">
+        <div className="relative flex-shrink-0 flex gap-4 text-center px-2 text-sm font-medium overflow-visible">
           {roles.map((r) => (
             <button
               key={r}
               onClick={() => setActiveRole(r)}
-              className={`pb-2 transition-colors ${
-                activeRole === r
-                  ? "text-black"
-                  : "text-gray-500 hover:text-black"
-              }`}
+              className={`pb-2 transition-colors ${activeRole === r
+                ? "text-black underline underline-offset-4 decoration-2 decoration-black"
+                : "text-gray-500 hover:text-black"
+                }`}
             >
               {r}
             </button>
           ))}
-          <motion.div
-            layoutId="tab-indicator"
-            className="absolute bottom-0 h-0.5 bg-black rounded-full"
-            initial={false}
-            animate={{
-              width: "50%",
-              x: `${roles.indexOf(activeRole) * 100}%`,
-            }}
-            transition={{ type: "spring", stiffness: 300, damping: 30 }}
-            style={{ left: 0 }}
-          />
         </div>
 
-        {/* Controls */}
         <div className="flex items-center gap-3 flex-wrap">
           <button
             className="px-3 py-1.5 text-xs bg-gray-300 rounded-md hover:bg-gray-600 hover:text-white transition-colors"
@@ -226,63 +217,65 @@ const AdminUsersContent: React.FC = () => {
 
       {/* Table */}
       <div className="relative overflow-x-auto overflow-y-auto h-[calc(90vh-160px)] rounded-lg border border-gray-200">
-        <table className="min-w-full text-left text-xs">
-          <thead className="bg-gray-50 text-gray-600">
-            <tr>
-              <th className="px-4 py-3 font-medium">ID</th>
-              <th className="px-4 py-3 font-medium">Name</th>
-              <th className="px-4 py-3 font-medium">Email Address</th>
-              <th className="px-4 py-3 font-medium">Role</th>
-              <th className="px-4 py-3 font-medium text-right"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {current.map((u) => (
-              <tr key={u.id} className="border-t hover:bg-gray-100 transition">
-                <td className="px-4 py-3 whitespace-nowrap">{u.id}</td>
-                <td className="px-4 py-3">{u.name}</td>
-                <td className="px-4 py-3">{u.email}</td>
-                <td className="px-4 py-3">{u.role}</td>
-                <td className="px-4 py-3 text-right space-x-2">
-                  <button
-                    className="px-2 py-1 text-xs bg-blue-500 text-white rounded-md hover:bg-blue-600 transition"
-                    onClick={() => setSelected(u)}
-                  >
-                    <FontAwesomeIcon icon={faEye} /> View
-                  </button>
-
-                  <button
-                    className={`px-2 py-1 text-xs rounded-md transition ${
-                      u.archive === 0
+        {loading ? (
+          <div className="flex items-center justify-center h-full text-sm text-gray-500">
+            Loading users...
+          </div>
+        ) : (
+          <table className="min-w-full text-left text-xs">
+            <thead className="bg-gray-50 text-gray-600">
+              <tr>
+                <th className="px-4 py-3 font-medium">ID</th>
+                <th className="px-4 py-3 font-medium">Name</th>
+                <th className="px-4 py-3 font-medium">Email Address</th>
+                <th className="px-4 py-3 font-medium">Role</th>
+                <th className="px-4 py-3 font-medium text-right"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {current.map((u) => (
+                <tr key={u.id} className="border-t hover:bg-gray-100 transition">
+                  <td className="px-4 py-3 whitespace-nowrap">{u.id}</td>
+                  <td className="px-4 py-3">{u.name}</td>
+                  <td className="px-4 py-3">{u.email}</td>
+                  <td className="px-4 py-3">{u.role}</td>
+                  <td className="px-4 py-3 text-right space-x-2">
+                    <button
+                      className="px-2 py-1 text-xs bg-blue-500 text-white rounded-md hover:bg-blue-600 transition"
+                      onClick={() => setSelected(u)}
+                    >
+                      <FontAwesomeIcon icon={faEye} /> View
+                    </button>
+                    <button
+                      className={`px-2 py-1 text-xs rounded-md transition ${u.archive === 0
                         ? "bg-green-500 text-white hover:bg-green-600"
                         : "bg-red-500 text-white hover:bg-red-600"
-                    }`}
-                    onClick={() => setConfirmArchive(u)}
-                  >
-                    {u.archive === 0 ? "Unarchive" : "Archive"}
-                  </button>
-                </td>
-              </tr>
-            ))}
-            {current.length === 0 && (
-              <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-gray-400">
-                  No users found.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+                        }`}
+                      onClick={() => setConfirmArchive(u)}
+                    >
+                      {u.archive === 0 ? "Unarchive" : "Archive"}
+                    </button>
+                  </td>
+                </tr>
+              ))}
+              {current.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="px-4 py-8 text-center text-gray-400">
+                    No users found.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        )}
       </div>
 
-      {/* ✅ Archive Confirmation Modal */}
       {confirmArchive && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-lg p-6 w-96 text-center space-y-4">
             <div
-              className={`mx-auto w-12 h-12 flex items-center justify-center rounded-full ${
-                confirmArchive.archive === 1 ? "bg-red-100" : "bg-green-100"
-              }`}
+              className={`mx-auto w-12 h-12 flex items-center justify-center rounded-full ${confirmArchive.archive === 1 ? "bg-red-100" : "bg-green-100"
+                }`}
             >
               {confirmArchive.archive === 1 ? (
                 <Archive className="text-red-600" />
@@ -308,11 +301,10 @@ const AdminUsersContent: React.FC = () => {
               </button>
               <button
                 onClick={confirmArchiveAction}
-                className={`w-full py-2 text-white text-sm rounded-md ${
-                  confirmArchive.archive === 1
-                    ? "bg-red-600 hover:bg-red-700"
-                    : "bg-green-600 hover:bg-green-700"
-                }`}
+                className={`w-full py-2 text-white text-sm rounded-md ${confirmArchive.archive === 1
+                  ? "bg-red-600 hover:bg-red-700"
+                  : "bg-green-600 hover:bg-green-700"
+                  }`}
               >
                 {confirmArchive.archive === 1 ? "Archive" : "Unarchive"}
               </button>
@@ -321,66 +313,50 @@ const AdminUsersContent: React.FC = () => {
         </div>
       )}
 
-      {/* Pagination */}
-      <div className="flex justify-end gap-2 text-xs">
+      {/* Pagination fixed at bottom */}
+      <div className="flex justify-end items-center gap-2 px-4 py-3">
         <button
-          disabled={page === 1}
           onClick={() => setPage((p) => Math.max(1, p - 1))}
-          className="px-2 py-1 border rounded disabled:opacity-30"
+          disabled={page === 1}
+          className="px-3 py-1 rounded-lg text-sm bg-gray-100 hover:bg-gray-200 transition disabled:opacity-50"
         >
-          Prev
+          &lt;
         </button>
-        {Array.from({ length: totalPages }).map((_, i) => (
-          <button
-            key={i}
-            onClick={() => setPage(i + 1)}
-            className={`px-2 py-1 rounded ${
-              page === i + 1 ? "bg-black text-white" : "border"
-            }`}
-          >
-            {i + 1}
-          </button>
-        ))}
+        <div className="text-xs text-gray-600">
+          {page} / {totalPages}
+        </div>
         <button
-          disabled={page === totalPages}
           onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-          className="px-2 py-1 border rounded disabled:opacity-30"
+          disabled={page === totalPages}
+          className="px-3 py-1 rounded-lg text-sm bg-gray-100 hover:bg-gray-200 transition disabled:opacity-50"
         >
-          Next
+          &gt;
         </button>
       </div>
 
-      {/* Details Panel */}
-      <AnimatePresence>
-        {selected && (
-          <UserDetailPanel
-            key={selected.id}
-            isOpen={true}
-            user={{
-              profilePicture: selected.profilePicture,
-              name: selected.name,
-              username: selected.username,
-              age: selected.age,
-              birthday: selected.birthday,
-              address: selected.address,
-              email: selected.email,
-              contact: selected.contact,
-              appointments: userAppointments[selected.id] || [],
-            }}
-            onClose={() => setSelected(null)}
-          />
-        )}
-      </AnimatePresence>
+      {selected && (
+        <UserDetailPanel
+          key={selected.id}
+          isOpen={true}
+          user={{
+            profilePicture: selected.profilePicture,
+            name: selected.name,
+            username: selected.username,
+            age: selected.age,
+            birthday: selected.birthday,
+            address: selected.address,
+            email: selected.email,
+            contact: selected.contact,
+            appointments: userAppointments[selected.id] || [],
+          }}
+          onClose={() => setSelected(null)}
+          loading={appointmentLoading}
+        />
+      )}
 
-      {/* Assign Role Modal */}
-      <AnimatePresence>
-        {showAssignModal && (
-          <AssignRoleModal
-            isOpen={true}
-            onClose={() => setShowAssignModal(false)}
-          />
-        )}
-      </AnimatePresence>
+      {showAssignModal && (
+        <AssignRoleModal isOpen={true} onClose={() => setShowAssignModal(false)} />
+      )}
     </div>
   );
 };

@@ -16,7 +16,7 @@ public function getTopSellingPackages()
             'packages.name as title',
             'packages.price',
             DB::raw('COUNT(booking.bookingID) as total_orders'),
-            DB::raw('AVG(booking.rating) as rating'),
+            DB::raw('COALESCE(ROUND(AVG(booking.rating), 1), 0) as rating'),
             DB::raw('MIN(package_images.imagePath) as image') // get one image per package
         )
         ->groupBy('packages.packageID', 'packages.name', 'packages.price')

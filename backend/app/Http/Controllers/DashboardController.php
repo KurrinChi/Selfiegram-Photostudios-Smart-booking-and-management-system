@@ -260,7 +260,7 @@ class DashboardController extends Controller
                     'packages.name',
                     DB::raw('COUNT(*) as totalBooking'),
                     DB::raw('COALESCE(SUM(transaction.receivedAmount), 0) as revenue'),  // Summing `DOUBLE` and using `COALESCE`
-                    DB::raw('NULL as avgRating') // Temporarily set to NULL for avgRating (no rating in current schema)
+                    DB::raw('AVG(booking.rating) as rating'),
                 )
                 ->where('transaction.paymentStatus', 1) // Only successful transactions
                 ->groupBy('packages.packageID', 'packages.name')
@@ -280,7 +280,7 @@ class DashboardController extends Controller
                     'bookingPct' => $totalBookings
                         ? round($pkg->totalBooking / $totalBookings * 100, 2) . "% of the total {$totalBookings}"
                         : "0% of the total 0",
-                    'rating' => null,  // No rating in the current schema, so set to null
+                    'rating' => $pkg->rating !== null ? (float)$pkg->rating : null, 
                     'trend' => "{$trendPct}% all-time", // Trend is always 0 for overall data
                     'trendPositive' => true, // As we have no trend calculation, we can set it to true for all-time data
                 ];

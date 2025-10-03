@@ -17,8 +17,11 @@ const AdminGalleryContent: React.FC = () => {
   const [selectedItem, setSelectedItem] = useState<any | null>(null);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
+  const [loading, setLoading] = useState(true);
+
 
   useEffect(() => {
+    setLoading(true);
     const fetchHistory = async () => {
       try {
         const token = localStorage.getItem("token");
@@ -53,6 +56,8 @@ const AdminGalleryContent: React.FC = () => {
           error
         );
         // optionally setHistoryData with fallback mock data here
+      } finally {
+        setLoading(false); // ✅ this is the correct place
       }
     };
 
@@ -195,7 +200,16 @@ const AdminGalleryContent: React.FC = () => {
             </thead>
 
             <tbody>
-              {paginatedData.length === 0 ? (
+              {loading ? (
+                <tr>
+                  <td
+                    colSpan={8}
+                    className="text-center text-gray-500 py-10 text-sm"
+                  >
+                    Loading Completed Bookings...
+                  </td>
+                </tr>
+              ) : paginatedData.length === 0 ? (
                 <tr className="h-[40px]">
                   <td
                     colSpan={6}
@@ -227,8 +241,8 @@ const AdminGalleryContent: React.FC = () => {
                     <td className="px-2 align-middle text-xs truncate">
                       {item.bookingStartTime && item.bookingEndTime
                         ? `${formatTime(item.bookingStartTime)} - ${formatTime(
-                            item.bookingEndTime
-                          )}`
+                          item.bookingEndTime
+                        )}`
                         : "N/A"}
                     </td>
                     <td className="px-2 text-center">
