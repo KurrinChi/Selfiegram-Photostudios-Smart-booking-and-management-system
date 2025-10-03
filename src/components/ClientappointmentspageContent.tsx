@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import ChatWidget from "./ChatWidget";
 import { Menu, Plus, X, Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import ModalTransactionDialog from "../components/ModalTransactionDialog";
@@ -441,6 +442,7 @@ const ClientAppointmentsPageContent = () => {
         }}
       />
     )}
+      <ChatWidget />
     </div>
   );
 };

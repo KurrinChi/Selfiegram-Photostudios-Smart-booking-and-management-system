@@ -23,7 +23,7 @@ const navLinks = [
   { to: "/client/packages", label: "Packages", icon: Package },
   { to: "/client/favorites", label: "Favorites", icon: Heart },
   { to: "/client/gallery", label: "Gallery", icon: Image },
-  { to: "/client/inbox", label: "Notifications", icon: Inbox },
+  { to: "/client/inbox", label: "Inbox", icon: Inbox },
   { to: "/client/appointments", label: "Appointments", icon: Calendar },
   { to: "/client/history", label: "History", icon: Clock },
 ];

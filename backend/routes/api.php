@@ -22,6 +22,7 @@
     use App\Http\Controllers\TestPayMongoController;
     use App\Http\Controllers\ImageController;
     use App\Http\Controllers\PackageAddOnController;
+    use App\Http\Controllers\MessageController; // Message (contact/chat) controller
     
     // Testing routes
     Route::middleware('api')->get('/test', function (Request $request) {
@@ -386,6 +387,15 @@
     Route::post('/payment/create-checkout', [PayMongoController::class, 'createCheckoutSession']);
     Route::post('/payment/success', [PayMongoController::class, 'handlePaymentSuccess']);
     Route::get('/payment/history/{bookingId}', [PayMongoController::class, 'getPaymentHistory']);
+
+    // Contact / Messages (chat widget submissions)
+    // Logged-in users submit messages
+    Route::middleware(['auth:sanctum'])->post('/messages', [MessageController::class, 'store']);
+    // Admin manage messages
+    Route::middleware(['auth:sanctum','role:Admin'])->group(function () {
+        Route::get('/messages', [MessageController::class, 'index']);
+        Route::post('/messages/{id}/status', [MessageController::class, 'updateStatus']);
+    });
 
     // PayMongo Webhook (no auth required)
     Route::post('/paymongo/webhook', [PayMongoWebhookController::class, 'handleWebhook']);

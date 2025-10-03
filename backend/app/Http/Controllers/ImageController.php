@@ -9,10 +9,29 @@ class ImageController extends Controller
 {
     public function getUserImages($userID)
     {
-        // Fetch all images for the given userID
-        $images = UserImage::where('userID', $userID)->get();
+        // Fetch images with booking and package info for categorization
+        $images = \DB::table('user_images as ui')
+            ->leftJoin('booking as b', 'b.bookingID', '=', 'ui.booking_id')
+            ->leftJoin('packages as p1', 'p1.packageID', '=', 'ui.packageID')
+            ->leftJoin('packages as p2', 'p2.packageID', '=', 'b.packageID')
+            ->where('ui.userID', $userID)
+            ->select(
+                'ui.imageID',
+                'ui.userID',
+                'ui.packageID',
+                'ui.booking_id',
+                \DB::raw('b.bookingID as bookingID'),
+                'ui.fileName',
+                'ui.filePath',
+                'ui.uploadDate',
+                'ui.isPrivate',
+                'ui.tag',
+                'ui.isFavorite',
+                \DB::raw('COALESCE(p1.name, p2.name) as packageName')
+            )
+            ->orderByDesc('ui.uploadDate')
+            ->get();
 
-        // Return the images as JSON
         return response()->json($images);
     }
 

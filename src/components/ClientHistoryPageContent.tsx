@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import ChatWidget from "./ChatWidget";
 import axios from "axios";
 import { Eye, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -13,7 +14,7 @@ const ClientHistoryPageContent = () => {
   const [showModal, setShowModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState<any | null>(null);
   const [itemToDelete, setItemToDelete] = useState<any | null>(null);
-  const [rawBookingMap, setRawBookingMap] = useState<{ [id: number]: any }>({});
+  const [, setRawBookingMap] = useState<{ [id: number]: any }>({});
   const [loading, setLoading] = useState(false);
   
   const fetchHistory = async () => {
@@ -161,7 +162,7 @@ const toNumber = (value: any): number => {
 
 
   return (
-    <div className="p-4 animate-fadeIn">
+    <div className="p-4 animate-fadeIn relative">
   <h1 className="text-2xl font-semibold mb-4">History</h1>
   {loading ? (
     <div className="text-center text-gray-500">Loading history...</div>
@@ -241,6 +242,7 @@ const toNumber = (value: any): number => {
           &gt;
         </button>
       </div>
+      <ChatWidget />
     </div>
   )}
 

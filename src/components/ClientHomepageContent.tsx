@@ -7,7 +7,7 @@ import { faStar as fasStar, faStarHalfAlt } from "@fortawesome/free-solid-svg-ic
 import { faStar as farStar } from "@fortawesome/free-regular-svg-icons";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
 import FeedbackSection from "./FeedbackSection";
-
+import ChatWidget from "./ChatWidget";
 interface Package {
   id: string;
   title: string;
@@ -243,6 +243,7 @@ const ClientHomepageContent = () => {
         <FeedbackSection feedbacks={feedbacks} />
 
       </div>
+      <ChatWidget />
     </div>
   );
 };

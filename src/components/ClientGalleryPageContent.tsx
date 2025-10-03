@@ -1,6 +1,7 @@
 // ClientGalleryPageContent.tsx
 import React, { useEffect, useState } from "react";
-import { Edit, X, Heart, HeartOff } from "lucide-react";
+import ChatWidget from "./ChatWidget";
+import { Edit, X, Heart } from "lucide-react";
 import JSZip from "jszip";
 import { fetchWithAuth } from "../utils/fetchWithAuth"; // adjust path if needed
 
@@ -11,7 +12,9 @@ type ImageItem = {
   date: string; // formatted display date, e.g. "October 1, 2025"
   edited?: boolean;
   isFavorite?: boolean;
-  packageName?: string;
+  bookingID?: number;
+  packageName?: string; // raw package name from backend
+  categoryTitle?: string; // "BookingID: PackageName"
 };
 
 type GroupImage = {
@@ -70,7 +73,12 @@ const ClientGalleryPageContent: React.FC = () => {
           }),
           edited: img.tag === "edited",
           isFavorite: img.isFavorite === 1 || img.isFavorite === true,
-          packageName: img.packageName ?? "Uncategorized",
+          bookingID: img.bookingID ?? img.booking_id ?? undefined,
+          packageName: img.packageName ?? undefined,
+          categoryTitle:
+            img && getBookingLabel(img.bookingID ?? img.booking_id, img.packageName)
+            ? `${getBookingLabel(img.bookingID ?? img.booking_id, img.packageName)}${img.packageName ? `: ${img.packageName}` : ""}`
+            : undefined,
         }));
 
         const grouped = groupByDateAndPackage(mapped);
@@ -104,7 +112,7 @@ const ClientGalleryPageContent: React.FC = () => {
       ([date, imgs]) => {
         const byPackage: Record<string, GroupImage[]> = {};
         imgs.forEach((img) => {
-          const pkg = img.packageName ?? "Uncategorized";
+          const pkg = img.categoryTitle ?? "Uncategorized";
           if (!byPackage[pkg]) byPackage[pkg] = [];
           byPackage[pkg].push({
             id: img.id,
@@ -130,6 +138,16 @@ const ClientGalleryPageContent: React.FC = () => {
 
     return dateGroups;
   };
+
+    const getBookingLabel = (bookingID: number, packageName?: string) => {
+  if (!packageName) return `#${bookingID}`; // fallback if packageName is missing
+  const acronym = packageName
+    .split(" ")
+    .map((word) => word[0])
+    .join("")
+    .toUpperCase();
+  return `${acronym}#${bookingID}`;
+};
 
   /* --------------------------- Actions ---------------------------- */
   const toggleFavorite = async (id: string) => {
@@ -247,7 +265,7 @@ const ClientGalleryPageContent: React.FC = () => {
 
   /* ----------------------------- Render ---------------------------- */
   return (
-    <div className="p-4 font-sans">
+    <div className="p-4 font-sans relative">
       {/* Top bar */}
       <div className="flex items-center justify-between gap-4 mb-4">
         <div className="flex gap-2">
@@ -386,19 +404,19 @@ const ClientGalleryPageContent: React.FC = () => {
                               <div className="absolute inset-0 flex items-start justify-end p-2 pointer-events-none">
                                 <div className="pointer-events-auto flex gap-2">
                                   <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      toggleFavorite(img.id);
-                                    }}
-                                    className="p-1 bg-white rounded-full shadow-sm"
-                                    aria-label="Toggle favorite"
-                                  >
-                                    {img.isFavorite ? (
-                                      <Heart className="w-4 h-4 text-rose-500" />
-                                    ) : (
-                                      <HeartOff className="w-4 h-4 text-slate-400" />
-                                    )}
-                                  </button>
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    toggleFavorite(img.id);
+                                  }}
+                                  className="p-1 bg-white rounded-full shadow-sm"
+                                  aria-label="Toggle favorite"
+                                >
+                                  {img.isFavorite ? (
+                                    <Heart className="w-4 h-4 text-pink-500 fill-pink-500" /> // solid pink
+                                  ) : (
+                                    <Heart className="w-4 h-4 text-slate-400" /> // outline gray
+                                  )}
+                                </button>
 
                                   <button
                                     onClick={(e) => {
@@ -454,6 +472,7 @@ const ClientGalleryPageContent: React.FC = () => {
           </div>
         </div>
       )}
+      <ChatWidget />
     </div>
   );
 };

@@ -64,6 +64,20 @@ export const useNotifications = (userID: number | null) => {
       console.log('New payment notification added to state:', newNotification);
     });
 
+    // Listen for message sent confirmation (system notification after user sends a message)
+    channel.bind('message.sent', (data: any) => {
+      console.log('Received message.sent event:', data);
+      const newNotification = data.notification;
+      if (!newNotification) return;
+      setNotifications(prev => {
+        // Prevent duplicates by notificationID + title+time fallback
+        const exists = prev.some(n => n.notificationID === newNotification.notificationID);
+        if (exists) return prev;
+        return [newNotification, ...prev];
+      });
+      console.log('New message notification added to state:', newNotification);
+    });
+
     // Listen for booking requests (reschedule/cancellation) for admins
     channel.bind('booking.request.submitted', (data: any) => {
       console.log('Received booking.request.submitted event:', data);

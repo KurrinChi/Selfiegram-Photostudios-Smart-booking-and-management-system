@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { Info, X, Download, Image } from "lucide-react";
+import { Search } from "lucide-react"; // Added Search icon import
 import { fetchWithAuth } from "../utils/fetchWithAuth";
 import { QRCodeCanvas } from "qrcode.react"; // Import QRCodeCanvas from qrcode.react
 import { useNotifications } from "../utils/useNotifications";
+import ChatWidget from "./ChatWidget";
 import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
 
@@ -123,6 +125,7 @@ export default function Notifications() {
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [selected, setSelected] = useState<Notification | null>(null);
     const [bookingDetails, setBookingDetails] = useState<any | null>(null);
+  const [query, setQuery] = useState(""); // search text
     
     const userID = localStorage.getItem("userID");
     const API_URL = import.meta.env.VITE_API_URL;
@@ -380,21 +383,34 @@ const BookingDetails = ({ details }: { details: any }) => {
     <div className="flex h-[calc(100vh-10vh)]">
       {/* Notifications List */}
       <div className="flex-1 p-4 animate-fadeIn">
-        <h1 className="text-2xl font-semibold mb-4">Notifications</h1>
+        <h1 className="text-2xl font-semibold mb-4">Inbox</h1>
         <div className="bg-white rounded-2xl shadow-md overflow-x-auto h-full">
           {/* Top Controls (Search + Actions) */}
           <div className="flex items-center justify-between px-7 py-4 bg-gray-100">
-            <input
-              type="text"
-              placeholder="Search"
-              className="w-1/3 rounded-lg border px-2 py-1 text-sm focus:outline-none focus:border-black focus:ring-1"
-            />
+            <div className="relative w-1/3">
+              <input
+                type="text"
+                placeholder="Search..."
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                className="w-full rounded-lg border pl-2 pr-8 py-1 text-sm focus:outline-none focus:border-black focus:ring-1"
+                aria-label="Search notifications by title"
+              />
+              <Search className="w-4 h-4 text-gray-400 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
+            </div>
           </div>
 
           {/* Notifications Table */}
           <table className="min-w-full table-auto text-left text-sm">
         <tbody>
-      {notifications.map((n) => (
+      {(notifications
+        .filter(n => {
+          if (!query.trim()) return true;
+          try {
+            return n.title.toLowerCase().includes(query.trim().toLowerCase());
+          } catch { return true; }
+        })
+      ).map((n) => (
         <tr
           key={n.notificationID}
           className={`border-t border-gray-100 hover:bg-gray-50 transition-all cursor-pointer ${
@@ -457,6 +473,13 @@ const BookingDetails = ({ details }: { details: any }) => {
           </td>
         </tr>
       ))}
+      {notifications.length > 0 && notifications.filter(n => n.title.toLowerCase().includes(query.trim().toLowerCase())).length === 0 && (
+        <tr>
+          <td colSpan={3} className="p-6 text-center text-sm text-gray-500">
+            No notifications match "{query}".
+          </td>
+        </tr>
+      )}
 </tbody>
           </table>
         </div>
@@ -466,7 +489,7 @@ const BookingDetails = ({ details }: { details: any }) => {
      {selected && (
   <div className="w-[40rem] border-l bg-white shadow-lg p-4 flex flex-col">
     <div className="flex justify-between items-center mb-4">
-      <h2 className="font-semibold text-lg">Details</h2>
+      <h2 className="font-semibold text-lg text-gray-600">SelfieGram Photostudios Malolos</h2>
       <button onClick={() => setSelected(null)}>
         <X className="w-5 h-5 text-gray-700" />
       </button>
@@ -483,9 +506,10 @@ const BookingDetails = ({ details }: { details: any }) => {
         {selected.label}
       </span>
     )}
-    <p className="mt-4 text-gray-700 text-sm leading-relaxed">
+    {/* Preserve line breaks and basic spacing inside the notification message */}
+    <div className="mt-4 text-gray-700 text-sm leading-relaxed whitespace-pre-line">
       {selected.message}
-    </p>
+    </div>
 
     {/* Gallery Button for Gallery notifications */}
     {selected.label === "Gallery" && (
@@ -516,6 +540,7 @@ const BookingDetails = ({ details }: { details: any }) => {
     )}
   </div>
       )}
+       <ChatWidget />
     </div>
     
   );
