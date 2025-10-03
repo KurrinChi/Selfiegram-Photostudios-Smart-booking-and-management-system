@@ -6,6 +6,8 @@ use App\Models\Message;
 use App\Models\User;
 use App\Models\Notification;
 use App\Events\MessageSent;
+use App\Events\AdminMessageCreated;
+use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
@@ -51,7 +53,7 @@ class MessageController extends Controller
 
         $notification = Notification::create($notificationData);
 
-        // Broadcast event via Pusher
+        // Broadcast event via Pusher to user (confirmation)
         event(new MessageSent($user->userID, [
             'notificationID' => $notification->notificationID,
             'title'          => $notification->title,
@@ -60,6 +62,22 @@ class MessageController extends Controller
             'time'           => $notification->time,
             'starred'        => $notification->starred,
         ]));
+
+        // Broadcast admin-facing event on private-admin.messages (authorized admins only)
+        try {
+            broadcast(new AdminMessageCreated([
+                'messageID'      => $message->messageID,
+                'senderName'     => $message->senderName,
+                'senderEmail'    => $message->senderEmail,
+                'inquiryOptions' => $message->inquiryOptions,
+                'message'        => $message->message,
+                'messageStatus'  => $message->messageStatus,
+                'createdAt'      => $message->createdAt ?? now(),
+                'profilePicture' => $user->profilePicture ?? null,
+            ]));
+        } catch (\Throwable $e) {
+            \Log::warning('Admin public broadcast failed', ['error' => $e->getMessage()]);
+        }
 
         return response()->json([
             'status'  => 'success',
@@ -77,7 +95,17 @@ class MessageController extends Controller
     public function index(Request $request)
     {
         $perPage = (int)($request->query('per_page', 20));
-        $messages = Message::orderByDesc('messageID')->paginate($perPage);
+        // Eager load related user limited columns for profile picture
+        $messages = Message::with(['user:userID,profilePicture'])
+            ->orderByDesc('messageID')
+            ->paginate($perPage);
+
+        // Transform to include a top-level profilePicture key for convenience
+        $messages->getCollection()->transform(function ($m) {
+            $m->profilePicture = $m->user ? $m->user->profilePicture : null; // attach virtual field
+            return $m;
+        });
+
         return response()->json($messages);
     }
 

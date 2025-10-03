@@ -134,32 +134,46 @@
             if (preg_match('/^private-user\.(\d+)$/', $channelName, $matches)) {
                 $requestedUserId = (int)$matches[1];
                 $authorized = (int)$user->userID === $requestedUserId;
-                
                 if ($authorized) {
-                    // Create the auth signature manually (Pusher format)
                     $authKey = config('broadcasting.connections.pusher.key');
                     $authSecret = config('broadcasting.connections.pusher.secret');
                     $stringToSign = $socketId . ':' . $channelName;
                     $signature = hash_hmac('sha256', $stringToSign, $authSecret);
                     $authString = $authKey . ':' . $signature;
-                    
-                    \Log::info('Broadcasting auth successful', [
+                    \Log::info('Broadcasting auth successful (user channel)', [
                         'user_id' => $user->userID,
                         'channel' => $channelName,
-                        'auth_string' => $authString
                     ]);
-                    
-                    return response()->json([
-                        'auth' => $authString
-                    ]);
-                } else {
-                    \Log::warning('Broadcasting auth failed: User not authorized for channel', [
-                        'user_id' => $user->userID,
-                        'requested_user_id' => $requestedUserId,
-                        'channel' => $channelName
-                    ]);
-                    return response()->json(['error' => 'Unauthorized for this channel'], 403);
+                    return response()->json(['auth' => $authString]);
                 }
+                \Log::warning('Broadcasting auth failed: User not authorized for channel', [
+                    'user_id' => $user->userID,
+                    'requested_user_id' => $requestedUserId,
+                    'channel' => $channelName
+                ]);
+                return response()->json(['error' => 'Unauthorized for this channel'], 403);
+            }
+
+            // Private admin messages channel authorization
+            if ($channelName === 'private-admin.messages') {
+                $role = strtolower($user->usertype ?? $user->userType ?? '');
+                if ($role === 'admin') {
+                    $authKey = config('broadcasting.connections.pusher.key');
+                    $authSecret = config('broadcasting.connections.pusher.secret');
+                    $stringToSign = $socketId . ':' . $channelName;
+                    $signature = hash_hmac('sha256', $stringToSign, $authSecret);
+                    $authString = $authKey . ':' . $signature;
+                    \Log::info('Broadcasting auth successful (admin channel)', [
+                        'user_id' => $user->userID,
+                        'channel' => $channelName,
+                    ]);
+                    return response()->json(['auth' => $authString]);
+                }
+                \Log::warning('Broadcasting auth failed: Non-admin tried admin channel', [
+                    'user_id' => $user->userID,
+                    'channel' => $channelName
+                ]);
+                return response()->json(['error' => 'Unauthorized for this channel'], 403);
             }
             
             \Log::warning('Broadcasting auth failed: Unknown channel pattern', [

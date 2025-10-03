@@ -6,10 +6,10 @@ import pusher from "../utils/pusher"; // local real-time subscription
 
 const inquiryOptions = [
   { value: "pricing", label: "Pricing & Packages" },
-  { value: "promotions", label: "Promotions" },
-  { value: "account", label: "Account Issues" },
-  { value: "payment", label: "Billing" },
-  { value: "other", label: "Other" },
+  { value: "promotions", label: "Promotions / Discounts" },
+  { value: "account", label: "Account / Technical Support" },
+  { value: "payment", label: "Payment & Billing" },
+  { value: "other", label: "General" },
 ];
 
 // Set to true if you want to force a full page reload after a successful submit (useful only for debugging)

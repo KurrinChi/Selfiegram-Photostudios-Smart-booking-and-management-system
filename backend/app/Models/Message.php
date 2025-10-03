@@ -30,6 +30,7 @@ class Message extends Model
 
     public function user()
     {
+        // Provides access to user's profilePicture (selected explicitly in controller)
         return $this->belongsTo(User::class, 'senderID', 'userID');
     }
 }

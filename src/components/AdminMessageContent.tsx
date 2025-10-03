@@ -1,482 +1,341 @@
-// AdminEmailApp.tsx
-import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type JSX,
-} from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import {
-  Send as SendIcon,
-  FileText as FileTextIcon,
-  Trash2 as TrashIcon,
-  Inbox as InboxIcon,
-  Search as SearchIcon,
-  Star as StarIcon,
-  Reply as ReplyIcon,
-  X as XIcon,
-  Plus as PlusIcon,
-  ArrowLeft as ArrowLeft,
-} from "lucide-react";
-
-/**
- * AdminEmailApp.tsx
- * - Consolidated single-file version with multiple fixes:
- *   - preserves selected email when emails update
- *   - clears simulated delivery timer on unmount
- *   - parses 'from' when replying / reply-all
- *   - debounced search input and improved search/filter layout
- *   - accessible email list items (buttons), ARIA labels
- *   - keyboard shortcuts: c (compose), j/k (next/prev), r (reply)
- *   - prevents send without recipients (To)
- */
-
-/* ----------------------------- Types ---------------------------------- */
-
-type MailboxId = "inbox" | "sent" | "drafts" | "trash";
+// Simplified Admin Inbox (inbox only) now fetching from Laravel messages table
+import { useCallback, useEffect, useMemo, useState, useRef, type JSX } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Trash2 as TrashIcon, Search as SearchIcon, Star as StarIcon, Reply as ReplyIcon, X as XIcon, Plus as PlusIcon, RefreshCcw as RefreshIcon, AlertTriangle as AlertIcon } from 'lucide-react';
+import pusher from '../utils/pusher';
 
 export type Email = {
   id: string;
   from: string;
-  to: string[]; // keep as array internally, compose uses comma-separated string
+  to: string[];
   subject: string;
   body: string;
-  time: string; // ISO
-  mailbox: MailboxId;
+  time: string; // ISO timestamp
+  mailbox: string; // only 'inbox' used here
   unread?: boolean;
   starred?: boolean;
+  avatar?: string | null; // profile picture absolute/relative URL
 };
 
-type Mailbox = { id: MailboxId; name: string; icon: React.ComponentType<any> };
-
-/* --------------------------- Utilities -------------------------------- */
-
-const makeId = (pref = "id") =>
-  `${pref}_${Date.now()}_${Math.floor(Math.random() * 1e6)}`;
-
+/* ---------------- Utilities ---------------- */
+const makeId = (pref = 'id') => `${pref}_${Date.now()}_${Math.floor(Math.random() * 1e6)}`;
 const timeShort = (iso?: string) => {
-  if (!iso) return "";
+  if (!iso) return '';
   const d = new Date(iso);
-  if (isNaN(d.getTime())) return "";
+  if (isNaN(d.getTime())) return '';
   const now = new Date();
   const diff = now.getTime() - d.getTime();
-  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-  if (days === 0)
-    return d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
-  if (days < 7) return d.toLocaleDateString([], { weekday: "short" });
-  return d.toLocaleDateString([], { month: "short", day: "numeric" });
+  const days = Math.floor(diff / 86400000);
+  if (days === 0) return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  if (days < 7) return d.toLocaleDateString([], { weekday: 'short' });
+  return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
 };
-
 const extractAddress = (raw: string) => {
   const m = raw.match(/<([^>]+)>/);
   return m ? m[1] : raw.trim();
 };
 
-/* --------------------------- Initial data ------------------------------ */
+/* -------------- Backend Types / Mapping -------------- */
+interface RawMessage {
+  messageID: number;
+  senderID: number;
+  senderName: string;
+  senderEmail: string;
+  message: string;
+  inquiryOptions: string; // pricing | promotions | account | payment | other
+  messageStatus: number; // 0 unread / 1 processed(read)
+  createdAt?: string; // may exist (nullable)
+  profilePicture?: string | null; // appended in controller transform
+}
 
-const MAILBOXES: Mailbox[] = [
-  { id: "inbox", name: "Inbox", icon: InboxIcon },
-  { id: "sent", name: "Sent", icon: SendIcon },
-  { id: "drafts", name: "Drafts", icon: FileTextIcon },
-  { id: "trash", name: "Trash", icon: TrashIcon },
-];
+// Canonical labels for inquiryOptions -> subject/title mapping
+const INQUIRY_LABELS: Record<string,string> = {
+  other: 'General',
+  pricing: 'Pricing & Packages',
+  promotions: 'Promotions / Discounts',
+  account: 'Account / Technical Support',
+  payment: 'Payment & Billing'
+};
+const inquiryToSubject = (raw: RawMessage) => INQUIRY_LABELS[raw.inquiryOptions] || 'General';
 
-const nowIso = new Date().toISOString();
-const INITIAL_EMAILS: Email[] = [
-  {
-    id: makeId("e"),
-    from: "Hannah Morgan <hannah@example.com>",
-    to: ["me@example.com"],
-    subject: "Meeting scheduled",
-    body: "Hi James, I just scheduled a meeting with the team to go over the design...",
-    time: nowIso,
-    mailbox: "inbox",
-    unread: true,
+function buildAvatarURL(raw: string | null | undefined, apiBase: string): string | null {
+  if (!raw) return null;
+  // If already absolute (http/https/data) return as-is
+  if (/^(https?:)?\/\//i.test(raw) || raw.startsWith('data:')) return raw;
+  // Normalize common storage prefixes
+  const cleaned = raw.replace(/^storage\//, '').replace(/^\/+/, '');
+  // Attempt to detect if backend serves /storage publicly (Laravel default with storage:link)
+  return apiBase ? `${apiBase}/storage/${cleaned}` : `/storage/${cleaned}`;
+}
+
+function mapRawToEmail(r: RawMessage, apiBase: string): Email {
+  return {
+    id: String(r.messageID),
+    from: `${r.senderName || 'User'} <${r.senderEmail || 'unknown@example.com'}>` ,
+    to: ['support@selfiegram.local'],
+    subject: inquiryToSubject(r),
+    body: r.message + `\n\n#${r.messageID}`,
+    time: r.createdAt || new Date().toISOString(),
+    mailbox: 'inbox',
+    unread: r.messageStatus === 0,
     starred: false,
-  },
-  {
-    id: makeId("e"),
-    from: "Megan Clark <megan@example.com>",
-    to: ["me@example.com"],
-    subject: "Update on marketing campaign",
-    body: "Hey Richard, here's an update on the marketing campaign my team is working on...",
-    time: nowIso,
-    mailbox: "inbox",
-    unread: false,
-    starred: false,
-  },
-  {
-    id: makeId("e"),
-    from: "Russ Miller <russ@example.com>",
-    to: ["me@example.com"],
-    subject: "We need some more swag",
-    body: "Hey James, We're running out of company swag, you need to order more!",
-    time: nowIso,
-    mailbox: "inbox",
-    unread: false,
-    starred: true,
-  },
-];
+    avatar: buildAvatarURL(r.profilePicture, apiBase)
+  };
+}
 
-/* ----------------------------- Component ------------------------------- */
+/* -------------- Component -------------- */
+export default function AdminMessageContent(): JSX.Element {
+  const [emails, setEmails] = useState<Email[]>([]);
+  const [selectedEmailId, setSelectedEmailId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [q, setQ] = useState(''); // immediate input for debounce
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [lastFetched, setLastFetched] = useState<Date | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
-export default function AdminEmailApp(): JSX.Element {
-  const [emails, setEmails] = useState<Email[]>(() =>
-    [...INITIAL_EMAILS].sort((a, b) => +new Date(b.time) - +new Date(a.time))
-  );
+  const API_URL = (import.meta as any).env?.VITE_API_URL || '';
+  const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
 
-  // UI state
-  const [selectedMailbox, setSelectedMailbox] = useState<MailboxId>("inbox");
-  const [selectedEmailId, setSelectedEmailId] = useState<string | null>(
-    emails[0]?.id ?? null
-  );
+  const fetchMessages = useCallback(async () => {
+    if (!API_URL || !token) {
+      setError('Missing API URL or auth token.');
+      return;
+    }
+    try {
+      setLoading(true);
+      setError(null);
+      abortRef.current?.abort();
+      const controller = new AbortController();
+      abortRef.current = controller;
+      const res = await fetch(`${API_URL}/api/messages?per_page=100`, {
+        headers: {
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        signal: controller.signal,
+      });
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => null);
+        throw new Error(errJson?.message || `Request failed (${res.status})`);
+      }
+      const json = await res.json();
+      const data: RawMessage[] = Array.isArray(json) ? json : (json.data || []);
+  const mapped = data.map(r => mapRawToEmail(r, API_URL)).sort((a,b)=> +new Date(b.time) - +new Date(a.time));
+      setEmails(mapped);
+      if (!selectedEmailId && mapped.length) setSelectedEmailId(mapped[0].id);
+      setLastFetched(new Date());
+    } catch (e: any) {
+      if (e?.name === 'AbortError') return; // ignore abort
+      setError(e?.message || 'Failed to load messages');
+    } finally {
+      setLoading(false);
+    }
+  }, [API_URL, token, selectedEmailId]);
 
-  // search + filter in middle column (debounced)
-  const [searchQuery, setSearchQuery] = useState("");
-  const [q, setQ] = useState(""); // immediate input
-  const [listTab, setListTab] = useState<"all" | "read" | "unread">("all");
+  // initial load
+  useEffect(() => { fetchMessages(); }, [fetchMessages]);
 
-  // compose (no cc, no attachments)
+  // Real-time subscription for new messages via private admin channel (auth required)
+  useEffect(() => {
+    const channelName = 'private-admin.messages';
+    const channel = pusher.subscribe(channelName);
+    const handler = (data: any) => {
+      if (!data || !data.messageID) return;
+      const raw: RawMessage = {
+        messageID: data.messageID,
+        senderID: 0,
+        senderName: data.senderName,
+        senderEmail: data.senderEmail,
+        message: data.message,
+        inquiryOptions: data.inquiryOptions,
+        messageStatus: data.messageStatus,
+        createdAt: data.createdAt,
+        profilePicture: data.profilePicture || null,
+      };
+      setEmails(prev => {
+        if (prev.some(e => e.id === String(raw.messageID))) return prev;
+        const mapped = mapRawToEmail(raw, API_URL);
+        return [mapped, ...prev].sort((a,b)=> +new Date(b.time) - +new Date(a.time));
+      });
+    };
+    channel.bind('admin.message.created', handler);
+    return () => {
+      channel.unbind('admin.message.created', handler);
+      pusher.unsubscribe(channelName);
+    };
+  }, [API_URL]);
+
+  // compose state
   const [composeOpen, setComposeOpen] = useState(false);
   const [composeMinimized, setComposeMinimized] = useState(false);
-  const [composeDraft, setComposeDraft] = useState<{
-    to: string;
-    subject: string;
-    body: string;
-  }>({
-    to: "",
-    subject: "",
-    body: "",
-  });
+  const [composeDraft, setComposeDraft] = useState({ to: '', subject: '', body: '' });
 
-  // refs
-  const deliveryTimerRef = useRef<number | null>(null);
-
-  // derived
-  const selectedEmail = useMemo(
-    () => emails.find((e) => e.id === selectedEmailId) ?? null,
-    [emails, selectedEmailId]
-  );
-
-  // debounced search effect
+  /* Debounce search */
   useEffect(() => {
     const id = window.setTimeout(() => setSearchQuery(q.trim()), 250);
     return () => clearTimeout(id);
   }, [q]);
 
-  // filtered emails for the middle list
+  /* Ensure selected email remains valid */
+  useEffect(() => {
+    if (selectedEmailId && emails.some(e => e.id === selectedEmailId)) return;
+    setSelectedEmailId(emails[0]?.id ?? null);
+  }, [emails, selectedEmailId]);
+
+  /* Mark selected as read (optimistic + backend status update) */
+  useEffect(() => {
+    if (!selectedEmailId) return;
+    const email = emails.find(e => e.id === selectedEmailId);
+    if (!email || !email.unread) return;
+    // optimistic UI update
+    setEmails(prev => prev.map(e => e.id === selectedEmailId ? { ...e, unread: false } : e));
+    // backend call (fire & forget)
+    if (API_URL && token) {
+      fetch(`${API_URL}/api/messages/${selectedEmailId}/status`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ messageStatus: 1 }),
+      }).catch(()=>{});
+    }
+  }, [selectedEmailId, emails, API_URL, token]);
+
+  const selectedEmail = useMemo(() => emails.find(e => e.id === selectedEmailId) ?? null, [emails, selectedEmailId]);
+
   const filteredEmails = useMemo(() => {
     const ql = searchQuery.toLowerCase();
     return emails
-      .filter((e) => e.mailbox === selectedMailbox)
-      .filter((e) => {
-        if (listTab === "unread") return !!e.unread;
-        if (listTab === "read") return !e.unread;
-        return true;
-      })
-      .filter((e) => {
-        if (!ql) return true;
-        return (
-          e.subject.toLowerCase().includes(ql) ||
-          e.body.toLowerCase().includes(ql) ||
-          e.from.toLowerCase().includes(ql)
-        );
-      })
+      .filter(e => e.mailbox === 'inbox')
+      .filter(e => !ql || e.subject.toLowerCase().includes(ql) || e.body.toLowerCase().includes(ql) || e.from.toLowerCase().includes(ql))
       .sort((a, b) => +new Date(b.time) - +new Date(a.time));
-  }, [emails, selectedMailbox, searchQuery, listTab]);
+  }, [emails, searchQuery]);
 
-  /* ---------------------------- selection rules ------------------------ */
-
-  // When mailbox changes or emails update: keep current selection when possible.
-  useEffect(() => {
-    const list = emails.filter((e) => e.mailbox === selectedMailbox);
-    const stillExists =
-      selectedEmailId &&
-      emails.some(
-        (e) => e.id === selectedEmailId && e.mailbox === selectedMailbox
-      );
-    if (!stillExists) {
-      setSelectedEmailId(list[0]?.id ?? null);
+  /* Compose helpers */
+  const toggleCompose = useCallback((opts?: { to?: string; subject?: string; body?: string }) => {
+    if (!composeOpen) {
+      setComposeDraft({ to: opts?.to ?? '', subject: opts?.subject ?? '', body: opts?.body ?? '' });
+      setComposeMinimized(false);
+      setComposeOpen(true);
+      return;
     }
-  }, [selectedMailbox, emails, selectedEmailId]);
-
-  // mark selected as read (only if unread)
-  useEffect(() => {
-    if (!selectedEmailId) return;
-    setEmails((prev) =>
-      prev.some((e) => e.id === selectedEmailId && e.unread)
-        ? prev.map((p) =>
-            p.id === selectedEmailId ? { ...p, unread: false } : p
-          )
-        : prev
-    );
-  }, [selectedEmailId]);
-
-  // clear timers on unmount
-  useEffect(() => {
-    return () => {
-      if (deliveryTimerRef.current)
-        window.clearTimeout(deliveryTimerRef.current);
-    };
-  }, []);
-
-  /* ---------------------------- compose logic -------------------------- */
-
-  const toggleCompose = useCallback(
-    (opts?: { to?: string; subject?: string; body?: string }) => {
-      if (!composeOpen) {
-        setComposeDraft({
-          to: opts?.to ?? "",
-          subject: opts?.subject ?? "",
-          body: opts?.body ?? "",
-        });
-        setComposeMinimized(false);
-        setComposeOpen(true);
-        return;
-      }
-      // If open and not minimized and pressing compose again -> close
-      if (composeOpen && !composeMinimized && !opts) {
-        setComposeOpen(false);
-        return;
-      }
-      // If minimized -> restore
-      if (composeOpen && composeMinimized) {
-        setComposeMinimized(false);
-        if (opts) setComposeDraft((s) => ({ ...s, ...opts }));
-        return;
-      }
-      // If open + opts -> fill (reply)
-      if (opts) {
-        setComposeDraft((s) => ({ ...s, ...opts }));
-        setComposeMinimized(false);
-      }
-    },
-    [composeOpen, composeMinimized]
-  );
+    if (composeOpen && !composeMinimized && !opts) { // close
+      setComposeOpen(false);
+      return;
+    }
+    if (composeOpen && composeMinimized) { // restore
+      setComposeMinimized(false);
+      if (opts) setComposeDraft(s => ({ ...s, ...opts }));
+      return;
+    }
+    if (opts) { // already open, fill
+      setComposeDraft(s => ({ ...s, ...opts }));
+      setComposeMinimized(false);
+    }
+  }, [composeOpen, composeMinimized]);
 
   const closeCompose = useCallback(() => {
-    setComposeDraft({ to: "", subject: "", body: "" });
+    setComposeDraft({ to: '', subject: '', body: '' });
     setComposeOpen(false);
     setComposeMinimized(false);
   }, []);
 
   const sendCompose = useCallback(() => {
-    // Validate recipients: must have at least one
     const cw = composeDraft;
-    const recipients = cw.to
-      .split(",")
-      .map((s) => s.trim())
-      .filter(Boolean);
-
+    const recipients = cw.to.split(',').map(s => s.trim()).filter(Boolean);
     if (recipients.length === 0) {
-      // Simple UX: don't send without recip; you could show toast or confirm
-      // For now, block sending
-      // eslint-disable-next-line no-alert
       alert("Please add at least one recipient in 'To' before sending.");
       return;
     }
-
     if (!cw.to.trim() && !cw.subject.trim() && !cw.body.trim()) return;
-    const sent: Email = {
-      id: makeId("e"),
-      from: "me <me@example.com>",
+    const newEmail: Email = {
+      id: makeId('e'),
+      from: 'me <me@example.com>',
       to: recipients,
-      subject: cw.subject || "(no subject)",
+      subject: cw.subject || '(no subject)',
       body: cw.body,
       time: new Date().toISOString(),
-      mailbox: "sent",
-      unread: false,
+      mailbox: 'inbox',
+      unread: true,
       starred: false,
     };
-
-    setEmails((prev) =>
-      [sent, ...prev].sort((a, b) => +new Date(b.time) - +new Date(a.time))
-    );
-
-    // simulate delivered copy to inbox (clear any previous timer)
-    if (deliveryTimerRef.current) {
-      window.clearTimeout(deliveryTimerRef.current);
-      deliveryTimerRef.current = null;
-    }
-
-    deliveryTimerRef.current = window.setTimeout(() => {
-      const delivered: Email = {
-        ...sent,
-        id: makeId("e"),
-        mailbox: "inbox",
-        unread: true,
-      };
-      setEmails((prev) =>
-        [delivered, ...prev].sort(
-          (a, b) => +new Date(b.time) - +new Date(a.time)
-        )
-      );
-    }, 800);
-
+    setEmails(prev => [newEmail, ...prev].sort((a, b) => +new Date(b.time) - +new Date(a.time)));
     closeCompose();
   }, [composeDraft, closeCompose]);
 
-  const saveDraft = useCallback(() => {
-    const cw = composeDraft;
-    const draft: Email = {
-      id: makeId("e"),
-      from: "me <me@example.com>",
-      to: cw.to
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean),
-      subject: cw.subject || "(no subject)",
-      body: cw.body,
-      time: new Date().toISOString(),
-      mailbox: "drafts",
-      unread: false,
-      starred: false,
-    };
-    setEmails((prev) =>
-      [draft, ...prev].sort((a, b) => +new Date(b.time) - +new Date(a.time))
-    );
-    closeCompose();
-  }, [composeDraft, closeCompose]);
-
-  /* --------------------------- email actions --------------------------- */
-
-  const moveToTrash = useCallback((emailId: string) => {
-    setEmails((prev) =>
-      prev.map((e) =>
-        e.id === emailId ? { ...e, mailbox: "trash", unread: false } : e
-      )
-    );
-    setSelectedEmailId(null);
+  const deleteMessage = useCallback((id: string) => {
+    // Backend delete route not implemented; this is local removal only.
+    const ok = window.confirm('Remove this message from view? (This does NOT delete from server)');
+    if (!ok) return;
+    setEmails(prev => prev.filter(e => e.id !== id));
+    setSelectedEmailId(prev => prev === id ? null : prev);
   }, []);
 
-  const restoreFromTrash = useCallback((emailId: string) => {
-    setEmails((prev) =>
-      prev.map((e) =>
-        e.id === emailId ? { ...e, mailbox: "inbox", unread: true } : e
-      )
-    );
-    setSelectedEmailId(null);
+  const toggleStar = useCallback((id: string) => {
+    setEmails(prev => prev.map(e => e.id === id ? { ...e, starred: !e.starred } : e));
   }, []);
 
-  const permanentlyDelete = useCallback((emailId: string) => {
-    const confirmDeletion = window.confirm("Delete this message forever?");
-    if (!confirmDeletion) return;
-    setEmails((prev) => prev.filter((e) => e.id !== emailId));
-    setSelectedEmailId(null);
-  }, []);
+  const replyTo = useCallback((email: Email) => {
+    const to = extractAddress(email.from);
+    const body = `\n\n---\nOn ${new Date(email.time).toLocaleString()}, ${email.from} wrote:\n${email.body}`;
+    toggleCompose({ to, subject: `Re: ${email.subject}`, body });
+  }, [toggleCompose]);
 
-  const toggleStar = useCallback((emailId: string) => {
-    setEmails((prev) =>
-      prev.map((e) => (e.id === emailId ? { ...e, starred: !e.starred } : e))
-    );
-  }, []);
-
-  const replyTo = useCallback(
-    (email: Email) => {
-      const to = extractAddress(email.from);
-      const body = `\n\n---\nOn ${new Date(email.time).toLocaleString()}, ${
-        email.from
-      } wrote:\n${email.body}`;
-      toggleCompose({ to, subject: `Re: ${email.subject}`, body });
-    },
-    [toggleCompose]
-  );
-
-  /* ---------------------------- keyboard UX --------------------------- */
+  /* Keyboard shortcuts */
   useEffect(() => {
     const handler = (ev: KeyboardEvent) => {
-      // ignore keyboard shortcuts if focus is in an input/textarea
       const tag = (ev.target as HTMLElement)?.tagName?.toLowerCase();
-      if (tag === "input" || tag === "textarea") return;
-
-      if (ev.key === "c") {
+      if (tag === 'input' || tag === 'textarea') return;
+      if (ev.key === 'c') { ev.preventDefault(); toggleCompose(); }
+      else if (ev.key === 'j') {
         ev.preventDefault();
-        toggleCompose();
-      } else if (ev.key === "j") {
-        // next email
-        ev.preventDefault();
-        const idx = filteredEmails.findIndex((e) => e.id === selectedEmailId);
-        const next =
-          filteredEmails[
-            Math.min(filteredEmails.length - 1, Math.max(0, idx + 1))
-          ];
+        const idx = filteredEmails.findIndex(e => e.id === selectedEmailId);
+        const next = filteredEmails[Math.min(filteredEmails.length - 1, Math.max(0, idx + 1))];
         if (next) setSelectedEmailId(next.id);
-      } else if (ev.key === "k") {
-        // prev email
+      } else if (ev.key === 'k') {
         ev.preventDefault();
-        const idx = filteredEmails.findIndex((e) => e.id === selectedEmailId);
+        const idx = filteredEmails.findIndex(e => e.id === selectedEmailId);
         const prev = filteredEmails[Math.max(0, idx - 1)];
         if (prev) setSelectedEmailId(prev.id);
-      } else if (ev.key === "r") {
+      } else if (ev.key === 'r') {
         ev.preventDefault();
         if (selectedEmail) replyTo(selectedEmail);
       }
     };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
   }, [filteredEmails, selectedEmailId, selectedEmail, replyTo, toggleCompose]);
-
-  /* ------------------------------- render ------------------------------- */
 
   return (
     <div className="h-screen bg-white text-[#212121] flex">
-      {/* Left vertical icon bar + labels (like reference) */}
-      <aside className="flex flex-col">
-        <div className="flex flex-row h-full">
-          {/* Labels + mailbox list */}
-          <div className="w-64 border-r border-slate-100 bg-white px-4 py-6 ">
-            <div className="flex items-center justify-between mb-4">
-              <div className="text-lg font-semibold ml-1">Email</div>
-            </div>
-            <nav className="flex flex-col gap-2">
-              {MAILBOXES.map((mb) => {
-                const count = emails.filter(
-                  (e) => e.mailbox === mb.id && e.unread
-                ).length;
-                const Icon = mb.icon;
-                return (
-                  <button
-                    key={mb.id}
-                    onClick={() => setSelectedMailbox(mb.id)}
-                    className={`flex items-center justify-between gap-3 px-3 py-2 rounded-md text-sm text-left hover:bg-slate-50 ${
-                      selectedMailbox === mb.id
-                        ? "bg-slate-50 font-medium"
-                        : "text-slate-800"
-                    }`}
-                    aria-pressed={selectedMailbox === mb.id}
-                    aria-label={`Open ${mb.name}`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <Icon className="w-4 h-4" />
-                      <span>{mb.name}</span>
-                    </div>
-                    {count > 0 && (
-                      <span className="text-xs bg-[#212121] text-white px-2 py-0.5 rounded-full">
-                        {count}
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-            </nav>
-          </div>
-        </div>
-      </aside>
-
-      {/* Middle column: header, search, tabs, list */}
+      {/* Inbox Column */}
       <main className="flex-1 min-w-0 border-r border-slate-100 bg-white">
         <div className="px-6 py-6">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold">
-              {MAILBOXES.find((m) => m.id === selectedMailbox)?.name ?? "Mail"}
+            <h2 className="text-xl font-semibold flex items-center gap-3">
+              Inbox
+              {loading && <span className="text-xs font-normal text-slate-400 animate-pulse">Loading...</span>}
             </h2>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => fetchMessages()}
+                className="flex items-center gap-1 px-3 py-2 rounded-md border border-slate-200 text-xs hover:bg-slate-50"
+                aria-label="Refresh"
+                disabled={loading}
+              >
+                <RefreshIcon className={`w-3 h-3 ${loading ? 'animate-spin' : ''}`} />
+                Refresh
+              </button>
+              {lastFetched && (
+                <span className="text-[10px] text-slate-400">{lastFetched.toLocaleTimeString()}</span>
+              )}
+            </div>
           </div>
 
-          {/* Search (top) + Filters (below) */}
           <div className="mt-4 flex flex-col gap-3">
-            {/* Search bar */}
             <div className="relative w-full">
               <SearchIcon className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#999]" />
               <input
@@ -487,110 +346,56 @@ export default function AdminEmailApp(): JSX.Element {
                 aria-label="Search messages"
               />
             </div>
-
-            {/* Tabs */}
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setListTab("all")}
-                aria-pressed={listTab === "all"}
-                className={`px-3 py-1 rounded-full text-sm ${
-                  listTab === "all"
-                    ? "bg-[#111] text-white"
-                    : "bg-slate-100 text-[#212121]"
-                }`}
-              >
-                All
-              </button>
-
-              <button
-                onClick={() => setListTab("read")}
-                aria-pressed={listTab === "read"}
-                className={`px-3 py-1 rounded-full text-sm ${
-                  listTab === "read"
-                    ? "bg-[#111] text-white"
-                    : "bg-slate-100 text-[#212121]"
-                }`}
-              >
-                Read
-              </button>
-
-              <button
-                onClick={() => setListTab("unread")}
-                aria-pressed={listTab === "unread"}
-                className={`px-3 py-1 rounded-full text-sm ${
-                  listTab === "unread"
-                    ? "bg-[#111] text-white"
-                    : "bg-slate-100 text-[#212121]"
-                }`}
-              >
-                Unread
-              </button>
-            </div>
           </div>
 
-          {/* List */}
-          <div className="mt-4 h-[calc(100vh-220px)] overflow-auto">
-            {filteredEmails.length === 0 ? (
+          <div className="mt-4 h-[calc(100vh-220px)] overflow-auto relative">
+            {error && (
+              <div className="p-3 mb-2 rounded bg-red-50 text-red-600 text-xs flex items-center gap-2"><AlertIcon className="w-4 h-4" /> {error}</div>
+            )}
+            {(!loading && filteredEmails.length === 0 && !error) && (
               <div className="p-6 text-sm text-slate-500">No messages</div>
-            ) : (
-              filteredEmails.map((e) => (
-                <button
-                  key={e.id}
-                  onClick={() => setSelectedEmailId(e.id)}
-                  className={`w-full text-left px-4 py-3 border-b border-slate-100 cursor-pointer hover:bg-slate-50 ${
-                    selectedEmailId === e.id ? "bg-slate-50" : ""
-                  }`}
-                  aria-pressed={selectedEmailId === e.id}
-                >
-                  <div className="flex items-start gap-3">
-                    <div className="w-10 h-10 rounded-full bg-[#f3f3f3] flex items-center justify-center text-sm font-semibold text-[#212121]">
-                      {/* initial based on display name */}
-                      {e.from.charAt(0).toUpperCase()}
+            )}
+            {filteredEmails.map(e => (
+              <button
+                key={e.id}
+                onClick={() => setSelectedEmailId(e.id)}
+                className={`w-full text-left px-4 py-3 border-b border-slate-100 cursor-pointer hover:bg-slate-50 ${selectedEmailId === e.id ? 'bg-slate-50' : ''}`}
+                aria-pressed={selectedEmailId === e.id}
+              >
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-full bg-[#f3f3f3] flex items-center justify-center text-sm font-semibold text-[#212121] overflow-hidden">
+                    {e.avatar ? (
+                      <img src={e.avatar} alt={e.from} className="w-full h-full object-cover" />
+                    ) : (
+                      e.from.charAt(0).toUpperCase()
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className={`truncate ${e.unread ? 'font-semibold text-[#212121]' : 'font-medium text-[#333]'}`}>{e.from.split('<')[0].trim()}</div>
+                      <div className="text-xs text-slate-500">{timeShort(e.time)}</div>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between gap-3">
-                        <div
-                          className={`truncate ${
-                            e.unread
-                              ? "font-semibold text-[#212121]"
-                              : "font-medium text-[#333]"
-                          }`}
-                        >
-                          {e.from.split("<")[0].trim()}
-                        </div>
-                        <div className="text-xs text-slate-500">
-                          {timeShort(e.time)}
-                        </div>
-                      </div>
-                      <div className="text-sm text-slate-700 truncate">
-                        {e.subject}
-                      </div>
-                      <div className="text-xs text-slate-500 truncate">
-                        {e.body.replace(/\n/g, " ").slice(0, 80)}
-                      </div>
-                      <div className="flex items-center gap-2 mt-2">
-                        {e.unread && (
-                          <span className="w-2 h-2 bg-[#212121] rounded-full" />
-                        )}
-                        {e.starred && <StarIcon className="w-3 h-3" />}
-                      </div>
+                    <div className="text-sm text-slate-700 truncate">{e.subject}</div>
+                    <div className="text-xs text-slate-500 truncate">{e.body.replace(/\n/g, ' ').slice(0, 80)}</div>
+                    <div className="flex items-center gap-2 mt-2">
+                      {e.unread && <span className="w-2 h-2 bg-[#212121] rounded-full" />}
+                      {e.starred && <StarIcon className="w-3 h-3" />}
                     </div>
                   </div>
-                </button>
-              ))
-            )}
+                </div>
+              </button>
+            ))}
           </div>
         </div>
       </main>
 
-      {/* Right column: viewer */}
+      {/* Viewer */}
       <aside className="w-[60%] min-w-[420px] bg-white">
         <div className="px-2 py-1">
           <div className="flex items-center justify-between">
             <div className="flex w-full items-center justify-between border-b border-slate-200 pb-2">
-              <div className="text-sm text-slate-400">Yesterday</div>
+              <div className="text-sm text-slate-400">Inbox</div>
               <div className="flex items-center gap-1">
-                {/* Reply */}
                 <button
                   onClick={() => selectedEmail && replyTo(selectedEmail)}
                   className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-slate-100 transition"
@@ -599,100 +404,54 @@ export default function AdminEmailApp(): JSX.Element {
                   <ReplyIcon className="w-4 h-4" />
                   <span className="hidden sm:inline text-sm">Reply</span>
                 </button>
-
-                {/* Divider */}
                 <div className="w-px h-6 bg-slate-200 mx-2" />
-
-                {/* Trash actions */}
-                {selectedEmail?.mailbox === "trash" ? (
-                  <>
-                    <button
-                      onClick={() =>
-                        selectedEmail && restoreFromTrash(selectedEmail.id)
-                      }
-                      className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-slate-100 transition"
-                      aria-label="Restore"
-                    >
-                      <ArrowLeft className="w-4 h-4" />
-                      <span className="hidden sm:inline text-sm">Restore</span>
-                    </button>
-                    <button
-                      onClick={() =>
-                        selectedEmail && permanentlyDelete(selectedEmail.id)
-                      }
-                      className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-red-50 text-red-600 hover:text-red-700 transition"
-                      aria-label="Delete forever"
-                    >
-                      <TrashIcon className="w-4 h-4" />
-                      <span className="hidden sm:inline text-sm">
-                        Delete forever
-                      </span>
-                    </button>
-                  </>
-                ) : (
-                  <button
-                    onClick={() =>
-                      selectedEmail && moveToTrash(selectedEmail.id)
-                    }
-                    className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-red-50 text-red-600 hover:text-red-700 transition"
-                    aria-label="Delete"
-                  >
-                    <TrashIcon className="w-4 h-4" />
-                    <span className="hidden sm:inline text-sm">Delete</span>
-                  </button>
-                )}
-
-                {/* Star */}
+                <button
+                  onClick={() => selectedEmail && deleteMessage(selectedEmail.id)}
+                  className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-red-50 text-red-600 hover:text-red-700 transition"
+                  aria-label="Delete"
+                >
+                  <TrashIcon className="w-4 h-4" />
+                  <span className="hidden sm:inline text-sm">Delete</span>
+                </button>
                 <button
                   onClick={() => selectedEmail && toggleStar(selectedEmail.id)}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-md transition ${
-                    selectedEmail?.starred
-                      ? "text-yellow-500 hover:bg-yellow-50"
-                      : "hover:bg-slate-100"
-                  }`}
-                  aria-label={selectedEmail?.starred ? "Unstar" : "Star"}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-md transition ${selectedEmail?.starred ? 'text-yellow-500 hover:bg-yellow-50' : 'hover:bg-slate-100'}`}
+                  aria-label={selectedEmail?.starred ? 'Unstar' : 'Star'}
                 >
                   <StarIcon className="w-4 h-4" />
-                  <span className="hidden sm:inline text-sm">
-                    {selectedEmail?.starred ? "Unstar" : "Star"}
-                  </span>
+                  <span className="hidden sm:inline text-sm">{selectedEmail?.starred ? 'Unstar' : 'Star'}</span>
                 </button>
               </div>
             </div>
           </div>
 
-          {/* message viewer */}
           <div className="mt-6 bg-white border border-slate-100 rounded p-6 min-h-[60vh]">
             {selectedEmail ? (
               <>
                 <div className="flex items-start justify-between">
-                  <div>
-                    <h3 className="text-xl font-semibold">
-                      {selectedEmail.subject}
-                    </h3>
-                    <div className="text-sm text-slate-500 mt-2">
-                      From:{" "}
-                      <span className="font-medium text-[#212121]">
-                        {selectedEmail.from}
-                      </span>
+                  <div className="space-y-2">
+                    <h3 className="text-xl font-semibold">{selectedEmail.subject}</h3>
+                    <div className="text-xs inline-block rounded bg-slate-100 px-2 py-1 text-slate-600">
+                      {selectedEmail.body.includes('\n#') ? selectedEmail.body.split('\n').pop() : ''}
                     </div>
+                    <div className="text-sm text-slate-500">
+                      From: <span className="font-medium text-[#212121]">{selectedEmail.from}</span>
+                    </div>
+                    <div className="text-xs text-slate-400">Received: {new Date(selectedEmail.time).toLocaleString()}</div>
                   </div>
                 </div>
-
                 <div className="mt-6 prose prose-slate">
-                  <pre className="whitespace-pre-wrap font-sans text-[#212121] leading-relaxed">
-                    {selectedEmail.body}
-                  </pre>
+                  <pre className="whitespace-pre-wrap font-sans text-[#212121] leading-relaxed">{selectedEmail.body}</pre>
                 </div>
               </>
             ) : (
-              <div className="text-slate-500">Select an email to view</div>
+              <div className="text-slate-500">Select a message to view</div>
             )}
           </div>
         </div>
       </aside>
 
-      {/* Compose bottom-right (no cc, no attachments) */}
+      {/* Compose */}
       <div className="fixed right-6 bottom-6 z-50">
         <AnimatePresence>
           {composeOpen ? (
@@ -709,49 +468,28 @@ export default function AdminEmailApp(): JSX.Element {
                 <div className="font-medium">New message</div>
                 <div className="flex items-center gap-2">
                   <button
-                    onClick={() => setComposeMinimized((s) => !s)}
+                    onClick={() => setComposeMinimized(s => !s)}
                     className="p-1 rounded hover:bg-slate-100"
                     aria-label="Minimize"
                   >
-                    <svg
-                      className="w-4 h-4"
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M20 12H4"
-                      />
+                    <svg className="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 12H4" />
                     </svg>
                   </button>
-                  <button
-                    onClick={closeCompose}
-                    className="p-1 rounded hover:bg-slate-100"
-                    aria-label="Close"
-                  >
+                  <button onClick={closeCompose} className="p-1 rounded hover:bg-slate-100" aria-label="Close">
                     <XIcon className="w-4 h-4" />
                   </button>
                 </div>
               </div>
-
               {composeMinimized ? (
-                <div
-                  className="px-4 py-2 text-sm text-slate-500 cursor-pointer"
-                  onClick={() => setComposeMinimized(false)}
-                >
-                  {composeDraft.subject || "New message"} —{" "}
-                  <span className="text-slate-400">{composeDraft.to}</span>
+                <div className="px-4 py-2 text-sm text-slate-500 cursor-pointer" onClick={() => setComposeMinimized(false)}>
+                  {composeDraft.subject || 'New message'} — <span className="text-slate-400">{composeDraft.to}</span>
                 </div>
               ) : (
                 <div className="p-4 flex flex-col gap-3 min-h-[240px]">
                   <input
                     value={composeDraft.to}
-                    onChange={(e) =>
-                      setComposeDraft((s) => ({ ...s, to: e.target.value }))
+                    onChange={e => setComposeDraft(s => ({ ...s, to: e.target.value }))
                     }
                     placeholder="To"
                     className="w-full border border-slate-100 rounded px-3 py-2 text-sm outline-none"
@@ -759,11 +497,7 @@ export default function AdminEmailApp(): JSX.Element {
                   />
                   <input
                     value={composeDraft.subject}
-                    onChange={(e) =>
-                      setComposeDraft((s) => ({
-                        ...s,
-                        subject: e.target.value,
-                      }))
+                    onChange={e => setComposeDraft(s => ({ ...s, subject: e.target.value }))
                     }
                     placeholder="Subject"
                     className="w-full border border-slate-100 rounded px-3 py-2 text-sm outline-none"
@@ -771,31 +505,20 @@ export default function AdminEmailApp(): JSX.Element {
                   />
                   <textarea
                     value={composeDraft.body}
-                    onChange={(e) =>
-                      setComposeDraft((s) => ({ ...s, body: e.target.value }))
+                    onChange={e => setComposeDraft(s => ({ ...s, body: e.target.value }))
                     }
                     placeholder="Message..."
                     className="w-full min-h-[120px] border border-slate-100 rounded px-3 py-2 text-sm outline-none resize-none"
                     aria-label="Message body"
                   />
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={saveDraft}
-                        className="px-3 py-1 rounded-md text-sm hover:bg-slate-100"
-                      >
-                        Save draft
-                      </button>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={sendCompose}
-                        className="px-4 py-2 rounded-md bg-[#212121] text-white"
-                        aria-label="Send message"
-                      >
-                        Send
-                      </button>
-                    </div>
+                  <div className="flex items-center justify-end gap-2">
+                    <button
+                      onClick={sendCompose}
+                      className="px-4 py-2 rounded-md bg-[#212121] text-white"
+                      aria-label="Send message"
+                    >
+                      Send
+                    </button>
                   </div>
                 </div>
               )}
