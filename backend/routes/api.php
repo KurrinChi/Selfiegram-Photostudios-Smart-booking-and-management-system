@@ -385,6 +385,7 @@
           Route::get('/booking-details', [NotificationController::class, 'getBookingDetails']);
           Route::get('/reschedule-details', [NotificationController::class, 'getRescheduleDetails']);
           Route::post('/notifications/{id}/mark-as-read', [NotificationController::class, 'markAsRead']);
+                    Route::delete('/notifications/{id}', [NotificationController::class, 'destroy']);
 
         //Client Gallery Page
         Route::get('/user-images/{userID}', [ImageController::class, 'getUserImages']);

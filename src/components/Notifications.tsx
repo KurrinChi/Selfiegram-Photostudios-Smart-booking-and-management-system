@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Info, X, Download, Image } from "lucide-react";
+import { Info, X, Download, Image, Trash2 } from "lucide-react";
 import { Search } from "lucide-react"; // Added Search icon import
 import { fetchWithAuth } from "../utils/fetchWithAuth";
 import { QRCodeCanvas } from "qrcode.react"; // Import QRCodeCanvas from qrcode.react
@@ -211,6 +211,43 @@ export default function Notifications() {
     console.error("Error marking notification as read:", err);
   }
 };
+
+  // Confirmation dialog state
+  const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const requestDelete = (id: number) => {
+    setConfirmDeleteId(id);
+  };
+
+  const closeDeleteDialog = () => {
+    if (deleting) return; // prevent closing mid-request
+    setConfirmDeleteId(null);
+  };
+
+  const performDelete = async () => {
+    if (confirmDeleteId == null) return;
+    setDeleting(true);
+    try {
+      const res = await fetch(`${API_URL}/api/notifications/${confirmDeleteId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('token') || ''}`
+        }
+      });
+      if (!res.ok) throw new Error('Failed to delete notification');
+      setNotifications(prev => prev.filter(n => n.notificationID !== confirmDeleteId));
+      if (selected?.notificationID === confirmDeleteId) setSelected(null);
+      toast.success('Notification deleted');
+      setConfirmDeleteId(null);
+    } catch (e) {
+      console.error('Delete error', e);
+      toast.error('Delete failed');
+    } finally {
+      setDeleting(false);
+    }
+  };
 //Fetch Booking Details when notification with label "Booking" is selected
 const fetchBookingDetails = async (bookingID: number) => {
   try {
@@ -467,8 +504,16 @@ const BookingDetails = ({ details }: { details: any }) => {
             <button
               className="p-1.5 rounded-full hover:bg-gray-100"
               onClick={() => setSelected(n)}
+              title="View details"
             >
               <Info className="w-4 h-4 text-gray-500" />
+            </button>
+            <button
+              className="p-1.5 rounded-full hover:bg-red-50"
+              onClick={() => requestDelete(n.notificationID)}
+              title="Delete notification"
+            >
+              <Trash2 className="w-4 h-4 text-red-500" />
             </button>
           </td>
         </tr>
@@ -541,6 +586,49 @@ const BookingDetails = ({ details }: { details: any }) => {
   </div>
       )}
        <ChatWidget />
+
+      {/* Delete Confirmation Dialog */}
+      {confirmDeleteId !== null && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center">
+          <div
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+            onClick={closeDeleteDialog}
+          />
+          <div className="relative bg-white w-full max-w-sm rounded-lg shadow-lg p-6 z-[130]">
+            <div className="flex items-center justify-between mb-4">
+              <h4 className="text-lg font-semibold text-gray-800">Delete Notification</h4>
+              <button
+                onClick={closeDeleteDialog}
+                className="p-1 rounded hover:bg-gray-100"
+                aria-label="Close dialog"
+                disabled={deleting}
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <p className="text-sm text-gray-600 mb-6">
+              Are you sure you want to permanently delete this notification? This action cannot be undone.
+            </p>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={closeDeleteDialog}
+                className="px-4 py-2 text-sm rounded-md border border-gray-300 hover:bg-gray-100 disabled:opacity-50"
+                disabled={deleting}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={performDelete}
+                className="px-4 py-2 text-sm rounded-md bg-red-600 text-white hover:bg-red-700 disabled:opacity-60 flex items-center gap-2"
+                disabled={deleting}
+              >
+                {deleting && <span className="w-3 h-3 rounded-full border-2 border-white border-t-transparent animate-spin" />}
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
     
   );

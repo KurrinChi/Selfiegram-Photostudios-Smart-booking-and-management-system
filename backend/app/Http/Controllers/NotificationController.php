@@ -103,4 +103,23 @@ class NotificationController extends Controller
 
             return response()->json(['success' => true]);
         }
+
+    /**
+     * Delete a notification (user-owned or global) - Admin or owner only ideally.
+     * Currently assumes authenticated context & simple ownership check could be added later.
+     */
+    public function destroy($id, Request $request)
+    {
+        $notification = Notification::find($id);
+        if (!$notification) {
+            return response()->json(['error' => 'Notification not found'], 404);
+        }
+        // Optional: enforce ownership (uncomment if needed)
+        // $user = $request->user();
+        // if ($notification->userID && $user && (int)$notification->userID !== (int)$user->userID) {
+        //     return response()->json(['error' => 'Forbidden'], 403);
+        // }
+        $notification->delete();
+        return response()->json(['success' => true]);
+    }
 }
