@@ -172,6 +172,8 @@ const SelectPackagePage = () => {
   const [tags, setTags] = useState<Tag[]>([]);
   const [addOns, setAddOns] = useState<AddOn[]>([]);
   const [bookedTimeSlots, setBookedTimeSlots] = useState<string[]>([]);
+  // Rich interval booking data (start/end in minutes from 00:00) if provided by API
+  const [bookedIntervals, setBookedIntervals] = useState<{ start: number; end: number; bookingID?: number; packageID?: number; durationMinutes?: number }[]>([]);
   const [activeAddOns, setActiveAddOns] = useState<Record<string, boolean>>({});
   const [selectedColors, setSelectedColors] = useState<
     Record<string, { id: string; hex: string; label: string }>
@@ -547,13 +549,37 @@ const SelectPackagePage = () => {
       const data = await response.json();
 
       if (response.ok) {
+        // Backward compatibility: simple string array still supported
         setBookedTimeSlots(data.bookedSlots || []);
+        // If API returns structured bookings with duration, build intervals
+        if (Array.isArray(data.bookings)) {
+          const intervals: { start: number; end: number; bookingID?: number; packageID?: number; durationMinutes?: number }[] = [];
+          for (const b of data.bookings) {
+            if (!b || !b.startTime) continue;
+            const start = slotLabelToMinutes(String(b.startTime));
+            if (isNaN(start)) continue;
+            const dur = parseDurationToMinutes(b.duration || b.packageDuration || '');
+            const durationMinutes = dur > 0 ? dur : 60; // fallback
+            const end = start + durationMinutes;
+            intervals.push({ start, end, bookingID: b.bookingID, packageID: b.packageID, durationMinutes });
+          }
+          setBookedIntervals(intervals);
+        } else {
+          // Fallback: derive 30-min intervals for simple bookedSlots list
+          const intervals = (data.bookedSlots || []).map((s: string) => {
+            const start = slotLabelToMinutes(String(s));
+            return { start, end: start + 30 };
+          });
+          setBookedIntervals(intervals);
+        }
       } else {
         setBookedTimeSlots([]);
+        setBookedIntervals([]);
       }
     } catch (error) {
       console.error("Failed to fetch booked time slots:", error);
       setBookedTimeSlots([]);
+      setBookedIntervals([]);
     }
   };
 
@@ -694,7 +720,59 @@ const SelectPackagePage = () => {
       " " +
       meridian;
     return formatted;
-  });
+  })
+  // Remove late evening slots as requested: 07:30 PM, 08:00 PM, 08:30 PM
+  .filter(s => !["07:30 PM","08:00 PM","08:30 PM"].includes(s));
+
+  /* ---------------------- Duration / Interval Helpers ---------------------- */
+  // Convert a label like "09:30 AM" to minutes from 00:00
+  const slotLabelToMinutes = (label: string): number => {
+    const parts = label.trim().split(/\s+/); // [HH:MM, AM]
+    if (parts.length < 2) return NaN;
+    const [time, period] = parts;
+    const [hh, mm] = time.split(':').map(n => parseInt(n, 10));
+    if (isNaN(hh) || isNaN(mm)) return NaN;
+    let hour24 = hh;
+    if (period.toUpperCase() === 'PM' && hh !== 12) hour24 = hh + 12;
+    if (period.toUpperCase() === 'AM' && hh === 12) hour24 = 0;
+    return hour24 * 60 + mm;
+  };
+
+  // Parse duration string (e.g., "1 hr", "2 hrs 30 mins", "90 mins") to minutes
+  const parseDurationToMinutes = (raw: string): number => {
+    if (!raw || typeof raw !== 'string') return 0;
+    const s = raw.toLowerCase();
+    // If it's a plain number assume minutes
+    if (/^\d+$/.test(s)) return parseInt(s, 10);
+    let total = 0;
+    const hourMatch = s.match(/(\d+)\s*(hour|hr|hrs|h)/);
+    if (hourMatch) total += parseInt(hourMatch[1], 10) * 60;
+    // Support patterns like "1 hr 30", "1h30m"
+    const minuteMatch = s.match(/(\d+)\s*(minute|min|mins|m)/);
+    if (minuteMatch) total += parseInt(minuteMatch[1], 10);
+    // Handle composite like "1 hr 30 mins" already covered; fallback: if only one number and includes 'hr' add 60 per number
+    if (total === 0) {
+      const generic = s.match(/(\d+)/g);
+      if (generic) {
+        // Heuristic: if keyword hour present, treat first as hours maybe second as minutes
+        if (/hour|hr|hrs|h/.test(s)) {
+          total += parseInt(generic[0], 10) * 60;
+          if (generic[1]) total += parseInt(generic[1], 10);
+        } else {
+          total += parseInt(generic[0], 10);
+        }
+      }
+    }
+    return total;
+  };
+
+  // Current package duration minutes (for disabling start times that can't fit)
+  const currentPackageDuration = parseDurationToMinutes(pkg?.duration || '') || 60; // fallback 60
+
+  // Business day boundaries in minutes (start 09:00, end after last slot 21:00 to allow 8:30 PM 30-min slot)
+  // Adjusted business end boundary: removing 07:30 PM onward means last valid start (e.g., 07:00 PM for 60m)
+  // Set day end to 20:00 (8 PM) so validation blocks later starts.
+  const DAY_END_MIN = 20 * 60; // 08:00 PM absolute upper bound (exclusive)
 
   const handleRemoveTag = (type: string) => {
     setTags((prev) => prev.filter((t) => t.type !== type));
@@ -1262,11 +1340,20 @@ const SelectPackagePage = () => {
               </h4>
               <div className="grid grid-cols-3 gap-2">
                 {timeSlots.map((slot) => {
-                  const isBooked = bookedTimeSlots.includes(slot);
-                  const isPastTime = selectedDate
-                    ? isTimeSlotInPast(slot, selectedDate)
-                    : false;
-                  const isDisabled = isBooked || isPastTime;
+                  const slotStart = slotLabelToMinutes(slot);
+                  const slotEnd = slotStart + 30; // base slot span
+                  const isPastTime = selectedDate ? isTimeSlotInPast(slot, selectedDate) : false;
+                  // Overlaps any existing booking interval?
+                  const overlapsExisting = bookedIntervals.some(iv =>
+                    // If slot start within interval OR slot end within interval OR interval starts inside this slot base window
+                    (slotStart < iv.end && slotEnd > iv.start)
+                  );
+                  // If user started a new booking at this slot, would its duration overlap existing intervals or exceed day end?
+                  const wouldEnd = slotStart + currentPackageDuration;
+                  const insufficientRemaining = wouldEnd > DAY_END_MIN;
+                  const intervalConflict = bookedIntervals.some(iv => (slotStart < iv.end) && (wouldEnd > iv.start));
+                  const isBooked = overlapsExisting;
+                  const isDisabled = isPastTime || isBooked || insufficientRemaining || intervalConflict;
 
                   return (
                     <button
@@ -1281,18 +1368,26 @@ const SelectPackagePage = () => {
                           : "bg-gray-100 hover:bg-gray-200"
                       }`}
                       title={
-                        isBooked
-                          ? "This time slot is already booked"
-                          : isPastTime
+                        isPastTime
                           ? "This time slot has passed"
+                          : isBooked
+                          ? "Overlaps an existing booking"
+                          : insufficientRemaining
+                          ? `Not enough time for a ${currentPackageDuration}-minute session before closing`
+                          : intervalConflict
+                          ? "Your session would overlap another booking"
                           : ""
                       }
                     >
                       {slot}
                       {isBooked && (
-                        <span className="block text-xs text-red-500">
-                          Booked
-                        </span>
+                        <span className="block text-xs text-red-500">Booked</span>
+                      )}
+                      {!isBooked && intervalConflict && (
+                        <span className="block text-xs text-orange-500">Conflict</span>
+                      )}
+                      {!isBooked && insufficientRemaining && (
+                        <span className="block text-xs text-amber-600">Too Late</span>
                       )}
                     </button>
                   );
