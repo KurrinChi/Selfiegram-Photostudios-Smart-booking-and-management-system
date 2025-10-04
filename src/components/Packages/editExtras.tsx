@@ -7,9 +7,9 @@ import {
   Check,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import EditConceptStudio from "../EditConceptStudio.tsx";
+//import EditConceptStudio from "../EditConceptStudio.tsx";
 import { fetchWithAuth } from "../../utils/fetchWithAuth";
-import { toast, ToastContainer } from "react-toastify";
+import { toast } from "react-toastify";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -192,37 +192,41 @@ function ConfirmDialog({
 
 export default function EditExtras() {
   const [addons, setAddons] = useState<Addon[]>([]);
+  const [loading, setLoading] = useState(true);
 
   // Fetch add-ons from backend instead of localStorage
+  const fetchAddons = async () => {
+    setLoading(true);
+    try {
+      const res = await fetchWithAuth(`${API_URL}/api/admin/package-add-ons`);
+      if (!res.ok) throw new Error("Failed to fetch add-ons");
+
+      const data = await res.json();
+
+      // Adapt backend fields → frontend shape if necessary
+      const mapped = data.map((a: any) => ({
+        id: a.addOnID, // from DB
+        name: a.addOn,
+        price: parseFloat(a.addOnPrice),
+        type: a.type,
+        description: a.description,
+        active: a.active ?? true,
+        min_quantity: a.min_quantity,
+        step: a.step,
+        max_quantity: a.max_quantity,
+        createdAt: a.created_at,
+      }));
+
+      setAddons(mapped);
+    } catch (err: any) {
+      toast.error(err.message || "Something went wrong");
+    } finally {
+      setLoading(false); // ✅ stop loading no matter what
+    }
+  };
+
   useEffect(() => {
-    const fetchAddons = async () => {
-      try {
-        const res = await fetchWithAuth(`${API_URL}/api/admin/package-add-ons`);
-        if (!res.ok) throw new Error("Failed to fetch add-ons");
-
-        const data = await res.json();
-
-        // Adapt backend fields → frontend shape if necessary
-        const mapped = data.map((a: any) => ({
-          id: a.addOnID, // from DB
-          name: a.addOn,
-          price: parseFloat(a.addOnPrice),
-          type: a.type,
-          description: a.description,
-          active: a.active ?? true,
-          min_quantity: a.min_quantity,
-          step: a.step,
-          max_quantity: a.max_quantity,
-          createdAt: a.created_at,
-        }));
-
-        setAddons(mapped);
-      } catch (err: any) {
-        toast.error(err.message || "Something went wrong");
-      }
-    };
-
-    fetchAddons();
+    fetchAddons(); // ✅ now referencing the shared function
   }, []);
 
   /* UI state */
@@ -344,6 +348,8 @@ export default function EditExtras() {
       // Update state only on success
       setAddons((s) => s.filter((a) => toId(a.id) !== tid));
       toast.success("Add-on deleted successfully!");
+
+      fetchAddons();
     } catch (err) {
       console.error(err);
       toast.error("Failed to delete add-on. Please try again.");
@@ -584,6 +590,7 @@ export default function EditExtras() {
         toast.success(saved.message); // ✅ message from backend
       }
 
+      fetchAddons();
       closeModal();
     } catch (err) {
       console.error(err);
@@ -700,7 +707,18 @@ export default function EditExtras() {
           </div>
 
           <div className="grid gap-3">
-            {filtered.length === 0 ? (
+            {loading ? (
+              <div
+                style={{
+                  background: P.surface,
+                  border: `1px solid ${P.border}`,
+                  color: P.muted,
+                }}
+                className="p-4 rounded text-center"
+              >
+                Loading add-ons...
+              </div>
+            ) : filtered.length === 0 ? (
               <div
                 style={{
                   background: P.surface,
@@ -794,7 +812,7 @@ export default function EditExtras() {
           </div>
         </div>
         <div className="flex-[1] min-w-0 overflow-x-auto">
-          <EditConceptStudio />
+          {/*<EditConceptStudio />*/}
         </div>
       </div>
 
@@ -1250,7 +1268,6 @@ export default function EditExtras() {
         onCancel={closeConfirm}
         onConfirm={() => doDeleteConfirmed(confirmState.targetId ?? null)}
       />
-      <ToastContainer position="bottom-right" />
     </AdminLayout>
   );
 }
