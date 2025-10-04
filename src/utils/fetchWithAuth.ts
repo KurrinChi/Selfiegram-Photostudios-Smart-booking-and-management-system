@@ -9,9 +9,11 @@ export async function fetchWithAuth(url: string, options: RequestInit = {}) {
   const headers = new Headers(options.headers || {});
   headers.set("Authorization", `Bearer ${token}`);
 
-  // Only set Content-Type if body is not FormData
+  // Only set Content-Type automatically when we actually send a body (POST/PUT/PATCH)
+  const method = (options.method || 'GET').toUpperCase();
+  const hasBody = !!options.body;
   const isFormData = options.body instanceof FormData;
-  if (!isFormData && !headers.has("Content-Type")) {
+  if (hasBody && !isFormData && !headers.has("Content-Type") && ['POST','PUT','PATCH','DELETE'].includes(method)) {
     headers.set("Content-Type", "application/json");
   }
 
