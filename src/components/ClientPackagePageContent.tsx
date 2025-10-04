@@ -11,7 +11,10 @@ import CenteredLoader from "./CenteredLoader";
 interface Package {
   id: string;
   title: string;
-  price: number;
+  price: number; // effective/current price (may be discounted)
+  base_price?: number; // original price when discounted
+  is_discounted?: number; // 1 if discounted
+  discount?: number; // percentage
   tags: string[];
   images?: string[];
     description?: string;
@@ -63,7 +66,45 @@ const ClientPackagePageContent: React.FC = () => {
       try {
         const response = await fetchWithAuth(`${API_URL}/api/packages`);
         const data = await response.json();
-        setAllPackages(data);
+        const arr = Array.isArray(data) ? data : [];
+        const normalized: Package[] = arr.map((p: any) => {
+          // Coerce numeric fields
+          const price = Number(p.price);
+          const baseRaw = p.base_price ?? p.basePrice ?? p.original_price ?? p.price; // fallbacks
+          const base_price = Number(baseRaw);
+          let discount = p.discount !== undefined ? Number(p.discount) : undefined;
+          // Derive discount if not provided but base > price
+            if ((discount === undefined || isNaN(discount)) && base_price > price) {
+              discount = Math.round(((base_price - price) / base_price) * 100);
+            }
+          let is_discounted = p.is_discounted !== undefined ? Number(p.is_discounted) : undefined;
+          if (is_discounted === undefined) {
+            is_discounted = discount && discount > 0 ? 1 : 0;
+          }
+          return {
+            id: String(p.id ?? p.packageID ?? ''),
+            title: p.title ?? p.name ?? 'Untitled Package',
+            price: price,
+            base_price: base_price,
+            is_discounted: is_discounted,
+            discount: discount,
+            tags: Array.isArray(p.tags) ? p.tags : (p.tags ? String(p.tags).split(',').map((t:string)=>t.trim()).filter(Boolean) : []),
+            images: Array.isArray(p.images) ? p.images : (p.image ? [p.image] : []),
+            description: p.description || p.desc || '',
+          };
+        }).map(pkg => {
+          // Ensure sane values
+          if (pkg.is_discounted === 1 && (!pkg.discount || pkg.discount <= 0)) {
+            pkg.is_discounted = 0; // invalid discount data
+          }
+          return pkg;
+        });
+        if (normalized.length && normalized[0]) {
+          // Debug sample to verify discount derivation in console
+          // (Remove this later if too noisy)
+          console.debug('[ClientPackages] Sample normalized package', normalized[0]);
+        }
+        setAllPackages(normalized);
       } catch (error) {
         console.error("Failed to fetch packages:", error);
       } finally {
@@ -337,8 +378,26 @@ const ClientPackagePageContent: React.FC = () => {
 
                 <div className="p-3 space-y-2">
                   <div className="font-medium text-sm">{pkg.title}</div>
-                  <div className="text-gray-500 text-xs">
-                    ₱{Number(pkg.price).toFixed(2)}
+                  <div className="flex flex-col gap-1">
+                    {pkg.is_discounted ? (
+                      <div className="flex flex-col">
+                        <div className="text-gray-400 text-xs line-through">
+                          ₱{Number(pkg.base_price ?? 0).toFixed(2)}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-green-600 font-semibold text-sm">
+                            ₱{Number(pkg.price).toFixed(2)}
+                          </span>
+                          <span className="bg-red-100 text-red-600 text-[10px] px-2 py-0.5 rounded-full font-medium">
+                            {pkg.discount}% OFF
+                          </span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-gray-500 text-sm font-medium">
+                        ₱{Number(pkg.price).toFixed(2)}
+                      </div>
+                    )}
                   </div>
 
                     {/* Package description here */}

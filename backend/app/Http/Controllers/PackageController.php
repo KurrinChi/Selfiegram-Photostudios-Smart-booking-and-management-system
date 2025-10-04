@@ -10,19 +10,32 @@ class PackageController extends Controller
     //Get all packages
     public function index()
     {
+        // Public packages list now also exposes discount metadata similar to admin endpoint
+        $selects = [
+            'packages.packageID as id',
+            'packages.name as title',
+            'packages.price',
+            'packages.description',
+            'package_images.imagePath',
+            'package_types.typeName as tag'
+        ];
+        // Include discount related columns if they exist (backward compatible with older schema)
+        if (Schema::hasColumn('packages', 'base_price')) {
+            $selects[] = 'packages.base_price';
+        }
+        if (Schema::hasColumn('packages', 'is_discounted')) {
+            $selects[] = 'packages.is_discounted';
+        }
+        if (Schema::hasColumn('packages', 'discount')) {
+            $selects[] = 'packages.discount';
+        }
+
         $raw = DB::table('packages')
             ->where('packages.status', 1)
             ->leftJoin('package_images', 'packages.packageID', '=', 'package_images.packageID')
             ->leftJoin('package_type_mapping', 'packages.packageID', '=', 'package_type_mapping.packageID')
             ->leftJoin('package_types', 'package_type_mapping.typeID', '=', 'package_types.typeID')
-            ->select(
-                'packages.packageID as id',
-                'packages.name as title',
-                'packages.price',
-                'packages.description',
-                'package_images.imagePath',
-                'package_types.typeName as tag'
-            )
+            ->select($selects)
             ->get();
 
         $grouped = $raw->groupBy('id');
@@ -30,10 +43,29 @@ class PackageController extends Controller
         $packages = $grouped->map(function ($items, $id) {
             $first = $items->first();
 
+            // Derive discount if columns exist; remain backward compatible
+            $basePrice = property_exists($first, 'base_price') && $first->base_price !== null ? (float) $first->base_price : (float) $first->price;
+            $price = (float) $first->price;
+            $isDiscounted = property_exists($first, 'is_discounted') ? (int) $first->is_discounted : null;
+            $discount = property_exists($first, 'discount') ? (int) $first->discount : null;
+
+            // If discounted flag missing but base_price > price, derive flag & percentage
+            if ($basePrice > $price) {
+                if ($discount === null || $discount <= 0) {
+                    $discount = (int) round((($basePrice - $price) / $basePrice) * 100);
+                }
+                if ($isDiscounted === null) {
+                    $isDiscounted = $discount > 0 ? 1 : 0;
+                }
+            }
+
             return [
                 'id' => $id,
                 'title' => $first->title,
-                'price' => (float) $first->price,
+                'price' => $price,
+                'base_price' => $basePrice,
+                'is_discounted' => $isDiscounted ?? 0,
+                'discount' => $discount ?? 0,
                 'description' => $first->description,
                 'images' => $items->pluck('imagePath')->filter()->unique()->map(fn($path) => url($path))->values(),
                 'tags' => $items->pluck('tag')->filter()->unique()->values(),

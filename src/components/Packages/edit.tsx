@@ -74,6 +74,18 @@ const EditPackagePage = () => {
   const [hasDiscount, setHasDiscount] = useState(false);
   const [discount, setDiscount] = useState<number | "">("");
 
+  // Helper: convert minutes to friendly hours/minutes string
+  const formatDuration = (mins: number) => {
+    if (isNaN(mins) || mins < 0) return '';
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    const parts: string[] = [];
+    if (h > 0) parts.push(`${h}h`);
+    if (m > 0) parts.push(`${m}m`);
+    if (!parts.length) parts.push('0m');
+    return parts.join(' ');
+  };
+
 
   useEffect(() => {
     const fetchPackage = async () => {
@@ -336,19 +348,36 @@ const EditPackagePage = () => {
               <label className="block text-sm font-bold">Duration (minutes)</label>
               <input
                 type="number"
-                min={30}
+                min={5}
                 max={300}
-                step={30}
+                step={5}
                 value={duration}
                 onChange={(e) => {
-                  const val = e.target.value;
-                  if (/^\d*$/.test(val)) {
-                    setDuration(val === "" ? "" : Number(val));
-                  }
+                  const raw = e.target.value;
+                  if (!/^\d*$/.test(raw)) return; // ignore invalid
+                  if (raw === "") { setDuration(""); return; }
+                  let num = Number(raw);
+                  if (num > 300) num = 300;
+                  if (num < 5) num = 5;
+                  // snap to nearest multiple of 5
+                  num = Math.round(num / 5) * 5;
+                  setDuration(num);
+                }}
+                onBlur={() => {
+                  if (duration === "") return;
+                  let num = typeof duration === 'number' ? duration : Number(duration);
+                  if (num > 300) num = 300;
+                  if (num < 5) num = 5;
+                  num = Math.round(num / 5) * 5;
+                  setDuration(num);
                 }}
                 className="w-full px-3 py-2 border rounded-md text-sm"
                 placeholder="e.g., 60"
               />
+              <p className="mt-1 text-[11px] text-gray-500">Choose between 5 and 300 minutes in 5-minute increments.</p>
+              {duration !== "" && (
+                <p className="mt-0.5 text-[11px] text-gray-600">≈ {formatDuration(Number(duration))}</p>
+              )}
             </div>
 
             {/* Price */}
@@ -357,16 +386,28 @@ const EditPackagePage = () => {
               <input
                 type="number"
                 min={1}
+                max={5000}
                 value={basePrice}
                 onChange={(e) => {
                   const val = e.target.value;
-                  if (/^\d*$/.test(val)) {
-                    setBasePrice(val === "" ? "" : Number(val));
-                  }
+                  if (!/^\d*$/.test(val)) return;
+                  if (val === "") { setBasePrice(""); return; }
+                  let num = Number(val);
+                  if (num < 1) num = 1;
+                  if (num > 5000) num = 5000;
+                  setBasePrice(num);
+                }}
+                onBlur={() => {
+                  if (basePrice === "") return;
+                  let num = typeof basePrice === 'number' ? basePrice : Number(basePrice);
+                  if (num < 1) num = 1;
+                  if (num > 5000) num = 5000;
+                  setBasePrice(num);
                 }}
                 className="w-full px-3 py-2 border rounded-md text-sm"
                 placeholder="e.g., 1500"
               />
+              <p className="mt-1 text-[11px] text-gray-500">Maximum allowed base price is ₱5,000.</p>
             </div>
 
             {/* Discount */}
@@ -395,12 +436,25 @@ const EditPackagePage = () => {
                 value={discount}
                 onChange={(e) => {
                   const val = e.target.value;
-                  if (/^\d*$/.test(val)) setDiscount(val === "" ? "" : Number(val));
+                  if (!/^\d*$/.test(val)) return;
+                  if (val === "") { setDiscount(""); return; }
+                  let num = Number(val);
+                  if (num < 0) num = 0;
+                  if (num > 100) num = 100;
+                  setDiscount(num);
+                }}
+                onBlur={() => {
+                  if (discount === "") return;
+                  let num = typeof discount === 'number' ? discount : Number(discount);
+                  if (num < 0) num = 0;
+                  if (num > 100) num = 100;
+                  setDiscount(num);
                 }}
                 disabled={!hasDiscount}
                 className={`w-full px-3 py-2 border rounded-md text-sm mt-1 transition ${hasDiscount ? "bg-white" : "bg-gray-100 cursor-not-allowed"}`}
                 placeholder="e.g., 10"
               />
+              <p className="mt-1 text-[11px] text-gray-500">Discount can be 0–100%.</p>
 
 
               {hasDiscount && basePrice !== "" && discount !== "" && (
