@@ -873,7 +873,12 @@ export default function AdminMessageContent(): JSX.Element {
                       {selectedEmail.body.includes('\n#') ? selectedEmail.body.split('\n').pop() : ''}
                     </div>
                     <div className="text-sm text-slate-500">
-                      From: <span className="font-medium text-[#212121]">{selectedEmail.from}</span>
+                      {(() => {
+                        const show = selectedEmail.mailbox === 'sent' ? selectedEmail.from.split('<')[0].trim() : selectedEmail.from;
+                        return (
+                          <>From: <span className="font-medium text-[#212121]">{show}</span></>
+                        );
+                      })()}
                     </div>
                     <div className="text-xs text-slate-400">Received: {new Date(selectedEmail.time).toLocaleString()}</div>
                   </div>
