@@ -25,7 +25,8 @@ class TransactionController extends Controller
             $request->validate([
                 'package_id' => 'required|integer',
                 'booking_date' => 'required|date',  // Removed after_or_equal:today temporarily
-                'time_slot' => 'required|string',
+                'time_slot' => 'required|string', // booking start time in 12h label (e.g. 09:00 AM)
+                'end_time_slot' => 'required|string', // booking end time computed on UI (same format as start)
                 'name' => 'required|string|max:255',
                 'contact' => 'required|string|max:20',
                 'email' => 'required|email|max:255',
@@ -118,10 +119,23 @@ class TransactionController extends Controller
                 $bookingStatus = 2; // 2 = confirmed (when payment is made)
             }
 
-            // Parse the time slot to create start and end times
-            $timeSlot = $request->time_slot;
+            // Parse start & end time slots provided by UI (UI already accounts for package + addons duration)
+            $timeSlot = $request->time_slot; // e.g. "09:00 AM"
+            $endTimeSlot = $request->end_time_slot; // e.g. "09:30 AM" or other
             $startTime = $this->parseTimeSlot($timeSlot);
-            $endTime = $this->addHourToTime($startTime); // Assuming 1-hour duration
+            $endTime = $this->parseTimeSlot($endTimeSlot);
+
+            // Basic sanity check: if end <= start, fallback to +60 mins to avoid DB storing inverted interval
+            if (strtotime($endTime) <= strtotime($startTime)) {
+                \Log::warning('End time provided is not after start time. Falling back to +60 minutes', [
+                    'start' => $startTime,
+                    'end' => $endTime,
+                    'original_end_label' => $endTimeSlot,
+                    'booking_date' => $request->booking_date,
+                    'package_id' => $request->package_id
+                ]);
+                $endTime = $this->addHourToTime($startTime);
+            }
 
                         // Get the next bookingID since auto-increment is not working
             $maxBookingId = DB::table('booking')->max('bookingID') ?? 0;
@@ -144,7 +158,7 @@ class TransactionController extends Controller
                 'customerContactNo' => $request->contact,
                 'bookingDate' => $request->booking_date,
                 'bookingStartTime' => $startTime,
-                'bookingEndTime' => $endTime,
+                'bookingEndTime' => $endTime, // now sourced from UI computed duration
                 'subTotal' => $packagePrice,
                 'total' => $subtotal,
                 'receivedAmount' => $paidAmount,
@@ -200,6 +214,7 @@ class TransactionController extends Controller
                     'booking.bookingID',
                     'booking.bookingDate',
                     'booking.bookingStartTime',
+                    'booking.bookingEndTime',
                     'packages.name as packageName'
                 )
                 ->first();
@@ -207,10 +222,12 @@ class TransactionController extends Controller
             if ($bookingDetails) {
                 // Format the booking date and time
                 $bookingDate = \Carbon\Carbon::parse($bookingDetails->bookingDate)->format('F j, Y');
-                $bookingTime = \Carbon\Carbon::parse($bookingDetails->bookingStartTime)->format('g:i A');
-                
-                // Create dynamic message
-                $dynamicMessage = "Your booking for SFO#{$bookingDetails->bookingID} {$bookingDetails->packageName} has been confirmed for {$bookingDate} at {$bookingTime}.";
+                $bookingStartTimeLabel = \Carbon\Carbon::parse($bookingDetails->bookingStartTime)->format('g:i A');
+                $bookingEndTimeLabel = $bookingDetails->bookingEndTime ? \Carbon\Carbon::parse($bookingDetails->bookingEndTime)->format('g:i A') : null;
+
+                // Create dynamic message (include end time if present)
+                $timeRange = $bookingEndTimeLabel ? $bookingStartTimeLabel . ' - ' . $bookingEndTimeLabel : $bookingStartTimeLabel;
+                $dynamicMessage = "Your booking for SFO#{$bookingDetails->bookingID} {$bookingDetails->packageName} has been confirmed for {$bookingDate} at {$timeRange}.";
 
                 // Create notification
                 $notification = Notification::create([
@@ -284,6 +301,7 @@ class TransactionController extends Controller
                 'booking.bookingDate',
                 'booking.date as transactionDate',
                 'booking.bookingStartTime as time',
+                'booking.bookingEndTime as end_time',
                 'booking.subTotal as subtotal',
                 'booking.total',
                 'booking.receivedAmount as paidAmount',
@@ -300,8 +318,9 @@ class TransactionController extends Controller
             return null;
         }
 
-        // Format time from 24-hour to 12-hour format
-        $formattedTime = $this->formatTimeTo12Hour($booking->time);
+    // Format start & end time from 24-hour to 12-hour format
+    $formattedTime = $this->formatTimeTo12Hour($booking->time);
+    $formattedEndTime = $this->formatTimeTo12Hour($booking->end_time);
 
         // Get booking addons
         $addons = DB::table('booking_addons')
@@ -319,7 +338,8 @@ class TransactionController extends Controller
             'package' => $booking->package,
             'bookingDate' => $booking->bookingDate,
             'transactionDate' => $booking->transactionDate,
-            'time' => $formattedTime,
+            'time' => $formattedTime, // start time (existing key kept for backward compatibility)
+            'endTime' => $formattedEndTime, // new key for end time in 12h format
             'subtotal' => (float)$booking->subtotal,
             'total' => (float)$booking->total,
             'paidAmount' => (float)$booking->paidAmount,
@@ -349,17 +369,20 @@ class TransactionController extends Controller
                 return response()->json(['error' => 'Date parameter is required'], 400);
             }
             
-            // Get all booked time slots for the given date
-            $bookedSlots = DB::table('booking')
+            // Get all booked time slots for the given date with start + end
+            $bookings = DB::table('booking')
                 ->where('bookingDate', $date)
-                ->whereIn('status', [0, 2]) // 0 = pending, 2 = confirmed (exclude cancelled)
-                ->pluck('bookingStartTime')
-                ->map(function ($time) {
-                    // Convert 24-hour format to 12-hour format
-                    return $this->formatTimeTo12Hour($time);
-                })
-                ->toArray();
-            
+                ->whereIn('status', [0, 2]) // 0 = pending, 2 = confirmed
+                ->select('bookingStartTime', 'bookingEndTime')
+                ->get();
+
+            $bookedSlots = $bookings->map(function ($b) {
+                return [
+                    'start' => $this->formatTimeTo12Hour($b->bookingStartTime),
+                    'end' => $b->bookingEndTime ? $this->formatTimeTo12Hour($b->bookingEndTime) : null,
+                ];
+            });
+
             return response()->json([
                 'success' => true,
                 'bookedSlots' => $bookedSlots

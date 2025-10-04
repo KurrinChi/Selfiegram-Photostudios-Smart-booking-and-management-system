@@ -288,6 +288,7 @@ if (isPreviewMode && previewData) {
         package_id: previewData.packageId,
         booking_date: previewData.bookingDate,
         time_slot: previewData.time,
+        end_time_slot: computedEndLabel || previewData.predictedEndLabel || previewData.time, // send end time to backend
         name: previewData.customerName,
         contact: previewData.contact,
         email: previewData.email,
