@@ -19,6 +19,11 @@ class PackageController extends Controller
             'package_images.imagePath',
             'package_types.typeName as tag'
         ];
+        // Include duration if column exists
+        if (Schema::hasColumn('packages', 'duration')) {
+            // Put duration right after title for consistency
+            array_splice($selects, 2, 0, ['packages.duration as duration']);
+        }
         // Include discount related columns if they exist (backward compatible with older schema)
         if (Schema::hasColumn('packages', 'base_price')) {
             $selects[] = 'packages.base_price';
@@ -62,6 +67,8 @@ class PackageController extends Controller
             return [
                 'id' => $id,
                 'title' => $first->title,
+                // Return raw duration (do not force int cast so formats like "1 hr 30 mins" survive)
+                'duration' => property_exists($first, 'duration') ? $first->duration : null,
                 'price' => $price,
                 'base_price' => $basePrice,
                 'is_discounted' => $isDiscounted ?? 0,
@@ -78,20 +85,24 @@ class PackageController extends Controller
     //Get a single package by ID
     public function show($id)
     {
+        $showSelects = [
+            'packages.packageID as id',
+            'packages.name as title',
+            'packages.price',
+            'packages.description',
+            'package_images.imagePath',
+            'package_types.typeName as tag'
+        ];
+        if (Schema::hasColumn('packages', 'duration')) {
+            array_splice($showSelects, 2, 0, ['packages.duration as duration']);
+        }
         $raw = DB::table('packages')
             ->where('packages.status', 1)
             ->where('packages.packageID', $id)
             ->leftJoin('package_images', 'packages.packageID', '=', 'package_images.packageID')
             ->leftJoin('package_type_mapping', 'packages.packageID', '=', 'package_type_mapping.packageID')
             ->leftJoin('package_types', 'package_type_mapping.typeID', '=', 'package_types.typeID')
-            ->select(
-                'packages.packageID as id',
-                'packages.name as title',
-                'packages.price',
-                'packages.description',
-                'package_images.imagePath',
-                'package_types.typeName as tag'
-            )
+            ->select($showSelects)
             ->get();
 
         if ($raw->isEmpty()) {
@@ -103,6 +114,7 @@ class PackageController extends Controller
         $package = [
             'id' => $first->id,
             'title' => $first->title,
+            'duration' => property_exists($first, 'duration') ? $first->duration : null,
             'price' => (float) $first->price,
             'description' => $first->description,
             'images' => $raw->pluck('imagePath')->filter()->unique()->map(fn($path) => url($path))->values(),

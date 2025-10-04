@@ -145,6 +145,9 @@ interface PreviewBookingData {
   paymentType: "deposit" | "full";
   paymentMode: string;
   packageId: string;
+  packageDuration?: string; // added for modal end-time display
+  packageDurationMinutes?: number; // numeric duration for direct use
+  predictedEndLabel?: string; // precomputed end time label
 }
 
 const API_URL = import.meta.env.VITE_API_URL;
@@ -588,7 +591,46 @@ const SelectPackagePage = () => {
       try {
         const response = await fetchWithAuth(`${API_URL}/api/packages/${id}`);
         const data = await response.json();
-        setPkg(data);
+        // DEBUG: Log raw package payload
+        try {
+          console.groupCollapsed('DEBUG: Fetched package payload');
+          console.log('Raw data:', data);
+          console.log('Raw duration field value:', (data && (data.duration || data?.packageDuration || data?.package_duration)) ?? '<<undefined>>');
+          // Attempt to normalize duration
+          const rawDuration = data?.duration || data?.packageDuration || data?.package_duration || '';
+          // Reuse existing parseDurationToMinutes below (defined later) by creating a temp inline parser copy (since function not yet in scope here at runtime ordering)
+          const tmpParse = (raw: string): number => {
+            if (!raw || typeof raw !== 'string') return 0;
+            const s = raw.toLowerCase();
+            if (/^\d+$/.test(s)) return parseInt(s, 10);
+            let total = 0;
+            const hourMatch = s.match(/(\d+)\s*(hour|hr|hrs|h)/);
+            if (hourMatch) total += parseInt(hourMatch[1], 10) * 60;
+            const minuteMatch = s.match(/(\d+)\s*(minute|min|mins|m)/);
+            if (minuteMatch) total += parseInt(minuteMatch[1], 10);
+            if (total === 0) {
+              const generic = s.match(/(\d+)/g);
+              if (generic) {
+                if (/hour|hr|hrs|h/.test(s)) {
+                  total += parseInt(generic[0], 10) * 60;
+                  if (generic[1]) total += parseInt(generic[1], 10);
+                } else {
+                  total += parseInt(generic[0], 10);
+                }
+              }
+            }
+            return total;
+          };
+          const parsedMinutes = tmpParse(rawDuration);
+          console.log('Parsed duration minutes (debug immediate):', parsedMinutes);
+          if (parsedMinutes === 60 && rawDuration && /10/.test(rawDuration)) {
+            console.warn('DEBUG: Duration contains "10" but parsed to 60. Raw string might have unexpected format. Raw:', rawDuration);
+          }
+          console.groupEnd();
+        } catch (e) {
+          console.warn('DEBUG: Error logging fetched package payload', e);
+        }
+        setPkg(data); // store after logging
       } catch (error) {
         console.error("Failed to fetch package:", error);
         setPkg(null);
@@ -667,6 +709,21 @@ const SelectPackagePage = () => {
     const paidAmount = paymentType === "full" ? subtotal : 200;
     const pendingBalance = subtotal - paidAmount;
 
+    // Compute end label now so modal does not need to refetch duration
+    const minutesToLabel = (total: number): string => {
+      const h24 = Math.floor(total / 60);
+      const m = total % 60;
+      const period = h24 >= 12 ? "PM" : "AM";
+      let h12 = h24 % 12;
+      if (h12 === 0) h12 = 12;
+      return `${String(h12).padStart(2, "0")}:${String(m).padStart(2, "0")} ${period}`;
+    };
+    const startMinutes = slotLabelToMinutes(selectedTime);
+    console.log('DEBUG: Preparing preview. Selected start label:', selectedTime, '-> startMinutes:', startMinutes, 'package raw duration:', pkg?.duration, 'effectivePackageDuration (parsed + addons):', effectivePackageDuration);
+    const predictedEndLabel = Number.isFinite(startMinutes)
+      ? minutesToLabel(startMinutes + effectivePackageDuration)
+      : "";
+
     const preview: PreviewBookingData = {
       customerName: name,
       email: email,
@@ -681,6 +738,9 @@ const SelectPackagePage = () => {
       paymentType: paymentType,
       paymentMode: paymentMode,
       packageId: id!,
+      packageDuration: pkg.duration, // pass raw duration so modal can compute end time without refetch race
+  packageDurationMinutes: effectivePackageDuration,
+      predictedEndLabel,
     };
 
     setPreviewData(preview);
@@ -739,22 +799,33 @@ const SelectPackagePage = () => {
   };
 
   // Parse duration string (e.g., "1 hr", "2 hrs 30 mins", "90 mins") to minutes
-  const parseDurationToMinutes = (raw: string): number => {
-    if (!raw || typeof raw !== 'string') return 0;
-    const s = raw.toLowerCase();
-    // If it's a plain number assume minutes
+  const parseDurationToMinutes = (raw: unknown): number => {
+    if (raw === null || raw === undefined) return 0;
+    if (typeof raw === 'number') {
+      return Number.isFinite(raw) && raw >= 0 ? raw : 0;
+    }
+    if (typeof raw !== 'string') return 0;
+    const s = raw.trim().toLowerCase();
+    if (!s) return 0;
+    // Pure number => minutes
     if (/^\d+$/.test(s)) return parseInt(s, 10);
     let total = 0;
     const hourMatch = s.match(/(\d+)\s*(hour|hr|hrs|h)/);
     if (hourMatch) total += parseInt(hourMatch[1], 10) * 60;
-    // Support patterns like "1 hr 30", "1h30m"
     const minuteMatch = s.match(/(\d+)\s*(minute|min|mins|m)/);
     if (minuteMatch) total += parseInt(minuteMatch[1], 10);
-    // Handle composite like "1 hr 30 mins" already covered; fallback: if only one number and includes 'hr' add 60 per number
+    // Support compact forms like 1h30m
+    if (total === 0) {
+      const compact = s.match(/(\d+)h(\d+)?m?/);
+      if (compact) {
+        total += parseInt(compact[1], 10) * 60;
+        if (compact[2]) total += parseInt(compact[2], 10);
+      }
+    }
+    // Heuristic fallback if still zero: grab first number(s)
     if (total === 0) {
       const generic = s.match(/(\d+)/g);
       if (generic) {
-        // Heuristic: if keyword hour present, treat first as hours maybe second as minutes
         if (/hour|hr|hrs|h/.test(s)) {
           total += parseInt(generic[0], 10) * 60;
           if (generic[1]) total += parseInt(generic[1], 10);
@@ -766,8 +837,36 @@ const SelectPackagePage = () => {
     return total;
   };
 
-  // Current package duration minutes (for disabling start times that can't fit)
-  const currentPackageDuration = parseDurationToMinutes(pkg?.duration || '') || 60; // fallback 60
+  // Base package duration minutes
+  const basePackageDuration = (() => {
+    const mins = parseDurationToMinutes(pkg?.duration);
+    if (mins === 0) {
+      console.warn('DEBUG duration fallback to 60 because parsed minutes was 0. Raw value:', pkg?.duration);
+    }
+    return mins || 60;
+  })();
+
+  // Mapping of add-on IDs that contribute extra session minutes
+  const EXTRA_DURATION_ADDON_MINUTES: Record<string, number> = {
+    '70': 5,   // Addl 5 mins
+    '80': 20,  // Photographer service for 20 mins
+    '90': 60,  // Photographer service for 1 hr
+  };
+
+  // Sum extra minutes from selected active add-ons
+  const extraDurationMinutes = selectedAddons.reduce((sum, addon) => {
+    if (addon.value <= 0) return sum;
+    const perUnit = EXTRA_DURATION_ADDON_MINUTES[addon.id];
+    if (!perUnit) return sum;
+    // If spinner quantity, multiply; otherwise add once
+    const qty = addon.type === 'spinner' ? addon.value : 1;
+    return sum + perUnit * qty;
+  }, 0);
+
+  const effectivePackageDuration = basePackageDuration + extraDurationMinutes;
+  if (extraDurationMinutes > 0) {
+    console.log('DEBUG effective duration: base', basePackageDuration, '+ extra', extraDurationMinutes, '= total', effectivePackageDuration);
+  }
 
   // Business day boundaries in minutes (start 09:00, end after last slot 21:00 to allow 8:30 PM 30-min slot)
   // Adjusted business end boundary: removing 07:30 PM onward means last valid start (e.g., 07:00 PM for 60m)
@@ -1349,7 +1448,7 @@ const SelectPackagePage = () => {
                     (slotStart < iv.end && slotEnd > iv.start)
                   );
                   // If user started a new booking at this slot, would its duration overlap existing intervals or exceed day end?
-                  const wouldEnd = slotStart + currentPackageDuration;
+                  const wouldEnd = slotStart + effectivePackageDuration;
                   const insufficientRemaining = wouldEnd > DAY_END_MIN;
                   const intervalConflict = bookedIntervals.some(iv => (slotStart < iv.end) && (wouldEnd > iv.start));
                   const isBooked = overlapsExisting;
@@ -1373,7 +1472,7 @@ const SelectPackagePage = () => {
                           : isBooked
                           ? "Overlaps an existing booking"
                           : insufficientRemaining
-                          ? `Not enough time for a ${currentPackageDuration}-minute session before closing`
+                          ? `Not enough time for a ${effectivePackageDuration}-minute session before closing`
                           : intervalConflict
                           ? "Your session would overlap another booking"
                           : ""

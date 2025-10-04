@@ -37,6 +37,9 @@ interface PreviewBookingData {
   paymentType: 'deposit' | 'full';
   paymentMode: string;
   packageId: string;
+  packageDuration?: string; // raw duration passed from select page
+  packageDurationMinutes?: number; // numeric duration passed from preview
+  predictedEndLabel?: string; // precomputed end label passed from preview
 }
 
 interface TransactionModalProps {
@@ -58,7 +61,6 @@ interface AddOn {
   required?: boolean;
 }
 const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
-const RECEIPT_URL = import.meta.env.VITE_URL;
 function getContrastColor(hex: string) {
   const c = hex.substring(1); // remove #
   const rgb = parseInt(c, 16); // convert rrggbb to decimal
@@ -89,6 +91,116 @@ const TransactionModalBooking: React.FC<TransactionModalProps> = ({
   // Determine if we're in preview mode or showing actual booking data
   const isPreviewMode = !!previewData && !data;
   const displayData = data || previewData;
+
+  /* -------------------------------------------------------
+     Duration / End Time Calculation (client-only)
+     We fetch the package duration (using packageId for preview,
+     or matching by name for existing booking) and compute
+     end time = start time + duration minutes.
+  -------------------------------------------------------- */
+  const [packageDurationMinutes, setPackageDurationMinutes] = useState<number | null>(
+    null
+  );
+  const [computedEndLabel, setComputedEndLabel] = useState<string>("");
+  const API_PACKAGES_BASE = `${API_URL}/api/packages`;
+
+  const parseDurationToMinutes = (raw?: string | null): number => {
+    if (!raw || typeof raw !== "string") return 0;
+    const s = raw.toLowerCase().trim();
+    if (/^\d+$/.test(s)) return parseInt(s, 10); // pure minutes
+    let total = 0;
+    const hourMatch = s.match(/(\d+)\s*(hour|hr|hrs|h)/);
+    if (hourMatch) total += parseInt(hourMatch[1], 10) * 60;
+    const minMatch = s.match(/(\d+)\s*(minute|min|mins|m)/);
+    if (minMatch) total += parseInt(minMatch[1], 10);
+    if (total === 0) {
+      const nums = s.match(/(\d+)/g);
+      if (nums) {
+        if (/hour|hr|hrs|h/.test(s)) {
+          total += parseInt(nums[0], 10) * 60;
+          if (nums[1]) total += parseInt(nums[1], 10);
+        } else {
+          total += parseInt(nums[0], 10);
+        }
+      }
+    }
+    return total; // may be 0 -> fallback applied later
+  };
+
+  const slotLabelToMinutes = (label: string): number => {
+    if (!label) return NaN;
+    const parts = label.trim().split(/\s+/); // [HH:MM, AM]
+    if (parts.length < 2) return NaN;
+    const [time, period] = parts;
+    const [hhStr, mmStr] = time.split(":");
+    const hh = parseInt(hhStr, 10);
+    const mm = parseInt(mmStr, 10);
+    if (isNaN(hh) || isNaN(mm)) return NaN;
+    let hour24 = hh;
+    if (period.toUpperCase() === "PM" && hh !== 12) hour24 = hh + 12;
+    if (period.toUpperCase() === "AM" && hh === 12) hour24 = 0;
+    return hour24 * 60 + mm;
+  };
+
+  const minutesToLabel = (total: number): string => {
+    if (!Number.isFinite(total)) return "";
+    const h24 = Math.floor(total / 60);
+    const m = total % 60;
+    const period = h24 >= 12 ? "PM" : "AM";
+    let h12 = h24 % 12;
+    if (h12 === 0) h12 = 12;
+    return `${String(h12).padStart(2, "0")}:${String(m).padStart(2, "0")} ${period}`;
+  };
+
+  // Fetch duration on open
+  useEffect(() => {
+    if (!isOpen || !displayData) return;
+    // Preview: consume precomputed minutes or raw duration
+    if (isPreviewMode) {
+      if (previewData?.packageDurationMinutes) {
+        setPackageDurationMinutes(previewData.packageDurationMinutes);
+        return;
+      }
+      if (previewData?.packageDuration) {
+        setPackageDurationMinutes(parseDurationToMinutes(previewData.packageDuration) || 60);
+        return;
+      }
+    }
+    // Existing booking fallback fetch once
+    let cancelled = false;
+    const fetchDuration = async () => {
+      try {
+        const res = await fetchWithAuth(API_PACKAGES_BASE);
+        if (!res.ok) throw new Error('fail');
+        const list = await res.json();
+        if (Array.isArray(list)) {
+          const found = list.find((pk: any) => (pk?.name || '').toString() === displayData.package);
+          if (found && !cancelled) {
+            setPackageDurationMinutes(parseDurationToMinutes(found.duration) || 60);
+          }
+        }
+      } catch (_) {
+        if (!cancelled) setPackageDurationMinutes((m)=> m ?? 60);
+      }
+    };
+    fetchDuration();
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, displayData?.package, isPreviewMode, previewData?.packageDurationMinutes, previewData?.packageDuration]);
+
+  // Compute end label whenever start time OR duration available
+  useEffect(() => {
+    if (!displayData?.time) return;
+    // If preview came with precomputed label, just use it.
+    if (isPreviewMode && previewData?.predictedEndLabel) {
+      setComputedEndLabel(previewData.predictedEndLabel);
+      return;
+    }
+    if (!packageDurationMinutes) return;
+    const startMinutes = slotLabelToMinutes(displayData.time);
+    if (!Number.isFinite(startMinutes)) return;
+    setComputedEndLabel(minutesToLabel(startMinutes + packageDurationMinutes));
+  }, [displayData?.time, packageDurationMinutes, isPreviewMode, previewData?.predictedEndLabel]);
 
     useEffect(() => {
     if (data) {
@@ -431,13 +543,12 @@ if (isPreviewMode && previewData) {
               />
             </div>
             <div>
-              <label className="text-gray-500 block text-xs mb-1">
-                Booking Time
-              </label>
+              <label className="text-gray-500 block text-xs mb-1">Booking Time</label>
               <input
                 disabled
-                value={displayData.time}
+                value={computedEndLabel ? `${displayData.time} - ${computedEndLabel}` : displayData.time}
                 className="w-full border rounded-md px-3 py-1.5 bg-gray-100"
+                title={packageDurationMinutes ? `Duration: ${packageDurationMinutes} mins` : 'Duration loading...'}
               />
             </div>
           </div>
