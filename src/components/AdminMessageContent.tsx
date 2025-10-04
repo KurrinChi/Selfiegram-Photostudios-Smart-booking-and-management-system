@@ -22,6 +22,8 @@ export type Email = {
   avatar?: string | null;
   senderID?: number;
   messageStatus?: number; // 0 pending, 1 accommodated
+  // For sent (replied) messages we can attach the admin's reply notification(s)
+  replies?: { notificationID: number; title: string; message: string; time: string }[];
 };
 
 /* ---------------- Utilities ---------------- */
@@ -96,6 +98,7 @@ function mapRawToEmail(r: RawMessage, apiBase: string): Email {
     avatar: buildAvatarURL(r.profilePicture, apiBase),
     senderID: r.senderID,
     messageStatus: r.messageStatus,
+    replies: undefined,
   };
 }
 
@@ -133,6 +136,19 @@ function buildReplyBody(email: Email, adminName: string) {
     `${header}`,
     original
   ].join('\n');
+}
+
+// Extract all #<number> tokens from a text blob (e.g. "Thanks... #54")
+// Returns an array of numeric ID strings without the leading '#'.
+function extractHashIds(text: string | null | undefined): string[] {
+  if (!text) return [];
+  const out: string[] = [];
+  const re = /#(\d{1,10})/g; // up to 10 digits just to be safe
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text)) !== null) {
+    out.push(m[1]);
+  }
+  return out;
 }
 
 /* -------------- Component -------------- */
@@ -276,6 +292,8 @@ export default function AdminMessageContent(): JSX.Element {
   const [replyTargetUserID, setReplyTargetUserID] = useState<number | null>(null);
   const [replyTargetMessageID, setReplyTargetMessageID] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
+  // Track which message IDs are currently loading replies to avoid duplicate fetches
+  const loadingRepliesRef = useRef<Set<string>>(new Set());
 
   /* Debounce search */
   useEffect(() => {
@@ -600,6 +618,49 @@ export default function AdminMessageContent(): JSX.Element {
     setReplyTargetMessageID(email.id);
   }, [toggleCompose, adminName]);
 
+  // Helper to normalize subjects (strip common reply prefixes)
+  const normalizeSubject = (s: string) => s.replace(/^re:\s*/i,'').trim().toLowerCase();
+
+  // Load admin reply notifications for a given sent message (original customer message moved to sent)
+  const loadReplies = useCallback(async (email: Email) => {
+    if (!API_URL || !token) return;
+    if (!email.senderID) return; // need user association
+    if (loadingRepliesRef.current.has(email.id)) return;
+    // Only load if we are in sent mailbox context and replies not already loaded
+    if (email.mailbox !== 'sent' || email.replies !== undefined) return;
+    loadingRepliesRef.current.add(email.id);
+    try {
+      const res = await fetch(`${API_URL}/api/notifications/${email.senderID}`, {
+        headers: { 'Authorization': `Bearer ${token}`, 'Accept':'application/json' }
+      });
+      if (!res.ok) return;
+      const rows = await res.json();
+      if (!Array.isArray(rows)) return;
+      const targetId = String(email.id); // messageID of original message
+      // Strategy: scan each notification message body for any #<number> tokens; if one matches the target messageID we treat it as the admin reply to that thread.
+      const matches = rows
+        .filter((n:any) => n && n.label === 'Support')
+        .filter((n:any) => {
+          const ids = extractHashIds(String(n.message || ''));
+            return ids.includes(targetId);
+        })
+        .map((n:any) => ({ notificationID: n.notificationID, title: n.title, message: n.message, time: n.time }));
+      if (DEBUG_MESSAGES) console.debug('[Messages] Reply resolution (hash match)', { messageID: targetId, matched: matches.length });
+      setEmails(prev => prev.map(e => e.id === email.id ? { ...e, replies: matches } : e));
+    } catch (err) {
+      if (DEBUG_MESSAGES) console.debug('[Messages] loadReplies error', err);
+    } finally {
+      loadingRepliesRef.current.delete(email.id);
+    }
+  }, [API_URL, token, setEmails]);
+
+  // Whenever a sent message is selected, attempt to load its replies (once)
+  useEffect(() => {
+    if (selectedMailbox === 'sent' && selectedEmail) {
+      loadReplies(selectedEmail);
+    }
+  }, [selectedMailbox, selectedEmail, loadReplies]);
+
   /* Keyboard shortcuts */
   useEffect(() => {
     const handler = (ev: KeyboardEvent) => {
@@ -749,11 +810,9 @@ export default function AdminMessageContent(): JSX.Element {
                     </div>
                     <div className="text-sm text-slate-700 truncate">{e.subject}</div>
                     <div className="text-xs text-slate-500 truncate">{e.body.replace(/\n/g, ' ').slice(0, 80)}</div>
-                    <div className="flex items-center gap-2 mt-2">
-                      {e.starred && <StarIcon className="w-3 h-3" />}
-                    </div>
+                    {/* Removed secondary star indicator to avoid duplicate icon in inbox; the toggle button at right already reflects state */}
                   </div>
-                  {selectedMailbox === 'inbox' && (
+                  {(selectedMailbox === 'inbox' || selectedMailbox === 'sent') && (
                     <div className="ml-auto pl-2 flex items-start">
                       <button
                         onClick={(ev) => { ev.stopPropagation(); toggleStar(e.id); }}
@@ -810,11 +869,11 @@ export default function AdminMessageContent(): JSX.Element {
                     </button>
                     <button
                       onClick={() => toggleStar(selectedEmail.id)}
-                      className={`flex items-center gap-2 px-3 py-2 rounded-md transition ${selectedEmail?.starred ? 'text-yellow-500 hover:bg-yellow-50' : 'hover:bg-slate-100'}`}
-                      aria-label={selectedEmail?.starred ? 'Unstar' : 'Star'}
+                      className={`flex items-center gap-2 px-3 py-2 rounded-md transition ${selectedEmail.starred ? 'text-amber-500 hover:bg-amber-50' : 'hover:bg-slate-100'}`}
+                      aria-label={selectedEmail.starred ? 'Unstar' : 'Star'}
                     >
-                      <StarIcon className="w-4 h-4" />
-                      <span className="hidden sm:inline text-sm">{selectedEmail?.starred ? 'Unstar' : 'Star'}</span>
+                      <StarIcon className={`w-4 h-4 ${selectedEmail.starred ? 'fill-amber-400 text-amber-500' : ''}`} />
+                      <span className="hidden sm:inline text-sm">{selectedEmail.starred ? 'Unstar' : 'Star'}</span>
                     </button>
                   </>
                 )}
@@ -884,7 +943,24 @@ export default function AdminMessageContent(): JSX.Element {
                   </div>
                 </div>
                 <div className="mt-6 prose prose-slate">
-                  <pre className="whitespace-pre-wrap font-sans text-[#212121] leading-relaxed">{selectedEmail.body}</pre>
+                  {selectedMailbox === 'sent' && selectedEmail.replies !== undefined && (
+                    <div className="mb-6 space-y-4">
+                      {selectedEmail.replies.length === 0 && (
+                        <div className="text-xs text-slate-400">(No stored admin reply notification matched this subject)</div>
+                      )}
+                      {selectedEmail.replies.map(r => (
+                        <div key={r.notificationID} className="border border-emerald-100 bg-emerald-50/50 rounded p-4">
+                          <div className="text-[11px] uppercase tracking-wide font-semibold text-emerald-600 mb-1">Admin Reply</div>
+                          <pre className="whitespace-pre-wrap font-sans text-[#212121] leading-relaxed">{r.message}</pre>
+                          <div className="mt-2 text-[10px] text-emerald-500">{new Date(r.time).toLocaleString()}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <div className="border border-slate-100 rounded p-4 bg-white">
+                    <div className="text-[11px] uppercase tracking-wide font-semibold text-slate-500 mb-2">Customer Message</div>
+                    <pre className="whitespace-pre-wrap font-sans text-[#212121] leading-relaxed">{selectedEmail.body}</pre>
+                  </div>
                 </div>
               </>
             ) : (
