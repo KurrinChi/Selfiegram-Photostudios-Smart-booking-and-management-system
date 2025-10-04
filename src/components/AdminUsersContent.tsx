@@ -7,6 +7,7 @@ import AssignRoleModal from "./ModalAssignRoleDialog.tsx";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import CenteredLoader from "./CenteredLoader";
 
 interface Appointment {
   id: string;
@@ -219,7 +220,7 @@ const AdminUsersContent: React.FC = () => {
       <div className="relative overflow-x-auto overflow-y-auto h-[calc(90vh-160px)] rounded-lg border border-gray-200">
         {loading ? (
           <div className="flex items-center justify-center h-full text-sm text-gray-500">
-            Loading users...
+            <CenteredLoader message="Loading users..." />
           </div>
         ) : (
           <table className="min-w-full text-left text-xs">

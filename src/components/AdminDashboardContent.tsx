@@ -4,7 +4,7 @@
 // Install deps:
 //   npm i recharts react-date-range date-fns
 // -----------------------------------------------------------------------------
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import {
   BarChart,
   Bar,
@@ -33,10 +33,10 @@ import "react-date-range/dist/styles.css";
 import "react-date-range/dist/theme/default.css";
 import "../styles/print.css";
 import axios from "axios";
-import { useEffect } from "react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import DashboardReportPDF from "./DashboardReportPDF";
+import CenteredLoader from "./CenteredLoader";
 
 // -----------------------------------------------------------------------------
 // Types
@@ -91,10 +91,6 @@ interface PackageRow {
 }
 
 // -----------------------------------------------------------------------------
-// Static Demo Data (replace w/ API) - keeping for reference
-// -----------------------------------------------------------------------------
-
-// -----------------------------------------------------------------------------
 // Helper Components
 // -----------------------------------------------------------------------------
 const TrendArrow: React.FC<{ up: boolean }> = ({ up }) => (
@@ -104,7 +100,6 @@ const TrendArrow: React.FC<{ up: boolean }> = ({ up }) => (
   />
 );
 
-// ⭐ Read‑only star rating (no click interaction)
 const StarRating: React.FC<{ value: number }> = ({ value }) => (
   <div className="flex gap-1">
     {Array.from({ length: 5 }).map((_, idx) => {
@@ -121,7 +116,6 @@ const StarRating: React.FC<{ value: number }> = ({ value }) => (
   </div>
 );
 
-
 // -----------------------------------------------------------------------------
 // Main Component
 // -----------------------------------------------------------------------------
@@ -132,22 +126,10 @@ const AdminDashboardContents: React.FC = () => {
     totalSales: 0,
     totalAppointments: 0,
     hasDateRange: false,
-    salesTrend: {
-      value: "0%",
-      up: true,
-    },
-    userTrend: {
-      value: "0%",
-      up: true,
-    },
-    scheduleTrend: {
-      value: "0%",
-      up: true,
-    },
-    appointmentsTrend: {
-      value: "0%",
-      up: true,
-    },
+    salesTrend: { value: "0%", up: true },
+    userTrend: { value: "0%", up: true },
+    scheduleTrend: { value: "0%", up: true },
+    appointmentsTrend: { value: "0%", up: true },
   });
 
   const API_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
@@ -161,7 +143,6 @@ const AdminDashboardContents: React.FC = () => {
   ]);
 
   const [isDefaultRange, setIsDefaultRange] = useState(true);
-
   const [grossIncomeWeeklyData, setGrossIncomeWeeklyData] = useState<
     WeeklyIncome[]
   >([]);
@@ -170,77 +151,56 @@ const AdminDashboardContents: React.FC = () => {
   const start = format(startDate, "yyyy-MM-dd");
   const end = format(endDate, "yyyy-MM-dd");
 
+  // Loading state
+  const [loading, setLoading] = useState(true);
+
   useEffect(() => {
+    setLoading(true);
     const token = localStorage.getItem("token");
 
-    // Summary cards - only send date params if user has actively changed the range
     const params = isDefaultRange ? {} : { startDate: start, endDate: end };
 
-    console.log("Dashboard API call:", {
-      isDefaultRange,
+    const fetchSummary = axios.get<SummaryData>(`${API_URL}/api/admin/summary`, {
       params,
-      startDate: start,
-      endDate: end,
+      headers: { Authorization: `Bearer ${token}` },
     });
 
-    axios
-      .get<SummaryData>(`${API_URL}/api/admin/summary`, {
-        params,
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
-      .then((r) => {
-        console.log("Dashboard API response:", r.data);
-        setSummaryData(r.data);
-      })
-      .catch((e) => console.error(e));
+    const fetchWeeklyIncome = axios.get<WeeklyIncome[]>(
+      `${API_URL}/api/admin/gross-income-weekly`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
 
-    // Weekly gross income graph
-    axios
-      .get<WeeklyIncome[]>(`${API_URL}/api/admin/gross-income-weekly`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+    const fetchPackages = axios.get<PackageRow[]>(`${API_URL}/api/admin/packages`, {
+      params: { startDate: start, endDate: end },
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    Promise.all([fetchSummary, fetchWeeklyIncome, fetchPackages])
+      .then(([summaryRes, weeklyRes, packagesRes]) => {
+        setSummaryData(summaryRes.data);
+        setGrossIncomeWeeklyData(weeklyRes.data);
+        setPackageRows(packagesRes.data);
       })
-      .then((res) => setGrossIncomeWeeklyData(res.data))
-      .catch(console.error);
+      .catch(console.error)
+      .finally(() => setLoading(false));
   }, [range, isDefaultRange, start, end]);
 
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-
-    // Package details
-    axios
-      .get<PackageRow[]>(`${API_URL}/api/admin/packages`, {
-        params: { startDate: start, endDate: end },
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
-      .then((r) => {
-        console.log(r.data);
-        setPackageRows(r.data);
-      })
-      .catch(console.error);
-  }, [start, end]);
-
-  //Summary Cards for Total User, Total Schedule, Total Sales, and Total Appointments
+  //Summary Cards
   const summaryCards: SummaryCard[] = [
     {
       label: "Total User",
       value: summaryData?.totalUsers ?? 0,
       icon: faUser,
       trend: summaryData?.hasDateRange
-        ? { value: "—", up: true } // Neutral when date range is selected
+        ? { value: "—", up: true }
         : summaryData?.userTrend ?? { value: "0%", up: true },
     },
     {
-      label: "Total Schedule", // This shows bookings from today onwards
+      label: "Total Schedule",
       value: summaryData?.totalBookings ?? 0,
       icon: faClipboardList,
       trend: summaryData?.hasDateRange
-        ? { value: "—", up: true } // Neutral when date range is selected
+        ? { value: "—", up: true }
         : summaryData?.scheduleTrend ?? { value: "0%", up: true },
     },
     {
@@ -248,15 +208,15 @@ const AdminDashboardContents: React.FC = () => {
       value: `₱ ${summaryData?.totalSales?.toLocaleString() ?? "0"}`,
       icon: faPesoSign,
       trend: summaryData?.hasDateRange
-        ? { value: "—", up: true } // Neutral when date range is selected
+        ? { value: "—", up: true }
         : summaryData?.salesTrend ?? { value: "0%", up: true },
     },
     {
-      label: "Total Appointments", // This shows all bookings (overall count)
+      label: "Total Appointments",
       value: summaryData?.totalAppointments ?? 0,
       icon: faCalendarAlt,
       trend: summaryData?.hasDateRange
-        ? { value: "—", up: true } // Neutral when date range is selected
+        ? { value: "—", up: true }
         : summaryData?.appointmentsTrend ?? { value: "0%", up: true },
     },
   ];
@@ -271,8 +231,8 @@ const AdminDashboardContents: React.FC = () => {
     () =>
       search
         ? packageRows.filter((r) =>
-            r.name.toLowerCase().includes(search.toLowerCase())
-          )
+          r.name.toLowerCase().includes(search.toLowerCase())
+        )
         : packageRows,
     [search, packageRows]
   );
@@ -290,9 +250,9 @@ const AdminDashboardContents: React.FC = () => {
         formattedRange: isDefaultRange
           ? "Last 7 days"
           : `${format(range[0].startDate, "MMM dd, yyyy")} - ${format(
-              range[0].endDate,
-              "MMM dd, yyyy"
-            )}`,
+            range[0].endDate,
+            "MMM dd, yyyy"
+          )}`,
       },
       summary: {
         totalUsers: summaryData?.totalUsers || 1250,
@@ -315,36 +275,36 @@ const AdminDashboardContents: React.FC = () => {
         grossIncomeWeeklyData.length > 0
           ? grossIncomeWeeklyData
           : [
-              { week: "Aug 05 - Aug 11", income: 18500 },
-              { week: "Aug 12 - Aug 18", income: 22300 },
-              { week: "Aug 19 - Aug 25", income: 19750 },
-              { week: "Aug 26 - Sep 01", income: 25100 },
-              { week: "Sep 02 - Sep 08", income: 28900 },
-              { week: "Sep 09 - Sep 15", income: 31200 },
-            ],
+            { week: "Aug 05 - Aug 11", income: 18500 },
+            { week: "Aug 12 - Aug 18", income: 22300 },
+            { week: "Aug 19 - Aug 25", income: 19750 },
+            { week: "Aug 26 - Sep 01", income: 25100 },
+            { week: "Sep 02 - Sep 08", income: 28900 },
+            { week: "Sep 09 - Sep 15", income: 31200 },
+          ],
       packages:
         packageRows.length > 0
           ? packageRows
           : [
-              {
-                name: "Birthday Package Elite",
-                totalBooking: 15,
-                revenue: "₱45,000",
-                bookingPct: "16.9%",
-                rating: 5,
-                trend: "12%",
-                trendPositive: true,
-              },
-              {
-                name: "Graduation Premium",
-                totalBooking: 12,
-                revenue: "₱36,000",
-                bookingPct: "13.5%",
-                rating: 4,
-                trend: "8%",
-                trendPositive: true,
-              },
-            ],
+            {
+              name: "Birthday Package Elite",
+              totalBooking: 15,
+              revenue: "₱45,000",
+              bookingPct: "16.9%",
+              rating: 5,
+              trend: "12%",
+              trendPositive: true,
+            },
+            {
+              name: "Graduation Premium",
+              totalBooking: 12,
+              revenue: "₱36,000",
+              bookingPct: "13.5%",
+              rating: 4,
+              trend: "8%",
+              trendPositive: true,
+            },
+          ],
       companyInfo: {
         name: "Selfiegram Photo Studios",
         address: "Malolos, Bulacan",
@@ -685,12 +645,12 @@ const AdminDashboardContents: React.FC = () => {
     // Add confirmation dialog
     const confirmed = window.confirm(
       `Are you sure you want to generate a PDF report for the selected date range?\n\n` +
-        (isDefaultRange
-          ? `Period: All time data`
-          : `Period: ${format(range[0].startDate, "MMM dd, yyyy")} - ${format(
-              range[0].endDate,
-              "MMM dd, yyyy"
-            )}`)
+      (isDefaultRange
+        ? `Period: All time data`
+        : `Period: ${format(range[0].startDate, "MMM dd, yyyy")} - ${format(
+          range[0].endDate,
+          "MMM dd, yyyy"
+        )}`)
     );
 
     if (!confirmed) return;
@@ -764,9 +724,9 @@ const AdminDashboardContents: React.FC = () => {
           formattedRange: isDefaultRange
             ? "All Time Data"
             : `${format(range[0].startDate, "MMM dd, yyyy")} - ${format(
-                range[0].endDate,
-                "MMM dd, yyyy"
-              )}`,
+              range[0].endDate,
+              "MMM dd, yyyy"
+            )}`,
         },
         reportGenerated: new Date().toISOString(),
       };
@@ -781,9 +741,9 @@ const AdminDashboardContents: React.FC = () => {
       const dateRange = isDefaultRange
         ? "AllTime"
         : `${format(range[0].startDate, "yyyyMMdd")}-${format(
-            range[0].endDate,
-            "yyyyMMdd"
-          )}`;
+          range[0].endDate,
+          "yyyyMMdd"
+        )}`;
       const filename = `Selfiegram-Dashboard-${dateRange}-${timestamp}.pdf`;
 
       // Save the PDF
@@ -801,350 +761,353 @@ const AdminDashboardContents: React.FC = () => {
   };
 
   return (
-    <div className="space-y-8 p-5">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 relative">
-        <h1 className="text-lg font-semibold pl-12 sm:pl-0  ">Dashboard</h1>
+    <div className="space-y-8 p-5 relative">
+      {loading ? (
+        <CenteredLoader message="Loading dashboard..." />
+      ) : (
+        <div className="relative">
+          {/* Header */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 relative">
+            <h1 className="text-lg font-semibold pl-12 sm:pl-0  ">Dashboard</h1>
 
-        {/* Date Range Picker */}
-        <div className="flex items-center gap-2">
-          <div className="relative text-xs">
-            <button
-              onClick={() => setPickerOpen((prev) => !prev)}
-              className="border px-3 py-2 rounded-md bg-white shadow-sm hover:bg-gray-100 transition"
-            >
-              {isDefaultRange
-                ? "Select Date Range"
-                : `${format(range[0].startDate, "MMM dd yyyy")} — ${format(
-                    range[0].endDate,
-                    "MMM dd yyyy"
-                  )}`}
-            </button>
-            {pickerOpen && (
-              <div className="absolute left-0 z-20 mt-2 bg-white shadow-lg rounded-md p-3">
-                <DateRange
-                  ranges={range}
-                  onChange={(item) => {
-                    const { startDate, endDate, key } = item.selection;
-                    setRange([
-                      {
-                        startDate: startDate ?? new Date(),
-                        endDate: endDate ?? new Date(),
-                        key: key ?? "selection",
-                      },
-                    ]);
-                    setIsDefaultRange(false); // User has actively changed the range
-                  }}
-                  moveRangeOnFirstSelection={false}
-                  rangeColors={["#000"]}
-                  maxDate={new Date()}
-                />
-              </div>
-            )}
-          </div>
-
-          {/* Reset Button */}
-          {!isDefaultRange && (
-            <button
-              onClick={() => {
-                setRange([
-                  {
-                    startDate: subDays(new Date(), 7),
-                    endDate: new Date(),
-                    key: "selection",
-                  },
-                ]);
-                setIsDefaultRange(true);
-                setPickerOpen(false);
-              }}
-              className="px-3 py-2 text-xs bg-red-100 text-red-600 hover:bg-red-200 rounded-md transition"
-            >
-              Reset
-            </button>
-          )}
-
-          {/* Action Buttons */}
-          <div className="flex items-center gap-2 ml-auto">
-            {/* Preview Button */}
-            <button
-              onClick={handlePreview}
-              className="px-4 py-2 rounded-md text-xs transition focus:outline-none bg-gray-100 text-gray-700 hover:bg-gray-200 border"
-            >
-              Preview Report
-            </button>
-
-            {/* Export Button */}
-            <button
-              onClick={handleExport}
-              disabled={isGeneratingReport}
-              className={`px-4 py-2 rounded-md text-xs transition focus:outline-none flex items-center gap-2 ${
-                isGeneratingReport
-                  ? "bg-gray-400 text-white cursor-not-allowed"
-                  : "bg-black text-white hover:bg-gray-800 hover:scale-[1.02]"
-              }`}
-            >
-              {isGeneratingReport && (
-                <svg
-                  className="animate-spin h-3 w-3 text-white"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  ></circle>
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                  ></path>
-                </svg>
-              )}
-              {isGeneratingReport ? "Generating PDF..." : "Export Data"}
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {summaryCards.map((card) => (
-          <div
-            key={card.label}
-            className="flex items-center justify-between p-4 bg-white shadow rounded-lg"
-          >
-            <div>
-              <p className="text-xs text-gray-500 mb-1">{card.label}</p>
-              <h2 className="text-lg font-semibold">{card.value}</h2>
-              <p className="text-[10px] flex items-center gap-1 mt-1">
-                {card.trend.value !== "—" && <TrendArrow up={card.trend.up} />}
-                <span
-                  className={
-                    card.trend.value === "—"
-                      ? "text-gray-500"
-                      : card.trend.up
-                      ? "text-green-500"
-                      : "text-red-500"
-                  }
-                >
-                  {card.trend.value === "—"
-                    ? "— Trend unavailable for custom range"
-                    : `${card.trend.value} ${
-                        card.trend.up ? "Up" : "Down"
-                      } from past week`}
-                </span>
-              </p>
-            </div>
-            <FontAwesomeIcon
-              icon={card.icon}
-              className="text-2xl text-gray-400"
-            />
-          </div>
-        ))}
-      </div>
-
-      {/* Gross Income Chart - Weekly */}
-      <div className="bg-white shadow rounded-lg p-4">
-        <h3 className="text-sm font-semibold mb-4">
-          Weekly Gross Income (Past 4 Months)
-        </h3>
-        <div className="w-full h-64">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={grossIncomeWeeklyData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-              <XAxis
-                dataKey="week"
-                className="text-[10px]"
-                angle={-45}
-                textAnchor="end"
-                height={60}
-                interval={1}
-              />
-
-              {/* Y-Axis formatting logic */}
-              <YAxis
-                tickFormatter={(v) => {
-                  const allAboveThousand = grossIncomeWeeklyData.every(
-                    (d) => d.income > 1000
-                  );
-                  return allAboveThousand ? `${(v / 1000).toFixed(1)}K` : v;
-                }}
-                className="text-xs"
-              />
-
-              <Tooltip formatter={(v: number) => `₱ ${v.toLocaleString()}`} />
-              <Bar
-                dataKey="income"
-                fill="#1f2937"
-                radius={[4, 4, 0, 0]}
-                barSize={28}
-              />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-
-      {/* Package Table */}
-      <div className="bg-white shadow rounded-lg p-4 overflow-x-auto">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-sm font-semibold">Package Details</h3>
-          <div className="relative text-gray-400 text-xs">
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search packages..."
-              className="border pl-8 pr-2 py-1 rounded-md focus:outline-none focus:ring-1 focus:ring-black"
-            />
-            <FontAwesomeIcon
-              icon={faSearch}
-              className="absolute left-2 top-1.5 text-gray-400 text-xs"
-            />
-          </div>
-        </div>
-
-        <table className="min-w-full text-left text-xs">
-          <thead>
-            <tr className="text-gray-500">
-              <th className={tableCell}>Package</th>
-              <th className={tableCell}>Total Booking</th>
-              <th className={tableCell}>Revenue</th>
-              <th className={tableCell}>Booking %</th>
-              <th className={tableCell}>Avg Client Rating</th>
-              <th className={tableCell}>Trend</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredRows.length === 0 ? (
-              <tr>
-                <td colSpan={6} className="text-center py-2">
-                  No packages found
-                </td>
-              </tr>
-            ) : (
-              filteredRows.map((row, i) => {
-                // Ensure revenue is parsed correctly by removing '₱' and commas
-                const parsedRevenue = row.revenue
-                  ? parseFloat(row.revenue.replace("₱", "").replace(",", ""))
-                  : 0;
-
-                // Ensure that the revenue is valid before formatting
-                const formattedRevenue = parsedRevenue
-                  ? "₱" + parsedRevenue.toLocaleString()
-                  : "₱0.00";
-
-                return (
-                  <tr key={i} className="border-t">
-                    <td className={tableCell}>{row.name}</td>
-                    <td className={tableCell}>{row.totalBooking}</td>
-                    <td className={tableCell}>{formattedRevenue}</td>
-                    <td className={tableCell}>{row.bookingPct}</td>
-                    <td className={tableCell}>
-                      <StarRating value={row.rating} />
-                    </td>
-                    <td className={tableCell}>
-                      <span
-                        className={`inline-flex items-center gap-1 ${
-                          row.trendPositive ? "text-green-500" : "text-red-500"
-                        }`}
-                      >
-                        <FontAwesomeIcon
-                          icon={row.trendPositive ? faArrowUp : faArrowDown}
-                        />
-                        {row.trend}
-                      </span>
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Report Preview Modal */}
-      {showPreview && reportData && (
-        <div
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) {
-              setShowPreview(false);
-              setReportData(null);
-            }
-          }}
-          onKeyDown={(e) => {
-            if (e.key === "Escape") {
-              setShowPreview(false);
-              setReportData(null);
-            }
-          }}
-        >
-          <div className="bg-white rounded-lg max-w-5xl max-h-[90vh] overflow-auto relative shadow-2xl">
-            {/* Modal Header */}
-            <div className="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center z-10">
-              <h2 className="text-xl font-semibold text-gray-800">
-                Dashboard Report Preview
-              </h2>
-              <div className="flex gap-3">
+            {/* Date Range Picker */}
+            <div className="flex items-center gap-2">
+              <div className="relative text-xs">
                 <button
-                  onClick={() => window.print()}
-                  className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center gap-2"
-                  title="Print (Ctrl+P)"
+                  onClick={() => setPickerOpen((prev) => !prev)}
+                  className="border px-3 py-2 rounded-md bg-white shadow-sm hover:bg-gray-100 transition"
                 >
-                  🖨️ Print
+                  {isDefaultRange
+                    ? "Select Date Range"
+                    : `${format(range[0].startDate, "MMM dd yyyy")} — ${format(
+                      range[0].endDate,
+                      "MMM dd yyyy"
+                    )}`}
                 </button>
+                {pickerOpen && (
+                  <div className="absolute left-0 z-20 mt-2 bg-white shadow-lg rounded-md p-3">
+                    <DateRange
+                      ranges={range}
+                      onChange={(item) => {
+                        const { startDate, endDate, key } = item.selection;
+                        setRange([
+                          {
+                            startDate: startDate ?? new Date(),
+                            endDate: endDate ?? new Date(),
+                            key: key ?? "selection",
+                          },
+                        ]);
+                        setIsDefaultRange(false); // User has actively changed the range
+                      }}
+                      moveRangeOnFirstSelection={false}
+                      rangeColors={["#000"]}
+                      maxDate={new Date()}
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Reset Button */}
+              {!isDefaultRange && (
                 <button
                   onClick={() => {
-                    setShowPreview(false);
-                    setReportData(null);
+                    setRange([
+                      {
+                        startDate: subDays(new Date(), 7),
+                        endDate: new Date(),
+                        key: "selection",
+                      },
+                    ]);
+                    setIsDefaultRange(true);
+                    setPickerOpen(false);
                   }}
-                  className="px-4 py-2 text-sm bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition"
-                  title="Close (Esc)"
+                  className="px-3 py-2 text-xs bg-red-100 text-red-600 hover:bg-red-200 rounded-md transition"
                 >
-                  ✕ Close
+                  Reset
+                </button>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex items-center gap-2 ml-auto">
+                {/* Preview Button */}
+                <button
+                  onClick={handlePreview}
+                  className="px-4 py-2 rounded-md text-xs transition focus:outline-none bg-gray-100 text-gray-700 hover:bg-gray-200 border"
+                >
+                  Preview Report
+                </button>
+
+                {/* Export Button */}
+                <button
+                  onClick={handleExport}
+                  disabled={isGeneratingReport}
+                  className={`px-4 py-2 rounded-md text-xs transition focus:outline-none flex items-center gap-2 ${isGeneratingReport
+                    ? "bg-gray-400 text-white cursor-not-allowed"
+                    : "bg-black text-white hover:bg-gray-800 hover:scale-[1.02]"
+                    }`}
+                >
+                  {isGeneratingReport && (
+                    <svg
+                      className="animate-spin h-3 w-3 text-white"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      ></circle>
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      ></path>
+                    </svg>
+                  )}
+                  {isGeneratingReport ? "Generating PDF..." : "Export Data"}
                 </button>
               </div>
             </div>
+          </div>
 
-            {/* Report Content */}
-            <div className="bg-gray-50 p-6">
-              <div className="bg-white rounded-lg shadow-sm">
+          {/* Summary Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-4">
+            {summaryCards.map((card) => (
+              <div
+                key={card.label}
+                className="flex items-center justify-between p-4 bg-white shadow rounded-lg"
+              >
+                <div>
+                  <p className="text-xs text-gray-500 mb-1">{card.label}</p>
+                  <h2 className="text-lg font-semibold">{card.value}</h2>
+                  <p className="text-[10px] flex items-center gap-1 mt-1">
+                    {card.trend.value !== "—" && <TrendArrow up={card.trend.up} />}
+                    <span
+                      className={
+                        card.trend.value === "—"
+                          ? "text-gray-500"
+                          : card.trend.up
+                            ? "text-green-500"
+                            : "text-red-500"
+                      }
+                    >
+                      {card.trend.value === "—"
+                        ? "— Trend unavailable for custom range"
+                        : `${card.trend.value} ${card.trend.up ? "Up" : "Down"
+                        } from past week`}
+                    </span>
+                  </p>
+                </div>
+                <FontAwesomeIcon
+                  icon={card.icon}
+                  className="text-2xl text-gray-400"
+                />
+              </div>
+            ))}
+          </div>
+
+          {/* Gross Income Chart - Weekly */}
+          <div className="bg-white shadow rounded-lg p-4">
+            <h3 className="text-sm font-semibold mb-4">
+              Weekly Gross Income (Past 4 Months)
+            </h3>
+            <div className="w-full h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={grossIncomeWeeklyData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                  <XAxis
+                    dataKey="week"
+                    className="text-[10px]"
+                    angle={-45}
+                    textAnchor="end"
+                    height={60}
+                    interval={1}
+                  />
+
+                  {/* Y-Axis formatting logic */}
+                  <YAxis
+                    tickFormatter={(v) => {
+                      const allAboveThousand = grossIncomeWeeklyData.every(
+                        (d) => d.income > 1000
+                      );
+                      return allAboveThousand ? `${(v / 1000).toFixed(1)}K` : v;
+                    }}
+                    className="text-xs"
+                  />
+
+                  <Tooltip formatter={(v: number) => `₱ ${v.toLocaleString()}`} />
+                  <Bar
+                    dataKey="income"
+                    fill="#1f2937"
+                    radius={[4, 4, 0, 0]}
+                    barSize={28}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          {/* Package Table */}
+          <div className="bg-white shadow rounded-lg p-4 overflow-x-auto mt-5">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-semibold">Package Details</h3>
+              <div className="relative text-gray-400 text-xs">
+                <input
+                  type="text"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Search packages..."
+                  className="border pl-8 pr-2 py-1 rounded-md focus:outline-none focus:ring-1 focus:ring-black"
+                />
+                <FontAwesomeIcon
+                  icon={faSearch}
+                  className="absolute left-2 top-1.5 text-gray-400 text-xs"
+                />
+              </div>
+            </div>
+
+            <table className="min-w-full text-left text-xs">
+              <thead>
+                <tr className="text-gray-500">
+                  <th className={tableCell}>Package</th>
+                  <th className={tableCell}>Total Booking</th>
+                  <th className={tableCell}>Revenue</th>
+                  <th className={tableCell}>Booking %</th>
+                  <th className={tableCell}>Avg Client Rating</th>
+                  <th className={tableCell}>Trend</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredRows.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="text-center py-2">
+                      No packages found
+                    </td>
+                  </tr>
+                ) : (
+                  filteredRows.map((row, i) => {
+                    // Ensure revenue is parsed correctly by removing '₱' and commas
+                    const parsedRevenue = row.revenue
+                      ? parseFloat(row.revenue.replace("₱", "").replace(",", ""))
+                      : 0;
+
+                    // Ensure that the revenue is valid before formatting
+                    const formattedRevenue = parsedRevenue
+                      ? "₱" + parsedRevenue.toLocaleString()
+                      : "₱0.00";
+
+                    return (
+                      <tr key={i} className="border-t">
+                        <td className={tableCell}>{row.name}</td>
+                        <td className={tableCell}>{row.totalBooking}</td>
+                        <td className={tableCell}>{formattedRevenue}</td>
+                        <td className={tableCell}>{row.bookingPct}</td>
+                        <td className={tableCell}>
+                          <StarRating value={row.rating} />
+                        </td>
+                        <td className={tableCell}>
+                          <span
+                            className={`inline-flex items-center gap-1 ${row.trendPositive ? "text-green-500" : "text-red-500"
+                              }`}
+                          >
+                            <FontAwesomeIcon
+                              icon={row.trendPositive ? faArrowUp : faArrowDown}
+                            />
+                            {row.trend}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Report Preview Modal */}
+          {showPreview && reportData && (
+            <div
+              className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+              onClick={(e) => {
+                if (e.target === e.currentTarget) {
+                  setShowPreview(false);
+                  setReportData(null);
+                }
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") {
+                  setShowPreview(false);
+                  setReportData(null);
+                }
+              }}
+            >
+              <div className="bg-white rounded-lg max-w-5xl max-h-[90vh] overflow-auto relative shadow-2xl">
+                {/* Modal Header */}
+                <div className="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center z-10">
+                  <h2 className="text-xl font-semibold text-gray-800">
+                    Dashboard Report Preview
+                  </h2>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => window.print()}
+                      className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center gap-2"
+                      title="Print (Ctrl+P)"
+                    >
+                      🖨️ Print
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowPreview(false);
+                        setReportData(null);
+                      }}
+                      className="px-4 py-2 text-sm bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition"
+                      title="Close (Esc)"
+                    >
+                      ✕ Close
+                    </button>
+                  </div>
+                </div>
+
+                {/* Report Content */}
+                <div className="bg-gray-50 p-6">
+                  <div className="bg-white rounded-lg shadow-sm">
+                    <DashboardReportPDF data={reportData} />
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Hidden Report Component for PDF Generation */}
+          {reportData && !showPreview && (
+            <div
+              id="dashboard-report"
+              style={{
+                position: "fixed",
+                top: "-10000px",
+                left: "-10000px",
+                zIndex: -1000,
+                opacity: 0,
+                pointerEvents: "none",
+                backgroundColor: "white",
+                width: "210mm",
+                minHeight: "297mm",
+                fontFamily: "Arial, sans-serif",
+                color: "black",
+                padding: "20px",
+                fontSize: "12px",
+                lineHeight: "1.4",
+              }}
+            >
+              <div style={{ width: "800px", margin: "0 auto" }}>
                 <DashboardReportPDF data={reportData} />
               </div>
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* Hidden Report Component for PDF Generation */}
-      {reportData && !showPreview && (
-        <div
-          id="dashboard-report"
-          style={{
-            position: "fixed",
-            top: "-10000px",
-            left: "-10000px",
-            zIndex: -1000,
-            opacity: 0,
-            pointerEvents: "none",
-            backgroundColor: "white",
-            width: "210mm",
-            minHeight: "297mm",
-            fontFamily: "Arial, sans-serif",
-            color: "black",
-            padding: "20px",
-            fontSize: "12px",
-            lineHeight: "1.4",
-          }}
-        >
-          <div style={{ width: "800px", margin: "0 auto" }}>
-            <DashboardReportPDF data={reportData} />
-          </div>
+          )}
         </div>
       )}
     </div>

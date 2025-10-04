@@ -7,6 +7,7 @@ import { fetchWithAuth } from "../utils/fetchWithAuth";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { Archive, Pen, RefreshCw } from "lucide-react";
+import CenteredLoader from "./CenteredLoader";
 
 interface Package {
   id: string;
@@ -232,7 +233,7 @@ const AdminPackageContent: React.FC = () => {
 
       {loading ? (
         <div className="text-center py-20 text-gray-400">
-          Loading packages...
+          <CenteredLoader message="Loading packages..." />
         </div>
       ) : filtered.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">

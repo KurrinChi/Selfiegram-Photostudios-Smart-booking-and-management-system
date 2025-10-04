@@ -10,6 +10,7 @@ import { motion, AnimatePresence } from "framer-motion";
 //import EditConceptStudio from "../EditConceptStudio.tsx";
 import { fetchWithAuth } from "../../utils/fetchWithAuth";
 import { toast } from "react-toastify";
+import CenteredLoader from "../CenteredLoader";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -716,7 +717,7 @@ export default function EditExtras() {
                 }}
                 className="p-4 rounded text-center"
               >
-                Loading add-ons...
+                <CenteredLoader message="Loading extras..." />
               </div>
             ) : filtered.length === 0 ? (
               <div

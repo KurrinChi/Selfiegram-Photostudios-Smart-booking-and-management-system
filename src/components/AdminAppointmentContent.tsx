@@ -4,7 +4,7 @@ import DayView from "./CalendarViews/DayView";
 import WeekView from "./CalendarViews/WeekView";
 import TransactionModal from "./ModalAppointmentInfoDialog";
 import type { TransactionModalProps } from "./ModalAppointmentInfoDialog";
-
+import CenteredLoader from "./CenteredLoader";
 
 const AdminAppointmentContent: React.FC = () => {
   const [view, setView] = useState<"week" | "day">("week");
@@ -21,14 +21,23 @@ const AdminAppointmentContent: React.FC = () => {
   };
 
   const [refreshAppointments, setRefreshAppointments] = useState<() => void>(
-    () => () => {}
+    () => () => { }
   );
   const handleOnReady = useCallback((refreshFn: () => void) => {
     setRefreshAppointments(() => refreshFn);
   }, []);
 
+  // NEW: Loading state
+  const [loading, setLoading] = useState(true);
+
+  // Example: simulate loading for demo purposes
+  React.useEffect(() => {
+    const timer = setTimeout(() => setLoading(false), 1000); // 1s loading
+    return () => clearTimeout(timer);
+  }, []);
+
   return (
-    <div className="flex flex-col h-full w-full">
+    <div className="flex flex-col h-full w-full relative">
       {/* Header */}
       <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b bg-white">
         <h2 className="text-lg sm:text-xl font-semibold pl-12 sm:pl-0">
@@ -41,9 +50,8 @@ const AdminAppointmentContent: React.FC = () => {
             <button
               key={v}
               onClick={() => setView(v)}
-              className={`relative px-4 sm:px-6 py-2 font-medium transition-colors duration-300 ${
-                view === v ? "text-black" : "text-gray-500"
-              }`}
+              className={`relative px-4 sm:px-6 py-2 font-medium transition-colors duration-300 ${view === v ? "text-black" : "text-gray-500"
+                }`}
             >
               {v[0].toUpperCase() + v.slice(1)}
               {view === v && (
@@ -57,7 +65,12 @@ const AdminAppointmentContent: React.FC = () => {
       {/* Main Content */}
       <div className="flex flex-1 overflow-hidden flex-col sm:flex-row">
         {/* Calendar View */}
-        <div className="flex-1 overflow-auto">
+        <div className="flex-1 relative overflow-auto">
+          {loading && (
+            <div className="absolute inset-0 z-50 bg-white bg-opacity-70 flex items-center justify-center">
+              <CenteredLoader message="Loading appointments..." />
+            </div>
+          )}
           {view === "week" ? (
             <WeekView
               currentDate={currentDate}

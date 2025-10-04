@@ -18,6 +18,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { ChevronDown } from "lucide-react";
 import { DateRange } from "react-date-range";
 import type { Range } from "react-date-range";
+import CenteredLoader from "./CenteredLoader";
 
 interface Sale {
   transactionID: number;
@@ -494,7 +495,7 @@ const AdminSalesContent: React.FC = () => {
                     colSpan={8}
                     className="text-center text-gray-500 py-10 text-sm"
                   >
-                    Loading sales...
+                    <CenteredLoader message="Loading sales..." />
                   </td>
                 </tr>
               ) : paginated.length === 0 ? (

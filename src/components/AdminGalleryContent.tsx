@@ -6,6 +6,7 @@ import "react-date-range/dist/styles.css";
 import "react-date-range/dist/theme/default.css";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faSearch } from "@fortawesome/free-solid-svg-icons";
+import CenteredLoader from "./CenteredLoader";
 
 const ITEMS_PER_PAGE = 8;
 const API_URL = import.meta.env.VITE_API_URL;
@@ -206,7 +207,7 @@ const AdminGalleryContent: React.FC = () => {
                     colSpan={8}
                     className="text-center text-gray-500 py-10 text-sm"
                   >
-                    Loading Completed Bookings...
+                    <CenteredLoader message="Loading gallery..." />
                   </td>
                 </tr>
               ) : paginatedData.length === 0 ? (
