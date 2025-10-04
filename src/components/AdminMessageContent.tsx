@@ -618,8 +618,7 @@ export default function AdminMessageContent(): JSX.Element {
     setReplyTargetMessageID(email.id);
   }, [toggleCompose, adminName]);
 
-  // Helper to normalize subjects (strip common reply prefixes)
-  const normalizeSubject = (s: string) => s.replace(/^re:\s*/i,'').trim().toLowerCase();
+
 
   // Load admin reply notifications for a given sent message (original customer message moved to sent)
   const loadReplies = useCallback(async (email: Email) => {
