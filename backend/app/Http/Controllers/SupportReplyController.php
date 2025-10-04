@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Notification;
 use App\Models\User;
+use App\Mail\SupportReply;
+use Illuminate\Support\Facades\Mail;
 use App\Events\SupportReplyCreated;
 
 class SupportReplyController extends Controller
@@ -37,6 +39,17 @@ class SupportReplyController extends Controller
         ];
 
         $notification = Notification::create($notificationData);
+
+        // Send mail to user (if email exists)
+        $user = User::where('userID', $userID)->first();
+        if ($user && $user->email) {
+            try {
+                Mail::to($user->email)->send(new SupportReply($user, $title, $body));
+            } catch (\Throwable $ex) {
+                // Log but don't fail the API response
+                \Log::warning('Support reply mail failed: '.$ex->getMessage());
+            }
+        }
 
         // Broadcast to the user's private channel
         event(new SupportReplyCreated($userID, [
