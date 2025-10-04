@@ -21,11 +21,15 @@ class Message extends Model
         'inquiryOptions',
         'messageStatus',
         'createdAt',
+        'starred',
+        'archived',
     ];
 
     protected $casts = [
         'createdAt' => 'datetime',
         'messageStatus' => 'integer',
+        'starred' => 'integer',
+        'archived' => 'integer',
     ];
 
     public function user()

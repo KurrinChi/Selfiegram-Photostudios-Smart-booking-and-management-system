@@ -416,6 +416,9 @@
     Route::middleware(['auth:sanctum','role:Admin'])->group(function () {
         Route::get('/messages', [MessageController::class, 'index']);
         Route::post('/messages/{id}/status', [MessageController::class, 'updateStatus']);
+        Route::post('/messages/{id}/starred', [MessageController::class, 'updateStarred']);
+        Route::post('/messages/{id}/archived', [MessageController::class, 'updateArchived']);
+        Route::delete('/messages/trash/empty', [MessageController::class, 'emptyTrash']);
     });
 
     // PayMongo Webhook (no auth required)

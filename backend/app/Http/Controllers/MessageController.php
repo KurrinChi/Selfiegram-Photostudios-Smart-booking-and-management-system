@@ -122,4 +122,48 @@ class MessageController extends Controller
         $msg->save();
         return response()->json(['status' => 'success', 'data' => $msg]);
     }
+
+    /**
+     * Toggle / set starred flag
+     */
+    public function updateStarred($id, Request $request)
+    {
+        $msg = Message::find($id);
+        if (!$msg) {
+            return response()->json(['status' => 'error', 'message' => 'Message not found'], 404);
+        }
+        $val = (int)$request->input('starred', 0) === 1 ? 1 : 0;
+        $msg->starred = $val;
+        $msg->save();
+        return response()->json(['status' => 'success', 'data' => $msg]);
+    }
+
+    /**
+     * Archive (move to trash) or restore (archived=0)
+     */
+    public function updateArchived($id, Request $request)
+    {
+        $msg = Message::find($id);
+        if (!$msg) {
+            return response()->json(['status' => 'error', 'message' => 'Message not found'], 404);
+        }
+        $val = (int)$request->input('archived', 0) === 1 ? 1 : 0;
+        $msg->archived = $val;
+        $msg->save();
+        return response()->json(['status' => 'success', 'data' => $msg]);
+    }
+
+    /**
+     * Permanently delete all archived (trash) messages
+     */
+    public function emptyTrash()
+    {
+        $count = Message::where('archived', 1)->count();
+        Message::where('archived', 1)->delete();
+        return response()->json([
+            'status' => 'success',
+            'deleted' => $count,
+            'message' => $count . ' trashed message(s) permanently deleted.'
+        ]);
+    }
 }
