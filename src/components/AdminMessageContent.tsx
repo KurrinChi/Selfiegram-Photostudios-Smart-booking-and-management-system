@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useMemo, useState, useRef, type JSX } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Trash2 as TrashIcon, Search as SearchIcon, Star as StarIcon, Reply as ReplyIcon, X as XIcon, Plus as PlusIcon, RefreshCcw as RefreshIcon, AlertTriangle as AlertIcon } from 'lucide-react';
-import { toast, ToastContainer } from 'react-toastify';
+// Toast notifications removed per request; using inline flash messages instead.
 import pusher from '../utils/pusher';
 
 export type Email = {
@@ -76,7 +76,8 @@ function mapRawToEmail(r: RawMessage, apiBase: string): Email {
     from: `${r.senderName || 'User'} <${r.senderEmail || 'unknown@example.com'}>` ,
     to: ['support@selfiegram.local'],
     subject: inquiryToSubject(r),
-    body: r.message + `\n\n#${r.messageID}`,
+    // Single newline before the #ID tag (remove extra blank spacing)
+    body: r.message + `\n#${r.messageID}`,
     time: r.createdAt || new Date().toISOString(),
     mailbox: 'inbox',
     starred: false,
@@ -86,9 +87,63 @@ function mapRawToEmail(r: RawMessage, apiBase: string): Email {
   };
 }
 
+// ---------------------------------------------------------------------------
+// Reply Template Helper
+// This function builds the pre-filled body that appears when an admin clicks
+// "Reply". Modify this if you want to change the formatting, add a greeting,
+// or remove the original quoted message. Keep the trailing original content
+// clearly separated for user context.
+// ---------------------------------------------------------------------------
+function buildReplyBody(email: Email, adminName: string) {
+  const timestamp = new Date(email.time).toLocaleString();
+  const header = `On ${timestamp}, ${email.from} wrote:`;
+  // Normalize any accidental double newlines before #ID to a single newline
+  const original = email.body.replace(/\n\n(#\d+)/g, '\n$1');
+  // Requested final format:
+  // ---
+  // If you have more questions, kindly send us a new contact form and we hope that you are satisfied with our service.
+  //
+  // Regards,
+  // {Admin Name}
+  // SelfieGram Support Staff
+  // ---
+  // On TIMESTAMP, Name <email> wrote:
+  // original message
+  return [
+    '', // leading blank line for typing space if desired
+    '---',
+    'If you have more questions, kindly send us a new contact form and we hope that you are satisfied with our service.',
+    '',
+    'Regards,',
+    adminName,
+    'SelfieGram Support Staff',
+    '---',
+    `${header}`,
+    original
+  ].join('\n');
+}
+
 /* -------------- Component -------------- */
 export default function AdminMessageContent(): JSX.Element {
-  const TOAST_ID = 'adminMessages';
+  const [adminName, setAdminName] = useState<string>('Support Staff');
+  const [flash, setFlash] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const pushFlash = useCallback((type: 'success' | 'error', message: string, ttl = 3200) => {
+    setFlash({ type, message });
+    if (ttl > 0) {
+      window.setTimeout(() => setFlash(f => (f?.message === message ? null : f)), ttl);
+    }
+  }, []);
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('user');
+      if (raw) {
+        const u = JSON.parse(raw);
+        // Try common name fields; fallback to username or 'Admin'
+        const name = [u.fname, u.lname].filter(Boolean).join(' ').trim() || u.username || 'Admin';
+        setAdminName(name);
+      }
+    } catch {}
+  }, []);
   const [emails, setEmails] = useState<Email[]>([]);
   const [selectedEmailId, setSelectedEmailId] = useState<string | null>(null); // stays null on load until user clicks
   const [searchQuery, setSearchQuery] = useState('');
@@ -235,20 +290,20 @@ export default function AdminMessageContent(): JSX.Element {
 
   const sendCompose = useCallback(() => {
     if (!replyTargetUserID || !replyTargetMessageID) {
-      toast.error('No target message. Select a message then click Reply.', { containerId: TOAST_ID, autoClose: 3000 });
+      pushFlash('error', 'No target message. Select a message then click Reply.');
       return;
     }
     const cw = composeDraft;
     if (!cw.subject.trim()) {
-      toast.error('Subject is required.', { containerId: TOAST_ID, autoClose: 2500 });
+      pushFlash('error', 'Subject is required.');
       return;
     }
     if (!cw.body.trim()) {
-      toast.error('Message body is required.', { containerId: TOAST_ID, autoClose: 2500 });
+      pushFlash('error', 'Message body is required.');
       return;
     }
     if (!API_URL || !token) {
-      toast.error('Missing API URL or authentication.', { containerId: TOAST_ID, autoClose: 3000 });
+      pushFlash('error', 'Missing API URL or authentication.');
       return;
     }
     setSending(true);
@@ -285,7 +340,7 @@ export default function AdminMessageContent(): JSX.Element {
           setSelectedEmailId(null); // leaves viewer empty after send
         }
       }
-  toast.success('Reply has been successfully sent.', { containerId: TOAST_ID, autoClose: 2500, closeOnClick: true });
+  pushFlash('success', 'Reply has been successfully sent.');
       // Clear draft and selection to avoid showing stale opened message
       setComposeDraft({ to: '', subject: '', body: '' });
       setReplyTargetUserID(null);
@@ -294,7 +349,7 @@ export default function AdminMessageContent(): JSX.Element {
       closeCompose();
     }).catch(err => {
       console.error('Support reply error', err);
-      toast.error('Failed to send reply: ' + (err.message || 'Unknown error'), { containerId: TOAST_ID, autoClose: 4000 });
+      pushFlash('error', 'Failed to send reply: ' + (err.message || 'Unknown error'));
     }).finally(() => setSending(false));
   }, [API_URL, token, replyTargetUserID, replyTargetMessageID, composeDraft, closeCompose, selectedEmailId]);
 
@@ -312,11 +367,11 @@ export default function AdminMessageContent(): JSX.Element {
 
   const replyTo = useCallback((email: Email) => {
     const to = extractAddress(email.from);
-    const body = `\n\n---\nOn ${new Date(email.time).toLocaleString()}, ${email.from} wrote:\n${email.body}`;
+    const body = buildReplyBody(email, adminName);
     toggleCompose({ to, subject: `Re: ${email.subject}`, body });
     setReplyTargetUserID(email.senderID ?? null);
     setReplyTargetMessageID(email.id);
-  }, [toggleCompose]);
+  }, [toggleCompose, adminName]);
 
   /* Keyboard shortcuts */
   useEffect(() => {
@@ -574,19 +629,24 @@ export default function AdminMessageContent(): JSX.Element {
           )}
         </AnimatePresence>
       </div>
-        {/* Local ToastContainer (scoped) */}
-        <ToastContainer
-          containerId={TOAST_ID}
-          position="bottom-right"
-          autoClose={3000}
-          newestOnTop
-          closeOnClick
-          pauseOnHover={false}
-          pauseOnFocusLoss={false}
-          draggable={false}
-          theme="light"
-          limit={3}
-        />
+        {/* Inline flash message (replaces toast) */}
+        {flash && (
+          <div
+            className={`fixed bottom-6 right-6 px-4 py-2 rounded-md shadow text-sm font-medium z-[999] transition-opacity duration-300
+            ${flash.type === 'success' ? 'bg-emerald-600 text-white' : 'bg-red-600 text-white'}`}
+          >
+            <div className="flex items-center gap-3">
+              <span>{flash.message}</span>
+              <button
+                onClick={() => setFlash(null)}
+                className="text-white/80 hover:text-white text-xs"
+                aria-label="Dismiss notification"
+              >
+                ×
+              </button>
+            </div>
+          </div>
+        )}
     </div>
   );
 }
