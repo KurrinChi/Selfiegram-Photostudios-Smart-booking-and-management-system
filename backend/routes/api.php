@@ -303,6 +303,8 @@
 
     // admin support reply -> creates notification + pushes via pusher
     Route::post('/admin/support-replies', [SupportReplyController::class, 'store']);
+        // system broadcast notifications
+        Route::post('/admin/notifications/broadcast', [NotificationController::class, 'broadcastSystem']);
 
         //admin package management
         Route::get('/admin/packages-all', [PackageController::class, 'adminShowAll']);

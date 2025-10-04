@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Notification;
+use App\Models\User;
+use App\Events\SystemNotificationCreated;
 use Illuminate\Support\Facades\DB;
 
 class NotificationController extends Controller
@@ -114,12 +116,62 @@ class NotificationController extends Controller
         if (!$notification) {
             return response()->json(['error' => 'Notification not found'], 404);
         }
-        // Optional: enforce ownership (uncomment if needed)
-        // $user = $request->user();
-        // if ($notification->userID && $user && (int)$notification->userID !== (int)$user->userID) {
-        //     return response()->json(['error' => 'Forbidden'], 403);
-        // }
+        // Optional ownership check could go here
         $notification->delete();
         return response()->json(['success' => true]);
+    }
+
+    /**
+     * Broadcast a System notification to all Customer users.
+     * Admin-only route. Payload: title, message
+     */
+    public function broadcastSystem(Request $request)
+    {
+        $request->validate([
+            'title' => 'required|string|max:255',
+            'message' => 'required|string'
+        ]);
+
+        $customers = User::where(function($q){
+            $q->where('userType', 'Customer')->orWhere('usertype','Customer');
+        })->select('userID')->get();
+
+        if ($customers->isEmpty()) {
+            return response()->json(['status' => 'no_customers', 'count' => 0]);
+        }
+
+        $now = now();
+        $title = $request->input('title');
+        $message = $request->input('message');
+
+        $created = [];
+        foreach ($customers as $cust) {
+            $n = Notification::create([
+                'userID' => $cust->userID,
+                'title' => $title,
+                'label' => 'System',
+                'message' => $message,
+                'time' => $now,
+                'starred' => 0,
+                'bookingID' => null,
+                'transID' => null,
+            ]);
+            $payload = [
+                'notificationID' => $n->notificationID,
+                'title' => $n->title,
+                'label' => $n->label,
+                'message' => $n->message,
+                'time' => $n->time,
+                'starred' => $n->starred,
+            ];
+            event(new SystemNotificationCreated($cust->userID, $payload));
+            $created[] = $n->notificationID;
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'count' => count($created),
+            'notification_ids' => $created,
+        ], 201);
     }
 }

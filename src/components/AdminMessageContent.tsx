@@ -228,6 +228,9 @@ export default function AdminMessageContent(): JSX.Element {
   const [composeOpen, setComposeOpen] = useState(false);
   const [composeMinimized, setComposeMinimized] = useState(false);
   const [composeDraft, setComposeDraft] = useState({ to: '', subject: '', body: '' });
+  const [broadcastMode, setBroadcastMode] = useState(false); // system broadcast mode flag (true for manual compose)
+  const [customerList, setCustomerList] = useState<{ userID:number; name:string; email:string }[]>([]);
+  const [recipient, setRecipient] = useState<'ALL' | number>('ALL');
   const [replyTargetUserID, setReplyTargetUserID] = useState<number | null>(null);
   const [replyTargetMessageID, setReplyTargetMessageID] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
@@ -286,9 +289,75 @@ export default function AdminMessageContent(): JSX.Element {
     setComposeDraft({ to: '', subject: '', body: '' });
     setComposeOpen(false);
     setComposeMinimized(false);
+    setBroadcastMode(false);
+    setRecipient('ALL');
   }, []);
 
+  // Fetch customers once broadcast mode is enabled
+  useEffect(() => {
+    if (!broadcastMode) return;
+    if (!API_URL || !token) return;
+    fetch(`${API_URL}/api/admin/users`, {
+      headers: { 'Authorization': `Bearer ${token}`, 'Accept':'application/json' }
+    })
+      .then(r => r.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          const customers = data.filter((u:any) => (u.userType || u.usertype) === 'Customer').map((u:any) => ({
+            userID: u.userID,
+            name: u.name || [u.fname, u.lname].filter(Boolean).join(' ').trim() || u.username || `User #${u.userID}`,
+            email: u.email
+          }));
+          setCustomerList(customers);
+        }
+      }).catch(err => console.error('Fetch customers failed', err));
+  }, [broadcastMode, API_URL, token]);
+
   const sendCompose = useCallback(() => {
+    // Helper to trigger a browser (push-like) notification via the Notification API
+    const fireBrowserNotification = (title: string, body: string) => {
+      if (typeof window === 'undefined' || !('Notification' in window)) return;
+      try {
+        if (Notification.permission === 'granted') {
+          new Notification(title, { body });
+        } else if (Notification.permission === 'default') {
+          Notification.requestPermission().then(p => {
+            if (p === 'granted') {
+              new Notification(title, { body });
+            }
+          }).catch(()=>{});
+        }
+      } catch { /* ignore */ }
+    };
+    // Branch: broadcast system notification
+    if (broadcastMode) {
+      if (!composeDraft.subject.trim()) { pushFlash('error','Subject is required.'); return; }
+      if (!composeDraft.body.trim()) { pushFlash('error','Message body is required.'); return; }
+      if (!API_URL || !token) { pushFlash('error','Missing API URL or authentication.'); return; }
+      setSending(true);
+      const isAll = recipient === 'ALL';
+      const endpoint = isAll ? `${API_URL}/api/admin/notifications/broadcast` : `${API_URL}/api/admin/support-replies`;
+      const payload = isAll
+        ? { title: composeDraft.subject.trim(), message: composeDraft.body }
+        : { userID: recipient, subject: composeDraft.subject.trim(), body: composeDraft.body };
+      fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type':'application/json', 'Accept':'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify(payload)
+      }).then(async res => {
+        if (!res.ok) { const txt = await res.text(); throw new Error(txt || `Failed (${res.status})`); }
+        pushFlash('success', isAll ? 'Broadcast sent to all customers.' : 'Message sent to selected customer.');
+        fireBrowserNotification(
+          isAll ? 'Broadcast Sent' : 'Message Sent',
+          isAll ? 'Your system broadcast was delivered to all customers.' : 'Direct support message delivered to selected customer.'
+        );
+        closeCompose();
+      }).catch(err => {
+        console.error('Broadcast error', err);
+        pushFlash('error', 'Failed to send message: ' + (err.message || 'Unknown error'));
+      }).finally(()=> setSending(false));
+      return;
+    }
     if (!replyTargetUserID || !replyTargetMessageID) {
       pushFlash('error', 'No target message. Select a message then click Reply.');
       return;
@@ -341,6 +410,7 @@ export default function AdminMessageContent(): JSX.Element {
         }
       }
   pushFlash('success', 'Reply has been successfully sent.');
+    fireBrowserNotification('Reply Sent', 'Your support reply was delivered successfully.');
       // Clear draft and selection to avoid showing stale opened message
       setComposeDraft({ to: '', subject: '', body: '' });
       setReplyTargetUserID(null);
@@ -371,6 +441,7 @@ export default function AdminMessageContent(): JSX.Element {
     toggleCompose({ to, subject: `Re: ${email.subject}`, body });
     setReplyTargetUserID(email.senderID ?? null);
     setReplyTargetMessageID(email.id);
+    setBroadcastMode(false); // replies use direct support reply path
   }, [toggleCompose, adminName]);
 
   /* Keyboard shortcuts */
@@ -553,8 +624,9 @@ export default function AdminMessageContent(): JSX.Element {
               aria-label="Compose new message"
             >
               <div className="px-4 py-3 bg-[#f8f8f8] flex items-center justify-between gap-2">
-                <div className="font-medium">New message</div>
+                <div className="font-medium">{broadcastMode ? 'System / Broadcast Message' : 'New Reply'}</div>
                 <div className="flex items-center gap-2">
+                  {/* Broadcast toggle removed per requirement (always broadcast when manually composing) */}
                   <button
                     onClick={() => setComposeMinimized(s => !s)}
                     className="p-1 rounded hover:bg-slate-100"
@@ -575,14 +647,37 @@ export default function AdminMessageContent(): JSX.Element {
                 </div>
               ) : (
                 <div className="p-4 flex flex-col gap-3 min-h-[240px]">
-                  <input
-                    value={composeDraft.to}
-                    onChange={e => setComposeDraft(s => ({ ...s, to: e.target.value }))
-                    }
-                    placeholder="To"
-                    className="w-full border border-slate-100 rounded px-3 py-2 text-sm outline-none"
-                    aria-label="To"
-                  />
+                  {!broadcastMode && (
+                    <input
+                      value={composeDraft.to}
+                      onChange={e => setComposeDraft(s => ({ ...s, to: e.target.value }))}
+                      placeholder="To"
+                      className="w-full border border-slate-100 rounded px-3 py-2 text-sm outline-none"
+                      aria-label="To"
+                      disabled
+                    />
+                  )}
+                  {broadcastMode && (
+                    <div className="flex flex-col gap-1">
+                      <label className="text-[11px] uppercase tracking-wide text-slate-500 font-medium">Recipient</label>
+                      <select
+                        value={recipient === 'ALL' ? 'ALL' : String(recipient)}
+                        onChange={e => {
+                          const v = e.target.value;
+                          if (v === 'ALL') setRecipient('ALL'); else setRecipient(Number(v));
+                        }}
+                        className="w-full border border-slate-100 rounded px-3 py-2 text-sm outline-none bg-white"
+                      >
+                        <option value="ALL">ALL USERS</option>
+                        {customerList.map(c => (
+                          <option key={c.userID} value={c.userID}>{c.name} - {c.email}</option>
+                        ))}
+                      </select>
+                      <span className="text-[11px] text-slate-500">
+                        {recipient === 'ALL' ? 'Label will be System (broadcast to all customers).' : 'Sending direct Support reply to this customer.'}
+                      </span>
+                    </div>
+                  )}
                   <input
                     value={composeDraft.subject}
                     onChange={e => setComposeDraft(s => ({ ...s, subject: e.target.value }))
@@ -607,7 +702,7 @@ export default function AdminMessageContent(): JSX.Element {
                       aria-label="Send message"
                     >
                       {sending && <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />}
-                      {sending ? 'Sending...' : 'Send'}
+                      {sending ? (broadcastMode ? (recipient==='ALL' ? 'Broadcasting...' : 'Sending...') : 'Sending...') : (broadcastMode ? (recipient==='ALL' ? 'Broadcast' : 'Send Direct') : 'Send')}
                     </button>
                   </div>
                 </div>
@@ -619,7 +714,7 @@ export default function AdminMessageContent(): JSX.Element {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 8 }}
               transition={{ duration: 0.12 }}
-              onClick={() => toggleCompose()}
+              onClick={() => { setBroadcastMode(true); toggleCompose(); }}
               className="flex items-center gap-2 px-4 py-2 rounded-md bg-[#212121] text-white shadow-lg"
               aria-label="Compose"
             >
