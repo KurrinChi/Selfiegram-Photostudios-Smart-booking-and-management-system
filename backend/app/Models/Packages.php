@@ -18,7 +18,10 @@ class Packages extends Model
         'name',
         'description',
         'duration',
+        'base_price',
         'price',
+        'is_discounted',
+        'discount',
         'status',
     ];
 

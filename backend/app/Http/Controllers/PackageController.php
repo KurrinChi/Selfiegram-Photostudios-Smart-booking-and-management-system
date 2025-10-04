@@ -86,7 +86,10 @@ class PackageController extends Controller
         $selects = [
             'packages.packageID as id',
             'packages.name as title',
+            'packages.base_price',
             'packages.price',
+            'packages.is_discounted',
+            'packages.discount',
             'package_images.imagePath',
             'package_types.typeName as tag',
             'packages.status'
@@ -110,7 +113,10 @@ class PackageController extends Controller
                 'id' => $id,
                 'title' => $first->title,
                 'duration' => (int) $first->duration,
+                'base_price' => (float) $first->base_price,
                 'price' => (float) $first->price,
+                'is_discounted' => (int) $first->is_discounted,
+                'discount' => (int) $first->discount,
                 'images' => $items->pluck('imagePath')->filter()->unique()->map(fn($path) => url($path))->values(),
                 'tags' => $items->pluck('tag')->filter()->unique()->values(),
                 'status' => $first->status
@@ -125,7 +131,10 @@ class PackageController extends Controller
         $detailSelects = [
             'packages.packageID as id',
             'packages.name as title',
+            'packages.base_price',
             'packages.price',
+            'packages.is_discounted',
+            'packages.discount',
             'packages.description',
             'package_images.imageID',
             'package_images.imagePath',
@@ -160,7 +169,10 @@ class PackageController extends Controller
             'id' => $first->id,
             'title' => $first->title,
             'duration' => (int) $first->duration,
+            'base_price' => (float) $first->base_price,
             'price' => (float) $first->price,
+            'is_discounted' => (int) $first->is_discounted,
+            'discount' => (int) $first->discount,
             'description' => $first->description,
             'images' => $raw
                 ->filter(fn($row) => $row->imagePath) // only keep rows with image
@@ -252,7 +264,7 @@ class PackageController extends Controller
         DB::beginTransaction();
 
         try {
-            $packageData = $request->only(['name', 'duration', 'price', 'description']);
+            $packageData = $request->only(['name', 'duration', 'price', 'description', 'base_price' , 'is_discounted', 'discount']);
             DB::table('packages')->where('packageID', $id)->update($packageData);
 
             // handle images

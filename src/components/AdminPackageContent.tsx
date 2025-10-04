@@ -11,7 +11,10 @@ import { Archive, Pen, RefreshCw } from "lucide-react";
 interface Package {
   id: string;
   title: string;
+  base_price: number;
   price: number;
+  is_discounted: number;
+  discount: number;
   tags: string[];
   images?: string[];
   status: number; // 1 for active, 0 for archived
@@ -284,9 +287,28 @@ const AdminPackageContent: React.FC = () => {
 
                 <div className="p-3 space-y-2">
                   <div className="font-medium text-sm">{pkg.title}</div>
-                  <div className="text-gray-500 text-xs">
-                    ₱{Number(pkg.price).toFixed(2)}
+                  <div className="flex flex-col gap-1">
+                    {pkg.is_discounted ? (
+                      <div className="flex flex-col">
+                        <div className="text-gray-400 text-xs line-through">
+                          ₱{Number(pkg.base_price).toFixed(2)}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-green-600 font-semibold text-sm">
+                            ₱{Number(pkg.price).toFixed(2)}
+                          </span>
+                          <span className="bg-red-100 text-red-600 text-[10px] px-2 py-0.5 rounded-full font-medium">
+                            {pkg.discount}% OFF
+                          </span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-gray-500 text-sm font-medium">
+                        ₱{Number(pkg.price).toFixed(2)}
+                      </div>
+                    )}
                   </div>
+
                   <div className="flex flex-wrap gap-1">
                     {(pkg.tags ?? []).map((tag) => (
                       <span

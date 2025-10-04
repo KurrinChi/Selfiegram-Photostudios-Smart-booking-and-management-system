@@ -12,7 +12,10 @@ interface PackageImage {
 interface Package {
   id: string;
   title: string;
+  basePrice: number;
   price: number;
+  isDiscounted: number;
+  discount: number;
   duration: number;
   description: string;
   tags: string[];
@@ -45,6 +48,7 @@ const EditPackagePage = () => {
   const [pkg, setPkg] = useState<Package | null>(null);
 
   const [title, setTitle] = useState("");
+  const [basePrice, setBasePrice] = useState<number | "">("");
   const [price, setPrice] = useState<number | "">("");
   const [duration, setDuration] = useState<number | "">("");
   const [description, setDescription] = useState("");
@@ -66,19 +70,29 @@ const EditPackagePage = () => {
   const [selectedBackground, setSelectedBackground] = useState<string>("");
   const [backgroundError, setBackgroundError] = useState<string | null>(null);
 
+  //discount
+  const [hasDiscount, setHasDiscount] = useState(false);
+  const [discount, setDiscount] = useState<number | "">("");
+
+
   useEffect(() => {
     const fetchPackage = async () => {
       try {
-        const response = await fetchWithAuth(
-          `${API_URL}/api/admin/packages/${id}`
-        );
+        const response = await fetchWithAuth(`${API_URL}/api/admin/packages/${id}`);
         const data = await response.json();
         setPkg(data);
+
         setTitle(data.title);
-        setPrice(data.price);
+        setBasePrice(data.base_price); // original price
+        setPrice(data.price); // discounted or same as base
         setDuration(data.duration);
         setDescription(data.description);
         setTags(data.tags || []);
+
+        const isDiscounted = data.is_discounted === 1 || data.is_discounted === "1";
+        setHasDiscount(isDiscounted);
+        setDiscount(isDiscounted ? Number(data.discount) : "");
+
         if (data.images && data.images.length > 0) {
           setCoverImage(data.images[0].path);
           setCarouselImages(data.images);
@@ -86,11 +100,13 @@ const EditPackagePage = () => {
           setCoverImage(undefined);
           setCarouselImages([]);
         }
+
         if (data.addons) {
           setSelectedAddons(data.addons.map((a: Addon) => a.addOnID));
         }
+
         if (data.backgroundType) {
-          setSelectedBackground(data.backgroundType); // wrap in array
+          setSelectedBackground(data.backgroundType);
         }
       } catch (error) {
         console.error("Failed to fetch package:", error);
@@ -100,6 +116,7 @@ const EditPackagePage = () => {
 
     if (id) fetchPackage();
   }, [id]);
+
 
   useEffect(() => {
     const fetchBackgroundTypes = async () => {
@@ -157,6 +174,13 @@ const EditPackagePage = () => {
     fetchAddons();
   }, []);
 
+  useEffect(() => {
+    const base = typeof basePrice === "number" ? basePrice : 0;
+    const disc = typeof discount === "number" ? discount : 0;
+    setPrice(hasDiscount && disc > 0 ? base - (base * disc) / 100 : base);
+  }, [basePrice, discount, hasDiscount]);
+
+
   const handleCarouselImageChange = (index: number, file: File) => {
     const reader = new FileReader();
     reader.onloadend = () => {
@@ -182,7 +206,10 @@ const EditPackagePage = () => {
 
     const formData = new FormData();
     formData.append("name", title.trim());
-    formData.append("price", price === "" ? "0" : String(price));
+    formData.append("base_price", String(basePrice)); // original price
+    formData.append("price", String(price)); // discounted or same
+    formData.append("is_discounted", hasDiscount ? "1" : "0");
+    formData.append("discount", hasDiscount ? String(discount) : "0");
     formData.append("duration", String(duration));
     formData.append("description", description.trim());
 
@@ -199,7 +226,6 @@ const EditPackagePage = () => {
     newFiles.forEach((file, idx) => {
       if (file) {
         formData.append(`images[${idx}]`, file);
-
         if (pkg?.images[idx]?.id) {
           formData.append(`imageIDs[${idx}]`, String(pkg.images[idx].id));
         }
@@ -219,17 +245,19 @@ const EditPackagePage = () => {
 
       if (!response.ok) {
         console.error("Backend error:", result);
-        toast.error(
-          `Failed to update package: ${result.message || "Unknown error"}`
-        );
+        toast.error(`Failed to update package: ${result.message || "Unknown error"}`);
         return;
       }
-      navigate("/admin/packages", { state: { toast: { type: "success", message: "Package updated successfully!" } } });
+
+      navigate("/admin/packages", {
+        state: { toast: { type: "success", message: "Package updated successfully!" } },
+      });
     } catch (error) {
       console.error("Network error:", error);
       toast.error("An error occurred while updating the package.");
     }
   };
+
 
   if (!pkg) return <div className="p-4">Loading...</div>;
 
@@ -301,8 +329,9 @@ const EditPackagePage = () => {
             />
           </div>
 
-          {/* Duration + Price */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* Duration + Price + Discount */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {/* Duration */}
             <div>
               <label className="block text-sm font-bold">Duration (minutes)</label>
               <input
@@ -322,21 +351,63 @@ const EditPackagePage = () => {
               />
             </div>
 
+            {/* Price */}
             <div>
               <label className="block text-sm font-bold">Price</label>
               <input
                 type="number"
                 min={1}
-                value={price}
+                value={basePrice}
                 onChange={(e) => {
                   const val = e.target.value;
                   if (/^\d*$/.test(val)) {
-                    setPrice(val === "" ? "" : Number(val));
+                    setBasePrice(val === "" ? "" : Number(val));
                   }
                 }}
                 className="w-full px-3 py-2 border rounded-md text-sm"
                 placeholder="e.g., 1500"
               />
+            </div>
+
+            {/* Discount */}
+            <div>
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-bold">Discount %</label>
+                <label className="inline-flex items-center cursor-pointer">
+                  <span className="mr-2 text-xs text-gray-600">Enable</span>
+                  <input
+                    type="checkbox"
+                    className="sr-only peer"
+                    checked={hasDiscount}
+                    onChange={(e) => {
+                      setHasDiscount(e.target.checked);
+                      if (!e.target.checked) setDiscount(""); // reset discount if disabled
+                    }}
+                  />
+                  <div className="w-9 h-5 bg-gray-300 rounded-full peer-checked:bg-black relative after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:h-4 after:w-4 after:rounded-full after:transition-all peer-checked:after:translate-x-4" />
+                </label>
+              </div>
+
+              <input
+                type="number"
+                min={0}
+                max={100}
+                value={discount}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (/^\d*$/.test(val)) setDiscount(val === "" ? "" : Number(val));
+                }}
+                disabled={!hasDiscount}
+                className={`w-full px-3 py-2 border rounded-md text-sm mt-1 transition ${hasDiscount ? "bg-white" : "bg-gray-100 cursor-not-allowed"}`}
+                placeholder="e.g., 10"
+              />
+
+
+              {hasDiscount && basePrice !== "" && discount !== "" && (
+                <p className="text-xs text-gray-500 mt-1">
+                  New Price: ₱{(Number(basePrice) - (Number(basePrice) * Number(discount)) / 100).toFixed(2)}
+                </p>
+              )}
             </div>
           </div>
 
