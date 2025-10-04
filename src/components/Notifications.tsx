@@ -12,7 +12,7 @@ import { useNavigate } from "react-router-dom";
 type Notification = {
   notificationID: number;
   title: string;
-  label?: "Booking" | "Payment" | "Reschedule" | "Cancellation" | "Reminder" | "Promotion" | "System" | "Gallery";
+  label?: "Booking" | "Payment" | "Reschedule" | "Cancellation" | "Reminder" | "Promotion" | "System" | "Gallery" | "Support";
   message: string;
   time: string;
   starred?: boolean;
@@ -79,6 +79,7 @@ const labelColors: Record<string, string> = {
   Promotion: "bg-pink-100 text-pink-600",
   System: "bg-black text-white",
   Gallery: "bg-indigo-100 text-indigo-600",
+  Support: "bg-purple-100 text-purple-600",
 };
 const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);

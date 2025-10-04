@@ -23,6 +23,7 @@
     use App\Http\Controllers\ImageController;
     use App\Http\Controllers\PackageAddOnController;
     use App\Http\Controllers\MessageController; // Message (contact/chat) controller
+    use App\Http\Controllers\SupportReplyController;
     
     // Testing routes
     Route::middleware('api')->get('/test', function (Request $request) {
@@ -299,6 +300,9 @@
         Route::post('/admin/booking-requests/{id}/confirm-reschedule', [BookingRequestController::class, 'confirmReschedule']);
         Route::post('/admin/booking-requests/{id}/confirm-cancellation', [BookingRequestController::class, 'confirmCancellation']);
         Route::post('/admin/booking-requests/{id}/decline-request', [BookingRequestController::class, 'decline']);
+
+    // admin support reply -> creates notification + pushes via pusher
+    Route::post('/admin/support-replies', [SupportReplyController::class, 'store']);
 
         //admin package management
         Route::get('/admin/packages-all', [PackageController::class, 'adminShowAll']);
