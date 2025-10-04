@@ -42,7 +42,7 @@ public function getFeedbacks()
             )
             ->whereNotNull('booking.feedback')
             ->orderBy('booking.bookingID', 'desc')
-            ->limit(10)
+            ->limit(3) // reduced from 10 to 3 per requirement
             ->get();
 
         return response()->json($feedbacks);

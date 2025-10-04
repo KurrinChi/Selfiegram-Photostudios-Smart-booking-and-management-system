@@ -6,6 +6,8 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faSearch } from "@fortawesome/free-solid-svg-icons";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
 
+import CenteredLoader from "./CenteredLoader";
+
 interface Package {
   id: string;
   title: string;
@@ -232,7 +234,7 @@ const ClientPackagePageContent: React.FC = () => {
       </div>
 
       {loading ? (
-        <div className="text-center py-20 text-gray-400">Loading packages...</div>
+        <CenteredLoader message="Loading packages..." />
       ) : filtered.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {filtered.map((pkg) => {

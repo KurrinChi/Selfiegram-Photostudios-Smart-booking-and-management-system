@@ -7,6 +7,7 @@ import { faStar as fasStar, faStarHalfAlt } from "@fortawesome/free-solid-svg-ic
 import { faStar as farStar } from "@fortawesome/free-regular-svg-icons";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
 import FeedbackSection from "./FeedbackSection";
+import CenteredLoader from "./CenteredLoader"; // shared loader
 import ChatWidget from "./ChatWidget";
 interface Package {
   id: string;
@@ -55,6 +56,7 @@ const ClientHomepageContent = () => {
   const [direction, setDirection] = useState(0);
   const [packages, setPackages] = useState<Package[]>([]);
   const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
+  const [loadingFeedbacks, setLoadingFeedbacks] = useState(true); // loading state for feedback section
 
   const SLIDE_DURATION = 0.5;
   const SLIDE_INTERVAL = 10000;
@@ -75,6 +77,8 @@ const ClientHomepageContent = () => {
         );
       } catch (err) {
         console.error("Failed to fetch top packages:", err);
+      } finally {
+        // no package-specific loader currently displayed
       }
     };
 
@@ -99,6 +103,8 @@ const ClientHomepageContent = () => {
         );
       } catch (err) {
         console.error("Failed to fetch feedbacks:", err);
+      } finally {
+        setLoadingFeedbacks(false);
       }
     };
 
@@ -238,10 +244,17 @@ const ClientHomepageContent = () => {
         </div>
       </div>
 
-      {/* Feedback Section */}
+      {/* Feedback Section with loader positioned below packages */}
       <div className="max-w-6xl mx-auto">
-        <FeedbackSection feedbacks={feedbacks} />
-
+        {loadingFeedbacks ? (
+          <CenteredLoader message="Loading..." minHeightClass="min-h-[40vh]" />
+        ) : feedbacks.length > 0 ? (
+          <FeedbackSection feedbacks={feedbacks} />
+        ) : (
+          <div className="w-full min-h-[30vh] flex items-center justify-center text-sm text-gray-500">
+            No feedback available yet.
+          </div>
+        )}
       </div>
       <ChatWidget />
     </div>

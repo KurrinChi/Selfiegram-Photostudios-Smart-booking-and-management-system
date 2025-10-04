@@ -1,17 +1,61 @@
 import React, { useEffect, useState } from "react";
-import ChatThread from "./Messaging/ChatThread";
-import ChatDetails from "./Messaging/ChatDetails";
-import type { Chat, Message } from "./AdminMessageContent";
+import CenteredLoader from "./CenteredLoader";
+// Fallback lightweight components & types (original Messaging components not found)
+interface Message { text: string; time: string; fromMe?: boolean }
+interface Chat { id?: string; messages: Message[]; message?: string; time?: string; unread?: boolean }
+
+const ChatThread: React.FC<{
+  chat: Chat;
+  input: string;
+  setInput: (v: string) => void;
+  handleSend: () => void;
+  onShowDetails: () => void;
+  onBack: () => void;
+  showBackButton: boolean;
+}> = ({ chat, input, setInput, handleSend, onShowDetails }) => {
+  return (
+    <div className="flex flex-col h-full">
+      <div className="flex-1 overflow-auto p-4 space-y-3 text-sm">
+        {chat.messages.map((m, i) => (
+          <div key={i} className={`max-w-xs px-3 py-2 rounded-md shadow text-[13px] whitespace-pre-wrap ${m.fromMe ? 'ml-auto bg-slate-900 text-white' : 'bg-slate-100 text-slate-800'}`}>{m.text}</div>
+        ))}
+      </div>
+      <div className="border-t p-3 flex gap-2">
+        <input value={input} onChange={e=>setInput(e.target.value)} onKeyDown={e=>{if(e.key==='Enter') handleSend();}} placeholder="Type a message" className="flex-1 border rounded-md px-3 py-2 text-sm outline-none" />
+        <button onClick={handleSend} className="px-4 py-2 bg-slate-900 text-white rounded-md text-sm">Send</button>
+        <button onClick={onShowDetails} className="px-3 py-2 bg-slate-100 rounded-md text-xs">Details</button>
+      </div>
+    </div>
+  );
+};
+
+const ChatDetails: React.FC<{ chat: Chat; isMobileVisible: boolean; onClose: () => void }> = ({ chat, onClose }) => {
+  return (
+    <div className="h-full flex flex-col">
+      <div className="p-4 border-b flex items-center justify-between"><h3 className="font-medium text-sm">Conversation Details</h3><button onClick={onClose} className="text-xs text-slate-500 hover:text-slate-800">Close</button></div>
+      <div className="p-4 text-xs text-slate-600 space-y-2 overflow-auto">
+        <div>Total Messages: {chat.messages.length}</div>
+        <div>Last Activity: {chat.time ? new Date(chat.time).toLocaleString() : '—'}</div>
+      </div>
+    </div>
+  );
+};
 import mockClientChat from "../data/mockClientChat.json";
 
 const ClientInboxPageContent: React.FC = () => {
   const [chat, setChat] = useState<Chat | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
   const [input, setInput] = useState<string>("");
   const [showDetails, setShowDetails] = useState(false);
 
   useEffect(() => {
-    const loadedChat = mockClientChat as Chat;
-    setChat(loadedChat);
+    // Simulate async loading (replace later with real fetch)
+    const timer = setTimeout(() => {
+      const loadedChat = mockClientChat as Chat;
+      setChat(loadedChat);
+      setLoading(false);
+    }, 150);
+    return () => clearTimeout(timer);
   }, []);
 
   const handleSend = () => {
@@ -35,7 +79,13 @@ const ClientInboxPageContent: React.FC = () => {
     setInput("");
   };
 
-  if (!chat) return null;
+  if (loading || !chat) {
+    return (
+      <div className="p-4 animate-fadeIn h-[calc(100vh-64px)]">
+        <CenteredLoader message="Loading inbox..." />
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-[calc(100vh-64px)] w-full font-sf overflow-hidden relative bg-gradient-to-br from-gray-100 to-white animate-fadeIn">

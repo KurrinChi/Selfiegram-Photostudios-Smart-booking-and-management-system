@@ -5,6 +5,8 @@ import { useNavigate } from "react-router-dom";
 import ModalTransactionDialog from "../components/ModalTransactionDialog";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
 
+import CenteredLoader from "./CenteredLoader";
+
 interface Appointment {
   id: string;
   date: string;
@@ -38,6 +40,7 @@ const ClientAppointmentsPageContent = () => {
   const [selectedAppointment, setSelectedAppointment] =
     useState<Appointment | null>(null);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [showSidebar, setShowSidebar] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -57,8 +60,9 @@ const ClientAppointmentsPageContent = () => {
   }, []);
 
   useEffect(() => {
-    const fetchAppointments = async () => {
+  const fetchAppointments = async () => {
     try {
+   setLoading(true);
      const userID = localStorage.getItem("userID");
 
       if (!userID) {
@@ -110,6 +114,8 @@ const ClientAppointmentsPageContent = () => {
       setAppointments(formatted);
     } catch (error) {
       console.error("Failed to fetch appointments:", error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -202,6 +208,14 @@ const ClientAppointmentsPageContent = () => {
       a.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       a.package.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  if (loading) {
+    return (
+      <div className="p-4">
+        <CenteredLoader message="Loading appointments..." />
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col lg:flex-row h-[calc(100vh-64px)] overflow-hidden font-sf relative">

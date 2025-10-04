@@ -41,6 +41,7 @@ const TABS = ["Gallery", "Favorites"];
 const ClientGalleryPageContent: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>("Gallery");
   const [galleryData, setGalleryData] = useState<DateGroup[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
   const [previewImage, setPreviewImage] = useState<null | {
     id: string;
@@ -57,6 +58,7 @@ const ClientGalleryPageContent: React.FC = () => {
   useEffect(() => {
     const fetchImages = async () => {
       try {
+        setLoading(true);
         const res = await fetchWithAuth(`${API_URL}/api/user-images/${userID}`);
         if (!res.ok) throw new Error("Failed to fetch images");
         const data = await res.json();
@@ -94,6 +96,8 @@ const ClientGalleryPageContent: React.FC = () => {
         setOpenPackageMap(initialOpen);
       } catch (err) {
         console.error("Error fetching images:", err);
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -264,6 +268,17 @@ const ClientGalleryPageContent: React.FC = () => {
   const isSelected = (id: string) => selectedImages.includes(id);
 
   /* ----------------------------- Render ---------------------------- */
+  if (loading) {
+    return (
+      <div className="p-4 font-sans">
+        <div className="w-full min-h-[65vh] flex flex-col items-center justify-center">
+          <div className="w-12 h-12 border-4 border-gray-300 border-t-slate-900 rounded-full animate-spin mb-5" />
+          <p className="text-sm text-slate-600 tracking-wide">Loading your gallery...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="p-4 font-sans relative">
       {/* Top bar */}
@@ -302,7 +317,7 @@ const ClientGalleryPageContent: React.FC = () => {
       </div>
 
       {/* Empty state */}
-      {filteredData.length === 0 ? (
+      {!loading && filteredData.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-center text-slate-500">
           <p className="text-lg font-medium mb-2">No photos yet</p>
           <p className="text-sm max-w-xs">

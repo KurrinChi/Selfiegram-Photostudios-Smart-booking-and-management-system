@@ -5,6 +5,7 @@ import { fetchWithAuth } from "../utils/fetchWithAuth";
 import { QRCodeCanvas } from "qrcode.react"; // Import QRCodeCanvas from qrcode.react
 import { useNotifications } from "../utils/useNotifications";
 import ChatWidget from "./ChatWidget";
+import CenteredLoader from "./CenteredLoader"; // unified loader
 import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
 
@@ -122,10 +123,11 @@ const formatDate = (dateStr: string) => {
   });
 };
 export default function Notifications() {
-    const [notifications, setNotifications] = useState<Notification[]>([]);
-    const [selected, setSelected] = useState<Notification | null>(null);
-    const [bookingDetails, setBookingDetails] = useState<any | null>(null);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [selected, setSelected] = useState<Notification | null>(null);
+  const [bookingDetails, setBookingDetails] = useState<any | null>(null);
   const [query, setQuery] = useState(""); // search text
+  const [loading, setLoading] = useState(true); // unified loading state
     
     const userID = localStorage.getItem("userID");
     const API_URL = import.meta.env.VITE_API_URL;
@@ -139,9 +141,9 @@ export default function Notifications() {
     };
 
     useEffect(() => {
-        const fetchNotifications = async () => {
+    const fetchNotifications = async () => {
             try {
-                if (!userID) return;
+        if (!userID) { setLoading(false); return; }
 
                 const token = localStorage.getItem("token");
                 const res = await fetchWithAuth(`${API_URL}/api/notifications/${userID}`, {
@@ -158,6 +160,8 @@ export default function Notifications() {
                 setNotifications(data);
             } catch (err) {
                 console.error("Error fetching notifications:", err);
+      } finally {
+        setLoading(false);
             }
         };
 
@@ -416,6 +420,21 @@ const BookingDetails = ({ details }: { details: any }) => {
 };
 
   
+  // Early return while loading
+  if (loading) {
+    return (
+      <div className="flex h-[calc(100vh-10vh)]">
+        <div className="flex-1 p-4 animate-fadeIn">
+          <h1 className="text-2xl font-semibold mb-4">Inbox</h1>
+          <div className="bg-white rounded-2xl shadow-md h-full">
+            <CenteredLoader message="Loading notifications..." minHeightClass="min-h-[60vh]" />
+          </div>
+        </div>
+        <ChatWidget />
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-[calc(100vh-10vh)]">
       {/* Notifications List */}
