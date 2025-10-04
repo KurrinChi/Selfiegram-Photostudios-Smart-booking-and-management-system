@@ -11,6 +11,8 @@ interface ModalRescheduleDialogProps {
   onSubmit: (reason: string, requestedDate: string, requestedStartTime: string) => void;
   bookingID: number; // Add bookingID prop
   userID: number; // Add userID prop
+  // Optional current package/session duration (e.g., "1 hr 30 mins" or "90 mins"). If not supplied we'll attempt to fetch.
+  currentDuration?: string;
 }
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -18,20 +20,26 @@ const ModalRescheduleDialog: React.FC<ModalRescheduleDialogProps> = ({
   isOpen,
   onClose,
   onSubmit,
-  // bookingID, // Reserved for future booking-specific validations
-  // userID, // Reserved for future user permission checks
+  bookingID,
+  currentDuration,
 }) => {
   const [reason, setReason] = useState("");
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
-  const [bookedSlots, setBookedSlots] = useState<string[]>([]);
-  
-  const timeSlots = [
-    "9 AM", "10 AM", "11 AM",
-    "12 PM", "1 PM", "2 PM",
-    "3 PM", "4 PM", "5 PM",
-    "6 PM", "7 PM",
-  ];
+  const [bookedSlots, setBookedSlots] = useState<string[]>([]); // simple labels for quick membership
+  const [bookedIntervals, setBookedIntervals] = useState<{ start: number; end: number; bookingID?: number; durationMinutes?: number }[]>([]);
+  const [sessionDurationMinutes, setSessionDurationMinutes] = useState<number>(60); // default 60 if unknown
+
+  // Generate 30-minute slots from 09:00 AM to 07:00 PM (exclude 07:30 PM onward for parity with select.tsx)
+  const timeSlots = React.useMemo(() => (
+    Array.from({ length: (20 - 9 + 1) * 2 }, (_, i) => {
+      const hour = 9 + Math.floor(i / 2);
+      const min = i % 2 === 0 ? '00' : '30';
+      const meridian = hour < 12 ? 'AM' : 'PM';
+      const labelHour = (hour > 12 ? hour - 12 : hour).toString().padStart(2, '0');
+      return `${labelHour}:${min} ${meridian}`; // e.g., 09:00 AM
+    }).filter(s => !['07:30 PM','08:00 PM','08:30 PM'].includes(s))
+  ), []);
 
   // (Removed unavailable-dates fetch; time-slot layer drives availability)
 
@@ -88,20 +96,62 @@ const ModalRescheduleDialog: React.FC<ModalRescheduleDialogProps> = ({
   }
 
   // Convert server 12-hour time (e.g., "09:00 AM") to slot label (e.g., "9 AM")
+  // Convert server times to our canonical HH:MM AM/PM 30-min label (keeps minutes)
   function normalizeServerTimeToSlotLabel(serverTime: string): string {
-    const match = serverTime.match(/^(\d{1,2}):\d{2}\s*(AM|PM)$/i);
-    if (!match) return serverTime;
-    let hour = parseInt(match[1], 10);
-    const ampm = match[2].toUpperCase();
-    if (hour === 0) hour = 12;
-    return `${hour} ${ampm}`;
+    const m = serverTime.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+    if (!m) return serverTime;
+    let h = parseInt(m[1], 10);
+    const mm = m[2];
+    const ap = m[3].toUpperCase();
+    if (h < 1 || h > 12) return serverTime;
+    return `${String(h).padStart(2,'0')}:${mm} ${ap}`;
   }
 
-  // Load booked slots for the selected date
+  // Helpers for conflict logic
+  const slotLabelToMinutes = (label: string): number => {
+    const parts = label.trim().split(/\s+/); // [HH:MM, AM]
+    if (parts.length < 2) return NaN;
+    const [time, period] = parts;
+    const [hh, mm] = time.split(':').map(n => parseInt(n, 10));
+    if (isNaN(hh) || isNaN(mm)) return NaN;
+    let hour24 = hh;
+    if (period.toUpperCase() === 'PM' && hh !== 12) hour24 = hh + 12;
+    if (period.toUpperCase() === 'AM' && hh === 12) hour24 = 0;
+    return hour24 * 60 + mm;
+  };
+
+  const parseDurationToMinutes = (raw: string): number => {
+    if (!raw || typeof raw !== 'string') return 0;
+    const s = raw.toLowerCase();
+    if (/^\d+$/.test(s)) return parseInt(s, 10);
+    let total = 0;
+    const hMatch = s.match(/(\d+)\s*(hour|hr|hrs|h)/);
+    if (hMatch) total += parseInt(hMatch[1], 10) * 60;
+    const mMatch = s.match(/(\d+)\s*(minute|min|mins|m)/);
+    if (mMatch) total += parseInt(mMatch[1], 10);
+    if (total === 0) {
+      const nums = s.match(/(\d+)/g);
+      if (nums) {
+        if (/hour|hr|hrs|h/.test(s)) {
+          total += parseInt(nums[0], 10) * 60;
+          if (nums[1]) total += parseInt(nums[1], 10);
+        } else {
+          total += parseInt(nums[0], 10);
+        }
+      }
+    }
+    return total;
+  };
+
+  // Adjust day end to 8 PM exclusive (20:00) like select.tsx
+  const DAY_END_MIN = 20 * 60;
+
+  // Load booked slots + intervals for the selected date
   useEffect(() => {
     const fetchBooked = async () => {
       if (!selectedDate) {
         setBookedSlots([]);
+        setBookedIntervals([]);
         return;
       }
       try {
@@ -109,12 +159,34 @@ const ModalRescheduleDialog: React.FC<ModalRescheduleDialogProps> = ({
         const res = await fetchWithAuth(`${API_URL}/api/booked-slots?date=${dateStr}`);
         if (!res.ok) {
           setBookedSlots([]);
+          setBookedIntervals([]);
           return;
         }
         const data = await res.json();
         const slots: string[] = Array.isArray(data.bookedSlots) ? data.bookedSlots : [];
         const normalized = slots.map(normalizeServerTimeToSlotLabel);
         setBookedSlots(normalized);
+
+        // Build intervals if structured bookings present
+        if (Array.isArray(data.bookings)) {
+          const intervals: { start: number; end: number; bookingID?: number; durationMinutes?: number }[] = [];
+            for (const b of data.bookings) {
+              if (!b || !b.startTime) continue;
+              const start = slotLabelToMinutes(normalizeServerTimeToSlotLabel(String(b.startTime)));
+              if (isNaN(start)) continue;
+              const dur = parseDurationToMinutes(b.duration || b.packageDuration || '');
+              const durationMinutes = dur > 0 ? dur : 60;
+              const end = start + durationMinutes;
+              intervals.push({ start, end, bookingID: b.bookingID, durationMinutes });
+            }
+          setBookedIntervals(intervals);
+        } else {
+          // Fallback: each booked slot is a 30-min occupied interval
+          setBookedIntervals(normalized.map(s => {
+            const start = slotLabelToMinutes(s);
+            return { start, end: start + 30 };
+          }));
+        }
 
         // If all time slots are booked, clear any selected time; also clear if the selected slot became booked
         const allBooked = timeSlots.every(s => normalized.includes(s));
@@ -125,6 +197,7 @@ const ModalRescheduleDialog: React.FC<ModalRescheduleDialogProps> = ({
         }
       } catch (e) {
         console.error('Error fetching booked slots:', e);
+        setBookedIntervals([]);
       }
     };
 
@@ -132,41 +205,16 @@ const ModalRescheduleDialog: React.FC<ModalRescheduleDialogProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDate]);
 
-  function to24Hour(time12h: string) {
-    try {
-      console.log("Converting time:", time12h);
-      
-      // Split the time and modifier (AM/PM)
-      const parts = time12h.trim().split(" ");
-      if (parts.length !== 2) {
-        console.error("Invalid time format:", time12h);
-        return "00:00";
-      }
-      
-      const [timeStr, modifier] = parts;
-      let hours = parseInt(timeStr);
-      
-      // Validate hours
-      if (isNaN(hours) || hours < 1 || hours > 12) {
-        console.error("Invalid hours:", hours);
-        return "00:00";
-      }
-      
-      // Convert to 24-hour format
-      if (modifier.toUpperCase() === "PM" && hours !== 12) {
-        hours += 12;
-      } else if (modifier.toUpperCase() === "AM" && hours === 12) {
-        hours = 0;
-      }
-      
-      const result = `${String(hours).padStart(2, "0")}:00`;
-      console.log("Converted to 24-hour:", result);
-      return result;
-      
-    } catch (error) {
-      console.error("Error converting time:", error);
-      return "00:00";
-    }
+  function to24Hour(timeLabel: string) {
+    // Accept formats: "09:00 AM" or fallback simplistic
+    const m = timeLabel.trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+    if (!m) return '00:00';
+    let h = parseInt(m[1], 10);
+    const mm = m[2];
+    const ap = m[3].toUpperCase();
+    if (ap === 'PM' && h !== 12) h += 12;
+    if (ap === 'AM' && h === 12) h = 0;
+    return `${String(h).padStart(2,'0')}:${mm}`;
   }
 
   // Helper function to format date without timezone issues
@@ -178,18 +226,26 @@ const ModalRescheduleDialog: React.FC<ModalRescheduleDialogProps> = ({
   };
 
   // Test the time conversion function when component loads (for debugging)
+  // Fetch existing booking details to derive session duration (if not passed) when dialog opens
   useEffect(() => {
-    if (isOpen) {
-      console.log("=== TIME SLOTS DEBUG ===");
-      console.log("Available time slots:", timeSlots);
-      console.log("Testing time conversion:");
-      timeSlots.forEach(slot => {
-        const converted = to24Hour(slot);
-        console.log(`${slot} -> ${converted}`);
-      });
-      console.log("========================");
-    }
-  }, [isOpen]);
+    const loadDuration = async () => {
+      if (!isOpen) return;
+      if (currentDuration) {
+        setSessionDurationMinutes(parseDurationToMinutes(currentDuration) || 60);
+        return;
+      }
+      try {
+        const res = await fetchWithAuth(`${API_URL}/api/bookings/${bookingID}`);
+        if (res.ok) {
+          const data = await res.json();
+          const dStr = data?.package?.duration || data?.duration || '';
+          const mins = parseDurationToMinutes(dStr) || 60;
+          setSessionDurationMinutes(mins);
+        }
+      } catch {/* ignore */}
+    };
+    loadDuration();
+  }, [isOpen, currentDuration, bookingID]);
 
   const handleConfirm = () => {
     // Validate all required fields
@@ -228,7 +284,7 @@ const ModalRescheduleDialog: React.FC<ModalRescheduleDialogProps> = ({
 
     // Use the timezone-safe date formatting function
     const requestedDate = formatDateToString(selectedDate);
-    const formattedTime = to24Hour(selectedTime);
+  const formattedTime = to24Hour(selectedTime);
 
     console.log("=== RESCHEDULE SUBMISSION ===");
     console.log("Selected date object:", selectedDate);
@@ -302,23 +358,58 @@ if (!isOpen) return null;
               Available Time Slots
             </h4>
             <div className="grid grid-cols-2 lg:grid-cols-3 gap-2">
-              {timeSlots.map((slot) => (
-                <button
-                  key={slot}
-                  onClick={() => setSelectedTime(slot)}
-                  disabled={!selectedDate || bookedSlots.includes(slot)}
-                  className={`py-3 px-2 text-xs font-medium rounded-md transition text-center whitespace-nowrap ${
-                    !selectedDate || bookedSlots.includes(slot)
-                      ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-                      : selectedTime === slot
-                        ? "bg-black text-white"
-                        : "bg-gray-100 hover:bg-gray-200 text-gray-700"
-                  }`}
-                  title={slot} // Add tooltip to show full time
-                >
-                  {slot}
-                </button>
-              ))}
+              {timeSlots.map(slot => {
+                const slotStart = slotLabelToMinutes(slot);
+                const slotEnd = slotStart + 30;
+                // Past date/time disable
+                const nowDisable = !selectedDate;
+                let isPastTime = false;
+                if (selectedDate) {
+                  // Compare against current PH time only if same calendar day
+                  const todayPH = getTodayInPH();
+                  const sameDay = isSameDay(selectedDate, todayPH);
+                  if (sameDay) {
+                    const now = new Date();
+                    // Rough minutes now in local timezone; for higher accuracy could use PH timezone conversion
+                    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+                    isPastTime = slotStart <= currentMinutes;
+                  }
+                }
+                // Check existing booked intervals (base slot overlap)
+                const overlapsExisting = bookedIntervals.some(iv => slotStart < iv.end && slotEnd > iv.start);
+                // Session end if started here
+                const wouldEnd = slotStart + sessionDurationMinutes;
+                const insufficientRemaining = wouldEnd > DAY_END_MIN;
+                const intervalConflict = bookedIntervals.some(iv => slotStart < iv.end && wouldEnd > iv.start);
+                const isBooked = overlapsExisting;
+                const disabled = nowDisable || isPastTime || isBooked || insufficientRemaining || intervalConflict;
+                const title = !selectedDate ? 'Select a date first'
+                  : isPastTime ? 'This time has already passed'
+                  : isBooked ? 'Overlaps an existing booking'
+                  : insufficientRemaining ? 'Not enough remaining time before closing'
+                  : intervalConflict ? 'Your full session would overlap an existing booking'
+                  : 'Available';
+                return (
+                  <button
+                    key={slot}
+                    onClick={() => !disabled && setSelectedTime(slot)}
+                    disabled={disabled}
+                    className={`py-2 px-2 text-[11px] font-medium rounded-md transition text-center whitespace-nowrap border ${
+                      selectedTime === slot && !disabled
+                        ? 'bg-black text-white border-black'
+                        : disabled
+                        ? 'bg-gray-200 text-gray-400 border-gray-200 cursor-not-allowed'
+                        : 'bg-gray-100 hover:bg-gray-200 text-gray-700 border-gray-200'
+                    }`}
+                    title={title}
+                  >
+                    {slot}
+                    {isBooked && <span className="block text-[10px] text-red-500">Booked</span>}
+                    {!isBooked && intervalConflict && <span className="block text-[10px] text-orange-500">Conflict</span>}
+                    {!isBooked && insufficientRemaining && <span className="block text-[10px] text-amber-600">Too Late</span>}
+                  </button>
+                );
+              })}
             </div>
             {selectedDate && timeSlots.every(s => bookedSlots.includes(s)) && (
               <div className="mt-3 text-sm text-red-600">
