@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useMemo, useState, useRef, type JSX } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Trash2 as TrashIcon, Search as SearchIcon, Star as StarIcon, Reply as ReplyIcon, X as XIcon, Plus as PlusIcon, RefreshCcw as RefreshIcon, AlertTriangle as AlertIcon } from 'lucide-react';
+import { toast, ToastContainer } from 'react-toastify';
 import pusher from '../utils/pusher';
 
 export type Email = {
@@ -12,13 +13,14 @@ export type Email = {
   body: string;
   time: string; // ISO timestamp
   mailbox: string; // only 'inbox' used here
-  unread?: boolean;
+  // unread removed; rely on messageStatus state from backend
   starred?: boolean;
   avatar?: string | null; // profile picture absolute/relative URL
+  senderID?: number; // original userID (for reply target)
+  messageStatus?: number; // 0 pending, 1 accommodated
 };
 
 /* ---------------- Utilities ---------------- */
-const makeId = (pref = 'id') => `${pref}_${Date.now()}_${Math.floor(Math.random() * 1e6)}`;
 const timeShort = (iso?: string) => {
   if (!iso) return '';
   const d = new Date(iso);
@@ -77,16 +79,18 @@ function mapRawToEmail(r: RawMessage, apiBase: string): Email {
     body: r.message + `\n\n#${r.messageID}`,
     time: r.createdAt || new Date().toISOString(),
     mailbox: 'inbox',
-    unread: r.messageStatus === 0,
     starred: false,
-    avatar: buildAvatarURL(r.profilePicture, apiBase)
+    avatar: buildAvatarURL(r.profilePicture, apiBase),
+    senderID: r.senderID,
+    messageStatus: r.messageStatus,
   };
 }
 
 /* -------------- Component -------------- */
 export default function AdminMessageContent(): JSX.Element {
+  const TOAST_ID = 'adminMessages';
   const [emails, setEmails] = useState<Email[]>([]);
-  const [selectedEmailId, setSelectedEmailId] = useState<string | null>(null);
+  const [selectedEmailId, setSelectedEmailId] = useState<string | null>(null); // stays null on load until user clicks
   const [searchQuery, setSearchQuery] = useState('');
   const [q, setQ] = useState(''); // immediate input for debounce
   const [loading, setLoading] = useState(false);
@@ -123,7 +127,6 @@ export default function AdminMessageContent(): JSX.Element {
       const data: RawMessage[] = Array.isArray(json) ? json : (json.data || []);
   const mapped = data.map(r => mapRawToEmail(r, API_URL)).sort((a,b)=> +new Date(b.time) - +new Date(a.time));
       setEmails(mapped);
-      if (!selectedEmailId && mapped.length) setSelectedEmailId(mapped[0].id);
       setLastFetched(new Date());
     } catch (e: any) {
       if (e?.name === 'AbortError') return; // ignore abort
@@ -170,6 +173,9 @@ export default function AdminMessageContent(): JSX.Element {
   const [composeOpen, setComposeOpen] = useState(false);
   const [composeMinimized, setComposeMinimized] = useState(false);
   const [composeDraft, setComposeDraft] = useState({ to: '', subject: '', body: '' });
+  const [replyTargetUserID, setReplyTargetUserID] = useState<number | null>(null);
+  const [replyTargetMessageID, setReplyTargetMessageID] = useState<string | null>(null);
+  const [sending, setSending] = useState(false);
 
   /* Debounce search */
   useEffect(() => {
@@ -179,30 +185,13 @@ export default function AdminMessageContent(): JSX.Element {
 
   /* Ensure selected email remains valid */
   useEffect(() => {
-    if (selectedEmailId && emails.some(e => e.id === selectedEmailId)) return;
-    setSelectedEmailId(emails[0]?.id ?? null);
+    // If the currently selected email was removed, clear selection (do not auto select a new one)
+    if (selectedEmailId && !emails.some(e => e.id === selectedEmailId)) {
+      setSelectedEmailId(null);
+    }
   }, [emails, selectedEmailId]);
 
-  /* Mark selected as read (optimistic + backend status update) */
-  useEffect(() => {
-    if (!selectedEmailId) return;
-    const email = emails.find(e => e.id === selectedEmailId);
-    if (!email || !email.unread) return;
-    // optimistic UI update
-    setEmails(prev => prev.map(e => e.id === selectedEmailId ? { ...e, unread: false } : e));
-    // backend call (fire & forget)
-    if (API_URL && token) {
-      fetch(`${API_URL}/api/messages/${selectedEmailId}/status`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({ messageStatus: 1 }),
-      }).catch(()=>{});
-    }
-  }, [selectedEmailId, emails, API_URL, token]);
+  // Removed mark-as-read logic per new requirement
 
   const selectedEmail = useMemo(() => emails.find(e => e.id === selectedEmailId) ?? null, [emails, selectedEmailId]);
 
@@ -210,6 +199,7 @@ export default function AdminMessageContent(): JSX.Element {
     const ql = searchQuery.toLowerCase();
     return emails
       .filter(e => e.mailbox === 'inbox')
+      .filter(e => e.messageStatus === 0) // show only un-accommodated messages
       .filter(e => !ql || e.subject.toLowerCase().includes(ql) || e.body.toLowerCase().includes(ql) || e.from.toLowerCase().includes(ql))
       .sort((a, b) => +new Date(b.time) - +new Date(a.time));
   }, [emails, searchQuery]);
@@ -244,27 +234,69 @@ export default function AdminMessageContent(): JSX.Element {
   }, []);
 
   const sendCompose = useCallback(() => {
-    const cw = composeDraft;
-    const recipients = cw.to.split(',').map(s => s.trim()).filter(Boolean);
-    if (recipients.length === 0) {
-      alert("Please add at least one recipient in 'To' before sending.");
+    if (!replyTargetUserID || !replyTargetMessageID) {
+      toast.error('No target message. Select a message then click Reply.', { containerId: TOAST_ID, autoClose: 3000 });
       return;
     }
-    if (!cw.to.trim() && !cw.subject.trim() && !cw.body.trim()) return;
-    const newEmail: Email = {
-      id: makeId('e'),
-      from: 'me <me@example.com>',
-      to: recipients,
-      subject: cw.subject || '(no subject)',
-      body: cw.body,
-      time: new Date().toISOString(),
-      mailbox: 'inbox',
-      unread: true,
-      starred: false,
-    };
-    setEmails(prev => [newEmail, ...prev].sort((a, b) => +new Date(b.time) - +new Date(a.time)));
-    closeCompose();
-  }, [composeDraft, closeCompose]);
+    const cw = composeDraft;
+    if (!cw.subject.trim()) {
+      toast.error('Subject is required.', { containerId: TOAST_ID, autoClose: 2500 });
+      return;
+    }
+    if (!cw.body.trim()) {
+      toast.error('Message body is required.', { containerId: TOAST_ID, autoClose: 2500 });
+      return;
+    }
+    if (!API_URL || !token) {
+      toast.error('Missing API URL or authentication.', { containerId: TOAST_ID, autoClose: 3000 });
+      return;
+    }
+    setSending(true);
+    fetch(`${API_URL}/api/admin/support-replies`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        userID: replyTargetUserID,
+        subject: cw.subject.trim(),
+        body: cw.body,
+      })
+    }).then(async res => {
+      if (!res.ok) {
+        const txt = await res.text();
+        throw new Error(txt || `Failed (${res.status})`);
+      }
+      // Mark original message as accommodated (messageStatus=1) and remove from list
+      if (replyTargetMessageID) {
+        fetch(`${API_URL}/api/messages/${replyTargetMessageID}/status`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify({ messageStatus: 1 })
+        }).catch(()=>{});
+        setEmails(prev => prev.filter(e => e.id !== replyTargetMessageID));
+        if (selectedEmailId === replyTargetMessageID) {
+          setSelectedEmailId(null); // leaves viewer empty after send
+        }
+      }
+  toast.success('Reply has been successfully sent.', { containerId: TOAST_ID, autoClose: 2500, closeOnClick: true });
+      // Clear draft and selection to avoid showing stale opened message
+      setComposeDraft({ to: '', subject: '', body: '' });
+      setReplyTargetUserID(null);
+      setReplyTargetMessageID(null);
+      setSelectedEmailId(null);
+      closeCompose();
+    }).catch(err => {
+      console.error('Support reply error', err);
+      toast.error('Failed to send reply: ' + (err.message || 'Unknown error'), { containerId: TOAST_ID, autoClose: 4000 });
+    }).finally(() => setSending(false));
+  }, [API_URL, token, replyTargetUserID, replyTargetMessageID, composeDraft, closeCompose, selectedEmailId]);
 
   const deleteMessage = useCallback((id: string) => {
     // Backend delete route not implemented; this is local removal only.
@@ -282,6 +314,8 @@ export default function AdminMessageContent(): JSX.Element {
     const to = extractAddress(email.from);
     const body = `\n\n---\nOn ${new Date(email.time).toLocaleString()}, ${email.from} wrote:\n${email.body}`;
     toggleCompose({ to, subject: `Re: ${email.subject}`, body });
+    setReplyTargetUserID(email.senderID ?? null);
+    setReplyTargetMessageID(email.id);
   }, [toggleCompose]);
 
   /* Keyboard shortcuts */
@@ -358,7 +392,7 @@ export default function AdminMessageContent(): JSX.Element {
             {filteredEmails.map(e => (
               <button
                 key={e.id}
-                onClick={() => setSelectedEmailId(e.id)}
+                onClick={() => { setSelectedEmailId(e.id); }}
                 className={`w-full text-left px-4 py-3 border-b border-slate-100 cursor-pointer hover:bg-slate-50 ${selectedEmailId === e.id ? 'bg-slate-50' : ''}`}
                 aria-pressed={selectedEmailId === e.id}
               >
@@ -372,13 +406,12 @@ export default function AdminMessageContent(): JSX.Element {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-3">
-                      <div className={`truncate ${e.unread ? 'font-semibold text-[#212121]' : 'font-medium text-[#333]'}`}>{e.from.split('<')[0].trim()}</div>
+                      <div className="truncate font-medium text-[#212121]">{e.from.split('<')[0].trim()}</div>
                       <div className="text-xs text-slate-500">{timeShort(e.time)}</div>
                     </div>
                     <div className="text-sm text-slate-700 truncate">{e.subject}</div>
                     <div className="text-xs text-slate-500 truncate">{e.body.replace(/\n/g, ' ').slice(0, 80)}</div>
                     <div className="flex items-center gap-2 mt-2">
-                      {e.unread && <span className="w-2 h-2 bg-[#212121] rounded-full" />}
                       {e.starred && <StarIcon className="w-3 h-3" />}
                     </div>
                   </div>
@@ -445,7 +478,7 @@ export default function AdminMessageContent(): JSX.Element {
                 </div>
               </>
             ) : (
-              <div className="text-slate-500">Select a message to view</div>
+              <div className="text-slate-500">...</div>
             )}
           </div>
         </div>
@@ -514,10 +547,12 @@ export default function AdminMessageContent(): JSX.Element {
                   <div className="flex items-center justify-end gap-2">
                     <button
                       onClick={sendCompose}
-                      className="px-4 py-2 rounded-md bg-[#212121] text-white"
+                      className="px-4 py-2 rounded-md bg-[#212121] text-white disabled:opacity-50 flex items-center gap-2"
+                      disabled={sending}
                       aria-label="Send message"
                     >
-                      Send
+                      {sending && <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />}
+                      {sending ? 'Sending...' : 'Send'}
                     </button>
                   </div>
                 </div>
@@ -539,6 +574,19 @@ export default function AdminMessageContent(): JSX.Element {
           )}
         </AnimatePresence>
       </div>
+        {/* Local ToastContainer (scoped) */}
+        <ToastContainer
+          containerId={TOAST_ID}
+          position="bottom-right"
+          autoClose={3000}
+          newestOnTop
+          closeOnClick
+          pauseOnHover={false}
+          pauseOnFocusLoss={false}
+          draggable={false}
+          theme="light"
+          limit={3}
+        />
     </div>
   );
 }

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import CenteredLoader from "./CenteredLoader";
 import ChatWidget from "./ChatWidget";
 import axios from "axios";
 import { Eye, Trash2 } from "lucide-react";
@@ -165,7 +166,7 @@ const toNumber = (value: any): number => {
     <div className="p-4 animate-fadeIn relative">
   <h1 className="text-2xl font-semibold mb-4">History</h1>
   {loading ? (
-    <div className="text-center text-gray-500">Loading history...</div>
+    <CenteredLoader message="Loading history..." />
   ) : historyData.length === 0 ? (
     <div className="text-center text-gray-500 border border-dashed py-20 rounded-md">
       <p className="mb-4">No transactions made yet.</p>

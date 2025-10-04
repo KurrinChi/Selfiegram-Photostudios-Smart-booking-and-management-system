@@ -5,7 +5,7 @@ interface Notification {
   notificationID: number;
   userID: number | null;
   title: string;
-  label?: "Booking" | "Payment" | "Reschedule" | "Cancellation" | "Reminder" | "Promotion" | "System" | "Gallery";
+  label?: "Booking" | "Payment" | "Reschedule" | "Cancellation" | "Reminder" | "Promotion" | "System" | "Gallery" | "Support";
   message: string;
   time: string;
   starred?: boolean;
@@ -76,6 +76,32 @@ export const useNotifications = (userID: number | null) => {
         return [newNotification, ...prev];
       });
       console.log('New message notification added to state:', newNotification);
+    });
+
+    // Listen for system welcome notification on registration
+    channel.bind('system.notification.created', (data: any) => {
+      console.log('Received system.notification.created event:', data);
+      const newNotification = data.notification;
+      if (!newNotification) return;
+      setNotifications(prev => {
+        const exists = prev.some(n => n.notificationID === newNotification.notificationID);
+        if (exists) return prev;
+        return [newNotification, ...prev];
+      });
+      console.log('New system notification added to state:', newNotification);
+    });
+
+    // Listen for support reply notifications
+    channel.bind('support.reply.created', (data: any) => {
+      console.log('Received support.reply.created event:', data);
+      const newNotification = data.notification;
+      if (!newNotification) return;
+      setNotifications(prev => {
+        const exists = prev.some(n => n.notificationID === newNotification.notificationID);
+        if (exists) return prev;
+        return [newNotification, ...prev];
+      });
+      console.log('New support reply notification added to state:', newNotification);
     });
 
     // Listen for booking requests (reschedule/cancellation) for admins

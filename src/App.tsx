@@ -37,7 +37,7 @@ import ReceiptPage from "./page/client/ReceiptPage.tsx";
 import PhotoEditorAPI from "./components/Embed/PhotoEditor.tsx";
 import LandingPage from "./components/LandingPage.tsx";
 import PusherDebugPage from "./components/PusherDebugPage.tsx";
-import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 const App = () => {
   const location = useLocation();
@@ -120,7 +120,6 @@ const App = () => {
           element={
             <ProtectedRoute allowedRoles={["Admin"]}>
               <AdminUsersPage />
-              <ToastContainer position="bottom-right" />
             </ProtectedRoute>
           }
         />
@@ -129,7 +128,6 @@ const App = () => {
           element={
             <ProtectedRoute allowedRoles={["Admin"]}>
               <AdminAppointmentsPage />
-              <ToastContainer position="bottom-right" />
             </ProtectedRoute>
           }
         />
@@ -154,7 +152,6 @@ const App = () => {
           element={
             <ProtectedRoute allowedRoles={["Admin"]}>
               <AdminProfilePage />
-              <ToastContainer position="bottom-right" />
             </ProtectedRoute>
           }
         />
@@ -257,7 +254,6 @@ const App = () => {
           element={
             <ProtectedRoute allowedRoles={["Customer"]}>
               <ClientSettingsPage />
-              <ToastContainer position="bottom-right" />
             </ProtectedRoute>
           }
         />
@@ -270,6 +266,7 @@ const App = () => {
 
         <Route path="*" element={<LandingPage />} />
       </Routes>
+
     </AnimatePresence>
   );
 };

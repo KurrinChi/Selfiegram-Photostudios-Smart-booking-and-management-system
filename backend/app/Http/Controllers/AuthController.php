@@ -10,6 +10,7 @@
     use Illuminate\Support\Str;
     use Illuminate\Support\Facades\Mail;
     use App\Mail\VerifyEmail;
+    use App\Events\SystemNotificationCreated;
 
     class AuthController extends Controller
     {
@@ -99,17 +100,35 @@
             ]);
 
             Mail::to($user->email)->send(new VerifyEmail($user));
-             
-            /*Notification::create([
-            'userID' => $user->id, // Address the notification to the new user
-            'title' => 'Welcome to SelfieGram!',
-            'label' => 'System',
-            'message' => 'Welcome to SelfieGram Photostudios! Thank you for choosing our service! Best Regards, SelfieGram Team',
-            'time' => now(),
-            'starred' => 0,
-            'bookingID' => 0, 
-              'transID' => 0
-        ]);*/
+
+            // Create a welcome system notification immediately (will appear once user logs in / subscribes)
+            $welcome = Notification::create([
+                'userID'    => $user->userID, // ensure we use the correct PK field
+                'title'     => 'Welcome to SelfieGram!',
+                'label'     => 'System',
+                'message' => "Welcome to SelfieGram Photostudios! We're excited to have you. \n\nWith your new account, you can now book packages, save favorites, and enjoy exclusive promos.\n\n\n\nNeed help? Contact our support team anytime.",
+                'time'      => now(),
+                'starred'   => 0,
+                'bookingID' => null,
+                'transID'   => null,
+            ]);
+
+            // Broadcast the welcome notification (user likely not connected yet—harmless if missed)
+            try {
+                event(new SystemNotificationCreated($user->userID, [
+                    'notificationID' => $welcome->notificationID,
+                    'userID'         => $welcome->userID,
+                    'title'          => $welcome->title,
+                    'label'          => $welcome->label,
+                    'message'        => $welcome->message,
+                    'time'           => $welcome->time,
+                    'starred'        => $welcome->starred,
+                    'bookingID'      => $welcome->bookingID,
+                    'transID'        => $welcome->transID,
+                ]));
+            } catch (\Throwable $e) {
+                \Log::warning('Failed broadcasting welcome notification', ['error' => $e->getMessage()]);
+            }
             return response()->json([
                 'status' => 'success',
                 'message' => 'User registered successfully! Please check your email to verify your account.',

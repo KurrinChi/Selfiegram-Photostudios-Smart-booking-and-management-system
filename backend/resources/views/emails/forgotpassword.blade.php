@@ -9,12 +9,17 @@
         <tr>
             <td align="center">
                 <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff; border-radius:8px; box-shadow:0 2px 6px rgba(0,0,0,0.1); overflow:hidden;">
-                    
                     <tr>
-                        <td style="background:#000; padding:20px; text-align:center;">
-                            <h1 style="margin:0; font-size:22px; color:#fff; font-weight:bold;">
-                                SelfieGram Photostudios
-                            </h1>
+                        <td style="background:#212121; padding:32px 28px; text-align:center;">
+                            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0; padding:0; border:0;">
+                                <tr>
+                                    <td align="center" style="font-size:0; line-height:0;">
+                                        <h1 style="margin:0; font-size:22px; color:#ffffff; font-weight:bold; font-family:Arial, sans-serif;">
+                                            SelfieGram Photostudios
+                                        </h1>
+                                    </td>
+                                </tr>
+                            </table>
                         </td>
                     </tr>
 
@@ -29,7 +34,7 @@
                             </p>
 
                             <div style="margin:30px 0; text-align:center;">
-                                <h3 style="font-size:38px; font-weight:bold; margin:0; color:#000;">
+                                <h3 style="font-size:38px; font-weight:bold; margin:0; color:#212121; letter-spacing:2px;">
                                     {{ $otp }}
                                 </h3>
                             </div>
