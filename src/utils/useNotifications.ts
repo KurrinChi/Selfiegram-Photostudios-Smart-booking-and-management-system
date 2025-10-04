@@ -78,6 +78,19 @@ export const useNotifications = (userID: number | null) => {
       console.log('New message notification added to state:', newNotification);
     });
 
+    // Listen for system welcome notification on registration
+    channel.bind('system.notification.created', (data: any) => {
+      console.log('Received system.notification.created event:', data);
+      const newNotification = data.notification;
+      if (!newNotification) return;
+      setNotifications(prev => {
+        const exists = prev.some(n => n.notificationID === newNotification.notificationID);
+        if (exists) return prev;
+        return [newNotification, ...prev];
+      });
+      console.log('New system notification added to state:', newNotification);
+    });
+
     // Listen for booking requests (reschedule/cancellation) for admins
     channel.bind('booking.request.submitted', (data: any) => {
       console.log('Received booking.request.submitted event:', data);
