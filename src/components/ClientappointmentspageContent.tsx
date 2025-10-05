@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import ChatWidget from "./ChatWidget";
 import { Menu, Plus, X, Search } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import ModalTransactionDialog from "../components/ModalTransactionDialog";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
 
@@ -46,6 +46,7 @@ const ClientAppointmentsPageContent = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const navigate = useNavigate();
   const [profilePicture, setProfilePicture] = useState<string | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
   
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
@@ -120,7 +121,15 @@ const ClientAppointmentsPageContent = () => {
   };
 
   fetchAppointments();
-  }, []);
+  
+  // Check if coming back from payment
+  const paymentStatus = searchParams.get('payment');
+  if (paymentStatus === 'success') {
+    console.log('Payment completed! Data will refresh automatically.');
+    // Clean up URL parameter
+    setSearchParams({});
+  }
+  }, [searchParams, setSearchParams]);
 
   const getMonthDays = (date: Date) => {
     const year = date.getFullYear();
@@ -216,7 +225,7 @@ const ClientAppointmentsPageContent = () => {
       </div>
     );
   }
-
+  
   return (
     <div className="flex flex-col lg:flex-row h-[calc(100vh-64px)] overflow-hidden font-sf relative">
       {/* Toggle Button for Mobile */}

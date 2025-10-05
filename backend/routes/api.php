@@ -35,6 +35,82 @@
     
     // Test PayMongo payment method extraction (for testing purposes)
     Route::get('/test-paymongo-webhook', [TestPayMongoController::class, 'testWebhook']);
+    
+    // TEST ROUTE: Simulate PayMongo webhook payment completion (for local testing)
+    Route::get('/test-complete-payment', function (Request $request) {
+        $sessionId = $request->query('session_id');
+        
+        if (!$sessionId) {
+            return response()->json(['error' => 'session_id required'], 400);
+        }
+        
+        // Find payment session
+        $paymentSession = \DB::table('payment_sessions')
+            ->where('checkout_session_id', $sessionId)
+            ->first();
+            
+        if (!$paymentSession) {
+            return response()->json(['error' => 'Payment session not found'], 404);
+        }
+        
+        if ($paymentSession->status === 'completed') {
+            return response()->json(['message' => 'Already completed', 'booking_id' => $paymentSession->booking_id], 200);
+        }
+        
+        // Simulate webhook payload
+        $testPayload = [
+            'data' => [
+                'attributes' => [
+                    'type' => 'checkout_session.payment.paid',
+                    'data' => [
+                        'id' => $sessionId,
+                        'attributes' => [
+                            'payment_intent' => [
+                                'id' => 'pi_test_' . uniqid(),
+                                'attributes' => [
+                                    'payment_method' => [
+                                        'type' => 'card'
+                                    ]
+                                ]
+                            ],
+                            'line_items' => [
+                                [
+                                    'amount' => $paymentSession->amount * 100 // Convert to centavos
+                                ]
+                            ]
+                        ]
+                    ]
+                ]
+            ]
+        ];
+        
+        // Call webhook handler
+        $webhookController = new \App\Http\Controllers\PayMongoWebhookController();
+        $webhookRequest = \Illuminate\Http\Request::create('/api/paymongo/webhook', 'POST', $testPayload);
+        $response = $webhookController->handleWebhook($webhookRequest);
+        
+        // Get updated booking
+        $booking = \DB::table('booking')->where('bookingID', $paymentSession->booking_id)->first();
+        $transaction = \DB::table('transaction')->where('bookingId', $paymentSession->booking_id)->first();
+        
+        return response()->json([
+            'message' => 'Payment simulated successfully!',
+            'session_id' => $sessionId,
+            'booking_id' => $paymentSession->booking_id,
+            'amount_paid' => $paymentSession->amount,
+            'booking' => [
+                'receivedAmount' => $booking->receivedAmount ?? null,
+                'rem' => $booking->rem ?? null,
+                'paymentStatus' => $booking->paymentStatus ?? null,
+                'status' => $booking->status ?? null
+            ],
+            'transaction' => [
+                'receivedAmount' => $transaction->receivedAmount ?? null,
+                'rem' => $transaction->rem ?? null,
+                'paymentStatus' => $transaction->paymentStatus ?? null
+            ]
+        ]);
+    });
 
     // Test auth without role
     Route::middleware(['auth:sanctum'])->get('/test-auth', function (Request $request) {
@@ -374,8 +450,9 @@
 
     // Original booking creation with conditional auth (allows OPTIONS, requires auth for POST)
     Route::middleware(['auth:sanctum'])->group(function () {
-        Route::post('/bookings', [TransactionController::class, 'createBooking']);
-        Route::post('/payment/checkout', [TransactionController::class, 'createPaymentCheckout']);
+        Route::post('/bookings', [TransactionController::class, 'createBooking']); // OLD: Should not be used for PayMongo payments
+        Route::post('/payment/checkout', [TransactionController::class, 'createPaymentCheckout']); // For EXISTING bookings (appointments)
+        Route::post('/payment/checkout-new-booking', [TransactionController::class, 'createPaymentCheckoutNewBooking']); // For NEW bookings
 
         //Client Cancel and Reschedule Request
         Route::post('/booking-request/cancel', [BookingRequestController::class, 'storeCancelRequest']);

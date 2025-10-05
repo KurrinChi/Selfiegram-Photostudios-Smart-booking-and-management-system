@@ -49,6 +49,7 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
   const [feedback, setFeedback] = useState("");
   const [hasTypedFeedback, setHasTypedFeedback] = useState(false);
   const [hasSelectedRating, setHasSelectedRating] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const [cancelRequest, setCancelRequest] = useState<{
     status: "pending" | "approved" | "declined";
@@ -266,6 +267,47 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
     } catch (err) {
       console.error("Error submitting reschedule request:", err);
       toast.error("Error submitting reschedule request. Please try again.");
+    }
+  };
+
+  const handleCompletePayment = async () => {
+    if (!data) return;
+
+    setIsProcessing(true);
+    try {
+      // Create PayMongo checkout session for remaining balance
+      const paymentPayload = {
+        booking_id: data.id,
+        payment_type: 'remaining', // paying the remaining balance
+        return_url: '/client/appointments' // Redirect back to appointments after payment
+      };
+
+      console.log('Creating PayMongo checkout session for remaining balance...');
+      const paymentResponse = await fetchWithAuth(`${API_URL}/api/payment/checkout`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(paymentPayload),
+      });
+
+      const paymentResult = await paymentResponse.json();
+      console.log('PayMongo response:', paymentResult);
+
+      if (paymentResponse.ok && paymentResult.success) {
+        // Redirect to PayMongo checkout page
+        console.log('Redirecting to:', paymentResult.checkout_url);
+        window.location.href = paymentResult.checkout_url;
+        onClose(); // Close the modal
+      } else {
+        console.error('PayMongo checkout session failed:', paymentResult);
+        toast.error(paymentResult.message || "Failed to create checkout session");
+      }
+    } catch (error) {
+      console.error("Payment checkout failed:", error);
+      toast.error("Failed to initiate payment. Please try again.");
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -972,8 +1014,12 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
               ) : Number(data.status) === 2 &&
                 Number(data.paymentStatus) === 0 ? (
                 <div className="w-full">
-                  <button className="w-full bg-gray-800 text-white py-3 rounded hover:bg-gray-600 transition mb-4">
-                    Complete Payment
+                  <button 
+                    onClick={handleCompletePayment}
+                    disabled={isProcessing}
+                    className="w-full bg-gray-800 text-white py-3 rounded hover:bg-gray-600 transition mb-4 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isProcessing ? 'Processing...' : 'Complete Payment'}
                   </button>
                 </div>
               ) : null}
@@ -1274,8 +1320,12 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
               </>
             ) : data.status === 2 && data.paymentStatus === 0 ? (
               <div className="w-full">
-                <button className="w-full bg-gray-800 text-white py-3 rounded hover:bg-gray-600 transition mb-4">
-                  Complete Payment
+                <button 
+                  onClick={handleCompletePayment}
+                  disabled={isProcessing}
+                  className="w-full bg-gray-800 text-white py-3 rounded hover:bg-gray-600 transition mb-4 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isProcessing ? 'Processing...' : 'Complete Payment'}
                 </button>
               </div>
             ) : null}

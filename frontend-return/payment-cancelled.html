@@ -97,9 +97,14 @@
         }
         
         function getBookingSystemUrl() {
-            // You can customize this URL to your frontend application
-            const frontendUrl = 'http://localhost:5173'; // Adjust to your frontend URL
-            return frontendUrl + '/bookings?payment=cancelled';
+            // Get return URL from query parameter
+            const urlParams = new URLSearchParams(window.location.search);
+            const returnPath = urlParams.get('return') || '/client/home';
+            
+            const frontendUrl = 'http://127.0.0.1:5173'; // Must match backend FRONTEND_URL
+            console.log('Redirecting to:', frontendUrl + returnPath + '?payment=cancelled');
+            console.log('Return path from URL:', returnPath);
+            return frontendUrl + returnPath + '?payment=cancelled';
         }
     </script>
 </body>
