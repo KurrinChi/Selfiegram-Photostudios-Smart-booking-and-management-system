@@ -1157,53 +1157,52 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
           throw new Error("ImageEditor constructor not available");
         }
 
-        if (editorRef.current) {
-          instanceRef.current = new Constructor(editorRef.current, {
-            includeUI: {
-              loadImage: {
-                path:
-                  imageUrl ||
-                  sampleImage?.path ||
-                  "https://picsum.photos/1200/800?random=1",
-                name: sampleImage?.name ?? "Sample Image",
-              },
-              menu: [
-                "crop",
-                "flip",
-                "rotate",
-                "draw",
-                "shape",
-                "icon",
-                "text",
-                "mask",
-                "filter",
-              ],
-              initMenu: "",
-              menuBarPosition: "bottom",
-              uiSize: {
-                width: "100%",
-                height: "100%",
-              },
-              theme: {
-                "menu.backgroundColor": "#ffffff",
-                "menu.borderColor": "#e5e5e5",
-                "menu.normalIcon.color": "#8a8a8a",
-                "menu.activeIcon.color": "#555555",
-                "menu.disabledIcon.color": "#ccc",
-                "menu.hoverIcon.color": "#e9e9e9",
-                "submenu.backgroundColor": "#1e1e1e",
-                "submenu.partition.color": "#858585",
-                "submenu.normalIcon.color": "#8a8a8a",
-                "submenu.normalLabel.color": "#ccc",
-                "submenu.activeIcon.color": "#fff",
-                "submenu.activeLabel.color": "#fff",
-              },
+        instanceRef.current = new Constructor(editorRef.current, {
+          includeUI: {
+            loadImage: {
+              path:
+                imageUrl ||
+                sampleImage?.path ||
+                "https://picsum.photos/1200/800?random=1",
+              name: sampleImage?.name ?? "Sample Image",
             },
-            cssMaxWidth: 999999,
-            cssMaxHeight: 999999,
-            usageStatistics: false,
-          });
-        }
+            menu: [
+              "crop",
+              "flip",
+              "rotate",
+              "draw",
+              "shape",
+              "icon",
+              "text",
+              "mask",
+              "filter",
+            ],
+            initMenu: "",
+            menuBarPosition: "bottom",
+            uiSize: {
+              width: "100%",
+              height: "100%",
+            },
+            theme: {
+              "menu.backgroundColor": "#ffffff",
+              "menu.borderColor": "#e5e5e5",
+              "menu.normalIcon.color": "#8a8a8a",
+              "menu.activeIcon.color": "#555555",
+              "menu.disabledIcon.color": "#ccc",
+              "menu.hoverIcon.color": "#e9e9e9",
+              "submenu.backgroundColor": "#1e1e1e",
+              "submenu.partition.color": "#858585",
+              "submenu.normalIcon.color": "#8a8a8a",
+              "submenu.normalLabel.color": "#ccc",
+              "submenu.activeIcon.color": "#fff",
+              "submenu.activeLabel.color": "#fff",
+            },
+          },
+          // CHANGE THESE VALUES TO VERY LARGE NUMBERS:
+          cssMaxWidth: 999999, // Changed from 10000
+          cssMaxHeight: 999999, // Changed from 10000
+          usageStatistics: false,
+        });
 
         renderTimeoutRefs.current.forEach(clearTimeout);
         renderTimeoutRefs.current = [];
@@ -1310,6 +1309,7 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
           `;
           document.head.appendChild(style);
         }
+
         if (!instanceRef.current) return;
 
         try {
@@ -2475,50 +2475,7 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
     padding: 16px !important;
   }
 }
-/* FIX MENU BAR ICON ALIGNMENT */
-.tui-image-editor-menu {
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  height: 48px !important;
-  padding: 0 !important;
-}
 
-.tui-image-editor-menu-item {
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  height: 48px !important;
-  padding: 0 8px !important;
-  margin: 0 !important;
-}
-
-.tui-image-editor-button {
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  height: 100% !important;
-  padding: 8px 12px !important;
-  border: none !important;
-  background: transparent !important;
-}
-
-.tui-image-editor-menu-icon {
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  width: 24px !important;
-  height: 24px !important;
-  margin: 0 !important;
-}
-
-.tui-image-editor-menu-icon img,
-.tui-image-editor-menu-icon svg {
-  width: 24px !important;
-  height: 24px !important;
-  display: block !important;
-  margin: 0 auto !important;
-}
 
 `}</style>
     </div>
