@@ -28,7 +28,7 @@ class SalesController extends Controller
             'transaction.total as totalAmount',
             DB::raw("
                 CASE
-                    WHEN booking.status = 0 THEN 'Cancelled'
+                    WHEN booking.status IN (3) THEN 'Cancelled'
                     WHEN transaction.paymentStatus = 1 THEN 'Completed'
                     ELSE 'Pending'
                 END as paymentStatus

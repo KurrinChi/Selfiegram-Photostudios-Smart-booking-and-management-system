@@ -294,6 +294,7 @@
         Route::post('/appointments/cancel', [AppointmentController::class, 'cancelAppointment']);
         Route::post('/appointments/reschedule', [AppointmentController::class, 'rescheduleAppointment']);
         Route::post('/appointments/completed', [AppointmentController::class, 'markAsCompleted']);
+        Route::get('/appointments/taken-times', [TransactionController::class, 'getBookedTimeSlots']);
 
         //admin booking requests
         Route::get('/admin/booking-requests', [BookingRequestController::class, 'adminGetAllRequests']);
@@ -301,8 +302,8 @@
         Route::post('/admin/booking-requests/{id}/confirm-cancellation', [BookingRequestController::class, 'confirmCancellation']);
         Route::post('/admin/booking-requests/{id}/decline-request', [BookingRequestController::class, 'decline']);
 
-    // admin support reply -> creates notification + pushes via pusher
-    Route::post('/admin/support-replies', [SupportReplyController::class, 'store']);
+        // admin support reply -> creates notification + pushes via pusher
+        Route::post('/admin/support-replies', [SupportReplyController::class, 'store']);
         // system broadcast notifications
         Route::post('/admin/notifications/broadcast', [NotificationController::class, 'broadcastSystem']);
 

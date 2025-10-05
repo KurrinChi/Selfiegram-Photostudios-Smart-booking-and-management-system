@@ -142,6 +142,7 @@ const WeekView: React.FC<WeekViewProps> = ({ currentDate, onEventClick, onReady 
                           address: appt.raw.address,
                           contact: appt.raw.contactNo,
                           package: appt.raw.package,
+                          duration: appt.raw.duration,
                           date: appt.raw.bookingDate,
                           time: appt.raw.time,
                           subtotal: Number(appt.raw.subtotal),

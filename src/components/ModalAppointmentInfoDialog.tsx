@@ -3,7 +3,7 @@ import { CalendarClock, Archive, X, Trash, Check } from "lucide-react";
 import { DayPicker } from "react-day-picker";
 import { isToday, isSameDay } from "date-fns";
 import "react-day-picker/dist/style.css";
-import { toast} from "react-toastify";
+import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
 
@@ -17,6 +17,7 @@ export interface TransactionModalProps {
     address: string;
     contact: string;
     package: string;
+    duration: string;
     date: string;
     time: string;
     subtotal: number;
@@ -29,13 +30,13 @@ export interface TransactionModalProps {
 }
 
 const getBookingLabel = (bookingID: string, packageName: string) => {
-    const acronym = packageName
-      .split(" ")
-      .map((word) => word[0])
-      .join("")
-      .toUpperCase();
-    return `${acronym}#${bookingID}`;
-  };
+  const acronym = packageName
+    .split(" ")
+    .map((word) => word[0])
+    .join("")
+    .toUpperCase();
+  return `${acronym}#${bookingID}`;
+};
 
 const timeSlots = [
   "10:00 AM",
@@ -60,18 +61,28 @@ const timeSlots = [
   "7:30 PM",
   "8:00 PM",
 ];
+
 const API_URL = import.meta.env.VITE_API_URL;
+
 const TransactionModal: React.FC<TransactionModalProps> = ({
   isOpen,
   onClose,
   data,
   refreshAppointments,
 }) => {
-  const [viewMode, setViewMode] = useState<"default" | "delete" | "reschedule" | "done">(
-    "default"
-  );
+  const [viewMode, setViewMode] = useState<
+    "default" | "delete" | "reschedule" | "done"
+  >("default");
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [selectedTime, setSelectedTime] = useState<string>("");
+  const [takenTimes, setTakenTimes] = useState<{ start: string; end: string }[]>([]);
+  const [sessionDuration, setSessionDuration] = useState<number>(60);
+
+  useEffect(() => {
+    if (data?.duration) {
+      setSessionDuration(Number(data.duration));
+    }
+  }, [data?.duration]);
 
   // 🧠 Reset modal view when opened with new data
   useEffect(() => {
@@ -79,8 +90,43 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
       setViewMode("default");
       setSelectedDate(undefined);
       setSelectedTime("");
+      setTakenTimes([]); // ✅ Reset taken times
     }
   }, [isOpen, data]);
+
+  useEffect(() => {
+    const fetchTakenTimes = async () => {
+      if (!selectedDate) return;
+
+      const formattedDate = `${selectedDate.getFullYear()}-${String(
+        selectedDate.getMonth() + 1
+      ).padStart(2, "0")}-${String(selectedDate.getDate()).padStart(2, "0")}`;
+
+      try {
+        const response = await fetchWithAuth(
+          `${API_URL}/api/appointments/taken-times?date=${formattedDate}`
+        );
+        const result = await response.json();
+        console.log("📅 Taken times response:", result);
+
+        if (result.success && Array.isArray(result.bookedSlots)) {
+          const times = result.bookedSlots.map((slot: any) => ({
+            start: slot.start?.replace(/^0/, ""),
+            end: slot.end?.replace(/^0/, ""),
+          }));
+          setTakenTimes(times);
+        } else {
+          setTakenTimes([]);
+        }
+      } catch (error) {
+        console.error("Failed to fetch taken times:", error);
+        setTakenTimes([]);
+      }
+    };
+
+    fetchTakenTimes();
+  }, [selectedDate]);
+
 
   if (!isOpen || !data) return null;
 
@@ -96,13 +142,11 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
 
       const result = await response.json();
       if (response.ok) {
-        console.log("Success:", result.message);
         toast.success(result.message);
         if (refreshAppointments) refreshAppointments();
         onClose();
       } else {
         toast.error("Failed to cancel appointment.");
-        console.error(result.message);
       }
     } catch (error) {
       console.error("Error cancelling appointment:", error);
@@ -122,19 +166,28 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
 
       const result = await response.json();
       if (response.ok) {
-        console.log("Success:", result.message);
         toast.success(result.message);
         if (refreshAppointments) refreshAppointments();
         onClose();
       } else {
         toast.error("This appointment is already completed.");
-        console.error(result.message);
       }
     } catch (error) {
-      console.error("Error cancelling appointment:", error);
+      console.error("Error marking appointment as done:", error);
       toast.error("Something went wrong.");
     }
   };
+
+  function slotToMinutes(slot: string): number {
+    const match = slot.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+    if (!match) return 0;
+    let hours = parseInt(match[1], 10);
+    const minutes = parseInt(match[2], 10);
+    const period = match[3].toUpperCase();
+    if (period === "PM" && hours !== 12) hours += 12;
+    if (period === "AM" && hours === 12) hours = 0;
+    return hours * 60 + minutes;
+  }
 
 
   const handleRescheduleConfirm = async () => {
@@ -143,28 +196,25 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
       return;
     }
 
-    // Format selected date (YYYY-MM-DD)
     const formattedDate = `${selectedDate.getFullYear()}-${String(
       selectedDate.getMonth() + 1
     ).padStart(2, "0")}-${String(selectedDate.getDate()).padStart(2, "0")}`;
 
+    const startMinutes = slotToMinutes(selectedTime);
+    const endMinutes = startMinutes + sessionDuration;
 
-    // Convert to 24-hour format time and calculate end time
-    const [time, modifier] = selectedTime.split(" ");
-    let [hours, minutes] = time.split(":").map(Number);
-    if (modifier === "PM" && hours !== 12) hours += 12;
-    if (modifier === "AM" && hours === 12) hours = 0;
+    const startHour = Math.floor(startMinutes / 60);
+    const startMin = startMinutes % 60;
+    const endHour = Math.floor(endMinutes / 60);
+    const endMin = endMinutes % 60;
 
-    const startTime = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
-    const endHour = hours + 1;
-    const endTime = `${String(endHour).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+    const startTime = `${String(startHour).padStart(2, "0")}:${String(startMin).padStart(2, "0")}`;
+    const endTime = `${String(endHour).padStart(2, "0")}:${String(endMin).padStart(2, "0")}`;
 
     try {
       const response = await fetchWithAuth(`${API_URL}/api/appointments/reschedule`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           id: data.id,
           bookingDate: formattedDate,
@@ -175,22 +225,19 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
 
       const result = await response.json();
       if (response.ok) {
-        console.log("Success:", result.message);
         toast.success(result.message);
-        if (refreshAppointments) refreshAppointments();
+        refreshAppointments?.();
         onClose();
       } else {
-        toast.error("Failed to reschedule appointment.");
-        console.error(result.message);
+        toast.error(result.message || "Failed to reschedule appointment.");
       }
     } catch (error) {
       console.error("Error rescheduling appointment:", error);
       toast.error("Something went wrong.");
     }
   };
-
-
   const goBack = () => setViewMode("default");
+
 
   return (
     <div className="printable fixed inset-0 z-50 bg-black/30 backdrop-blur-sm flex justify-center items-center p-4">
@@ -213,8 +260,8 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
               <Archive className="w-5 h-5 text-red-600" />
             </button>
 
-             <button
-              onClick={() => setViewMode("done")} // Replace with your function
+            <button
+              onClick={() => setViewMode("done")} 
               title="Mark as Done"
               className="p-2 rounded-full bg-gray-100 hover:bg-gray-200"
             >
@@ -311,9 +358,8 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
                 {Array.from({ length: 5 }, (_, i) => (
                   <span
                     key={i}
-                    className={`text-xl ${
-                      i < data.rating ? "text-yellow-500" : "text-gray-300"
-                    }`}
+                    className={`text-xl ${i < data.rating ? "text-yellow-500" : "text-gray-300"
+                      }`}
                   >
                     ★
                   </span>
@@ -401,57 +447,181 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
               Rescheduling Appointment
             </h2>
             <p className="text-center text-sm text-gray-500">
-              The appointment has been rescheduled to the proposed date and
-              time.
-              <br /> Please select your preferred option below.
+              Please select a valid future date and available time slot below.
             </p>
 
-            <div className="flex flex-col lg:flex-row justify-center gap-8">
-              <div className="lg:w-1/2">
-                <DayPicker
-                  mode="single"
-                  selected={selectedDate}
-                  onSelect={(date) => date && setSelectedDate(date)}
-                  captionLayout="label"
-                  modifiers={{
-                    selected: (d) =>
-                      !!selectedDate && isSameDay(d, selectedDate!),
-                    today: (d) => isToday(d),
-                  }}
-                  modifiersClassNames={{
-                    selected: "bg-gray-800 text-white",
-                    today: "font-bold text-black bg-gray-100 rounded-xl",
-                  }}
-                  classNames={{
-                    caption: "text-sm text-black",
-                    day: "text-sm",
-                    nav_button: "text-black hover:bg-gray-100 p-1 rounded",
-                    nav_icon: "stroke-black fill-black w-4 h-4",
-                  }}
-                />
-              </div>
+            {/** PH TIME **/}
+            {(() => {
+              function getTodayInPH(): Date {
+                const fmt = new Intl.DateTimeFormat("en-CA", {
+                  timeZone: "Asia/Manila",
+                  year: "numeric",
+                  month: "2-digit",
+                  day: "2-digit",
+                });
+                const parts = fmt.format(new Date());
+                const [y, m, d] = parts.split("-").map((v) => parseInt(v, 10));
+                return new Date(y, (m || 1) - 1, d || 1);
+              }
 
-              <div className="lg:w-1/2">
-                <h4 className="text-sm text-gray-700 mb-2 font-medium">
-                  Available Time Slots
-                </h4>
-                <div className="grid grid-cols-3 gap-2">
-                  {timeSlots.map((slot) => (
-                    <button
-                      key={slot}
-                      onClick={() => setSelectedTime(slot)}
-                      className={`py-2 px-3 text-sm rounded-md transition text-center ${
-                        selectedTime === slot
-                          ? "bg-black text-white"
-                          : "bg-gray-100 hover:bg-gray-200"
-                      }`}
-                    >
-                      {slot}
-                    </button>
-                  ))}
+              function isPastDatePH(date: Date) {
+                const phToday = getTodayInPH();
+                phToday.setHours(0, 0, 0, 0);
+                const check = new Date(date);
+                check.setHours(0, 0, 0, 0);
+                return check < phToday;
+              }
+
+              function isTodayPH(date: Date) {
+                const phToday = getTodayInPH();
+                return (
+                  date.getFullYear() === phToday.getFullYear() &&
+                  date.getMonth() === phToday.getMonth() &&
+                  date.getDate() === phToday.getDate()
+                );
+              }
+
+              // Calculate current PH time in minutes
+              function getPHMinutesNow(): number {
+                const fmt = new Intl.DateTimeFormat("en-US", {
+                  timeZone: "Asia/Manila",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  hour12: true,
+                });
+                const parts = fmt.format(new Date()).match(/(\d+):(\d+)\s*(AM|PM)/i);
+                if (!parts) return 0;
+                let h = parseInt(parts[1]);
+                const m = parseInt(parts[2]);
+                const ap = parts[3].toUpperCase();
+                if (ap === "PM" && h !== 12) h += 12;
+                if (ap === "AM" && h === 12) h = 0;
+                return h * 60 + m;
+              }
+
+              const nowPHMinutes = getPHMinutesNow();
+
+              function slotToMinutes(slot: string | undefined | null): number {
+                if (!slot || typeof slot !== "string") return 0;
+                const m = slot.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+                if (!m) return 0;
+                let h = parseInt(m[1]);
+                const min = parseInt(m[2]);
+                const ap = m[3].toUpperCase();
+                if (ap === "PM" && h !== 12) h += 12;
+                if (ap === "AM" && h === 12) h = 0;
+                return h * 60 + min;
+              }
+
+
+              return (
+                <div className="flex flex-col lg:flex-row justify-center gap-8">
+                  {/* Calendar */}
+                  <div className="lg:w-1/2">
+                    <DayPicker
+                      mode="single"
+                      selected={selectedDate}
+                      onSelect={(date) => date && setSelectedDate(date)}
+                      disabled={isPastDatePH}
+                      captionLayout="label"
+                      modifiers={{
+                        selected: (d) =>
+                          !!selectedDate && isSameDay(d, selectedDate!),
+                        today: (d) => isToday(d),
+                      }}
+                      modifiersClassNames={{
+                        selected: "bg-gray-800 text-white",
+                        today: "font-bold text-black bg-gray-100 rounded-xl",
+                        disabled: "opacity-40 line-through cursor-not-allowed",
+                      }}
+                      classNames={{
+                        caption: "text-sm text-black",
+                        day: "text-sm",
+                        nav_button: "text-black hover:bg-gray-100 p-1 rounded",
+                        nav_icon: "stroke-black fill-black w-4 h-4",
+                      }}
+                    />
+                  </div>
+
+                  {/* Time Slots */}
+                  <div className="lg:w-1/2">
+                    <h4 className="text-sm text-gray-700 mb-2 font-medium">
+                      Available Time Slots
+                    </h4>
+                    <div className="grid grid-cols-3 gap-2">
+                      {timeSlots.map((slot) => {
+                        const slotMinutes = slotToMinutes(slot);
+
+                        // Disable if this slot overlaps any booked start–end range
+                        const isTaken = takenTimes.some((b: { start?: string; end?: string }) => {
+                          if (!b?.start || !b?.end) return false;
+                          const start = slotToMinutes(b.start);
+                          const end = slotToMinutes(b.end);
+                          return slotMinutes >= start && slotMinutes < end;
+                        });
+
+                        // Disable past times for today
+                        const isPastTime =
+                          selectedDate && isTodayPH(selectedDate)
+                            ? slotMinutes <= nowPHMinutes
+                            : false;
+
+                        const disabled = isTaken || isPastTime;
+
+                        return (
+                          <button
+                            key={slot}
+                            onClick={() => !disabled && setSelectedTime(slot)}
+                            disabled={disabled}
+                            className={`py-2 px-3 text-sm rounded-md transition text-center ${disabled
+                              ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                              : selectedTime === slot
+                                ? "bg-black text-white"
+                                : "bg-gray-100 hover:bg-gray-200"
+                              }`}
+                          >
+                            {slot}
+                            {isTaken && (
+                              <span className="block text-[10px] text-red-500">Booked</span>
+                            )}
+                            {isPastTime && !isTaken && (
+                              <span className="block text-[10px] text-gray-500"></span>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Message if all slots are booked */}
+                    {selectedDate &&
+                      timeSlots.every((slot) =>
+                        takenTimes.some((b: { start?: string; end?: string }) => {
+                          if (!b?.start || !b?.end) return false;
+                          const s = slotToMinutes(slot);
+                          const start = slotToMinutes(b.start);
+                          const end = slotToMinutes(b.end);
+                          return s >= start && s < end;
+                        })
+                      ) && (
+                        <div className="mt-3 text-sm text-red-600">
+                          All time slots are fully booked for this date.
+                        </div>
+                      )}
+
+                    {/* Show selected time */}
+                    {selectedTime && (
+                      <div className="mt-3 text-sm text-gray-600">
+                        <span className="font-medium">Selected time: </span>
+                        <span className="bg-gray-100 px-2 py-1 rounded text-black font-mono">
+                          {selectedTime}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
                 </div>
-              </div>
-            </div>
+              );
+            })()}
 
             <div className="flex justify-between pt-4">
               <button

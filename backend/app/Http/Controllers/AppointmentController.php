@@ -48,6 +48,7 @@ class AppointmentController extends Controller
                 'users.contactNo',
                 'packages.name as package',
                 'packages.price',
+                'packages.duration',
                 'booking.bookingDate',
                 'transaction.date as transactionDate',
                 'booking.status',
@@ -97,7 +98,7 @@ class AppointmentController extends Controller
 
         $updated = DB::table('booking')
             ->where('bookingID', $bookingId)
-            ->update(['status' => 0]);
+            ->update(['status' => 3]);
 
         if ($updated) {
             return response()->json(['message' => 'Appointment cancelled successfully'], 200);

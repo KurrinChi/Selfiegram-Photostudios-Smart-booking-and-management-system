@@ -133,6 +133,7 @@ const DayView: React.FC<DayViewProps> = ({ currentDate, onEventClick, onReady })
                   address: raw.address,
                   contact: raw.contactNo,
                   package: raw.package,
+                  duration: raw.duration,
                   date: raw.bookingDate,
                   time: raw.time,
                   subtotal: Number(raw.subtotal),

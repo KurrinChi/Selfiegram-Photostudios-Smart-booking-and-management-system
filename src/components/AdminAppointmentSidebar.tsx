@@ -58,6 +58,8 @@ const AdminAppointmentSidebar: React.FC<AdminAppointmentSidebarProps> = ({
   const [minimized, setMinimized] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [loading, setLoading] = useState(true);
+
 
   // Modal state
   const [viewMode, setViewMode] = useState<NotificationType | null>(null);
@@ -67,6 +69,7 @@ const AdminAppointmentSidebar: React.FC<AdminAppointmentSidebarProps> = ({
 
   // Fetch booking requests
   const fetchRequests = useCallback(async () => {
+    setLoading(true);
     try {
       const res = await fetchWithAuth(`${API_URL}/api/admin/booking-requests`, {
         headers: { Accept: "application/json" },
@@ -104,7 +107,10 @@ const AdminAppointmentSidebar: React.FC<AdminAppointmentSidebarProps> = ({
       }
     } catch (error) {
       console.error("Error fetching booking requests:", error);
+    } finally {
+      setLoading(false);
     }
+
   }, []);
 
   useEffect(() => {
@@ -161,15 +167,15 @@ const AdminAppointmentSidebar: React.FC<AdminAppointmentSidebarProps> = ({
   const weekStart = startOfWeek(currentDate, { weekStartsOn: 0 });
   const weekEnd = endOfWeek(currentDate, { weekStartsOn: 0 });
 
-const handleAction = (note: Notification, action: "approve" | "decline") => {
-  setSelectedRequest(note);
+  const handleAction = (note: Notification, action: "approve" | "decline") => {
+    setSelectedRequest(note);
 
-  if (action === "approve") {
-    setViewMode(note.type); // open reschedule or cancellation modal
-  } else {
-    setViewMode("decline"); // open decline modal
-  }
-};
+    if (action === "approve") {
+      setViewMode(note.type); // open reschedule or cancellation modal
+    } else {
+      setViewMode("decline"); // open decline modal
+    }
+  };
 
   const handleRescheduleConfirm = async () => {
     if (!selectedRequest) return;
@@ -189,7 +195,7 @@ const handleAction = (note: Notification, action: "approve" | "decline") => {
         setNotifications((prev) => prev.filter((n) => n.id !== selectedRequest.id));
         setViewMode(null);
         setSelectedRequest(null);
-        
+
         refreshAppointments?.();
       } else {
         console.error("Failed to confirm reschedule:", data.message);
@@ -354,42 +360,52 @@ const handleAction = (note: Notification, action: "approve" | "decline") => {
 
           {!minimized && (
             <div className="max-h-64 md:max-h-80 overflow-y-auto space-y-2 pr-1">
-              {notifications.map((note) => (
-                <div
-                  key={note.id}
-                  className={`flex flex-col gap-2 p-3 rounded border shadow-sm ${note.type === "reschedule"
-                    ? "bg-blue-50 border-l-4 border-blue-500"
-                    : "bg-red-50 border-l-4 border-red-500"
-                    }`}
-                >
-                  <div className="flex items-start gap-2">
-                    <note.icon
-                      className={`w-5 h-5 mt-1 ${note.type === "reschedule"
-                        ? "text-blue-600"
-                        : "text-red-600"
-                        }`}
-                    />
-                    <p className="text-sm leading-snug flex-1">{note.message}</p>
-                  </div>
-
-                  <div className="flex gap-2 ml-7">
-                    <button
-                      onClick={() => handleAction(note, "approve")}
-                      className="px-2 py-1 text-xs rounded bg-black text-white hover:bg-black-700"
-                    >
-                      Approve
-                    </button>
-                    <button
-                      onClick={() => handleAction(note, "decline")}
-                      className="px-2 py-1 text-xs rounded bg-red-600 text-white hover:bg-red-700"
-                    >
-                      Decline
-                    </button>
-                  </div>
+              {loading ? (
+                <div className="flex justify-center items-center py-8 text-gray-500 text-sm">
+                  <span className="animate-pulse">Loading requests...</span>
                 </div>
-              ))}
+              ) : notifications.length === 0 ? (
+                <div className="flex flex-col justify-center items-center py-10 text-gray-400 text-sm">
+                  <CalendarClock className="w-6 h-6 mb-2 opacity-70" />
+                  No notifications yet
+                </div>
+              ) : (
+                notifications.map((note) => (
+                  <div
+                    key={note.id}
+                    className={`flex flex-col gap-2 p-3 rounded border shadow-sm ${note.type === "reschedule"
+                        ? "bg-blue-50 border-l-4 border-blue-500"
+                        : "bg-red-50 border-l-4 border-red-500"
+                      }`}
+                  >
+                    <div className="flex items-start gap-2">
+                      <note.icon
+                        className={`w-5 h-5 mt-1 ${note.type === "reschedule" ? "text-blue-600" : "text-red-600"
+                          }`}
+                      />
+                      <p className="text-sm leading-snug flex-1">{note.message}</p>
+                    </div>
+
+                    <div className="flex gap-2 ml-7">
+                      <button
+                        onClick={() => handleAction(note, "approve")}
+                        className="px-2 py-1 text-xs rounded bg-black text-white hover:bg-black/80"
+                      >
+                        Approve
+                      </button>
+                      <button
+                        onClick={() => handleAction(note, "decline")}
+                        className="px-2 py-1 text-xs rounded bg-red-600 text-white hover:bg-red-700"
+                      >
+                        Decline
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           )}
+
         </div>
       )}
 
