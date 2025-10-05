@@ -1,6 +1,5 @@
-import React, { useRef, useEffect, useState } from "react";
+import React, { useRef, useEffect, useState, useCallback } from "react";
 import type { HTMLAttributes } from "react";
-import { useCallback } from "react";
 
 declare global {
   interface Window {
@@ -9,9 +8,14 @@ declare global {
   }
 }
 
+// ============================================================================
+// CONSTANTS & CONFIGURATION
+// ============================================================================
+
 const TOAST_CSS_BACKUPS = [
   "https://uicdn.toast.com/tui-image-editor/latest/tui-image-editor.css",
 ];
+
 const TOAST_COLOR_PICKER_CSS = [
   "https://uicdn.toast.com/tui-color-picker/latest/tui-color-picker.css",
 ];
@@ -48,6 +52,10 @@ const MENU_ICONS: Record<string, string> = {
   adjust: ICONS.adjust,
 };
 
+// ============================================================================
+// TYPES & INTERFACES
+// ============================================================================
+
 interface AdjustValues {
   brightness: number;
   contrast: number;
@@ -57,6 +65,60 @@ interface AdjustValues {
   whites: number;
   blacks: number;
   hue: number;
+}
+
+interface FabricImage {
+  filters?: any[];
+  width?: number;
+  height?: number;
+  originalWidth?: number;
+  originalHeight?: number;
+  scaleX?: number;
+  scaleY?: number;
+  left?: number;
+  top?: number;
+  originX?: string;
+  originY?: string;
+  selectable?: boolean;
+  evented?: boolean;
+  set?: (props: any) => void;
+  applyFilters?: () => void;
+  type?: string;
+}
+
+interface FabricCanvas {
+  backgroundImage?: FabricImage | null;
+  lowerCanvasEl?: HTMLCanvasElement;
+  upperCanvasEl?: HTMLCanvasElement;
+  selection?: boolean;
+  preserveObjectStacking?: boolean;
+  imageSmoothingEnabled?: boolean;
+  enableRetinaScaling?: boolean;
+  getActiveObject?: () => FabricImage | null;
+  setDimensions?: (dim: { width: number; height: number }) => void;
+  renderAll?: () => void;
+  on?: (event: string, handler: (e?: any) => void) => void;
+  off?: (event: string, handler: (e?: any) => void) => void;
+}
+
+interface TUIInstance {
+  _graphics?: {
+    getCanvas?: () => FabricCanvas | null;
+  };
+  graphics?: {
+    getCanvas?: () => FabricCanvas | null;
+  };
+  destroy?: () => void;
+}
+
+interface EventListenerRef {
+  el: Element;
+  type: string;
+  handler: EventListenerOrEventListenerObject;
+}
+
+interface ToastEditorProps extends HTMLAttributes<HTMLDivElement> {
+  sampleImage?: { path: string; name?: string };
 }
 
 const DEFAULT_ADJUST_VALUES: AdjustValues = {
@@ -70,15 +132,16 @@ const DEFAULT_ADJUST_VALUES: AdjustValues = {
   hue: 0,
 };
 
-// Utility function to calculate responsive dimensions
+// ============================================================================
+// UTILITY FUNCTIONS
+// ============================================================================
+
 const getResponsiveDimensions = (
   containerWidth: number,
   containerHeight: number
 ) => {
   const menuHeight = 48;
-  // Increased padding to give more breathing room
   const padding = window.innerWidth < 768 ? 20 : 40;
-  // Additional top padding to ensure image doesn't touch top
   const topPadding = 20;
 
   return {
@@ -89,90 +152,64 @@ const getResponsiveDimensions = (
   };
 };
 
-// Improved scaling calculation
-const calculateOptimalScale = (
-  imageWidth: number,
-  imageHeight: number,
-  canvasWidth: number,
-  canvasHeight: number
-) => {
-  const imageAspect = imageWidth / imageHeight;
-  const canvasAspect = canvasWidth / canvasHeight;
+async function loadScriptWithBackups(
+  urls: string[],
+  timeout = 15000
+): Promise<void> {
+  let lastErr: Error | null = null;
 
-  // Reduced scale factors to make images smaller and fit better
-  let scaleFactor = 0.75; // Default - much smaller
-
-  if (window.innerWidth < 480) {
-    scaleFactor = 0.8; // Mobile: slightly larger but still smaller than before
-  } else if (window.innerWidth < 768) {
-    scaleFactor = 0.78; // Small tablet
-  } else if (window.innerWidth < 1024) {
-    scaleFactor = 0.76; // Tablet
-  } else {
-    scaleFactor = 0.75; // Desktop: more breathing room
-  }
-
-  // Calculate scale to fit within canvas
-  let scale;
-  if (imageAspect > canvasAspect) {
-    // Image is wider - scale by width
-    scale = (canvasWidth * scaleFactor) / imageWidth;
-  } else {
-    // Image is taller - scale by height
-    scale = (canvasHeight * scaleFactor) / imageHeight;
-  }
-
-  // Ensure minimum scale for very large images
-  const minScale = 0.1;
-  const maxScale = 2.0; // Reduced max scale
-
-  return Math.max(minScale, Math.min(maxScale, scale));
-};
-
-async function loadScriptWithBackups(urls: string[], timeout = 15000) {
-  let lastErr: any = null;
   for (const url of urls) {
     try {
-      if (document.querySelector(`script[src="${url}"]`)) {
+      const existing = document.querySelector(`script[src="${url}"]`);
+      if (existing) {
         console.info(`[loader] script already present: ${url}`);
         return;
       }
+
       await new Promise<void>((resolve, reject) => {
         const s = document.createElement("script");
         s.src = url;
         s.async = true;
+
         const timer = window.setTimeout(() => {
           s.onerror = null;
           s.onload = null;
           reject(new Error("Script load timeout: " + url));
         }, timeout);
+
         s.onload = () => {
           window.clearTimeout(timer);
           resolve();
         };
+
         s.onerror = () => {
           window.clearTimeout(timer);
           reject(new Error("Script load error: " + url));
         };
+
         document.body.appendChild(s);
       });
+
       console.info(`[loader] loaded script: ${url}`);
       return;
     } catch (err) {
       console.warn(`[loader] failed to load script ${url}:`, err);
-      lastErr = err;
+      lastErr = err as Error;
     }
   }
+
   throw lastErr ?? new Error("No script URLs available");
 }
 
-async function loadCssWithBackups(urls: string[]) {
+async function loadCssWithBackups(urls: string[]): Promise<void> {
   for (const href of urls) {
     try {
-      if (document.querySelector(`link[href="${href}"]`)) {
+      const existing = document.querySelector(`link[href="${href}"]`);
+      if (existing) {
         console.info(`[loader] css already present: ${href}`);
         return;
       }
+
       await new Promise<void>((resolve, reject) => {
         const link = document.createElement("link");
         link.rel = "stylesheet";
@@ -181,6 +218,7 @@ async function loadCssWithBackups(urls: string[]) {
         link.onerror = () => reject(new Error("CSS load error: " + href));
         document.head.appendChild(link);
       });
+
       console.info(`[loader] loaded css: ${href}`);
       return;
     } catch (e) {
@@ -189,105 +227,114 @@ async function loadCssWithBackups(urls: string[]) {
   }
 }
 
-interface ToastEditorProps extends HTMLAttributes<HTMLDivElement> {
-  sampleImage?: { path: string; name?: string };
-}
+// ============================================================================
+// MAIN COMPONENT
+// ============================================================================
 
 const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
+  // ========== REFS ==========
   const editorRef = useRef<HTMLDivElement | null>(null);
-  const instanceRef = useRef<any>(null);
+  const instanceRef = useRef<TUIInstance | null>(null);
   const adjustPanelRef = useRef<HTMLDivElement | null>(null);
-  const canvasListenersRef = useRef<any | null>(null);
+  const canvasListenersRef = useRef<Record<string, (e?: any) => void> | null>(
+    null
+  );
   const adjustMenuLiRef = useRef<HTMLElement | null>(null);
   const rafRef = useRef<number | null>(null);
   const scheduledSessionRef = useRef<AdjustValues | null>(null);
   const panelVisibilityRef = useRef<boolean>(false);
   const menuBarListenerRef = useRef<((e: Event) => void) | null>(null);
   const imageLoadedRef = useRef(false);
-  const resizeTimeoutRef = useRef<number | null>(null);
+  const resizeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const renderTimeoutRefs = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const panelListenersRef = useRef<EventListenerRef[]>([]);
 
-  const backendUrl = import.meta.env.VITE_API_URL;
+  // Backend URL construction
+  const backendUrl = (import.meta as any).env?.VITE_API_URL || "";
   const urlParams = new URLSearchParams(location.search);
   const filePath = decodeURIComponent(urlParams.get("url") || "");
-  const imageUrl = `${backendUrl}/api/proxy-image?path=${encodeURIComponent(
-    filePath.replace(/^\/storage\//, "")
-  )}`;
+  const imageUrl = filePath
+    ? `${backendUrl}/api/proxy-image?path=${encodeURIComponent(
+        filePath.replace(/^\/storage\//, "")
+      )}`
+    : "";
 
-  const panelListenersRef = useRef<
-    Array<{
-      el: Element;
-      type: string;
-      handler: EventListenerOrEventListenerObject;
-    }>
-  >([]);
-
+  // ========== STATE ==========
   const [sessionValues, setSessionValues] = useState<AdjustValues>(
     DEFAULT_ADJUST_VALUES
   );
   const sessionRef = useRef<AdjustValues>(sessionValues);
-
-  useEffect(() => {
-    sessionRef.current = sessionValues;
-  }, [sessionValues]);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isAdjustPanelOpen, setIsAdjustPanelOpen] = useState(false);
   const [, setCurrentActiveMenu] = useState<string>("");
 
+  // ========== SYNC STATE TO REF ==========
+  useEffect(() => {
+    sessionRef.current = sessionValues;
+  }, [sessionValues]);
+
   useEffect(() => {
     panelVisibilityRef.current = isAdjustPanelOpen;
   }, [isAdjustPanelOpen]);
 
-  const formatValueForLabel = (_key: keyof AdjustValues, val: number) => {
+  // ========== HELPER FUNCTIONS ==========
+  const formatValueForLabel = (
+    key: keyof AdjustValues,
+    val: number
+  ): string => {
     const abs = Math.abs(val);
     if (abs < 1) return val.toFixed(2);
     if (abs < 10) return val.toFixed(2);
     return String(Math.round(val));
   };
 
-  const buildAdjustmentFilters = useCallback((values: AdjustValues) => {
+  const buildAdjustmentFilters = useCallback((values: AdjustValues): any[] => {
     const filters: any[] = [];
 
-    try {
-      if (
-        Math.abs(values.brightness) > 0.0001 &&
-        window.fabric?.Image?.filters?.Brightness
-      ) {
+    // Brightness filter
+    if (
+      Math.abs(values.brightness) > 0.0001 &&
+      window.fabric?.Image?.filters?.Brightness
+    ) {
+      try {
         const f = new window.fabric.Image.filters.Brightness({
           brightness: values.brightness,
         });
         (f as any).__tui_session_marker = true;
         filters.push(f);
+      } catch (e) {
+        console.warn("[Filter] Brightness creation failed:", e);
       }
-    } catch (e) {
-      console.warn("Brightness creation failed", e);
     }
 
-    try {
-      if (
-        Math.abs(values.contrast) > 0.0001 &&
-        window.fabric?.Image?.filters?.Contrast
-      ) {
+    // Contrast filter
+    if (
+      Math.abs(values.contrast) > 0.0001 &&
+      window.fabric?.Image?.filters?.Contrast
+    ) {
+      try {
         const f = new window.fabric.Image.filters.Contrast({
           contrast: values.contrast,
         });
         (f as any).__tui_session_marker = true;
         filters.push(f);
+      } catch (e) {
+        console.warn("[Filter] Contrast creation failed:", e);
       }
-    } catch (e) {
-      console.warn("Contrast creation failed", e);
     }
 
-    try {
-      if (Math.abs(values.saturation) > 0.0001) {
+    // Saturation filter
+    if (Math.abs(values.saturation) > 0.0001) {
+      try {
         if (window.fabric?.Image?.filters?.Saturation) {
           const f = new window.fabric.Image.filters.Saturation({
             saturation: values.saturation,
           });
           (f as any).__tui_session_marker = true;
           filters.push(f);
-        } else {
+        } else if (window.fabric?.Image?.filters?.ColorMatrix) {
           const s = 1 + values.saturation;
           const lumR = 0.2126;
           const lumG = 0.7152;
@@ -318,26 +365,28 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
           (f as any).__tui_session_marker = true;
           filters.push(f);
         }
+      } catch (e) {
+        console.warn("[Filter] Saturation creation failed:", e);
       }
-    } catch (e) {
-      console.warn("Saturation filter build failed", e);
     }
 
-    try {
-      if (
-        Math.abs(values.hue) > 0.0001 &&
-        window.fabric?.Image?.filters?.HueRotation
-      ) {
+    // Hue rotation filter
+    if (
+      Math.abs(values.hue) > 0.0001 &&
+      window.fabric?.Image?.filters?.HueRotation
+    ) {
+      try {
         const f = new window.fabric.Image.filters.HueRotation({
           rotation: (values.hue * Math.PI) / 180,
         });
         (f as any).__tui_session_marker = true;
         filters.push(f);
+      } catch (e) {
+        console.warn("[Filter] Hue rotation creation failed:", e);
       }
-    } catch (e) {
-      console.warn("Hue filter creation failed", e);
     }
 
+    // Tonal adjustments (highlights, shadows, whites, blacks)
     if (
       Math.abs(values.highlights) > 0.00001 ||
       Math.abs(values.shadows) > 0.00001 ||
@@ -345,44 +394,46 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
       Math.abs(values.blacks) > 0.00001
     ) {
       try {
-        const hFactor = values.highlights * 0.02;
-        const sFactor = values.shadows * 0.02;
-        const wFactor = values.whites * 0.005;
-        const bFactor = values.blacks * 0.005;
+        if (window.fabric?.Image?.filters?.ColorMatrix) {
+          const hFactor = values.highlights * 0.02;
+          const sFactor = values.shadows * 0.02;
+          const wFactor = values.whites * 0.005;
+          const bFactor = values.blacks * 0.005;
 
-        const diag = Math.max(0.1, Math.min(2.0, 1 + wFactor - bFactor));
-        const offset = Math.max(-50, Math.min(50, (hFactor - sFactor) * 10));
+          const diag = Math.max(0.1, Math.min(2.0, 1 + wFactor - bFactor));
+          const offset = Math.max(-50, Math.min(50, (hFactor - sFactor) * 10));
 
-        const matrix20 = [
-          diag,
-          0,
-          0,
-          0,
-          offset,
-          0,
-          diag,
-          0,
-          0,
-          offset,
-          0,
-          0,
-          diag,
-          0,
-          offset,
-          0,
-          0,
-          0,
-          1,
-          0,
-        ];
+          const matrix20 = [
+            diag,
+            0,
+            0,
+            0,
+            offset,
+            0,
+            diag,
+            0,
+            0,
+            offset,
+            0,
+            0,
+            diag,
+            0,
+            offset,
+            0,
+            0,
+            0,
+            1,
+            0,
+          ];
 
-        const f = new window.fabric.Image.filters.ColorMatrix({
-          matrix: matrix20,
-        });
-        (f as any).__tui_session_marker = true;
-        filters.push(f);
+          const f = new window.fabric.Image.filters.ColorMatrix({
+            matrix: matrix20,
+          });
+          (f as any).__tui_session_marker = true;
+          filters.push(f);
+        }
       } catch (e) {
-        console.warn("Tonal matrix build failed", e);
+        console.warn("[Filter] Tonal adjustments creation failed:", e);
       }
     }
 
@@ -391,12 +442,19 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
 
   const scheduleApplySession = useCallback((values: AdjustValues) => {
     scheduledSessionRef.current = values;
-    if (rafRef.current != null) return;
+
+    if (rafRef.current !== null) {
+      return;
+    }
+
     rafRef.current = requestAnimationFrame(() => {
       rafRef.current = null;
       const sess = scheduledSessionRef.current;
       scheduledSessionRef.current = null;
-      if (sess) reapplySessionToCurrentTargets(sess);
+
+      if (sess) {
+        reapplySessionToCurrentTargets(sess);
+      }
     });
   }, []);
 
@@ -404,48 +462,63 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
     (session?: AdjustValues) => {
       const instance = instanceRef.current;
       if (!instance) return;
-      const canvas = instance._graphics?.getCanvas();
+
+      const canvas =
+        instance._graphics?.getCanvas?.() || instance.graphics?.getCanvas?.();
       if (!canvas) return;
 
       const sess = session || sessionRef.current || DEFAULT_ADJUST_VALUES;
-      const targets: any[] = [];
+      const targets: FabricImage[] = [];
 
       try {
-        const active = canvas.getActiveObject();
-        if (active && active.type === "image") targets.push(active);
-        if (canvas.backgroundImage) targets.push(canvas.backgroundImage);
-        if (targets.length === 0 && canvas.backgroundImage)
+        const active = canvas.getActiveObject?.();
+        if (active && active.type === "image") {
+          targets.push(active);
+        }
+
+        if (canvas.backgroundImage) {
           targets.push(canvas.backgroundImage);
+        }
+
+        if (targets.length === 0 && canvas.backgroundImage) {
+          targets.push(canvas.backgroundImage);
+        }
       } catch (e) {
-        console.warn("Target detection failed:", e);
+        console.warn("[Apply] Target detection failed:", e);
+        return;
       }
 
       targets.forEach((target) => {
+        if (!target) return;
+
         try {
           (target as any).__tui_session_values = sess;
-          const currentFilters = (target.filters && [...target.filters]) || [];
-          const baseFilters = currentFilters.filter(
-            (f: any) => !(f && f.__tui_session_marker === true)
-          );
-          const adjustmentFilters = buildAdjustmentFilters(sess);
 
+          const currentFilters = target.filters ? [...target.filters] : [];
+          const baseFilters = currentFilters.filter(
+            (f: any) => f && (f as any).__tui_session_marker !== true
+          );
+
+          const adjustmentFilters = buildAdjustmentFilters(sess);
           target.filters = [...baseFilters, ...adjustmentFilters];
           (target as any).__tui_adj_filters = adjustmentFilters;
 
-          if (typeof target.applyFilters === "function") {
+          if (target.applyFilters) {
             try {
               target.applyFilters();
-            } catch (err) {}
+            } catch (err) {
+              console.warn("[Apply] Filter application failed:", err);
+            }
           }
         } catch (ex) {
-          console.warn("Per-target filter application failed:", ex);
+          console.warn("[Apply] Per-target filter failed:", ex);
         }
       });
 
       try {
-        canvas.renderAll();
+        canvas.renderAll?.();
       } catch (e) {
-        console.warn("Canvas render failed:", e);
+        console.warn("[Apply] Canvas render failed:", e);
       }
     },
     [buildAdjustmentFilters]
@@ -464,33 +537,37 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
     if (!instance) return;
 
     try {
-      const canvas = instance._graphics?.getCanvas();
+      const canvas =
+        instance._graphics?.getCanvas?.() || instance.graphics?.getCanvas?.();
       if (!canvas) return;
 
-      const targets: any[] = [];
-      const active = canvas.getActiveObject();
+      const targets: FabricImage[] = [];
+      const active = canvas.getActiveObject?.();
       if (active) targets.push(active);
       if (canvas.backgroundImage) targets.push(canvas.backgroundImage);
 
       targets.forEach((t) => {
         if (!t) return;
-        const current = (t.filters && [...t.filters]) || [];
+
+        const current = t.filters ? [...t.filters] : [];
         t.filters = current.filter(
-          (f: any) => !(f && f.__tui_session_marker === true)
+          (f: any) => f && (f as any).__tui_session_marker !== true
         );
         (t as any).__tui_adj_filters = [];
         delete (t as any).__tui_session_values;
 
-        if (typeof t.applyFilters === "function") {
+        if (t.applyFilters) {
           try {
             t.applyFilters();
-          } catch (err) {}
+          } catch (err) {
+            console.warn("[Reset] Filter application failed:", err);
+          }
         }
       });
 
-      canvas.renderAll();
+      canvas.renderAll?.();
     } catch (e) {
-      console.warn("Session reset failed:", e);
+      console.warn("[Reset] Session reset failed:", e);
     }
 
     updatePanelUI(DEFAULT_ADJUST_VALUES);
@@ -508,26 +585,19 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
       const valueSpan = panel.querySelector(
         `#${key}-value`
       ) as HTMLSpanElement | null;
-      if (slider) slider.value = String(session[key]);
-      if (valueSpan)
+
+      if (slider) {
+        slider.value = String(session[key]);
+      }
+      if (valueSpan) {
         valueSpan.textContent = formatValueForLabel(key, session[key]);
+      }
     });
   }, []);
 
   const startSliderInteraction = useCallback((key: keyof AdjustValues) => {
     setSessionValues((prev) => {
-      const next = { ...prev, [key]: 0 };
-      const panel = adjustPanelRef.current;
-      if (panel) {
-        const slider = panel.querySelector(
-          `#${key}-slider`
-        ) as HTMLInputElement | null;
-        const valueSpan = panel.querySelector(
-          `#${key}-value`
-        ) as HTMLSpanElement | null;
-        if (slider) slider.value = "0";
-        if (valueSpan) valueSpan.textContent = formatValueForLabel(key, 0);
-      }
+      const next = { ...prev, [key]: prev[key] };
       return next;
     });
   }, []);
@@ -537,96 +607,129 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
       setSessionValues((prev) => {
         const next = { ...prev, [key]: value };
         scheduleApplySession(next);
+
         const panel = adjustPanelRef.current;
         if (panel) {
           const valueSpan = panel.querySelector(
             `#${key}-value`
           ) as HTMLSpanElement | null;
-          if (valueSpan)
+          if (valueSpan) {
             valueSpan.textContent = formatValueForLabel(key, value);
+          }
         }
+
         return next;
       });
     },
     [scheduleApplySession]
   );
 
-  // Enhanced image scaling and alignment function
   const fixImageAspectRatio = useCallback(() => {
     try {
       const instance = instanceRef.current;
       if (!instance) return;
 
-      const canvas = instance.graphics?.getCanvas();
+      const canvas =
+        instance._graphics?.getCanvas?.() || instance.graphics?.getCanvas?.();
       if (!canvas || !canvas.backgroundImage) return;
 
       const bgImg = canvas.backgroundImage;
 
-      // Save original image width and height once
-      if (!bgImg.originalWidth) {
-        bgImg.originalWidth = bgImg.width!;
-        bgImg.originalHeight = bgImg.height!;
+      if (!bgImg.originalWidth || !bgImg.originalHeight) {
+        if (bgImg.width && bgImg.height) {
+          bgImg.originalWidth = bgImg.width;
+          bgImg.originalHeight = bgImg.height;
+        } else {
+          console.warn("[Fix] Background image dimensions not available");
+          return;
+        }
       }
 
-      const containerRect = editorRef.current?.getBoundingClientRect();
-      if (!containerRect) return;
+      // Get full viewport dimensions
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
 
-      const { canvasWidth, canvasHeight } = getResponsiveDimensions(
-        containerRect.width,
-        containerRect.height
-      );
+      // Calculate available space (minus header and bottom menu)
+      const headerHeight = 72; // Header height
+      const menuHeight = 48; // Bottom menu height
+
+      const availableWidth = viewportWidth;
+      const availableHeight = viewportHeight - headerHeight - menuHeight;
 
       const imgWidth = bgImg.originalWidth;
       const imgHeight = bgImg.originalHeight;
 
-      // Calculate scale so that image fits perfectly without cropping or distortion
-      const scaleX = canvasWidth / imgWidth;
-      const scaleY = canvasHeight / imgHeight;
+      // Responsive padding based on screen size
+      let paddingFactor;
+      if (viewportWidth >= 1920) {
+        paddingFactor = 0.8; // 80% on large desktop (more breathing room)
+      } else if (viewportWidth >= 1024) {
+        paddingFactor = 0.85; // 85% on desktop
+      } else if (viewportWidth >= 768) {
+        paddingFactor = 0.88; // 88% on tablet
+      } else {
+        paddingFactor = 0.9; // 90% on mobile
+      }
+
+      // Calculate scale to fit image in available space
+      const scaleX = (availableWidth * paddingFactor) / imgWidth;
+      const scaleY = (availableHeight * paddingFactor) / imgHeight;
       const scale = Math.min(scaleX, scaleY);
 
-      bgImg.set({
-        scaleX: scale,
-        scaleY: scale,
-        left: canvasWidth / 2,
-        top: canvasHeight / 2,
-        originX: "center",
-        originY: "center",
-        selectable: false,
-        evented: false,
+      // Set canvas dimensions to full available space
+      canvas.setDimensions?.({
+        width: availableWidth,
+        height: availableHeight,
       });
 
-      // Resize canvas to container dimensions
-      canvas.setDimensions({ width: canvasWidth, height: canvasHeight });
-      canvas.renderAll();
+      // Center the image perfectly
+      if (bgImg.set) {
+        bgImg.set({
+          scaleX: scale,
+          scaleY: scale,
+          left: availableWidth / 2,
+          top: availableHeight / 2,
+          originX: "center",
+          originY: "center",
+          selectable: false,
+          evented: false,
+        });
+      }
 
-      console.info("Aspect ratio fix applied", {
-        canvasWidth,
-        canvasHeight,
-        scale,
-      });
+      canvas.renderAll?.();
+
+      if (!imageLoadedRef.current) {
+        imageLoadedRef.current = true;
+      }
+
+      console.log(
+        `[Fix] Canvas: ${availableWidth}x${availableHeight}, Scale: ${scale.toFixed(
+          2
+        )}, Padding: ${paddingFactor * 100}%`
+      );
     } catch (e) {
-      console.warn("fixImageAspectRatio error:", e);
+      console.warn("[Fix] Aspect ratio fix failed:", e);
     }
-  }, [instanceRef, editorRef]);
+  }, []);
 
-  // Enhanced responsive resize handler
   const handleResize = useCallback(() => {
     if (resizeTimeoutRef.current) {
       clearTimeout(resizeTimeoutRef.current);
     }
-    resizeTimeoutRef.current = window.setTimeout(() => {
+
+    resizeTimeoutRef.current = setTimeout(() => {
       if (!instanceRef.current || !editorRef.current) return;
       fixImageAspectRatio();
     }, 150);
   }, [fixImageAspectRatio]);
 
   const createAdjustPanel = useCallback(() => {
-    if (!editorRef.current) return;
-    if (!isAdjustPanelOpen) return;
+    if (!editorRef.current || !isAdjustPanelOpen) return;
 
     const existing = editorRef.current.querySelector(
       ".tui-image-editor-adjust-panel"
     ) as HTMLDivElement | null;
+
     if (existing) {
       adjustPanelRef.current = existing;
       updatePanelUI(sessionRef.current);
@@ -642,7 +745,6 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
     adjustPanel.setAttribute("role", "region");
     adjustPanel.setAttribute("aria-label", "Image Adjustments");
 
-    // Responsive panel width
     const panelWidth = window.innerWidth < 768 ? "100%" : "280px";
     const panelPosition = window.innerWidth < 768 ? "bottom" : "right";
 
@@ -698,9 +800,12 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
       </div>
       <div id="sliders-container"></div>
     `;
+
     adjustPanel.appendChild(panelContent);
 
-    const slidersContainer = panelContent.querySelector("#sliders-container")!;
+    const slidersContainer = panelContent.querySelector("#sliders-container");
+    if (!slidersContainer) return;
+
     const adjustSliders = [
       {
         key: "brightness",
@@ -740,9 +845,6 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
           color: #444;
         ">
           <div style="display: flex; align-items: center; gap: 8px;">
-            <img src="${
-              (ICONS as any)[key] || ICONS.brightness
-            }" alt="" style="width: 16px; height: 16px; opacity: 0.7;">
             <span>${label}</span>
           </div>
           <span id="${key}-value" style="
@@ -776,10 +878,10 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
           "
         />
       `;
+
       slidersContainer.appendChild(sliderDiv);
     });
 
-    // Enhanced CSS for better mobile experience
     if (!document.getElementById("tui-adjust-style")) {
       const style = document.createElement("style");
       style.id = "tui-adjust-style";
@@ -827,7 +929,6 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
           border-radius: 3px;
         }
         
-        /* Mobile responsive adjustments */
         @media (max-width: 768px) {
           .tui-image-editor-adjust-panel {
             max-height: 50vh;
@@ -847,20 +948,16 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
     const adjustSlidersElements = slidersContainer.querySelectorAll(
       "input[type='range']"
     );
+
     adjustSlidersElements.forEach((el) => {
-      const id = el.id;
+      const id = (el as HTMLInputElement).id;
       const key = id.replace("-slider", "") as keyof AdjustValues;
       const slider = el as HTMLInputElement;
-      const valueSpan = adjustPanel.querySelector(
-        `#${key}-value`
-      ) as HTMLSpanElement | null;
-      if (!slider || !valueSpan) return;
 
       const onPointerDown = () => startSliderInteraction(key);
       const onInput = (e: Event) => {
         const raw = (e.target as HTMLInputElement).value;
         const parsed = parseFloat(raw);
-        valueSpan.textContent = formatValueForLabel(key, parsed);
         handleSessionChange(key, parsed);
       };
 
@@ -868,22 +965,6 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
       panelListenersRef.current.push({
         el: slider,
         type: "pointerdown",
-        handler: onPointerDown,
-      });
-
-      slider.addEventListener("mousedown", onPointerDown);
-      panelListenersRef.current.push({
-        el: slider,
-        type: "mousedown",
-        handler: onPointerDown,
-      });
-
-      slider.addEventListener("touchstart", onPointerDown, {
-        passive: true,
-      } as any);
-      panelListenersRef.current.push({
-        el: slider,
-        type: "touchstart",
         handler: onPointerDown,
       });
 
@@ -900,12 +981,14 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
       const onBlur = () => {
         slider.style.boxShadow = "none";
       };
+
       slider.addEventListener("focus", onFocus);
       panelListenersRef.current.push({
         el: slider,
         type: "focus",
         handler: onFocus,
       });
+
       slider.addEventListener("blur", onBlur);
       panelListenersRef.current.push({
         el: slider,
@@ -928,9 +1011,6 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
     editorContainer.appendChild(adjustPanel);
     adjustPanelRef.current = adjustPanel;
     updatePanelUI(sessionRef.current);
-
-    adjustPanel.tabIndex = -1;
-    adjustPanel.style.pointerEvents = "auto";
   }, [
     isAdjustPanelOpen,
     startSliderInteraction,
@@ -948,40 +1028,27 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
       const existingPanel = editorRef.current.querySelector(
         ".tui-image-editor-adjust-panel"
       );
+
       if (existingPanel) {
-        try {
-          if (
-            panelListenersRef.current &&
-            panelListenersRef.current.length > 0
-          ) {
-            panelListenersRef.current.forEach(({ el, type, handler }) => {
-              try {
-                el.removeEventListener(type, handler as EventListener);
-              } catch (e) {}
-            });
-            panelListenersRef.current = [];
-          }
-          existingPanel.parentElement?.removeChild(existingPanel);
-        } catch (e) {
+        panelListenersRef.current.forEach(({ el, type, handler }) => {
           try {
-            existingPanel.remove();
-          } catch (ex) {}
+            el.removeEventListener(type, handler as EventListener);
+          } catch (e) {
+            console.warn("[Cleanup] Panel listener removal failed:", e);
+          }
+        });
+        panelListenersRef.current = [];
+
+        try {
+          existingPanel.remove();
+        } catch (e) {
+          console.warn("[Cleanup] Panel removal failed:", e);
         }
+
         adjustPanelRef.current = null;
       }
     }
   }, [isAdjustPanelOpen, createAdjustPanel]);
-
-  const cleanupCanvasEvents = useCallback(() => {
-    try {
-      const canvas = instanceRef.current?._graphics?.getCanvas();
-      if (canvas) {
-        // Simplified cleanup
-      }
-    } catch (e) {
-      console.warn("Canvas event cleanup failed:", e);
-    }
-  }, []);
 
   useEffect(() => {
     window.addEventListener("resize", handleResize);
@@ -989,6 +1056,7 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
       window.removeEventListener("resize", handleResize);
       if (resizeTimeoutRef.current) {
         clearTimeout(resizeTimeoutRef.current);
+        resizeTimeoutRef.current = null;
       }
     };
   }, [handleResize]);
@@ -1003,73 +1071,58 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
         "tui-image-editor/dist/tui-image-editor.esm.js",
         "tui-image-editor/dist/tui-image-editor.js",
       ];
+
       for (const p of tryPaths) {
         try {
           const mod = await import(/* @vite-ignore */ p);
           if (mod) return mod;
         } catch (e) {
-          console.warn(`[import] failed for ${p}:`, e);
+          console.warn(`[Import] Failed for ${p}:`, e);
         }
       }
+
       throw new Error("Dynamic import failed for all known paths");
     }
 
     async function initEditor() {
       setLoading(true);
       setError(null);
+
       try {
         await loadCssWithBackups(TOAST_CSS_BACKUPS);
         await loadCssWithBackups(TOAST_COLOR_PICKER_CSS);
 
         let Constructor: any = undefined;
+
         try {
           const mod = await attemptImportPaths();
           Constructor =
             (mod as any).default ?? (mod as any).ImageEditor ?? (mod as any);
-          console.info("[init] using local tui-image-editor import");
+          console.info("[Init] Using local tui-image-editor import");
         } catch (importErr) {
           console.warn(
-            "[init] local import failed, will attempt CDN fallback:",
+            "[Init] Local import failed, attempting CDN:",
             importErr
           );
         }
 
         if (typeof Constructor !== "function") {
-          try {
-            if (!window.fabric) {
-              await loadScriptWithBackups([FABRIC_CDN], 20000);
-            } else {
-              console.info("[init] fabric already present");
-            }
-          } catch (e) {
-            console.warn("[init] fabric load failed:", e);
+          if (!window.fabric) {
+            await loadScriptWithBackups([FABRIC_CDN], 20000);
           }
 
-          try {
-            if (!(window as any).tui) {
-              await loadScriptWithBackups([TUI_SNIPPET_CDN], 15000);
-            } else {
-              console.info("[init] tui code snippet already present");
-            }
-          } catch (e) {
-            console.warn("[init] tui-code-snippet load failed:", e);
+          if (!(window as any).tui) {
+            await loadScriptWithBackups([TUI_SNIPPET_CDN], 15000);
           }
 
-          try {
-            if (!(window as any).tui?.colorPicker) {
-              await loadScriptWithBackups([TUI_COLOR_PICKER_SCRIPT], 15000);
-            } else {
-              console.info("[init] tui-color-picker already present");
-            }
-          } catch (e) {
-            console.warn("[init] tui-color-picker load failed:", e);
+          if (!(window as any).tui?.colorPicker) {
+            await loadScriptWithBackups([TUI_COLOR_PICKER_SCRIPT], 15000);
           }
 
           await loadScriptWithBackups([TUI_IMAGE_EDITOR_CDN], 20000);
 
           Constructor =
-            (window as any).tui?.ImageEditor ??
-            (window as any).tui?.ImageEditor;
+            (window as any).tui?.ImageEditor ?? (window as any).ImageEditor;
         }
 
         if (typeof Constructor !== "function") {
@@ -1117,18 +1170,21 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
               "submenu.activeLabel.color": "#fff",
             },
           },
-          cssMaxWidth: 10000,
-          cssMaxHeight: 10000,
+          // CHANGE THESE VALUES TO VERY LARGE NUMBERS:
+          cssMaxWidth: 999999, // Changed from 10000
+          cssMaxHeight: 999999, // Changed from 10000
           usageStatistics: false,
         });
 
-        // Apply image scaling with delays to ensure proper loading
-        setTimeout(() => fixImageAspectRatio(), 100);
-        setTimeout(() => fixImageAspectRatio(), 300);
-        setTimeout(() => fixImageAspectRatio(), 500);
-        setTimeout(() => fixImageAspectRatio(), 1000);
+        renderTimeoutRefs.current.forEach(clearTimeout);
+        renderTimeoutRefs.current = [];
 
-        // Enhanced CSS for better alignment and responsive design
+        const delays = [100, 300, 500, 1000];
+        delays.forEach((delay) => {
+          const timeoutId = setTimeout(() => fixImageAspectRatio(), delay);
+          renderTimeoutRefs.current.push(timeoutId);
+        });
+
         if (!document.getElementById("tui-menu-alignment-fix")) {
           const style = document.createElement("style");
           style.id = "tui-menu-alignment-fix";
@@ -1183,7 +1239,6 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
               vertical-align: middle;
             }
             
-            /* Mobile responsive menu */
             @media (max-width: 640px) {
               .tui-image-editor .tui-image-editor-menu {
                 gap: 2px;
@@ -1220,7 +1275,6 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
             .tui-image-editor-header {
               display: none !important;
             }
-            
             .tui-image-editor-wrap {
               top: 0 !important;
             }
@@ -1229,30 +1283,39 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
         }
 
         try {
-          const fabricCanvas = instanceRef.current._graphics?.getCanvas();
-          const trySetWillRead = (el: HTMLCanvasElement | null | undefined) => {
-            if (!el) return;
-            try {
-              el.getContext("2d", { willReadFrequently: true });
-            } catch (e) {}
-          };
-          trySetWillRead(fabricCanvas?.lowerCanvasEl);
-          trySetWillRead(fabricCanvas?.upperCanvasEl);
-          trySetWillRead((fabricCanvas as any)?.cacheCanvasEl);
+          const canvas =
+            instanceRef.current._graphics?.getCanvas?.() ||
+            instanceRef.current.graphics?.getCanvas?.();
 
-          if (fabricCanvas) {
-            fabricCanvas.selection = true;
-            fabricCanvas.preserveObjectStacking = true;
-            fabricCanvas.imageSmoothingEnabled = true;
-            fabricCanvas.enableRetinaScaling = true;
+          if (canvas) {
+            const canvases = [
+              canvas.lowerCanvasEl,
+              canvas.upperCanvasEl,
+              (canvas as any).cacheCanvasEl,
+            ];
 
-            if (fabricCanvas.backgroundImage) {
-              fabricCanvas.backgroundImage.selectable = false;
-              fabricCanvas.backgroundImage.evented = false;
+            canvases.forEach((el) => {
+              if (el) {
+                try {
+                  el.getContext("2d", { willReadFrequently: true });
+                } catch (e) {
+                  console.warn("[Canvas] willReadFrequently failed:", e);
+                }
+              }
+            });
+
+            canvas.selection = true;
+            canvas.preserveObjectStacking = true;
+            canvas.imageSmoothingEnabled = true;
+            canvas.enableRetinaScaling = true;
+
+            if (canvas.backgroundImage) {
+              canvas.backgroundImage.selectable = false;
+              canvas.backgroundImage.evented = false;
             }
           }
         } catch (e) {
-          console.warn("Canvas enhancement failed:", e);
+          console.warn("[Canvas] Enhancement failed:", e);
         }
 
         setTimeout(() => {
@@ -1261,18 +1324,17 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
           setupCanvasListeners();
         }, 600);
 
-        // Enhanced resize observer
         resizeObs = new ResizeObserver(() => {
           handleResize();
         });
-        if (editorRef.current) resizeObs.observe(editorRef.current);
 
-        // Also listen to window resize for better responsiveness
-        window.addEventListener("resize", handleResize);
+        if (editorRef.current) {
+          resizeObs.observe(editorRef.current);
+        }
 
         setLoading(false);
       } catch (err: any) {
-        console.error("[init] error:", err);
+        console.error("[Init] Initialization failed:", err);
         if (mounted) {
           setError(err?.message ?? String(err));
           setLoading(false);
@@ -1287,14 +1349,18 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
       if (!menuBar) return;
 
       Object.entries(MENU_ICONS).forEach(([id, url]) => {
-        const img = editorRef.current!.querySelector(
+        const img = editorRef.current?.querySelector(
           `.tui-image-editor-menu [data-menu="${id}"] img`
         ) as HTMLImageElement | null;
+
         if (img) {
           img.src = url;
           img.onerror = () => {
-            if (id === "adjust") img.src = ICONS.adjust;
-            else img.style.display = "none";
+            if (id === "adjust") {
+              img.src = ICONS.adjust;
+            } else {
+              img.style.display = "none";
+            }
           };
         }
       });
@@ -1303,11 +1369,13 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
         const li = document.createElement("li");
         li.setAttribute("data-menu", "adjust");
         li.className = "tui-image-editor-menu-item";
-        li.style.cursor = "pointer";
-        li.style.display = "inline-flex";
-        li.style.alignItems = "center";
-        li.style.height = "100%";
-        li.style.marginLeft = "6px";
+        li.style.cssText = `
+          cursor: pointer;
+          display: inline-flex;
+          align-items: center;
+          height: 100%;
+          margin-left: 6px;
+        `;
 
         li.innerHTML = `
           <button class="tui-image-editor-button tui-adjust-btn" title="Adjust" aria-label="Adjust" style="display:inline-flex;align-items:center;border:none;background:transparent;border-radius:4px;transition:all 0.18s ease;color: #8a8a8a;">
@@ -1329,16 +1397,19 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
 
           try {
             const instance = instanceRef.current;
-            const canvas = instance?._graphics?.getCanvas();
+            const canvas =
+              instance?._graphics?.getCanvas?.() ||
+              instance?.graphics?.getCanvas?.();
             const hasImage =
-              canvas && (canvas.backgroundImage || canvas.getActiveObject());
+              canvas && (canvas.backgroundImage || canvas.getActiveObject?.());
+
             if (!hasImage) {
               setError("Please load an image first");
               setTimeout(() => setError(null), 3000);
               return;
             }
           } catch (ex) {
-            console.warn("Image check failed:", ex);
+            console.warn("[Menu] Image check failed:", ex);
           }
 
           setIsAdjustPanelOpen((prev) => {
@@ -1369,10 +1440,12 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
       const delegatedHandler = (ev: Event) => {
         const target = ev.target as HTMLElement | null;
         if (!target) return;
+
         const menuItem = target.closest?.(
           ".tui-image-editor-menu-item"
         ) as HTMLElement | null;
         if (!menuItem) return;
+
         const menuName = menuItem.getAttribute("data-menu");
         if (!menuName) return;
 
@@ -1392,9 +1465,10 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
           menuItem.classList.add("tui-image-editor-menu-item-active");
           (menuItem as HTMLElement).style.background = "#f0f8ff";
 
-          setTimeout(() => {
+          const timeoutId = setTimeout(() => {
             reapplySessionToCurrentTargets();
           }, 100);
+          renderTimeoutRefs.current.push(timeoutId);
         }
       };
 
@@ -1407,7 +1481,10 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
 
     const setupCanvasListeners = () => {
       try {
-        const canvas = instanceRef.current._graphics?.getCanvas();
+        const canvas =
+          instanceRef.current?._graphics?.getCanvas?.() ||
+          instanceRef.current?.graphics?.getCanvas?.();
+
         if (!canvas || canvasListenersRef.current) return;
 
         const onObjectAdded = (e: any) => {
@@ -1415,10 +1492,14 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
             const obj = e?.target;
             if (obj) {
               (obj as any).__tui_session_values = sessionRef.current;
-              setTimeout(() => reapplySessionToCurrentTargets(), 50);
+              const timeoutId = setTimeout(
+                () => reapplySessionToCurrentTargets(),
+                50
+              );
+              renderTimeoutRefs.current.push(timeoutId);
             }
           } catch (ex) {
-            console.warn("Object added handler failed:", ex);
+            console.warn("[Canvas] Object added handler failed:", ex);
           }
         };
 
@@ -1428,9 +1509,13 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
             if (obj) {
               (obj as any).__tui_session_values = sessionRef.current;
             }
-            setTimeout(() => reapplySessionToCurrentTargets(), 30);
+            const timeoutId = setTimeout(
+              () => reapplySessionToCurrentTargets(),
+              30
+            );
+            renderTimeoutRefs.current.push(timeoutId);
           } catch (ex) {
-            console.warn("Object modified handler failed:", ex);
+            console.warn("[Canvas] Object modified handler failed:", ex);
           }
         };
 
@@ -1440,48 +1525,41 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
             if (obj) {
               (obj as any).__tui_session_values = sessionRef.current;
             }
-            setTimeout(() => reapplySessionToCurrentTargets(), 20);
+            const timeoutId = setTimeout(
+              () => reapplySessionToCurrentTargets(),
+              20
+            );
+            renderTimeoutRefs.current.push(timeoutId);
           } catch (ex) {
-            console.warn("Selection created handler failed:", ex);
+            console.warn("[Canvas] Selection created handler failed:", ex);
           }
         };
 
         const onSelectionCleared = () => {
           try {
-            setTimeout(() => reapplySessionToCurrentTargets(), 20);
+            const timeoutId = setTimeout(
+              () => reapplySessionToCurrentTargets(),
+              20
+            );
+            renderTimeoutRefs.current.push(timeoutId);
           } catch (ex) {
-            console.warn("Selection cleared handler failed:", ex);
+            console.warn("[Canvas] Selection cleared handler failed:", ex);
           }
         };
 
-        const onAfterRender = () => {
-          try {
-            const hasActiveSession = Object.values(
-              sessionRef.current || {}
-            ).some((v) => Math.abs(v) > 0.001);
-            if (hasActiveSession) {
-              setTimeout(() => reapplySessionToCurrentTargets(), 10);
-            }
-          } catch (ex) {
-            console.warn("After render handler failed:", ex);
-          }
-        };
-
-        canvas.on("object:added", onObjectAdded);
-        canvas.on("object:modified", onObjectModified);
-        canvas.on("selection:created", onSelectionCreated);
-        canvas.on("selection:cleared", onSelectionCleared);
-        if (canvas.on) canvas.on("after:render", onAfterRender);
+        canvas.on?.("object:added", onObjectAdded);
+        canvas.on?.("object:modified", onObjectModified);
+        canvas.on?.("selection:created", onSelectionCreated);
+        canvas.on?.("selection:cleared", onSelectionCleared);
 
         canvasListenersRef.current = {
           added: onObjectAdded,
           modified: onObjectModified,
           selectionCreated: onSelectionCreated,
           selectionCleared: onSelectionCleared,
-          afterRender: onAfterRender,
         };
       } catch (e) {
-        console.warn("Canvas listeners setup failed:", e);
+        console.warn("[Canvas] Listeners setup failed:", e);
       }
     };
 
@@ -1492,11 +1570,27 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
 
       if (resizeTimeoutRef.current) {
         clearTimeout(resizeTimeoutRef.current);
+        resizeTimeoutRef.current = null;
       }
 
-      window.removeEventListener("resize", handleResize);
+      renderTimeoutRefs.current.forEach(clearTimeout);
+      renderTimeoutRefs.current = [];
 
-      if (resizeObs && editorRef.current) resizeObs.disconnect();
+      if (rafRef.current !== null) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+      }
+
+      scheduledSessionRef.current = null;
+
+      if (resizeObs) {
+        try {
+          resizeObs.disconnect();
+        } catch (e) {
+          console.warn("[Cleanup] ResizeObserver disconnect failed:", e);
+        }
+        resizeObs = null;
+      }
 
       try {
         const menuBar = editorRef.current?.querySelector(
@@ -1507,77 +1601,72 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
           handlers.forEach((handler: any) => {
             try {
               menuBar.removeEventListener("click", handler, true);
-            } catch (e) {}
+            } catch (e) {
+              console.warn("[Cleanup] Menu handler removal failed:", e);
+            }
           });
           delete (menuBar as any).__tuiMenuHandlers;
         }
       } catch (e) {
-        console.warn("Menu cleanup failed:", e);
+        console.warn("[Cleanup] Menu cleanup failed:", e);
       }
 
-      cleanupCanvasEvents();
-
       try {
-        const canvas = instanceRef.current?._graphics?.getCanvas();
+        const canvas =
+          instanceRef.current?._graphics?.getCanvas?.() ||
+          instanceRef.current?.graphics?.getCanvas?.();
+
         if (canvas && canvasListenersRef.current) {
           const listeners = canvasListenersRef.current;
-          if (listeners.added) canvas.off("object:added", listeners.added);
-          if (listeners.modified)
-            canvas.off("object:modified", listeners.modified);
-          if (listeners.selectionCreated)
-            canvas.off("selection:created", listeners.selectionCreated);
-          if (listeners.selectionCleared)
-            canvas.off("selection:cleared", listeners.selectionCleared);
-          if (listeners.afterRender && canvas.off)
-            canvas.off("after:render", listeners.afterRender);
+
+          if (listeners.added) {
+            canvas.off?.("object:added", listeners.added);
+          }
+          if (listeners.modified) {
+            canvas.off?.("object:modified", listeners.modified);
+          }
+          if (listeners.selectionCreated) {
+            canvas.off?.("selection:created", listeners.selectionCreated);
+          }
+          if (listeners.selectionCleared) {
+            canvas.off?.("selection:cleared", listeners.selectionCleared);
+          }
+
           canvasListenersRef.current = null;
         }
       } catch (e) {
-        console.warn("Canvas cleanup failed:", e);
+        console.warn("[Cleanup] Canvas cleanup failed:", e);
       }
 
       try {
         instanceRef.current?.destroy?.();
       } catch (e) {
-        console.warn("Editor cleanup failed:", e);
+        console.warn("[Cleanup] Editor destroy failed:", e);
       }
       instanceRef.current = null;
 
-      try {
-        if (panelListenersRef.current && panelListenersRef.current.length > 0) {
-          panelListenersRef.current.forEach(({ el, type, handler }) => {
-            try {
-              el.removeEventListener(type, handler as EventListener);
-            } catch (e) {}
-          });
-          panelListenersRef.current = [];
+      panelListenersRef.current.forEach(({ el, type, handler }) => {
+        try {
+          el.removeEventListener(type, handler as EventListener);
+        } catch (e) {
+          console.warn("[Cleanup] Panel listener removal failed:", e);
         }
-      } catch (e) {
-        console.warn("Panel listeners cleanup failed:", e);
-      }
+      });
+      panelListenersRef.current = [];
 
       try {
         const existingPanel = editorRef.current?.querySelector(
           ".tui-image-editor-adjust-panel"
         );
-        if (existingPanel) existingPanel.remove();
+        if (existingPanel) {
+          existingPanel.remove();
+        }
         adjustPanelRef.current = null;
       } catch (e) {
-        console.warn("Panel cleanup failed:", e);
+        console.warn("[Cleanup] Panel cleanup failed:", e);
       }
-
-      if (rafRef.current != null) {
-        cancelAnimationFrame(rafRef.current);
-        rafRef.current = null;
-      }
-      scheduledSessionRef.current = null;
     };
-  }, [
-    fixImageAspectRatio,
-    cleanupCanvasEvents,
-    reapplySessionToCurrentTargets,
-    handleResize,
-  ]);
+  }, [fixImageAspectRatio, reapplySessionToCurrentTargets, handleResize]);
 
   return (
     <div
@@ -1591,7 +1680,6 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
         flexDirection: "column",
       }}
     >
-      {/* Header */}
       <header
         style={{
           width: "100%",
@@ -1668,7 +1756,6 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
         </div>
       </header>
 
-      {/* Editor Content */}
       <div
         style={{
           flex: 1,
@@ -1770,198 +1857,274 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
       </div>
 
       <style>{`
-  * {
+        * {
     box-sizing: border-box;
   }
   
   body {
     overflow: hidden !important;
   }
+
+  /* ADD THESE AGGRESSIVE OVERRIDES HERE */
+  .tui-image-editor,
+  .tui-image-editor *,
+  .tui-image-editor-canvas-container,
+  .tui-image-editor-main,
+  .tui-image-editor-main-container,
+  .tui-image-editor-wrap,
+  .lower-canvas-container {
+    max-width: none !important;
+    max-height: none !important;
+  }
+
+  /* Force canvas to use full width */
+  canvas.lower-canvas,
+  canvas.upper-canvas {
+    max-width: none !important;
+    max-height: none !important;
+  }
   
   @keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
   }
-  
-  .tui-image-editor-menu-item-active {
-    background: #f0f8ff !important;
-  }
-  
-  /* Enhanced container sizing and responsiveness */
-  .tui-image-editor-container {
-    height: 100% !important;
-    width: 100% !important;
-    overflow: hidden !important;
-  }
-  
-  .tui-image-editor-wrap {
-    height: 100% !important;
-    width: 100% !important;
-    top: 0 !important;
-    bottom: 0 !important;
-    overflow: hidden !important;
-  }
-  
-  .tui-image-editor-main {
-    position: relative !important;
-    height: calc(100vh - 120px) !important;
-    width: 100% !important;
-    overflow: hidden !important;
-    padding: 10px !important;
-    box-sizing: border-box !important;
-    margin-bottom: 4px !important;
-  }
-  
-  .tui-image-editor {
-    height: 100% !important;
-    width: 100% !important;
-    overflow: hidden !important;
-  }
-  
-  /* Enhanced canvas sizing and centering */
-  .tui-image-editor .lower-canvas,
-  .tui-image-editor .upper-canvas {
-    max-width: 100% !important;
-    max-height: 100% !important;
-    object-fit: contain !important;
-  }
-  
-  /* Improved canvas background centering */
-  .tui-image-editor-main-container {
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    width: 100% !important;
-    height: 100% !important;
-    position: relative !important;
-  }
+        
+        .tui-image-editor-menu-item-active {
+          background: #f0f8ff !important;
+        }
+        
+        .tui-image-editor-container {
+          height: 100% !important;
+          width: 100% !important;
+          overflow: hidden !important;
+        }
+        
+        .tui-image-editor-wrap {
+          height: 100% !important;
+          width: 100% !important;
+          top: 0 !important;
+          bottom: 0 !important;
+          overflow: hidden !important;
+        }
+        
+        /* NUCLEAR FIX: Force canvas container to stay full size */
+        /* Replace the existing canvas container rules with these: */
+.tui-image-editor-canvas-container {
+  position: fixed !important;
+  top: 72px !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 48px !important;
+  width: 100vw !important;
+  height: calc(100vh - 120px) !important;
+  z-index: 1 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
 
-  .tui-image-editor .lower-canvas-container {
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    width: 100% !important;
-    height: 100% !important;
-    position: relative !important;
-  }
+.tui-image-editor-main {
+  position: fixed !important;
+  top: 72px !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 48px !important;
+  width: 100vw !important;
+  height: calc(100vh - 120px) !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
 
-  canvas.lower-canvas,
-  canvas.upper-canvas {
-    position: absolute !important;
-    left: 50% !important;
-    top: 50% !important;
-    transform: translate(-50%, -50%) !important;
-  }
-  
-  /* Ensure bottom menu stays at bottom and is centered */
-  .tui-image-editor-menu-wrap {
-    position: fixed !important;
-    bottom: 0 !important;
-    left: 0 !important;
-    right: 0 !important;
-    height: 48px !important;
-    z-index: 0 !important;
-    background: #ffffff !important;
-    border-top: 1px solid #e5e5e5 !important;
-    pointer-events: auto !important;
-  }
+.tui-image-editor-main-container {
+  position: fixed !important;
+  top: 72px !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 48px !important;
+  width: 100vw !important;
+  height: calc(100vh - 120px) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
 
-  /* Fix submenu positioning - must be ABOVE menu */
-  .tui-image-editor-submenu {
-    position: fixed !important;
-    bottom: 48px !important;
-    left: 0 !important;
-    right: 0 !important;
-    max-height: 50vh !important;
-    z-index: 99998 !important;
-    pointer-events: auto !important;
-    background: #1e1e1e !important;
-  }
-  
-  /* Remove scrollbar from body */
-  ::-webkit-scrollbar {
-    width: 0px !important;
-    height: 0px !important;
-  }
-  
-  /* Enhanced responsive adjustments */
-  @media (max-width: 768px) {
-    .editor-title {
-      display: none !important;
-    }
-    
-    /* Mobile canvas adjustments */
-    .tui-image-editor-main-container {
-      padding: 4px !important;
-    }
-  }
-  
-  @media (min-width: 769px) and (max-width: 1024px) {
-    .editor-title {
-      font-size: 9px !important;
-    }
-  }
-  
-  /* Enhanced mobile menu responsiveness */
-  @media (max-width: 640px) {
-    .tui-image-editor-menu {
-      font-size: 11px !important;
-      height: 44px !important;
-    }
-    
-    .tui-image-editor-menu-icon {
-      width: 16px !important;
-      height: 16px !important;
-    }
-    
-    .tui-image-editor-menu-title {
-      display: none !important;
-    }
-  }
-  
-  /* Very small screens */
-  @media (max-width: 480px) {
-    .tui-image-editor-menu {
-      height: 40px !important;
-    }
-    
-    .tui-image-editor-menu .tui-image-editor-button {
-      padding: 4px 6px !important;
-    }
-  }
-  
-  /* High DPI displays */
-  @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 2dppx) {
-    .tui-image-editor .lower-canvas,
-    .tui-image-editor .upper-canvas {
-      image-rendering: -webkit-optimize-contrast !important;
-      image-rendering: optimize-contrast !important;
-    }
-  }
+.lower-canvas-container {
+  position: relative !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 100% !important;
+  height: 100% !important;
+}
 
+canvas.lower-canvas,
+canvas.upper-canvas {
+  position: absolute !important;
+  left: 50% !important;
+  top: 50% !important;
+  transform: translate(-50%, -50%) !important;
+}
 
-  /* CRITICAL: Prevent any submenu from covering the bottom menu bar */
-  .tui-image-editor-submenu-style,
-  .tui-image-editor-partition > div {
-    max-height: calc(100vh - 100px) !important;
-    bottom: 48px !important;
-  }
+/* Ensure the canvas wrapper is centered */
+.canvas-container {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 100% !important;
+  height: 100% !important;
+}
 
-  /* Make sure adjust panel never covers menu */
-  .tui-image-editor-adjust-panel {
-    position: fixed !important;
-    bottom: 48px !important;
-    z-index: 100000 !important;
-    pointer-events: auto !important;
-  }
+        
+        .tui-image-editor {
+          height: 100% !important;
+          width: 100% !important;
+          overflow: hidden !important;
+        }
+        
+        .tui-image-editor .lower-canvas,
+        .tui-image-editor .upper-canvas {
+          max-width: 100% !important;
+          max-height: 100% !important;
+          object-fit: contain !important;
+        }
+        
+        .tui-image-editor-menu-wrap {
+          position: fixed !important;
+          bottom: 0 !important;
+          left: 0 !important;
+          right: 0 !important;
+          height: 48px !important;
+          z-index: 99997 !important;
+          background: #ffffff !important;
+          border-top: 1px solid #e5e5e5 !important;
+          pointer-events: auto !important;
+        }
 
-  /* Ensure built-in submenus also stay above menu */
-  .tui-colorpicker-clearfix,
-  .tui-image-editor-help-menu {
-    bottom: 48px !important;
-    max-height: calc(100vh - 100px) !important;
-  }
-`}</style>
+        .tui-image-editor-submenu {
+          position: fixed !important;
+          bottom: 48px !important;
+          padding: 12px !important;
+          left: 0 !important;
+          right: 0 !important;
+          height: auto !important;
+          max-height: 250px !important;
+          z-index: 99998 !important;
+          pointer-events: auto !important;
+          background: #1e1e1e !important;
+          overflow-y: auto !important;
+        }
+        
+        ::-webkit-scrollbar {
+          width: 0px !important;
+          height: 0px !important;
+        }
+        
+        @media (max-width: 768px) {
+          .editor-title {
+            display: none !important;
+          }
+          
+          .tui-image-editor-main-container {
+            padding: 4px !important;
+          }
+
+          .tui-image-editor-submenu {
+            max-height: 200px !important;
+          }
+        }
+        
+        @media (min-width: 769px) and (max-width: 1024px) {
+          .editor-title {
+            font-size: 9px !important;
+          }
+        }
+        
+        @media (max-width: 640px) {
+          .tui-image-editor-menu {
+            font-size: 11px !important;
+            height: 44px !important;
+          }
+          
+          .tui-image-editor-menu-icon {
+            width: 16px !important;
+            height: 16px !important;
+          }
+          
+          .tui-image-editor-menu-title {
+            display: none !important;
+          }
+
+          .tui-image-editor-submenu {
+            max-height: 180px !important;
+          }
+        }
+        
+        @media (max-width: 480px) {
+          .tui-image-editor-menu {
+            height: 40px !important;
+          }
+          
+          .tui-image-editor-menu .tui-image-editor-button {
+            padding: 4px 6px !important;
+          }
+
+          .tui-image-editor-submenu {
+            max-height: 150px !important;
+          }
+        }
+
+        /* Add this to your existing <style> section */
+
+        /* Desktop optimizations */
+        @media (min-width: 1024px) {
+          .tui-image-editor-canvas-container,
+          .tui-image-editor-main,
+          .tui-image-editor-main-container {
+            padding: 0 !important;
+          }
+        }
+
+        /* Large desktop optimizations */
+        @media (min-width: 1920px) {
+          .tui-image-editor-canvas-container,
+          .tui-image-editor-main,
+          .tui-image-editor-main-container {
+            max-width: 100vw !important;
+            max-height: calc(100vh - 120px) !important;
+          }
+        }
+
+        
+        @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 2dppx) {
+          .tui-image-editor .lower-canvas,
+          .tui-image-editor .upper-canvas {
+            image-rendering: -webkit-optimize-contrast !important;
+            image-rendering: optimize-contrast !important;
+          }
+        }
+
+        .tui-image-editor-submenu-style,
+        .tui-image-editor-partition > div {
+          max-height: 200px !important;
+          overflow-y: auto !important;
+        }
+
+        .tui-image-editor-adjust-panel {
+          position: fixed !important;
+          bottom: 48px !important;
+          z-index: 100000 !important;
+          pointer-events: auto !important;
+        }
+
+        .tui-colorpicker-clearfix,
+        .tui-image-editor-help-menu {
+          bottom: 48px !important;
+          max-height: calc(100vh - 100px) !important;
+        }
+      `}</style>
     </div>
   );
 };
