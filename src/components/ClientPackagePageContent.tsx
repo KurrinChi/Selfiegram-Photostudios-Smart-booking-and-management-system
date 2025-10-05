@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { ChevronDown, Heart } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -33,6 +33,7 @@ const ClientPackagePageContent: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const fetchFavorites = async () => {
    const user = JSON.parse(localStorage.getItem("user") || "{}");
@@ -114,7 +115,15 @@ const ClientPackagePageContent: React.FC = () => {
 
     fetchPackages();
     fetchFavorites();
-  }, []);
+    
+    // Check if coming back from payment
+    const paymentStatus = searchParams.get('payment');
+    if (paymentStatus === 'success') {
+      console.log('Payment completed! Returning to packages page.');
+      // Clean up URL parameter
+      setSearchParams({});
+    }
+  }, [searchParams, setSearchParams]);
 
   const toggleTag = (tag: string) => {
     setSelectedTags((prev) =>

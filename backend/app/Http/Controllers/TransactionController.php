@@ -19,6 +19,12 @@ class TransactionController extends Controller
     {
         $this->payMongoService = $payMongoService;
     }
+    
+    /**
+     * DEPRECATED: Old booking creation method
+     * No longer used - bookings are now created via PayMongo webhook after payment
+     * Kept for backward compatibility only
+     */
     public function createBooking(Request $request)
     {
         try {
@@ -459,7 +465,144 @@ class TransactionController extends Controller
     }
 
     /**
-     * Create PayMongo Checkout Session for booking payment
+     * Create PayMongo Checkout Session for NEW booking (before booking exists in DB)
+     * PROPER FLOW: Payment first, then create booking after webhook confirms payment
+     */
+    public function createPaymentCheckoutNewBooking(Request $request)
+    {
+        try {
+            // Validate booking data
+            $request->validate([
+                'package_id' => 'required|integer',
+                'booking_date' => 'required|date',
+                'time_slot' => 'required|string',
+                'name' => 'required|string|max:255',
+                'contact' => 'required|string|max:20',
+                'email' => 'required|email|max:255',
+                'address' => 'required|string|max:500',
+                'payment_type' => 'required|string|in:deposit,full',
+                'return_url' => 'nullable|string'
+            ]);
+
+            // Get package details
+            $package = DB::table('packages')->where('packageID', $request->package_id)->first();
+            
+            if (!$package) {
+                return response()->json(['error' => 'Package not found'], 404);
+            }
+
+            $userId = Auth::id() ?? 1; // Default to 1 for testing
+            $packagePrice = (float)$package->price;
+            
+            // Calculate add-ons total
+            $addonsTotal = 0;
+            if ($request->has('addons') && is_array($request->addons)) {
+                foreach ($request->addons as $addon) {
+                    if (isset($addon['value']) && $addon['value'] > 0) {
+                        $addonPrice = isset($addon['price']) ? (float)$addon['price'] : 0;
+                        $addonType = isset($addon['type']) ? $addon['type'] : 'spinner';
+                        $quantity = (int)$addon['value'];
+                        $addonsTotal += $addonType === 'spinner' ? $addonPrice * $quantity : $addonPrice;
+                    }
+                }
+            }
+            
+            $total = $packagePrice + $addonsTotal;
+            $paymentType = $request->payment_type;
+            $amount = $paymentType === 'full' ? $total : 200.00; // Deposit amount
+            
+            // Convert to centavos
+            $amountInCentavos = (int)($amount * 100);
+            
+            // Create description
+            $paymentTypeLabel = $paymentType === 'full' ? 'Full Payment' : 'Down Payment';
+            $description = 'Selfiegram ' . $paymentTypeLabel . ' - ' . $package->name;
+            
+            $returnUrl = $request->return_url ?? '/client/home';
+
+            // Store ALL booking data in payment session (will create booking AFTER payment)
+            $bookingData = [
+                'user_id' => $userId,
+                'package_id' => $request->package_id,
+                'package_name' => $package->name,
+                'booking_date' => $request->booking_date,
+                'time_slot' => $request->time_slot,
+                'customer_name' => $request->name,
+                'customer_contact' => $request->contact,
+                'customer_email' => $request->email,
+                'customer_address' => $request->address,
+                'package_price' => $packagePrice,
+                'addons_total' => $addonsTotal,
+                'total' => $total,
+                'payment_type' => $paymentType,
+                'payment_amount' => $amount,
+                'addons' => $request->addons ?? [],
+                'studio_selection' => $request->studio_selection ?? null,
+                'return_url' => $returnUrl
+            ];
+
+            // Create Checkout Session
+            $checkoutSession = $this->createPayMongoCheckoutSession(
+                $amountInCentavos,
+                $description,
+                [
+                    'payment_type' => $paymentType,
+                    'customer_name' => $request->name,
+                    'customer_email' => $request->email,
+                    'return_url' => $returnUrl,
+                    'is_new_booking' => 'true' // Flag to identify new bookings
+                ]
+            );
+
+            if ($checkoutSession['success']) {
+                // Save payment session WITHOUT booking_id (booking doesn't exist yet!)
+                $paymentSessionId = DB::table('payment_sessions')->insertGetId([
+                    'booking_id' => null, // NULL because booking doesn't exist yet
+                    'checkout_session_id' => $checkoutSession['session_id'],
+                    'amount' => $amount,
+                    'payment_type' => $paymentType,
+                    'status' => 'pending',
+                    'booking_data' => json_encode($bookingData), // Store all booking info here
+                    'created_at' => now(),
+                    'updated_at' => now()
+                ]);
+
+                \Log::info('Payment session created for NEW booking', [
+                    'payment_session_id' => $paymentSessionId,
+                    'checkout_session_id' => $checkoutSession['session_id'],
+                    'amount' => $amount,
+                    'customer' => $request->name
+                ]);
+
+                return response()->json([
+                    'success' => true,
+                    'checkout_url' => $checkoutSession['checkout_url'],
+                    'session_id' => $checkoutSession['session_id'],
+                    'payment_session_id' => $paymentSessionId
+                ]);
+            } else {
+                return response()->json([
+                    'error' => 'Failed to create checkout session',
+                    'message' => $checkoutSession['error']
+                ], 400);
+            }
+
+        } catch (\Exception $e) {
+            \Log::error('New booking checkout creation failed', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return response()->json([
+                'error' => 'Checkout session creation failed',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Create PayMongo Checkout Session for EXISTING booking payment (appointments)
+     * PROPER FLOW: Booking already exists, only update payment fields after webhook
      */
     public function createPaymentCheckout(Request $request)
     {
@@ -477,40 +620,50 @@ class TransactionController extends Controller
                 return response()->json(['error' => 'Booking not found'], 404);
             }
 
-            $paymentType = $request->payment_type ?? 'deposit';
-            $amount = $paymentType === 'full' ? $booking->total : 200.00; // 200 for deposit
+            $paymentType = $request->payment_type ?? 'remaining';
+            $returnUrl = $request->return_url ?? '/client/home';
             
-            // Convert to centavos (PayMongo expects amount in centavos)
+            // Calculate amount (only for remaining balance on existing bookings)
+            $amount = $booking->total - $booking->receivedAmount;
+            
+            if ($amount <= 0) {
+                return response()->json(['error' => 'No pending balance'], 400);
+            }
+            
+            // Convert to centavos
             $amountInCentavos = (int)($amount * 100);
             
             // Create description
-            $description = 'Selfiegram Booking Payment - ' . $booking->packageName;
+            $description = 'Selfiegram Remaining Balance - ' . $booking->packageName;
 
-            // Create Checkout Session using PayMongo API
+            // Create Checkout Session
             $checkoutSession = $this->createPayMongoCheckoutSession(
                 $amountInCentavos,
                 $description,
                 [
                     'booking_id' => $bookingId,
-                    'payment_type' => $paymentType,
+                    'payment_type' => 'remaining',
                     'customer_name' => $booking->customerName,
-                    'customer_email' => $booking->customerEmail
+                    'customer_email' => $booking->customerEmail,
+                    'return_url' => $returnUrl,
+                    'is_new_booking' => 'false' // Flag for existing bookings
                 ]
             );
 
             if ($checkoutSession['success']) {
-                // INDUSTRY STANDARD: Save pending transaction BEFORE redirect
+                // Save payment session WITH booking_id (booking already exists)
                 $paymentSessionId = DB::table('payment_sessions')->insertGetId([
                     'booking_id' => $bookingId,
                     'checkout_session_id' => $checkoutSession['session_id'],
                     'amount' => $amount,
-                    'payment_type' => $paymentType,
+                    'payment_type' => 'remaining',
                     'status' => 'pending',
+                    'booking_data' => json_encode(['return_url' => $returnUrl]),
                     'created_at' => now(),
                     'updated_at' => now()
                 ]);
 
-                \Log::info('Payment session created', [
+                \Log::info('Payment session created for EXISTING booking', [
                     'payment_session_id' => $paymentSessionId,
                     'booking_id' => $bookingId,
                     'checkout_session_id' => $checkoutSession['session_id'],
@@ -551,10 +704,28 @@ class TransactionController extends Controller
         try {
             $secretKey = env('PAYMONGO_SECRET_KEY');
             
-            // Use frontend URL for success and cancel redirects
-            $frontendUrl = env('FRONTEND_URL', env('APP_URL'));
-            $cancelUrl = $frontendUrl . '/payment-cancelled';
-            $successUrl = $frontendUrl . '/payment-success';
+            // Debug: Check if secret key is loaded
+            if (!$secretKey) {
+                \Log::error('PayMongo Secret Key is not set in environment!');
+                throw new \Exception('PayMongo API key not configured');
+            }
+            
+            \Log::info('PayMongo API Key Check', [
+                'key_exists' => !empty($secretKey),
+                'key_prefix' => substr($secretKey, 0, 10) . '...'
+            ]);
+            
+            // Use BACKEND URL for success (to trigger automatic booking creation)
+            // Then redirect to frontend after booking is created
+            $frontendUrl = env('FRONTEND_URL', 'http://127.0.0.1:5173');
+            $backendUrl = env('APP_URL', 'http://127.0.0.1:8000');
+            $returnUrl = $metadata['return_url'] ?? '/client/home';
+            
+            // Cancel goes to frontend (no booking to create)
+            $cancelUrl = $frontendUrl . '/payment-cancelled?return=' . urlencode($returnUrl);
+            
+            // Success goes to BACKEND first (to create booking automatically)
+            $successUrl = $backendUrl . '/payment-success?return=' . urlencode($returnUrl);
             
             // Log checkout session configuration
             \Log::info('PayMongo Checkout Session URLs', [

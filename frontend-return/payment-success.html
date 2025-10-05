@@ -80,6 +80,9 @@
         const countdownElement = document.getElementById('countdown');
         const loadingElement = document.getElementById('loading');
         
+        // AUTOMATIC PAYMENT PROCESSING: Process the payment immediately when page loads
+        processPaymentAutomatically();
+        
         // Update countdown every second
         const timer = setInterval(() => {
             countdown--;
@@ -90,6 +93,25 @@
                 redirectToBookingSystem();
             }
         }, 1000);
+        
+        // NEW: Automatically process the payment when user returns from PayMongo
+        function processPaymentAutomatically() {
+            console.log('Processing payment automatically...');
+            
+            fetch('http://127.0.0.1:8000/api/process-payment-return')
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Payment processing result:', data);
+                    if (data.success) {
+                        console.log('✅ Booking created automatically! Booking ID:', data.booking_id);
+                    } else {
+                        console.warn('⚠️ Payment processing failed:', data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('❌ Payment processing error:', error);
+                });
+        }
         
         function redirectNow() {
             clearInterval(timer);
@@ -119,9 +141,14 @@
         }
         
         function getBookingSystemUrl() {
-            // You can customize this URL to your frontend application
-            const frontendUrl = 'http://localhost:5173'; // Adjust to your frontend URL
-            return frontendUrl + '/bookings?payment=success';
+            // Get return URL from query parameter
+            const urlParams = new URLSearchParams(window.location.search);
+            const returnPath = urlParams.get('return') || '/client/home';
+            
+            const frontendUrl = 'http://127.0.0.1:5173'; // Must match backend FRONTEND_URL
+            console.log('Redirecting to:', frontendUrl + returnPath + '?payment=success');
+            console.log('Return path from URL:', returnPath);
+            return frontendUrl + returnPath + '?payment=success';
         }
     </script>
 </body>

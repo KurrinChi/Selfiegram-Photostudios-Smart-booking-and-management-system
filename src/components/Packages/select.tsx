@@ -112,25 +112,6 @@ interface Package {
   images: string[];
 }
 
-interface BookingData {
-  id: string;
-  customerName: string;
-  email: string;
-  address: string;
-  contact: string;
-  package: string;
-  bookingDate: string;
-  transactionDate: string;
-  time: string;
-  subtotal: number;
-  paidAmount: number;
-  pendingBalance: number;
-  feedback: string;
-  rating: number;
-  status: number;
-  paymentStatus: number;
-}
-
 interface PreviewBookingData {
   customerName: string;
   email: string;
@@ -780,20 +761,6 @@ const SelectPackagePage = () => {
   const handleModalClose = () => {
     setIsModalOpen(false);
     setPreviewData(null);
-  };
-
-  const handleBookingComplete = (_bookingData: BookingData) => {
-    // Booking was successfully created
-    setIsModalOpen(false);
-    setPreviewData(null);
-
-    // Show success toast message
-    toast.success("Booking successful! Your appointment has been confirmed.");
-
-    // Add a small delay before navigation to ensure toast is visible
-    setTimeout(() => {
-      navigate("/client/packages");
-    }, 2000); // 2 seconds delay
   };
 
   if (!pkg)
@@ -1630,7 +1597,6 @@ const SelectPackagePage = () => {
         isOpen={isModalOpen}
         onClose={handleModalClose}
         previewData={previewData}
-        onBookingComplete={handleBookingComplete}
         tags={tags}
         addons={addOns}
         selectedAddons={selectedAddons}

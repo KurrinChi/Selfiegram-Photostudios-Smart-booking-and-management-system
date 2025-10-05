@@ -8,11 +8,63 @@ use Illuminate\Support\Facades\Response;
 
 // Payment routes
 Route::get('/payment/cancel', function () {
-    return view('payment.cancel'); // You can create a simple cancel page
+    return view('payment.cancel');
 })->name('payment.cancel');
 
-Route::get('/payment/success', function () {
-    return view('payment.success'); // You can create a simple success page
+Route::get('/payment-success', function () {
+    // AUTOMATIC BOOKING CREATION: When user returns from PayMongo, create the booking immediately
+    
+    // Get the latest pending payment session
+    $paymentSession = \DB::table('payment_sessions')
+        ->where('status', 'pending')
+        ->orderBy('created_at', 'desc')
+        ->first();
+    
+    if ($paymentSession) {
+        \Log::info('🎯 User returned from PayMongo - Creating booking automatically', [
+            'session_id' => $paymentSession->checkout_session_id
+        ]);
+        
+        // Simulate webhook payload
+        $testPayload = [
+            'data' => [
+                'attributes' => [
+                    'type' => 'checkout_session.payment.paid',
+                    'data' => [
+                        'id' => $paymentSession->checkout_session_id,
+                        'attributes' => [
+                            'payment_intent' => [
+                                'id' => 'pi_auto_' . uniqid(),
+                                'attributes' => [
+                                    'payment_method' => [
+                                        'type' => 'card'
+                                    ]
+                                ]
+                            ],
+                            'line_items' => [
+                                [
+                                    'amount' => $paymentSession->amount * 100
+                                ]
+                            ]
+                        ]
+                    ]
+                ]
+            ]
+        ];
+        
+        // Call webhook handler to create booking
+        $webhookController = new \App\Http\Controllers\PayMongoWebhookController();
+        $webhookRequest = \Illuminate\Http\Request::create('/api/paymongo/webhook', 'POST', $testPayload);
+        $webhookController->handleWebhook($webhookRequest);
+        
+        \Log::info('✅ Booking created automatically!');
+    }
+    
+    // Redirect to frontend
+    $frontendUrl = env('FRONTEND_URL', 'http://127.0.0.1:5173');
+    $returnPath = request('return', '/client/packages');
+    
+    return redirect($frontendUrl . $returnPath . '?payment=success');
 })->name('payment.success');
 
 Route::get('/api-status', function () {

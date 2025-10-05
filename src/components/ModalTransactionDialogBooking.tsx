@@ -48,7 +48,6 @@ interface TransactionModalProps {
   data?: BookingData | null;
   previewData?: PreviewBookingData | null;
   onSaved?: () => void;
-  onBookingComplete?: (bookingData: BookingData) => void;
   tags?: Tag[]; 
   addons?: AddOn[];
   selectedAddons: SelectedAddon[];
@@ -61,6 +60,7 @@ interface AddOn {
   required?: boolean;
 }
 const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
+
 function getContrastColor(hex: string) {
   const c = hex.substring(1); // remove #
   const rgb = parseInt(c, 16); // convert rrggbb to decimal
@@ -76,7 +76,6 @@ const TransactionModalBooking: React.FC<TransactionModalProps> = ({
   onSaved,
   data,
   previewData,
-  onBookingComplete,
   tags,
   addons = [], 
   selectedAddons
@@ -283,8 +282,8 @@ if (isPreviewMode && previewData) {
 
     setIsProcessing(true);
     try {
-      // First create the booking
-      const bookingPayload = {
+      // PROPER FLOW: Create payment checkout FIRST (booking will be created AFTER payment via webhook)
+      const paymentPayload = {
         package_id: previewData.packageId,
         booking_date: previewData.bookingDate,
         time_slot: previewData.time,
@@ -293,7 +292,6 @@ if (isPreviewMode && previewData) {
         contact: previewData.contact,
         email: previewData.email,
         address: previewData.address,
-        payment_mode: 'PayMongo', // Set to PayMongo
         payment_type: previewData.paymentType,
         addons: selectedAddons.filter(addon => addon.value > 0).map((addon) => ({ 
           id: addon.id, 
@@ -303,82 +301,11 @@ if (isPreviewMode && previewData) {
           option: addon.option || null
         })),
         studio_selection: tags && tags.length > 0 ? tags[0] : null,
+        return_url: '/client/packages' // Redirect back to packages after payment
       };
 
-      console.log('Creating booking with PayMongo payment...');
-      const bookingResponse = await fetchWithAuth(`${API_URL}/api/bookings`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(bookingPayload),
-      });
-
-      const result = await bookingResponse.json();
-      console.log('Booking created:', result);
-      console.log('Full booking response:', result);
-      console.log('Response status:', bookingResponse.status);
-      console.log('Response OK:', bookingResponse.ok);
-
-      if (bookingResponse.ok) {
-        // Now create PayMongo checkout session
-        const paymentPayload = {
-          booking_id: result.booking.id,
-          payment_type: previewData.paymentType
-        };
-
-        console.log('Creating PayMongo checkout session...');
-        const paymentResponse = await fetchWithAuth(`${API_URL}/api/payment/checkout`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(paymentPayload),
-        });
-
-        const paymentResult = await paymentResponse.json();
-        console.log('PayMongo response:', paymentResult);
-
-        if (paymentResponse.ok && paymentResult.success) {
-          // Redirect to PayMongo checkout page
-          console.log('Redirecting to:', paymentResult.checkout_url);
-          window.location.href = paymentResult.checkout_url;
-          
-          // Call onBookingComplete with the booking data
-          if (onBookingComplete) {
-            onBookingComplete(result.booking);
-          }
-          
-          onClose(); // Close the modal
-        } else {
-          console.error('PayMongo checkout session failed:', paymentResult);
-          toast.error(paymentResult.message || "Failed to create checkout session");
-        }
-      } else {
-        console.error('Booking creation failed:', result);
-        toast.error(result.message || result.error || "Failed to create booking");
-      }
-    } catch (error) {
-      console.error("Payment checkout failed:", error);
-      toast.error("Failed to initiate payment. Please try again.");
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  const handleExistingBookingPayment = async () => {
-    if (!data) return;
-
-    setIsProcessing(true);
-    try {
-      // Create PayMongo payment intent for existing booking
-      const paymentPayload = {
-        booking_id: data.id,
-        payment_type: data.pendingBalance > 0 ? 'remaining' : 'full'
-      };
-
-      console.log('Creating PayMongo checkout session for existing booking...');
-      const paymentResponse = await fetchWithAuth(`${API_URL}/api/payment/checkout`, {
+      console.log('Creating PayMongo checkout for NEW booking (payment first)...');
+      const paymentResponse = await fetchWithAuth(`${API_URL}/api/payment/checkout-new-booking`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -391,20 +318,26 @@ if (isPreviewMode && previewData) {
 
       if (paymentResponse.ok && paymentResult.success) {
         // Redirect to PayMongo checkout page
-        console.log('Redirecting to:', paymentResult.checkout_url);
+        console.log('Redirecting to PayMongo. Booking will be created AFTER payment confirmation.');
+        console.log('Redirect URL:', paymentResult.checkout_url);
         window.location.href = paymentResult.checkout_url;
+        
         onClose(); // Close the modal
       } else {
         console.error('PayMongo checkout session failed:', paymentResult);
-        toast.error(paymentResult.message || "Failed to create checkout session");
+        toast.error(paymentResult.message || paymentResult.error || "Failed to create checkout session");
       }
     } catch (error) {
-      console.error("Payment intent creation failed:", error);
+      console.error("Payment checkout failed:", error);
       toast.error("Failed to initiate payment. Please try again.");
     } finally {
       setIsProcessing(false);
     }
   };
+
+  // NOTE: handleExistingBookingPayment is NOT needed in ModalTransactionDialogBooking
+  // This modal is only for NEW bookings (preview mode)
+  // Existing booking payments are handled in ModalTransactionDialog.tsx
 
   const handleCompletePayment = async () => {
     if (!previewData) return;
@@ -689,18 +622,8 @@ if (isPreviewMode && previewData) {
             </div>
           )}
 
-          {/* Complete Payment button for confirmed bookings with pending balance */}
-          {data && data.status === 2 && data.paymentStatus === 0 && (
-            <div className="w-full mb-4">
-              <button 
-                onClick={handleExistingBookingPayment}
-                disabled={isProcessing}
-                className="w-full bg-gray-800 text-white py-3 rounded hover:bg-gray-600 transition disabled:opacity-50"
-              >
-                {isProcessing ? "Processing..." : "Complete Payment"}
-              </button>
-            </div>
-          )}
+          {/* NOTE: This modal is ONLY for NEW bookings (preview mode).
+              Existing booking payments are handled in ModalTransactionDialog.tsx */}
 
           <div className="flex justify-between">
             <button

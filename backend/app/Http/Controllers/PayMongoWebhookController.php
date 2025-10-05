@@ -92,29 +92,62 @@ class PayMongoWebhookController extends Controller
             DB::table('payment_sessions')
                 ->where('id', $paymentSession->id)
                 ->update([
-                    'status' => 'paid',
+                    'status' => 'completed',
                     'paymongo_payment_id' => $paymentId,
                     'payment_method_used' => $paymentMethod,
-                    'paid_at' => now(),
                     'updated_at' => now()
                 ]);
+            
+            // Check if this is a NEW booking (booking_id is null)
+            if ($paymentSession->booking_id === null) {
+                Log::info('Creating NEW booking from payment session', ['payment_session_id' => $paymentSession->id]);
+                
+                // Decode booking data from payment session
+                $bookingData = json_decode($paymentSession->booking_data, true);
+                
+                if (!$bookingData) {
+                    Log::error('No booking data found in payment session', ['payment_session_id' => $paymentSession->id]);
+                    return;
+                }
+                
+                // Create the booking NOW (after payment confirmed)
+                $bookingId = $this->createBookingFromPaymentSession($bookingData, $paymentMethod, $amount / 100);
+                
+                // Update payment session with the new booking_id
+                DB::table('payment_sessions')
+                    ->where('id', $paymentSession->id)
+                    ->update(['booking_id' => $bookingId]);
+                
+                // Update the local variable
+                $paymentSession->booking_id = $bookingId;
+                
+                Log::info('Booking created successfully after payment', [
+                    'booking_id' => $bookingId,
+                    'payment_session_id' => $paymentSession->id
+                ]);
+            } else {
+                Log::info('Updating EXISTING booking payment', ['booking_id' => $paymentSession->booking_id]);
+                
+                // Update existing booking payment status
+                $this->updateBookingPaymentStatus($paymentSession->booking_id, $paymentSession->payment_type, $amount / 100, $paymentMethod);
+            }
                 
             // Create payment transaction record
             DB::table('payment_transactions')->insert([
-                'payment_session_id' => $paymentSession->id,
                 'booking_id' => $paymentSession->booking_id,
-                'paymongo_payment_id' => $paymentId,
+                'payment_type' => $paymentSession->payment_type,
                 'amount' => $amount / 100, // Convert from centavos
-                'currency' => 'PHP',
+                'payment_method' => $paymentMethod,
                 'status' => 'completed',
-                'transaction_type' => $paymentSession->payment_type,
-                'metadata' => json_encode($eventData),
+                'payment_details' => json_encode([
+                    'paymongo_payment_id' => $paymentId,
+                    'checkout_session_id' => $sessionId,
+                    'payment_session_id' => $paymentSession->id,
+                    'webhook_data' => $eventData
+                ]),
                 'created_at' => now(),
                 'updated_at' => now()
             ]);
-            
-            // Update booking payment status
-            $this->updateBookingPaymentStatus($paymentSession->booking_id, $paymentSession->payment_type, $amount / 100, $paymentMethod);
             
             // Create payment notification
             $this->createPaymentNotification($paymentSession->booking_id, $paymentSession->payment_type, $amount / 100, $paymentMethod);
@@ -126,6 +159,122 @@ class PayMongoWebhookController extends Controller
                 'amount' => $amount / 100
             ]);
         });
+    }
+    
+    /**
+     * Create booking from payment session data (after payment confirmed)
+     */
+    private function createBookingFromPaymentSession($bookingData, $paymentMethod, $paidAmount)
+    {
+        // Parse time slot
+        $timeSlot = $bookingData['time_slot'];
+        $time = \DateTime::createFromFormat('h:i A', $timeSlot);
+        $startTime = $time ? $time->format('H:i:s') : '09:00:00';
+        
+        // Calculate end time (add 1 hour)
+        $endTimeObj = clone $time;
+        $endTimeObj->add(new \DateInterval('PT1H'));
+        $endTime = $endTimeObj->format('H:i:s');
+        
+        // Get next booking ID
+        $maxBookingId = DB::table('booking')->max('bookingID') ?? 0;
+        $newBookingId = $maxBookingId + 1;
+        
+        // Prepare studio selection
+        $studioSelection = isset($bookingData['studio_selection']) ? json_encode($bookingData['studio_selection']) : null;
+        
+        // Calculate payment fields
+        $total = $bookingData['total'];
+        $paymentType = $bookingData['payment_type'];
+        $receivedAmount = $paidAmount; // Amount just paid
+        $remainingBalance = $total - $receivedAmount;
+        $paymentStatus = $remainingBalance <= 0 ? 1 : 0; // 1 = fully paid, 0 = pending
+        $bookingStatus = 2; // 2 = confirmed (payment received)
+        
+        // Create booking
+        DB::table('booking')->insert([
+            'bookingID' => $newBookingId,
+            'userID' => $bookingData['user_id'],
+            'packageID' => $bookingData['package_id'],
+            'customerName' => $bookingData['customer_name'],
+            'customerEmail' => $bookingData['customer_email'],
+            'customerAddress' => $bookingData['customer_address'],
+            'customerContactNo' => $bookingData['customer_contact'],
+            'bookingDate' => $bookingData['booking_date'],
+            'bookingStartTime' => $startTime,
+            'bookingEndTime' => $endTime,
+            'subTotal' => $bookingData['package_price'],
+            'total' => $total,
+            'receivedAmount' => $receivedAmount,
+            'rem' => $remainingBalance,
+            'paymentMethod' => $paymentMethod,
+            'paymentStatus' => $paymentStatus,
+            'status' => $bookingStatus,
+            'date' => now()->toDateString(),
+            'studio_selection' => $studioSelection,
+            'addons_total' => $bookingData['addons_total']
+        ]);
+        
+        // Store add-ons if any
+        if (isset($bookingData['addons']) && is_array($bookingData['addons'])) {
+            foreach ($bookingData['addons'] as $addon) {
+                if (isset($addon['value']) && $addon['value'] > 0) {
+                    $addonPrice = isset($addon['price']) ? (float)$addon['price'] : 0;
+                    $addonType = isset($addon['type']) ? $addon['type'] : 'spinner';
+                    $quantity = (int)$addon['value'];
+                    $addonTotal = $addonType === 'spinner' ? $addonPrice * $quantity : $addonPrice;
+                    
+                    DB::table('booking_addons')->insert([
+                        'booking_id' => $newBookingId,
+                        'addon_id' => $addon['id'],
+                        'quantity' => $quantity,
+                        'price' => $addonPrice,
+                        'total' => $addonTotal,
+                        'created_at' => now(),
+                        'updated_at' => now()
+                    ]);
+                }
+            }
+        }
+        
+        // Create transaction record
+        $maxTransId = DB::table('transaction')->max('transId') ?? 0;
+        $newTransId = $maxTransId + 1;
+        
+        DB::table('transaction')->insert([
+            'transId' => $newTransId,
+            'bookingId' => $newBookingId,
+            'total' => $total,
+            'paymentStatus' => $paymentStatus,
+            'date' => now()->toDateString(),
+            'receivedAmount' => $receivedAmount,
+            'paymentMethod' => $paymentMethod,
+            'rem' => $remainingBalance
+        ]);
+        
+        // Create booking notification
+        $notification = Notification::create([
+            'userID' => $bookingData['user_id'],
+            'title' => 'Booking Confirmed',
+            'label' => 'Booking',
+            'message' => "Your booking for SFO#{$newBookingId} {$bookingData['package_name']} has been confirmed for " . \Carbon\Carbon::parse($bookingData['booking_date'])->format('F j, Y'),
+            'time' => now(),
+            'starred' => 0,
+            'bookingID' => $newBookingId,
+            'transID' => 0,
+        ]);
+        
+        // Broadcast the event
+        broadcast(new \App\Events\BookingStatusUpdated($bookingData['user_id'], $newBookingId, $notification));
+        
+        Log::info('Booking created from payment session', [
+            'booking_id' => $newBookingId,
+            'customer' => $bookingData['customer_name'],
+            'total' => $total,
+            'paid' => $receivedAmount
+        ]);
+        
+        return $newBookingId;
     }
     
     /**
@@ -198,6 +347,7 @@ class PayMongoWebhookController extends Controller
         // Use extracted payment method, fallback to 'PayMongo' for local development
         $finalPaymentMethod = $paymentMethod ?: 'PayMongo';
         
+        // Update booking table
         DB::table('booking')
             ->where('bookingID', $bookingId)
             ->update([
@@ -207,8 +357,18 @@ class PayMongoWebhookController extends Controller
                 'status' => $bookingStatus,
                 'paymentMethod' => $finalPaymentMethod
             ]);
+        
+        // Update transaction table as well
+        DB::table('transaction')
+            ->where('bookingId', $bookingId)
+            ->update([
+                'receivedAmount' => $newReceivedAmount,
+                'rem' => max(0, $newRemainingBalance),
+                'paymentStatus' => $paymentStatus,
+                'paymentMethod' => $finalPaymentMethod
+            ]);
             
-        Log::info('Booking payment status updated', [
+        Log::info('Booking and transaction payment status updated', [
             'booking_id' => $bookingId,
             'received_amount' => $newReceivedAmount,
             'remaining_balance' => $newRemainingBalance,
