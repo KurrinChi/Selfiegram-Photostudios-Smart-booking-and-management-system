@@ -80,16 +80,6 @@ interface WeeklyIncome {
   income: number;
 }
 
-interface PackageRow {
-  name: string;
-  totalBooking: number;
-  revenue: string;
-  bookingPct: string;
-  rating: number;
-  trend: string;
-  trendPositive: boolean;
-}
-
 // -----------------------------------------------------------------------------
 // Helper Components
 // -----------------------------------------------------------------------------
@@ -154,26 +144,35 @@ const AdminDashboardContents: React.FC = () => {
   // Loading state
   const [loading, setLoading] = useState(true);
 
+  // ADD THIS: Missing state declaration
+  const [showPreview, setShowPreview] = useState(false);
+
   useEffect(() => {
     setLoading(true);
     const token = localStorage.getItem("token");
 
     const params = isDefaultRange ? {} : { startDate: start, endDate: end };
 
-    const fetchSummary = axios.get<SummaryData>(`${API_URL}/api/admin/summary`, {
-      params,
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    const fetchSummary = axios.get<SummaryData>(
+      `${API_URL}/api/admin/summary`,
+      {
+        params,
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
 
     const fetchWeeklyIncome = axios.get<WeeklyIncome[]>(
       `${API_URL}/api/admin/gross-income-weekly`,
       { headers: { Authorization: `Bearer ${token}` } }
     );
 
-    const fetchPackages = axios.get<PackageRow[]>(`${API_URL}/api/admin/packages`, {
-      params: { startDate: start, endDate: end },
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    const fetchPackages = axios.get<PackageRow[]>(
+      `${API_URL}/api/admin/packages`,
+      {
+        params: { startDate: start, endDate: end },
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
 
     Promise.all([fetchSummary, fetchWeeklyIncome, fetchPackages])
       .then(([summaryRes, weeklyRes, packagesRes]) => {
@@ -230,8 +229,8 @@ const AdminDashboardContents: React.FC = () => {
     () =>
       search
         ? packageRows.filter((r) =>
-          r.name.toLowerCase().includes(search.toLowerCase())
-        )
+            r.name.toLowerCase().includes(search.toLowerCase())
+          )
         : packageRows,
     [search, packageRows]
   );
@@ -249,9 +248,9 @@ const AdminDashboardContents: React.FC = () => {
         formattedRange: isDefaultRange
           ? "Last 7 days"
           : `${format(range[0].startDate, "MMM dd, yyyy")} - ${format(
-            range[0].endDate,
-            "MMM dd, yyyy"
-          )}`,
+              range[0].endDate,
+              "MMM dd, yyyy"
+            )}`,
       },
       summary: {
         totalUsers: summaryData?.totalUsers || 1250,
@@ -274,36 +273,36 @@ const AdminDashboardContents: React.FC = () => {
         grossIncomeWeeklyData.length > 0
           ? grossIncomeWeeklyData
           : [
-            { week: "Aug 05 - Aug 11", income: 18500 },
-            { week: "Aug 12 - Aug 18", income: 22300 },
-            { week: "Aug 19 - Aug 25", income: 19750 },
-            { week: "Aug 26 - Sep 01", income: 25100 },
-            { week: "Sep 02 - Sep 08", income: 28900 },
-            { week: "Sep 09 - Sep 15", income: 31200 },
-          ],
+              { week: "Aug 05 - Aug 11", income: 18500 },
+              { week: "Aug 12 - Aug 18", income: 22300 },
+              { week: "Aug 19 - Aug 25", income: 19750 },
+              { week: "Aug 26 - Sep 01", income: 25100 },
+              { week: "Sep 02 - Sep 08", income: 28900 },
+              { week: "Sep 09 - Sep 15", income: 31200 },
+            ],
       packages:
         packageRows.length > 0
           ? packageRows
           : [
-            {
-              name: "Birthday Package Elite",
-              totalBooking: 15,
-              revenue: "₱45,000",
-              bookingPct: "16.9%",
-              rating: 5,
-              trend: "12%",
-              trendPositive: true,
-            },
-            {
-              name: "Graduation Premium",
-              totalBooking: 12,
-              revenue: "₱36,000",
-              bookingPct: "13.5%",
-              rating: 4,
-              trend: "8%",
-              trendPositive: true,
-            },
-          ],
+              {
+                name: "Birthday Package Elite",
+                totalBooking: 15,
+                revenue: "₱45,000",
+                bookingPct: "16.9%",
+                rating: 5,
+                trend: "12%",
+                trendPositive: true,
+              },
+              {
+                name: "Graduation Premium",
+                totalBooking: 12,
+                revenue: "₱36,000",
+                bookingPct: "13.5%",
+                rating: 4,
+                trend: "8%",
+                trendPositive: true,
+              },
+            ],
       companyInfo: {
         name: "Selfiegram Photo Studios",
         address: "Malolos, Bulacan",
@@ -626,11 +625,7 @@ const AdminDashboardContents: React.FC = () => {
     pdf.setTextColor(107, 114, 128);
     pdf.setFontSize(8);
     pdf.setFont("helvetica", "normal");
-    pdf.text(
-      "Generated by Selfiegram Dashboard System",
-      leftMargin,
-      footerY
-    );
+    pdf.text("Generated by Selfiegram Dashboard System", leftMargin, footerY);
     pdf.text(
       `Page 1 of ${pdf.internal.pages.length - 1}`,
       rightMargin - 20,
@@ -644,12 +639,12 @@ const AdminDashboardContents: React.FC = () => {
     // Add confirmation dialog
     const confirmed = window.confirm(
       `Are you sure you want to generate a PDF report for the selected date range?\n\n` +
-      (isDefaultRange
-        ? `Period: All time data`
-        : `Period: ${format(range[0].startDate, "MMM dd, yyyy")} - ${format(
-          range[0].endDate,
-          "MMM dd, yyyy"
-        )}`)
+        (isDefaultRange
+          ? `Period: All time data`
+          : `Period: ${format(range[0].startDate, "MMM dd, yyyy")} - ${format(
+              range[0].endDate,
+              "MMM dd, yyyy"
+            )}`)
     );
 
     if (!confirmed) return;
@@ -687,9 +682,7 @@ const AdminDashboardContents: React.FC = () => {
       }
 
       if (!rawData || !rawData.summary) {
-        throw new Error(
-          "Invalid report data structure received from server."
-        );
+        throw new Error("Invalid report data structure received from server.");
       }
 
       // Prepare data with defaults
@@ -723,9 +716,9 @@ const AdminDashboardContents: React.FC = () => {
           formattedRange: isDefaultRange
             ? "All Time Data"
             : `${format(range[0].startDate, "MMM dd, yyyy")} - ${format(
-              range[0].endDate,
-              "MMM dd, yyyy"
-            )}`,
+                range[0].endDate,
+                "MMM dd, yyyy"
+              )}`,
         },
         reportGenerated: new Date().toISOString(),
       };
@@ -740,9 +733,9 @@ const AdminDashboardContents: React.FC = () => {
       const dateRange = isDefaultRange
         ? "AllTime"
         : `${format(range[0].startDate, "yyyyMMdd")}-${format(
-          range[0].endDate,
-          "yyyyMMdd"
-        )}`;
+            range[0].endDate,
+            "yyyyMMdd"
+          )}`;
       const filename = `Selfiegram-Dashboard-${dateRange}-${timestamp}.pdf`;
 
       // Save the PDF
@@ -767,7 +760,7 @@ const AdminDashboardContents: React.FC = () => {
         <div className="relative">
           {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 relative">
-            <h1 className="text-lg font-semibold pl-12 sm:pl-0  ">Dashboard</h1>
+            <h1 className="text-lg font-semibold pl-12 sm:pl-0">Dashboard</h1>
 
             {/* Date Range Picker */}
             <div className="flex items-center gap-2">
@@ -779,9 +772,9 @@ const AdminDashboardContents: React.FC = () => {
                   {isDefaultRange
                     ? "Select Date Range"
                     : `${format(range[0].startDate, "MMM dd yyyy")} — ${format(
-                      range[0].endDate,
-                      "MMM dd yyyy"
-                    )}`}
+                        range[0].endDate,
+                        "MMM dd yyyy"
+                      )}`}
                 </button>
                 {pickerOpen && (
                   <div className="absolute left-0 z-20 mt-2 bg-white shadow-lg rounded-md p-3">
@@ -826,66 +819,8 @@ const AdminDashboardContents: React.FC = () => {
                 </button>
               )}
 
-          {/* Export Report Button */}
-          <div className="flex items-center gap-2 ml-auto">
-            <button
-              onClick={handleExport}
-              disabled={isGeneratingReport}
-              className={`px-5 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 flex items-center gap-2.5 shadow-sm ${
-                isGeneratingReport
-                  ? "bg-gray-400 text-white cursor-not-allowed opacity-75"
-                  : "bg-gradient-to-r from-gray-800 to-gray-900 text-white hover:from-gray-900 hover:to-black hover:shadow-md focus:ring-gray-500 transform hover:scale-[1.02]"
-              }`}
-            >
-              {isGeneratingReport ? (
-                <>
-                  <svg
-                    className="animate-spin h-4 w-4 text-white"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                  >
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                    ></circle>
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                    ></path>
-                  </svg>
-                  <span>Generating Report...</span>
-                </>
-              ) : (
-                <>
-                  <svg
-                    className="w-4 h-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                    />
-                  </svg>
-                  <span>Export PDF Report</span>
-                </>
-              )}
-            </button>
-          </div>
-        </div>
-      </div>
               {/* Action Buttons */}
-              <div className="flex items-center gap-2 ml-auto">
+              <div className="flex items-center gap-2">
                 {/* Preview Button */}
                 <button
                   onClick={handlePreview}
@@ -898,10 +833,11 @@ const AdminDashboardContents: React.FC = () => {
                 <button
                   onClick={handleExport}
                   disabled={isGeneratingReport}
-                  className={`px-4 py-2 rounded-md text-xs transition focus:outline-none flex items-center gap-2 ${isGeneratingReport
-                    ? "bg-gray-400 text-white cursor-not-allowed"
-                    : "bg-black text-white hover:bg-gray-800 hover:scale-[1.02]"
-                    }`}
+                  className={`px-4 py-2 rounded-md text-xs transition focus:outline-none flex items-center gap-2 ${
+                    isGeneratingReport
+                      ? "bg-gray-400 text-white cursor-not-allowed"
+                      : "bg-black text-white hover:bg-gray-800 hover:scale-[1.02]"
+                  }`}
                 >
                   {isGeneratingReport && (
                     <svg
@@ -942,20 +878,23 @@ const AdminDashboardContents: React.FC = () => {
                   <p className="text-xs text-gray-500 mb-1">{card.label}</p>
                   <h2 className="text-lg font-semibold">{card.value}</h2>
                   <p className="text-[10px] flex items-center gap-1 mt-1">
-                    {card.trend.value !== "—" && <TrendArrow up={card.trend.up} />}
+                    {card.trend.value !== "—" && (
+                      <TrendArrow up={card.trend.up} />
+                    )}
                     <span
                       className={
                         card.trend.value === "—"
                           ? "text-gray-500"
                           : card.trend.up
-                            ? "text-green-500"
-                            : "text-red-500"
+                          ? "text-green-500"
+                          : "text-red-500"
                       }
                     >
                       {card.trend.value === "—"
                         ? "— Trend unavailable for custom range"
-                        : `${card.trend.value} ${card.trend.up ? "Up" : "Down"
-                        } from past week`}
+                        : `${card.trend.value} ${
+                            card.trend.up ? "Up" : "Down"
+                          } from past week`}
                     </span>
                   </p>
                 </div>
@@ -995,8 +934,9 @@ const AdminDashboardContents: React.FC = () => {
                     }}
                     className="text-xs"
                   />
-
-                  <Tooltip formatter={(v: number) => `₱ ${v.toLocaleString()}`} />
+                  <Tooltip
+                    formatter={(v: number) => `₱ ${v.toLocaleString()}`}
+                  />
                   <Bar
                     dataKey="income"
                     fill="#1f2937"
@@ -1049,7 +989,9 @@ const AdminDashboardContents: React.FC = () => {
                   filteredRows.map((row, i) => {
                     // Ensure revenue is parsed correctly by removing '₱' and commas
                     const parsedRevenue = row.revenue
-                      ? parseFloat(row.revenue.replace("₱", "").replace(",", ""))
+                      ? parseFloat(
+                          row.revenue.replace("₱", "").replace(",", "")
+                        )
                       : 0;
 
                     // Ensure that the revenue is valid before formatting
@@ -1068,8 +1010,11 @@ const AdminDashboardContents: React.FC = () => {
                         </td>
                         <td className={tableCell}>
                           <span
-                            className={`inline-flex items-center gap-1 ${row.trendPositive ? "text-green-500" : "text-red-500"
-                              }`}
+                            className={`inline-flex items-center gap-1 ${
+                              row.trendPositive
+                                ? "text-green-500"
+                                : "text-red-500"
+                            }`}
                           >
                             <FontAwesomeIcon
                               icon={row.trendPositive ? faArrowUp : faArrowDown}
