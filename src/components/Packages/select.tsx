@@ -552,29 +552,59 @@ const SelectPackagePage = () => {
       const data = await response.json();
 
       if (response.ok) {
-        // Backward compatibility: simple string array still supported
-        setBookedTimeSlots(data.bookedSlots || []);
-        // If API returns structured bookings with duration, build intervals
-        if (Array.isArray(data.bookings)) {
-          const intervals: { start: number; end: number; bookingID?: number; packageID?: number; durationMinutes?: number }[] = [];
+        /* New backend shape (updated controller):
+           bookedSlots: [ { start: '09:00 AM', end: '09:30 AM' }, ... ]
+           Legacy shape: bookedSlots: ['09:00 AM','09:30 AM', ...]
+           Optional: bookings: [...with startTime, duration ...]
+        */
+        const rawSlots = Array.isArray(data.bookedSlots) ? data.bookedSlots : [];
+
+        // Normalize starts for simple collision check via bookedTimeSlots (strings only)
+        const normalizedStarts: string[] = [];
+        const intervals: { start: number; end: number; bookingID?: number; packageID?: number; durationMinutes?: number }[] = [];
+
+        // Priority 1: explicit structured bookings array (richer info)
+        if (Array.isArray(data.bookings) && data.bookings.length > 0) {
           for (const b of data.bookings) {
-            if (!b || !b.startTime) continue;
-            const start = slotLabelToMinutes(String(b.startTime));
+            if (!b) continue;
+            const startLabel = String(b.startTime || b.start || '');
+            if (!startLabel) continue;
+            const start = slotLabelToMinutes(startLabel);
             if (isNaN(start)) continue;
-            const dur = parseDurationToMinutes(b.duration || b.packageDuration || '');
-            const durationMinutes = dur > 0 ? dur : 60; // fallback
+            const dur = parseDurationToMinutes(b.duration || b.packageDuration || b.durationMinutes || '');
+            const durationMinutes = dur > 0 ? dur : 60;
             const end = start + durationMinutes;
+            normalizedStarts.push(startLabel);
             intervals.push({ start, end, bookingID: b.bookingID, packageID: b.packageID, durationMinutes });
           }
-          setBookedIntervals(intervals);
-        } else {
-          // Fallback: derive 30-min intervals for simple bookedSlots list
-          const intervals = (data.bookedSlots || []).map((s: string) => {
-            const start = slotLabelToMinutes(String(s));
-            return { start, end: start + 30 };
-          });
-          setBookedIntervals(intervals);
+        } else if (rawSlots.length > 0) {
+          // Priority 2: new bookedSlots objects with start/end
+            for (const entry of rawSlots) {
+              if (entry && typeof entry === 'object' && entry.start) {
+                const startLabel = String(entry.start);
+                const endLabel = entry.end ? String(entry.end) : '';
+                const start = slotLabelToMinutes(startLabel);
+                let end = slotLabelToMinutes(endLabel);
+                if (!Number.isFinite(end) || end <= start) {
+                  // fallback assume 30-minute base block if end missing/invalid
+                  end = start + 30;
+                }
+                normalizedStarts.push(startLabel);
+                intervals.push({ start, end });
+              } else {
+                // Legacy string element inside array
+                const label = String(entry);
+                const start = slotLabelToMinutes(label);
+                if (!isNaN(start)) {
+                  normalizedStarts.push(label);
+                  intervals.push({ start, end: start + 30 });
+                }
+              }
+            }
         }
+
+        setBookedTimeSlots(normalizedStarts);
+        setBookedIntervals(intervals);
       } else {
         setBookedTimeSlots([]);
         setBookedIntervals([]);
