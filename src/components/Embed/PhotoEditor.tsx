@@ -162,22 +162,6 @@ const DEFAULT_ADJUST_VALUES: AdjustValues = {
 // UTILITY FUNCTIONS
 // ============================================================================
 
-const getResponsiveDimensions = (
-  containerWidth: number,
-  containerHeight: number
-) => {
-  const menuHeight = 48;
-  const padding = window.innerWidth < 768 ? 20 : 40;
-  const topPadding = 20;
-
-  return {
-    canvasWidth: containerWidth - padding * 2,
-    canvasHeight: containerHeight - menuHeight - padding - topPadding,
-    padding,
-    menuHeight,
-  };
-};
-
 async function loadScriptWithBackups(
   urls: string[],
   timeout = 15000
@@ -307,7 +291,7 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
 
   // ========== HELPER FUNCTIONS ==========
   const formatValueForLabel = (
-    key: keyof AdjustValues,
+    _key: keyof AdjustValues,
     val: number
   ): string => {
     const abs = Math.abs(val);
@@ -1173,52 +1157,53 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
           throw new Error("ImageEditor constructor not available");
         }
 
-        instanceRef.current = new Constructor(editorRef.current, {
-          includeUI: {
-            loadImage: {
-              path:
-                imageUrl ||
-                sampleImage?.path ||
-                "https://picsum.photos/1200/800?random=1",
-              name: sampleImage?.name ?? "Sample Image",
+        if (editorRef.current) {
+          instanceRef.current = new Constructor(editorRef.current, {
+            includeUI: {
+              loadImage: {
+                path:
+                  imageUrl ||
+                  sampleImage?.path ||
+                  "https://picsum.photos/1200/800?random=1",
+                name: sampleImage?.name ?? "Sample Image",
+              },
+              menu: [
+                "crop",
+                "flip",
+                "rotate",
+                "draw",
+                "shape",
+                "icon",
+                "text",
+                "mask",
+                "filter",
+              ],
+              initMenu: "",
+              menuBarPosition: "bottom",
+              uiSize: {
+                width: "100%",
+                height: "100%",
+              },
+              theme: {
+                "menu.backgroundColor": "#ffffff",
+                "menu.borderColor": "#e5e5e5",
+                "menu.normalIcon.color": "#8a8a8a",
+                "menu.activeIcon.color": "#555555",
+                "menu.disabledIcon.color": "#ccc",
+                "menu.hoverIcon.color": "#e9e9e9",
+                "submenu.backgroundColor": "#1e1e1e",
+                "submenu.partition.color": "#858585",
+                "submenu.normalIcon.color": "#8a8a8a",
+                "submenu.normalLabel.color": "#ccc",
+                "submenu.activeIcon.color": "#fff",
+                "submenu.activeLabel.color": "#fff",
+              },
             },
-            menu: [
-              "crop",
-              "flip",
-              "rotate",
-              "draw",
-              "shape",
-              "icon",
-              "text",
-              "mask",
-              "filter",
-            ],
-            initMenu: "",
-            menuBarPosition: "bottom",
-            uiSize: {
-              width: "100%",
-              height: "100%",
-            },
-            theme: {
-              "menu.backgroundColor": "#ffffff",
-              "menu.borderColor": "#e5e5e5",
-              "menu.normalIcon.color": "#8a8a8a",
-              "menu.activeIcon.color": "#555555",
-              "menu.disabledIcon.color": "#ccc",
-              "menu.hoverIcon.color": "#e9e9e9",
-              "submenu.backgroundColor": "#1e1e1e",
-              "submenu.partition.color": "#858585",
-              "submenu.normalIcon.color": "#8a8a8a",
-              "submenu.normalLabel.color": "#ccc",
-              "submenu.activeIcon.color": "#fff",
-              "submenu.activeLabel.color": "#fff",
-            },
-          },
-          // CHANGE THESE VALUES TO VERY LARGE NUMBERS:
-          cssMaxWidth: 999999, // Changed from 10000
-          cssMaxHeight: 999999, // Changed from 10000
-          usageStatistics: false,
-        });
+            cssMaxWidth: 999999,
+            cssMaxHeight: 999999,
+            usageStatistics: false,
+          });
+        }
 
         renderTimeoutRefs.current.forEach(clearTimeout);
         renderTimeoutRefs.current = [];
@@ -1325,6 +1310,7 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
           `;
           document.head.appendChild(style);
         }
+        if (!instanceRef.current) return;
 
         try {
           const canvas =
@@ -1414,23 +1400,24 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
         li.setAttribute("data-menu", "adjust");
         li.className = "tui-image-editor-menu-item";
         li.style.cssText = `
-          cursor: pointer;
-          display: inline-flex;
-          align-items: center;
-          height: 100%;
-          margin-left: 6px;
-        `;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            height: 48px;
+            padding: 0 10px;
+            margin: 0;
+          `;
 
         li.innerHTML = `
-          <button class="tui-image-editor-button tui-adjust-btn" title="Adjust" aria-label="Adjust" style="display:inline-flex;align-items:center;border:none;background:transparent;border-radius:4px;transition:all 0.18s ease;color: #8a8a8a;">
-            <div class="tui-image-editor-menu-icon" style="display:inline-flex;align-items:center;justify-content:center;margin-right:6px;line-height:0;">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false" style="display:block;">
-                <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.5" fill="none"/>
-                <path d="M12 1v6M12 17v6M4.22 4.22l4.24 4.24M15.54 15.54l4.24 4.24M1 12h6M17 12h6M4.22 19.78l4.24-4.24M15.54 8.46l4.24-4.24" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-            </div>
-          </button>
-        `;
+            <button class="tui-image-editor-button tui-adjust-btn" title="Adjust" aria-label="Adjust" style="display:inline-flex;align-items:center;justify-content:center;height:100%;border:none;background:transparent;padding:8px 12px;transition:all 0.18s ease;color:#8a8a8a;">
+              <div class="tui-image-editor-menu-icon" style="display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;line-height:0;">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false" style="display:block;">
+                  <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.5" fill="none"/>
+                  <path d="M12 1v6M12 17v6M4.22 4.22l4.24 4.24M15.54 15.54l4.24 4.24M1 12h6M17 12h6M4.22 19.78l4.24-4.24M15.54 8.46l4.24-4.24" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+            </button>
+          `;
 
         menuBar.appendChild(li);
         adjustMenuLiRef.current = li;
@@ -2285,6 +2272,254 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
     bottom: 48px !important;
     max-height: calc(100vh - 100px) !important;
   }
+
+  /* MODERN SUBMENU STYLING */
+.tui-image-editor-submenu {
+  position: fixed !important;
+  bottom: 68px !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  width: auto !important;
+  min-width: 400px !important;
+  max-width: 90vw !important;
+  background: linear-gradient(180deg, #1a1a1a 0%, #212121 100%) !important;
+  backdrop-filter: blur(20px) !important;
+  border-radius: 16px !important;
+  padding: 20px !important;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.1) !important;
+  border: none !important;
+  z-index: 99998 !important;
+  pointer-events: auto !important;
+  animation: slideUpSubmenu 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  max-height: 400px !important;
+  overflow-y: auto !important;
+}
+
+@keyframes slideUpSubmenu {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+/* Modern Submenu Scrollbar */
+.tui-image-editor-submenu::-webkit-scrollbar {
+  width: 6px;
+}
+
+.tui-image-editor-submenu::-webkit-scrollbar-track {
+  background: rgba(255,255,255,0.05);
+  border-radius: 3px;
+}
+
+.tui-image-editor-submenu::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+  border-radius: 3px;
+}
+
+/* Modern Buttons in Submenu */
+.tui-image-editor-submenu .tui-image-editor-button,
+.tui-image-editor-submenu label.tui-image-editor-button {
+  background: rgba(255,255,255,0.08) !important;
+  border: 1px solid rgba(255,255,255,0.12) !important;
+  border-radius: 10px !important;
+  padding: 10px 16px !important;
+  color: #e0e0e0 !important;
+  font-weight: 500 !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  cursor: pointer !important;
+  margin: 4px !important;
+}
+
+.tui-image-editor-submenu .tui-image-editor-button:hover,
+.tui-image-editor-submenu label.tui-image-editor-button:hover {
+  background: rgba(255,255,255,0.15) !important;
+  border-color: rgba(102,126,234,0.5) !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 4px 12px rgba(102,126,234,0.3) !important;
+}
+
+.tui-image-editor-submenu .tui-image-editor-button:active {
+  transform: translateY(0) !important;
+}
+
+/* Active state */
+.tui-image-editor-submenu .tui-image-editor-button.active {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  border-color: transparent !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 12px rgba(102,126,234,0.4) !important;
+}
+
+/* Modern Range Sliders in Submenu */
+.tui-image-editor-submenu input[type="range"] {
+  width: 100% !important;
+  height: 6px !important;
+  background: linear-gradient(90deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.2) 100%) !important;
+  border-radius: 3px !important;
+  outline: none !important;
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+}
+
+.tui-image-editor-submenu input[type="range"]:hover {
+  background: linear-gradient(90deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.25) 100%) !important;
+}
+
+.tui-image-editor-submenu input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none !important;
+  width: 18px !important;
+  height: 18px !important;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  border-radius: 50% !important;
+  cursor: pointer !important;
+  box-shadow: 0 2px 8px rgba(102,126,234,0.4), 0 0 0 3px rgba(102,126,234,0.2) !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.tui-image-editor-submenu input[type="range"]::-webkit-slider-thumb:hover {
+  transform: scale(1.2) !important;
+  box-shadow: 0 4px 12px rgba(102,126,234,0.5), 0 0 0 4px rgba(102,126,234,0.3) !important;
+}
+
+.tui-image-editor-submenu input[type="range"]::-moz-range-thumb {
+  width: 18px !important;
+  height: 18px !important;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  border: none !important;
+  border-radius: 50% !important;
+  cursor: pointer !important;
+  box-shadow: 0 2px 8px rgba(102,126,234,0.4) !important;
+}
+
+/* Modern Labels */
+.tui-image-editor-submenu label {
+  color: #e0e0e0 !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+}
+
+/* Modern Number Inputs */
+.tui-image-editor-submenu input[type="number"],
+.tui-image-editor-submenu input[type="text"],
+.tui-image-editor-submenu .tui-image-editor-range-value {
+  background: rgba(255,255,255,0.08) !important;
+  border: 1px solid rgba(255,255,255,0.12) !important;
+  color: #ffffff !important;
+  border-radius: 8px !important;
+  padding: 8px 12px !important;
+  font-weight: 500 !important;
+  transition: all 0.2s ease !important;
+}
+
+.tui-image-editor-submenu input[type="number"]:focus,
+.tui-image-editor-submenu input[type="text"]:focus {
+  border-color: rgba(102,126,234,0.5) !important;
+  box-shadow: 0 0 0 3px rgba(102,126,234,0.2) !important;
+  outline: none !important;
+}
+
+/* Modern Checkboxes */
+.tui-image-editor-submenu input[type="checkbox"] {
+  width: 18px !important;
+  height: 18px !important;
+  cursor: pointer !important;
+  accent-color: #667eea !important;
+}
+
+/* Modern Apply Button */
+.tui-image-editor-submenu .tui-image-editor-button.apply {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  border: none !important;
+  color: #ffffff !important;
+  font-weight: 600 !important;
+  padding: 12px 32px !important;
+  margin-top: 16px !important;
+  width: 100% !important;
+  box-shadow: 0 4px 16px rgba(102,126,234,0.4) !important;
+}
+
+.tui-image-editor-submenu .tui-image-editor-button.apply:hover {
+  background: linear-gradient(135deg, #764ba2 0%, #667eea 100%) !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 6px 20px rgba(102,126,234,0.5) !important;
+}
+
+/* Modern Partition Lines */
+.tui-image-editor-submenu .tui-image-editor-partition {
+  border-color: rgba(255,255,255,0.1) !important;
+  margin: 16px 0 !important;
+}
+
+/* Icon Buttons Grid */
+.tui-image-editor-submenu .tui-image-editor-newline {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 8px !important;
+  justify-content: flex-start !important;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .tui-image-editor-submenu {
+    bottom: 48px !important;
+    min-width: 300px !important;
+    max-width: calc(100vw - 20px) !important;
+    max-height: 50vh !important;
+    padding: 16px !important;
+  }
+}
+/* FIX MENU BAR ICON ALIGNMENT */
+.tui-image-editor-menu {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  height: 48px !important;
+  padding: 0 !important;
+}
+
+.tui-image-editor-menu-item {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  height: 48px !important;
+  padding: 0 8px !important;
+  margin: 0 !important;
+}
+
+.tui-image-editor-button {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  height: 100% !important;
+  padding: 8px 12px !important;
+  border: none !important;
+  background: transparent !important;
+}
+
+.tui-image-editor-menu-icon {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 24px !important;
+  height: 24px !important;
+  margin: 0 !important;
+}
+
+.tui-image-editor-menu-icon img,
+.tui-image-editor-menu-icon svg {
+  width: 24px !important;
+  height: 24px !important;
+  display: block !important;
+  margin: 0 auto !important;
+}
+
 `}</style>
     </div>
   );
