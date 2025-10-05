@@ -41,6 +41,7 @@ class PackageController extends Controller
             ->leftJoin('package_type_mapping', 'packages.packageID', '=', 'package_type_mapping.packageID')
             ->leftJoin('package_types', 'package_type_mapping.typeID', '=', 'package_types.typeID')
             ->select($selects)
+            ->orderBy('packages.packageID', 'asc')
             ->get();
 
         $grouped = $raw->groupBy('id');
@@ -146,6 +147,7 @@ class PackageController extends Controller
             ->leftJoin('package_type_mapping', 'packages.packageID', '=', 'package_type_mapping.packageID')
             ->leftJoin('package_types', 'package_type_mapping.typeID', '=', 'package_types.typeID')
             ->select($selects)
+            ->orderBy('packages.packageID', 'asc')
             ->get();
 
         $grouped = $raw->groupBy('id');
