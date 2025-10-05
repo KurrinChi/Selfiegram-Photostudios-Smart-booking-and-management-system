@@ -1,6 +1,5 @@
 import React, { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import '@fortawesome/fontawesome-free/css/all.min.css';
 import { toast } from "react-toastify";
 
 const API_URL = import.meta.env.VITE_API_URL;
@@ -18,25 +17,27 @@ const RegisterInfoForm = () => {
     birthday: "",
   });
 
-   // Load saved data from localStorage when component mounts
-    useEffect(() => {
-      const savedData = localStorage.getItem("registerStep2");
-      if (savedData) {
-        setFormData(JSON.parse(savedData));
-      }
-    }, []);
-  
-    const handleChange = (
-      e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
-    ) => {
-      const newData = { ...formData, [e.target.name]: e.target.value };
-      setFormData(newData);
-      localStorage.setItem("registerStep2", JSON.stringify(newData)); // save live while typing
-    };
+  // Load saved data from localStorage when component mounts
+  useEffect(() => {
+    const savedData = localStorage.getItem("registerStep2");
+    if (savedData) {
+      setFormData(JSON.parse(savedData));
+    }
+  }, []);
+
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
+    const newData = { ...formData, [e.target.name]: e.target.value };
+    setFormData(newData);
+    localStorage.setItem("registerStep2", JSON.stringify(newData)); // save live while typing
+  };
+
+  const [isSubmitting, setIsSubmitting] = React.useState(false); // <-- Loading state
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
+    if (isSubmitting) return; // prevent double-click
     const step1Data = JSON.parse(localStorage.getItem("registerStep1") || "{}");
 
     if (!formData.fname || !formData.lname || !formData.email || !step1Data.username) {
@@ -49,7 +50,7 @@ const RegisterInfoForm = () => {
       toast.error("Please enter a valid Philippine mobile number (e.g., 09123456789).");
       return;
     }
-
+    setIsSubmitting(true); // <-- Start loading
     try {
       const response = await fetch(`${API_URL}/api/register`, {
         method: "POST",
@@ -77,7 +78,7 @@ const RegisterInfoForm = () => {
         toast.success(
           "Registered successfully! Please check your email to proceed with log in.",
           {
-            autoClose: 7000, 
+            autoClose: 7000,
             onClose: () => {
               localStorage.removeItem("registerStep1");
               localStorage.removeItem("registerStep2");
@@ -91,19 +92,21 @@ const RegisterInfoForm = () => {
     } catch (error) {
       console.error("Register error:", error);
       toast.error("Something went wrong.");
+    } finally {
+      setIsSubmitting(false); // <-- Stop loading
     }
   };
 
   return (
     <div className="relative w-full max-w-md mx-auto text-[#111] font-sf px-4 py-6">
       {/* Back Button */}
-    <button
-      type="button"
-      onClick={() => navigate(-1)}
-      className="absolute top-4 left-4 w-10 h-10 flex items-center justify-center rounded-full bg-gray-200 hover:bg-gray-300 shadow-md"
-    >
-      <i className="fas fa-arrow-left" />
-    </button>
+      <button
+        type="button"
+        onClick={() => navigate(-1)}
+        className="absolute top-4 left-4 w-10 h-10 flex items-center justify-center rounded-full bg-gray-200 hover:bg-gray-300 shadow-md"
+      >
+        <i className="fas fa-arrow-left" />
+      </button>
 
       <div className="mt-12">
         <h2 className="text-2xl font-bold mb-2 text-left">Create an account</h2>
@@ -133,7 +136,7 @@ const RegisterInfoForm = () => {
             />
           </div>
 
-    
+
           <input
             type="email"
             name="email"
@@ -144,7 +147,7 @@ const RegisterInfoForm = () => {
             required
           />
 
-        
+
           <input
             type="text"
             name="address"
@@ -155,7 +158,7 @@ const RegisterInfoForm = () => {
             required
           />
 
-          
+
           <input
             type="text"
             name="contact"
@@ -167,47 +170,55 @@ const RegisterInfoForm = () => {
           />
 
 
-          
-     <select
-        name="gender"
-        value={formData.gender}
-        onChange={handleChange}
-        className={`w-full p-3 border border-gray-300 rounded-xl bg-white ${
-          formData.gender === "" ? "text-gray-400" : "text-black"
-        }`}
-        required
-      >
-        <option value="" disabled>
-          Select Gender
-        </option>
-        <option value="Female" className="text-black">
-          Female
-        </option>
-        <option value="Male" className="text-black">
-          Male
-        </option>
-        <option value="Prefer not to say" className="text-black">
-          Prefer not to say
-        </option>
-      </select>
+
+          <select
+            name="gender"
+            value={formData.gender}
+            onChange={handleChange}
+            className={`w-full p-3 border border-gray-300 rounded-xl bg-white ${formData.gender === "" ? "text-gray-400" : "text-black"
+              }`}
+            required
+          >
+            <option value="" disabled>
+              Select Gender
+            </option>
+            <option value="Female" className="text-black">
+              Female
+            </option>
+            <option value="Male" className="text-black">
+              Male
+            </option>
+            <option value="Prefer not to say" className="text-black">
+              Prefer not to say
+            </option>
+          </select>
 
 
           <input
-          type="date"
-          name="birthday"
-          value={formData.birthday}
-          onChange={handleChange}
-          className={`w-full p-3 border border-gray-300 rounded-xl ${
-            !formData.birthday ? "text-gray-400" : "text-black"
-          }`}
-          required
-        />
+            type="date"
+            name="birthday"
+            value={formData.birthday}
+            onChange={handleChange}
+            className={`w-full p-3 border border-gray-300 rounded-xl ${!formData.birthday ? "text-gray-400" : "text-black"
+              }`}
+            required
+          />
 
           <button
             type="submit"
-            className="w-full py-3 bg-[#E2E1E1] text-[#4E4E4E] rounded-xl font-semibold hover:bg-[#333] hover:text-[#E2E1E1] transition-colors"
+            disabled={isSubmitting} // <-- Disable when submitting
+            className={`w-full py-3 rounded-xl font-semibold transition-colors ${isSubmitting
+                ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                : "bg-[#E2E1E1] text-[#4E4E4E] hover:bg-[#333] hover:text-[#E2E1E1]"
+              }`}
           >
-            Next
+            {isSubmitting ? (
+              <span className="flex items-center justify-center gap-2">
+                Submitting...
+              </span>
+            ) : (
+              "Submit"
+            )}
           </button>
         </form>
       </div>
