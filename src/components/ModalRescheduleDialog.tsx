@@ -97,14 +97,15 @@ const ModalRescheduleDialog: React.FC<ModalRescheduleDialogProps> = ({
 
   // Convert server 12-hour time (e.g., "09:00 AM") to slot label (e.g., "9 AM")
   // Convert server times to our canonical HH:MM AM/PM 30-min label (keeps minutes)
-  function normalizeServerTimeToSlotLabel(serverTime: string): string {
+  function normalizeServerTimeToSlotLabel(serverTime: unknown): string {
+    if (typeof serverTime !== 'string') return '';
     const m = serverTime.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
     if (!m) return serverTime;
-    let h = parseInt(m[1], 10);
+    const hNum = parseInt(m[1], 10);
+    if (hNum < 1 || hNum > 12) return serverTime;
     const mm = m[2];
     const ap = m[3].toUpperCase();
-    if (h < 1 || h > 12) return serverTime;
-    return `${String(h).padStart(2,'0')}:${mm} ${ap}`;
+    return `${String(hNum).padStart(2,'0')}:${mm} ${ap}`;
   }
 
   // Helpers for conflict logic
@@ -163,36 +164,63 @@ const ModalRescheduleDialog: React.FC<ModalRescheduleDialogProps> = ({
           return;
         }
         const data = await res.json();
-        const slots: string[] = Array.isArray(data.bookedSlots) ? data.bookedSlots : [];
-        const normalized = slots.map(normalizeServerTimeToSlotLabel);
-        setBookedSlots(normalized);
+        const rawSlots = Array.isArray(data.bookedSlots) ? data.bookedSlots : [];
 
-        // Build intervals if structured bookings present
-        if (Array.isArray(data.bookings)) {
-          const intervals: { start: number; end: number; bookingID?: number; durationMinutes?: number }[] = [];
-            for (const b of data.bookings) {
-              if (!b || !b.startTime) continue;
-              const start = slotLabelToMinutes(normalizeServerTimeToSlotLabel(String(b.startTime)));
+        const startLabels: string[] = [];
+        const intervals: { start: number; end: number; bookingID?: number; durationMinutes?: number }[] = [];
+
+        // Priority 1: provided rich bookings array
+        if (Array.isArray(data.bookings) && data.bookings.length > 0) {
+          for (const b of data.bookings) {
+            if (!b) continue;
+            const startLabelRaw = b.startTime || b.start;
+            if (!startLabelRaw) continue;
+            const startLabel = normalizeServerTimeToSlotLabel(String(startLabelRaw));
+            const start = slotLabelToMinutes(startLabel);
+            if (isNaN(start)) continue;
+            const durParsed = parseDurationToMinutes(b.duration || b.packageDuration || b.durationMinutes || '');
+            const durationMinutes = durParsed > 0 ? durParsed : 60;
+            const end = start + durationMinutes;
+            startLabels.push(startLabel);
+            intervals.push({ start, end, bookingID: b.bookingID, durationMinutes });
+          }
+        } else if (rawSlots.length > 0) {
+          // Priority 2: newer shape [{start:'09:00 AM', end:'09:30 AM'}]
+          for (const entry of rawSlots) {
+            if (entry && typeof entry === 'object' && 'start' in entry) {
+              const startLabel = normalizeServerTimeToSlotLabel((entry as any).start);
+              if (!startLabel) continue;
+              const start = slotLabelToMinutes(startLabel);
               if (isNaN(start)) continue;
-              const dur = parseDurationToMinutes(b.duration || b.packageDuration || '');
-              const durationMinutes = dur > 0 ? dur : 60;
-              const end = start + durationMinutes;
-              intervals.push({ start, end, bookingID: b.bookingID, durationMinutes });
+              let end = NaN;
+              if ((entry as any).end) {
+                const endLabel = normalizeServerTimeToSlotLabel((entry as any).end);
+                end = slotLabelToMinutes(endLabel);
+              }
+              if (!Number.isFinite(end) || end <= start) {
+                end = start + 30; // fallback block size
+              }
+              startLabels.push(startLabel);
+              intervals.push({ start, end });
+            } else if (typeof entry === 'string') {
+              // Legacy simple string array
+              const startLabel = normalizeServerTimeToSlotLabel(entry);
+              const start = slotLabelToMinutes(startLabel);
+              if (isNaN(start)) continue;
+              startLabels.push(startLabel);
+              intervals.push({ start, end: start + 30 });
             }
-          setBookedIntervals(intervals);
-        } else {
-          // Fallback: each booked slot is a 30-min occupied interval
-          setBookedIntervals(normalized.map(s => {
-            const start = slotLabelToMinutes(s);
-            return { start, end: start + 30 };
-          }));
+          }
         }
 
+        setBookedSlots(startLabels);
+        setBookedIntervals(intervals);
+
         // If all time slots are booked, clear any selected time; also clear if the selected slot became booked
-        const allBooked = timeSlots.every(s => normalized.includes(s));
+        const allBooked = timeSlots.every(s => startLabels.includes(s));
         if (allBooked) {
           setSelectedTime(null);
-        } else if (selectedTime && normalized.includes(selectedTime)) {
+        } else if (selectedTime && startLabels.includes(selectedTime)) {
           setSelectedTime(null);
         }
       } catch (e) {
@@ -238,9 +266,21 @@ const ModalRescheduleDialog: React.FC<ModalRescheduleDialogProps> = ({
         const res = await fetchWithAuth(`${API_URL}/api/bookings/${bookingID}`);
         if (res.ok) {
           const data = await res.json();
-          const dStr = data?.package?.duration || data?.duration || '';
-          const mins = parseDurationToMinutes(dStr) || 60;
-          setSessionDurationMinutes(mins);
+          // Prefer computing from stored start/end times (more accurate with add-ons)
+          const startLabel = data?.time; // already 12h formatted by backend
+          const endLabel = data?.endTime;
+          if (startLabel && endLabel) {
+            const start = slotLabelToMinutes(String(startLabel));
+            const end = slotLabelToMinutes(String(endLabel));
+            if (Number.isFinite(start) && Number.isFinite(end) && end > start) {
+              setSessionDurationMinutes(end - start);
+              return;
+            }
+          }
+          // Fallback: attempt duration fields
+          const dStr = data?.duration || data?.packageDuration || '';
+            const mins = parseDurationToMinutes(String(dStr)) || 60;
+            setSessionDurationMinutes(mins);
         }
       } catch {/* ignore */}
     };
