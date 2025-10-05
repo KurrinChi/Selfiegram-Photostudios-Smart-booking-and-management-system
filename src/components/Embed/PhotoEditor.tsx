@@ -38,6 +38,32 @@ const ICONS = {
   )}`,
   brightness: "",
 };
+const SLIDER_ICONS: Record<string, string> = {
+  brightness: `data:image/svg+xml,${encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">ircle cx="12" cy="12" r="4"4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>`
+  )}`,
+  contrast: `data:image/svg+xml,${encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">ircle cx="12" cy="="12" r="10"/><path d="M12 2v20"/></svg>`
+  )}`,
+  saturation: `data:image/svg+xml,${encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>`
+  )}`,
+  highlights: `data:image/svg+xml,${encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M12 3v1M12 20v1M4.22 4.22l.71.71M18.36 18.36l.71.71M1 12h1M21 12h1M4.22 19.78l.71-.71M18.36 5.64l.71-.71"/>ircle cx="12" cy="12"2" r="3"/></svg>`
+  )}`,
+  shadows: `data:image/svg+xml,${encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M12 3a9 9 0 1 0 9 9"/>ircle cx="12" cy="1212" r="3"/></svg>`
+  )}`,
+  whites: `data:image/svg+xml,${encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="white" stroke="white" stroke-width="2">ircle cx="12" cy="12"2" r="10"/></svg>`
+  )}`,
+  blacks: `data:image/svg+xml,${encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">ircle cx="12" cy="12"2" r="10"/></svg>`
+  )}`,
+  hue: `data:image/svg+xml,${encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">ircle cx="12" cy="12"2" r="10"/>ircle cx="12" cy="12" r="4" fill="whitete"/></svg>`
+  )}`,
+};
 
 const MENU_ICONS: Record<string, string> = {
   crop: "https://img.icons8.com/ios-filled/50/crop.png",
@@ -775,31 +801,36 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
 
     const panelContent = document.createElement("div");
     panelContent.innerHTML = `
-      <div style="margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid #f0f0f0;">
-        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
-          <img src="${ICONS.adjust}" alt="" style="width: 18px; height: 18px; opacity: 0.8;">
-          <h3 style="margin: 0; font-size: 15px; font-weight: 600; color: #333;">Adjust</h3>
-        </div>
-        <button id="reset-adjustments" aria-label="Reset adjustments" style="
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          padding: 8px 12px;
-          background: transparent;
-          border: 1px solid #ddd;
-          border-radius: 6px;
-          cursor: pointer;
-          font-size: 12px;
-          color: #666;
-          font-weight: 500;
-          transition: all 0.2s ease;
-        ">
-          <img src="${ICONS.reset}" alt="" style="width: 14px; height: 14px;">
-          Reset
-        </button>
+  <div style="margin-bottom: 24px; padding-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.1);">
+    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 16px; animation: fadeInDown 0.4s ease;">
+      <div style="width: 36px; height: 36px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 10px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(102,126,234,0.3);">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v6M12 17v6M4.22 4.22l4.24 4.24M15.54 15.54l4.24 4.24M1 12h6M17 12h6M4.22 19.78l4.24-4.24M15.54 8.46l4.24-4.24"/></svg>
       </div>
-      <div id="sliders-container"></div>
-    `;
+      <h3 style="margin: 0; font-size: 18px; font-weight: 700; color: #ffffff; letter-spacing: -0.5px;">Adjustments</h3>
+    </div>
+    <button id="reset-adjustments" aria-label="Reset adjustments" style="
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 12px 20px;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 14px;
+      color: #ffffff;
+      font-weight: 600;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      width: 100%;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    ">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M3 21v-5h5"/></svg>
+      Reset All
+    </button>
+  </div>
+  <div id="sliders-container"></div>
+`;
 
     adjustPanel.appendChild(panelContent);
 
@@ -829,55 +860,68 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
       { key: "hue", label: "Hue", min: -90, max: 90, step: 1 },
     ];
 
-    adjustSliders.forEach(({ key, label, min, max, step }) => {
+    adjustSliders.forEach(({ key, label, min, max, step }, index) => {
       const sessionVal = sessionRef.current[key as keyof AdjustValues];
       const sliderDiv = document.createElement("div");
-      sliderDiv.style.cssText = "margin-bottom: 18px;";
+      sliderDiv.style.cssText = `margin-bottom: 24px; animation: fadeInUp 0.4s ease ${
+        index * 0.05
+      }s both;`;
+
+      const iconSrc = SLIDER_ICONS[key] || ICONS.brightness;
 
       sliderDiv.innerHTML = `
-        <label style="
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          font-size: 13px;
-          font-weight: 500;
-          margin-bottom: 8px;
-          color: #444;
-        ">
-          <div style="display: flex; align-items: center; gap: 8px;">
-            <span>${label}</span>
-          </div>
-          <span id="${key}-value" style="
-            font-weight: 500; 
-            color: #666; 
-            font-size: 12px;
-            background: #f5f5f5;
-            padding: 2px 6px;
-            border-radius: 3px;
-            min-width: 40px;
-            text-align: center;
-          ">${formatValueForLabel(key as keyof AdjustValues, sessionVal)}</span>
-        </label>
-        <input 
-          type="range" 
-          id="${key}-slider"
-          min="${min}" 
-          max="${max}" 
-          step="${step}" 
-          value="${sessionVal}"
-          aria-label="${label}"
-          style="
-            width: 100%;
-            height: 4px;
-            background: #e0e0e0;
-            border-radius: 2px;
-            outline: none;
-            -webkit-appearance: none;
-            appearance: none;
-            cursor: pointer;
-          "
-        />
-      `;
+    <label style="
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 12px;
+      color: #e0e0e0;
+    ">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <div style="width: 28px; height: 28px; background: rgba(255,255,255,0.08); border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+          <img src="${iconSrc}" alt="" style="width: 16px; height: 16px;">
+        </div>
+        <span>${label}</span>
+      </div>
+      <span id="${key}-value" style="
+        font-weight: 700; 
+        color: #ffffff; 
+        font-size: 13px;
+        background: linear-gradient(135deg, rgba(102,126,234,0.2) 0%, rgba(118,75,162,0.2) 100%);
+        padding: 6px 12px;
+        border-radius: 8px;
+        min-width: 50px;
+        text-align: center;
+        font-variant-numeric: tabular-nums;
+        border: 1px solid rgba(102,126,234,0.3);
+        box-shadow: 0 2px 8px rgba(102,126,234,0.2);
+      ">${formatValueForLabel(key as keyof AdjustValues, sessionVal)}</span>
+    </label>
+    <div style="position: relative;">
+      <input 
+        type="range" 
+        id="${key}-slider"
+        min="${min}" 
+        max="${max}" 
+        step="${step}" 
+        value="${sessionVal}"
+        aria-label="${label}"
+        style="
+          width: 100%;
+          height: 6px;
+          background: linear-gradient(90deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.2) 100%);
+          border-radius: 3px;
+          outline: none;
+          -webkit-appearance: none;
+          appearance: none;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        "
+      />
+    </div>
+  `;
 
       slidersContainer.appendChild(sliderDiv);
     });
@@ -1857,7 +1901,7 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
       </div>
 
       <style>{`
-        * {
+  * {
     box-sizing: border-box;
   }
   
@@ -1865,7 +1909,7 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
     overflow: hidden !important;
   }
 
-  /* ADD THESE AGGRESSIVE OVERRIDES HERE */
+  /* Aggressive overrides */
   .tui-image-editor,
   .tui-image-editor *,
   .tui-image-editor-canvas-container,
@@ -1877,7 +1921,6 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
     max-height: none !important;
   }
 
-  /* Force canvas to use full width */
   canvas.lower-canvas,
   canvas.upper-canvas {
     max-width: none !important;
@@ -1888,243 +1931,361 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
   }
+
+  @keyframes fadeInDown {
+    from {
+      opacity: 0;
+      transform: translateY(-20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes slideInRight {
+    from {
+      opacity: 0;
+      transform: translateX(30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
         
-        .tui-image-editor-menu-item-active {
-          background: #f0f8ff !important;
-        }
-        
-        .tui-image-editor-container {
-          height: 100% !important;
-          width: 100% !important;
-          overflow: hidden !important;
-        }
-        
-        .tui-image-editor-wrap {
-          height: 100% !important;
-          width: 100% !important;
-          top: 0 !important;
-          bottom: 0 !important;
-          overflow: hidden !important;
-        }
-        
-        /* NUCLEAR FIX: Force canvas container to stay full size */
-        /* Replace the existing canvas container rules with these: */
-.tui-image-editor-canvas-container {
-  position: fixed !important;
-  top: 72px !important;
-  left: 0 !important;
-  right: 0 !important;
-  bottom: 48px !important;
-  width: 100vw !important;
-  height: calc(100vh - 120px) !important;
-  z-index: 1 !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-}
+  .tui-image-editor-menu-item-active {
+    background: #f0f8ff !important;
+  }
+  
+  .tui-image-editor-container {
+    height: 100% !important;
+    width: 100% !important;
+    overflow: hidden !important;
+  }
+  
+  .tui-image-editor-wrap {
+    height: 100% !important;
+    width: 100% !important;
+    top: 0 !important;
+    bottom: 0 !important;
+    overflow: hidden !important;
+  }
+  
+  .tui-image-editor-canvas-container {
+    position: fixed !important;
+    top: 72px !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 48px !important;
+    width: 100vw !important;
+    height: calc(100vh - 120px) !important;
+    z-index: 1 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
 
-.tui-image-editor-main {
-  position: fixed !important;
-  top: 72px !important;
-  left: 0 !important;
-  right: 0 !important;
-  bottom: 48px !important;
-  width: 100vw !important;
-  height: calc(100vh - 120px) !important;
-  padding: 0 !important;
-  margin: 0 !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-}
+  .tui-image-editor-main {
+    position: fixed !important;
+    top: 72px !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 48px !important;
+    width: 100vw !important;
+    height: calc(100vh - 120px) !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
 
-.tui-image-editor-main-container {
-  position: fixed !important;
-  top: 72px !important;
-  left: 0 !important;
-  right: 0 !important;
-  bottom: 48px !important;
-  width: 100vw !important;
-  height: calc(100vh - 120px) !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-}
+  .tui-image-editor-main-container {
+    position: fixed !important;
+    top: 72px !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 48px !important;
+    width: 100vw !important;
+    height: calc(100vh - 120px) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
 
-.lower-canvas-container {
-  position: relative !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  width: 100% !important;
-  height: 100% !important;
-}
+  .lower-canvas-container {
+    position: relative !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 100% !important;
+    height: 100% !important;
+  }
 
-canvas.lower-canvas,
-canvas.upper-canvas {
-  position: absolute !important;
-  left: 50% !important;
-  top: 50% !important;
-  transform: translate(-50%, -50%) !important;
-}
+  canvas.lower-canvas,
+  canvas.upper-canvas {
+    position: absolute !important;
+    left: 50% !important;
+    top: 50% !important;
+    transform: translate(-50%, -50%) !important;
+  }
 
-/* Ensure the canvas wrapper is centered */
-.canvas-container {
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  width: 100% !important;
-  height: 100% !important;
-}
+  .canvas-container {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 100% !important;
+    height: 100% !important;
+  }
+  
+  .tui-image-editor {
+    height: 100% !important;
+    width: 100% !important;
+    overflow: hidden !important;
+  }
+  
+  .tui-image-editor .lower-canvas,
+  .tui-image-editor .upper-canvas {
+    max-width: 100% !important;
+    max-height: 100% !important;
+    object-fit: contain !important;
+  }
+  
+  .tui-image-editor-menu-wrap {
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    height: 48px !important;
+    z-index: 99997 !important;
+    background: #ffffff !important;
+    border-top: 1px solid #e5e5e5 !important;
+    pointer-events: auto !important;
+  }
 
-        
-        .tui-image-editor {
-          height: 100% !important;
-          width: 100% !important;
-          overflow: hidden !important;
-        }
-        
-        .tui-image-editor .lower-canvas,
-        .tui-image-editor .upper-canvas {
-          max-width: 100% !important;
-          max-height: 100% !important;
-          object-fit: contain !important;
-        }
-        
-        .tui-image-editor-menu-wrap {
-          position: fixed !important;
-          bottom: 0 !important;
-          left: 0 !important;
-          right: 0 !important;
-          height: 48px !important;
-          z-index: 99997 !important;
-          background: #ffffff !important;
-          border-top: 1px solid #e5e5e5 !important;
-          pointer-events: auto !important;
-        }
+  .tui-image-editor-submenu {
+    position: fixed !important;
+    bottom: 48px !important;
+    padding: 12px !important;
+    left: 0 !important;
+    right: 0 !important;
+    height: auto !important;
+    max-height: 250px !important;
+    z-index: 99998 !important;
+    pointer-events: auto !important;
+    background: #1e1e1e !important;
+    overflow-y: auto !important;
+  }
 
-        .tui-image-editor-submenu {
-          position: fixed !important;
-          bottom: 48px !important;
-          padding: 12px !important;
-          left: 0 !important;
-          right: 0 !important;
-          height: auto !important;
-          max-height: 250px !important;
-          z-index: 99998 !important;
-          pointer-events: auto !important;
-          background: #1e1e1e !important;
-          overflow-y: auto !important;
-        }
-        
-        ::-webkit-scrollbar {
-          width: 0px !important;
-          height: 0px !important;
-        }
-        
-        @media (max-width: 768px) {
-          .editor-title {
-            display: none !important;
-          }
-          
-          .tui-image-editor-main-container {
-            padding: 4px !important;
-          }
+  /* MODERN ADJUSTMENT PANEL */
+  .tui-image-editor-adjust-panel {
+    position: fixed !important;
+    top: 72px !important;
+    right: 0 !important;
+    width: 320px !important;
+    height: calc(100vh - 120px) !important;
+    background: linear-gradient(180deg, #1a1a1a 0%, #212121 100%) !important;
+    border-left: 1px solid rgba(255,255,255,0.1) !important;
+    padding: 24px !important;
+    box-sizing: border-box !important;
+    overflow-y: auto !important;
+    z-index: 100000 !important;
+    pointer-events: auto !important;
+    box-shadow: -8px 0 32px rgba(0,0,0,0.5) !important;
+    animation: slideInRight 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  }
 
-          .tui-image-editor-submenu {
-            max-height: 200px !important;
-          }
-        }
-        
-        @media (min-width: 769px) and (max-width: 1024px) {
-          .editor-title {
-            font-size: 9px !important;
-          }
-        }
-        
-        @media (max-width: 640px) {
-          .tui-image-editor-menu {
-            font-size: 11px !important;
-            height: 44px !important;
-          }
-          
-          .tui-image-editor-menu-icon {
-            width: 16px !important;
-            height: 16px !important;
-          }
-          
-          .tui-image-editor-menu-title {
-            display: none !important;
-          }
+  /* Modern Scrollbar */
+  .tui-image-editor-adjust-panel::-webkit-scrollbar {
+    width: 6px;
+  }
 
-          .tui-image-editor-submenu {
-            max-height: 180px !important;
-          }
-        }
-        
-        @media (max-width: 480px) {
-          .tui-image-editor-menu {
-            height: 40px !important;
-          }
-          
-          .tui-image-editor-menu .tui-image-editor-button {
-            padding: 4px 6px !important;
-          }
+  .tui-image-editor-adjust-panel::-webkit-scrollbar-track {
+    background: rgba(255,255,255,0.05);
+    border-radius: 3px;
+  }
 
-          .tui-image-editor-submenu {
-            max-height: 150px !important;
-          }
-        }
+  .tui-image-editor-adjust-panel::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+    border-radius: 3px;
+    transition: all 0.2s ease;
+  }
 
-        /* Add this to your existing <style> section */
+  .tui-image-editor-adjust-panel::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, #764ba2 0%, #667eea 100%);
+  }
 
-        /* Desktop optimizations */
-        @media (min-width: 1024px) {
-          .tui-image-editor-canvas-container,
-          .tui-image-editor-main,
-          .tui-image-editor-main-container {
-            padding: 0 !important;
-          }
-        }
+  /* Modern Slider Styles */
+  .tui-image-editor-adjust-panel input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    cursor: pointer;
+    border-radius: 50%;
+    box-shadow: 0 4px 12px rgba(102,126,234,0.5), 0 0 0 4px rgba(102,126,234,0.2);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+  }
 
-        /* Large desktop optimizations */
-        @media (min-width: 1920px) {
-          .tui-image-editor-canvas-container,
-          .tui-image-editor-main,
-          .tui-image-editor-main-container {
-            max-width: 100vw !important;
-            max-height: calc(100vh - 120px) !important;
-          }
-        }
+  .tui-image-editor-adjust-panel input[type="range"]::-webkit-slider-thumb:hover {
+    transform: scale(1.2);
+    box-shadow: 0 6px 16px rgba(102,126,234,0.6), 0 0 0 6px rgba(102,126,234,0.25);
+  }
 
-        
-        @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 2dppx) {
-          .tui-image-editor .lower-canvas,
-          .tui-image-editor .upper-canvas {
-            image-rendering: -webkit-optimize-contrast !important;
-            image-rendering: optimize-contrast !important;
-          }
-        }
+  .tui-image-editor-adjust-panel input[type="range"]::-webkit-slider-thumb:active {
+    transform: scale(1.1);
+  }
 
-        .tui-image-editor-submenu-style,
-        .tui-image-editor-partition > div {
-          max-height: 200px !important;
-          overflow-y: auto !important;
-        }
+  .tui-image-editor-adjust-panel input[type="range"]::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    cursor: pointer;
+    border-radius: 50%;
+    border: none;
+    box-shadow: 0 4px 12px rgba(102,126,234,0.5);
+    transition: all 0.3s ease;
+  }
 
-        .tui-image-editor-adjust-panel {
-          position: fixed !important;
-          bottom: 48px !important;
-          z-index: 100000 !important;
-          pointer-events: auto !important;
-        }
+  .tui-image-editor-adjust-panel input[type="range"]:hover {
+    background: linear-gradient(90deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.25) 100%) !important;
+  }
 
-        .tui-colorpicker-clearfix,
-        .tui-image-editor-help-menu {
-          bottom: 48px !important;
-          max-height: calc(100vh - 100px) !important;
-        }
-      `}</style>
+  /* Modern Button Hover */
+  .tui-image-editor-adjust-panel button:hover {
+    background: rgba(255,255,255,0.15) !important;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+    border-color: rgba(255,255,255,0.2) !important;
+  }
+
+  .tui-image-editor-adjust-panel button:active {
+    transform: translateY(0);
+  }
+  
+  ::-webkit-scrollbar {
+    width: 0px !important;
+    height: 0px !important;
+  }
+  
+  @media (max-width: 768px) {
+    .editor-title {
+      display: none !important;
+    }
+
+    .tui-image-editor-adjust-panel {
+      top: auto !important;
+      bottom: 48px !important;
+      left: 0 !important;
+      right: 0 !important;
+      width: 100% !important;
+      height: 50vh !important;
+      max-height: 400px !important;
+      border-left: none !important;
+      border-top: 1px solid rgba(255,255,255,0.1) !important;
+      animation: fadeInUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    }
+    
+    .tui-image-editor-main-container {
+      padding: 4px !important;
+    }
+
+    .tui-image-editor-submenu {
+      max-height: 200px !important;
+    }
+  }
+  
+  @media (min-width: 769px) and (max-width: 1024px) {
+    .editor-title {
+      font-size: 9px !important;
+    }
+  }
+  
+  @media (max-width: 640px) {
+    .tui-image-editor-menu {
+      font-size: 11px !important;
+      height: 44px !important;
+    }
+    
+    .tui-image-editor-menu-icon {
+      width: 16px !important;
+      height: 16px !important;
+    }
+    
+    .tui-image-editor-menu-title {
+      display: none !important;
+    }
+
+    .tui-image-editor-submenu {
+      max-height: 180px !important;
+    }
+  }
+  
+  @media (max-width: 480px) {
+    .tui-image-editor-menu {
+      height: 40px !important;
+    }
+    
+    .tui-image-editor-menu .tui-image-editor-button {
+      padding: 4px 6px !important;
+    }
+
+    .tui-image-editor-submenu {
+      max-height: 150px !important;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .tui-image-editor-canvas-container,
+    .tui-image-editor-main,
+    .tui-image-editor-main-container {
+      padding: 0 !important;
+    }
+  }
+
+  @media (min-width: 1920px) {
+    .tui-image-editor-canvas-container,
+    .tui-image-editor-main,
+    .tui-image-editor-main-container {
+      max-width: 100vw !important;
+      max-height: calc(100vh - 120px) !important;
+    }
+  }
+
+  @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 2dppx) {
+    .tui-image-editor .lower-canvas,
+    .tui-image-editor .upper-canvas {
+      image-rendering: -webkit-optimize-contrast !important;
+      image-rendering: optimize-contrast !important;
+    }
+  }
+
+  .tui-image-editor-submenu-style,
+  .tui-image-editor-partition > div {
+    max-height: 200px !important;
+    overflow-y: auto !important;
+  }
+
+  .tui-colorpicker-clearfix,
+  .tui-image-editor-help-menu {
+    bottom: 48px !important;
+    max-height: calc(100vh - 100px) !important;
+  }
+`}</style>
     </div>
   );
 };
