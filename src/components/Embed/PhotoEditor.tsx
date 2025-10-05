@@ -9,9 +9,6 @@ declare global {
   }
 }
 
-/**
- * CONFIG — adjust as needed:
- */
 const TOAST_CSS_BACKUPS = [
   "https://uicdn.toast.com/tui-image-editor/latest/tui-image-editor.css",
 ];
@@ -28,7 +25,6 @@ const TUI_COLOR_PICKER_SCRIPT =
 const TUI_IMAGE_EDITOR_CDN =
   "https://uicdn.toast.com/tui-image-editor/latest/tui-image-editor.min.js";
 
-/** Minimal inline SVG icons as data URLs */
 const ICONS = {
   adjust: `data:image/svg+xml,${encodeURIComponent(
     `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="3"/><path d="M12 1v6M12 17v6M4.22 4.22l4.24 4.24M15.54 15.54l4.24 4.24M1 12h6M17 12h6M4.22 19.78l4.24-4.24M15.54 8.46l4.24-4.24"/></svg>`
@@ -36,10 +32,9 @@ const ICONS = {
   reset: `data:image/svg+xml,${encodeURIComponent(
     `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M3 21v-5h5"/></svg>`
   )}`,
-  brightness: "", // not strictly necessary (used by labels)
+  brightness: "",
 };
 
-/** Menu icon mapping (keeps your previous approach) */
 const MENU_ICONS: Record<string, string> = {
   crop: "https://img.icons8.com/ios-filled/50/crop.png",
   flip: "https://img.icons8.com/ios-filled/50/flip.png",
@@ -75,11 +70,69 @@ const DEFAULT_ADJUST_VALUES: AdjustValues = {
   hue: 0,
 };
 
+// Utility function to calculate responsive dimensions
+const getResponsiveDimensions = (
+  containerWidth: number,
+  containerHeight: number
+) => {
+  const menuHeight = 48;
+  // Increased padding to give more breathing room
+  const padding = window.innerWidth < 768 ? 20 : 40;
+  // Additional top padding to ensure image doesn't touch top
+  const topPadding = 20;
+
+  return {
+    canvasWidth: containerWidth - padding * 2,
+    canvasHeight: containerHeight - menuHeight - padding - topPadding,
+    padding,
+    menuHeight,
+  };
+};
+
+// Improved scaling calculation
+const calculateOptimalScale = (
+  imageWidth: number,
+  imageHeight: number,
+  canvasWidth: number,
+  canvasHeight: number
+) => {
+  const imageAspect = imageWidth / imageHeight;
+  const canvasAspect = canvasWidth / canvasHeight;
+
+  // Reduced scale factors to make images smaller and fit better
+  let scaleFactor = 0.75; // Default - much smaller
+
+  if (window.innerWidth < 480) {
+    scaleFactor = 0.8; // Mobile: slightly larger but still smaller than before
+  } else if (window.innerWidth < 768) {
+    scaleFactor = 0.78; // Small tablet
+  } else if (window.innerWidth < 1024) {
+    scaleFactor = 0.76; // Tablet
+  } else {
+    scaleFactor = 0.75; // Desktop: more breathing room
+  }
+
+  // Calculate scale to fit within canvas
+  let scale;
+  if (imageAspect > canvasAspect) {
+    // Image is wider - scale by width
+    scale = (canvasWidth * scaleFactor) / imageWidth;
+  } else {
+    // Image is taller - scale by height
+    scale = (canvasHeight * scaleFactor) / imageHeight;
+  }
+
+  // Ensure minimum scale for very large images
+  const minScale = 0.1;
+  const maxScale = 2.0; // Reduced max scale
+
+  return Math.max(minScale, Math.min(maxScale, scale));
+};
+
 async function loadScriptWithBackups(urls: string[], timeout = 15000) {
   let lastErr: any = null;
   for (const url of urls) {
     try {
-      // if already present, resolve quickly
       if (document.querySelector(`script[src="${url}"]`)) {
         console.info(`[loader] script already present: ${url}`);
         return;
@@ -150,17 +203,16 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
   const scheduledSessionRef = useRef<AdjustValues | null>(null);
   const panelVisibilityRef = useRef<boolean>(false);
   const menuBarListenerRef = useRef<((e: Event) => void) | null>(null);
+  const imageLoadedRef = useRef(false);
+  const resizeTimeoutRef = useRef<number | null>(null);
 
-  //const [searchParams] = useSearchParams();
-
-  const backendUrl = import.meta.env.VITE_API_URL; // Replace with your backend URL
+  const backendUrl = import.meta.env.VITE_API_URL;
   const urlParams = new URLSearchParams(location.search);
   const filePath = decodeURIComponent(urlParams.get("url") || "");
   const imageUrl = `${backendUrl}/api/proxy-image?path=${encodeURIComponent(
     filePath.replace(/^\/storage\//, "")
   )}`;
 
-  // track listeners attached to the adjust panel so we can remove them cleanly
   const panelListenersRef = useRef<
     Array<{
       el: Element;
@@ -169,7 +221,6 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
     }>
   >([]);
 
-  // session = temporary live adjustments (overlay, never baked)
   const [sessionValues, setSessionValues] = useState<AdjustValues>(
     DEFAULT_ADJUST_VALUES
   );
@@ -237,7 +288,6 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
           (f as any).__tui_session_marker = true;
           filters.push(f);
         } else {
-          // fallback color matrix
           const s = 1 + values.saturation;
           const lumR = 0.2126;
           const lumG = 0.7152;
@@ -402,9 +452,10 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
   );
 
   useEffect(() => {
+    if (!imageLoadedRef.current) return;
     scheduleApplySession(sessionValues);
     updatePanelUI(sessionValues);
-  }, [sessionValues]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [sessionValues, scheduleApplySession]);
 
   const resetSession = useCallback(() => {
     setSessionValues(DEFAULT_ADJUST_VALUES);
@@ -486,7 +537,6 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
       setSessionValues((prev) => {
         const next = { ...prev, [key]: value };
         scheduleApplySession(next);
-
         const panel = adjustPanelRef.current;
         if (panel) {
           const valueSpan = panel.querySelector(
@@ -498,10 +548,78 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
         return next;
       });
     },
-    []
-  ); // scheduleApplySession referenced through closure - acceptable
+    [scheduleApplySession]
+  );
 
-  // createAdjustPanel (single creation, UI updates read sessionRef)
+  // Enhanced image scaling and alignment function
+  const fixImageAspectRatio = useCallback(() => {
+    try {
+      const instance = instanceRef.current;
+      if (!instance) return;
+
+      const canvas = instance.graphics?.getCanvas();
+      if (!canvas || !canvas.backgroundImage) return;
+
+      const bgImg = canvas.backgroundImage;
+
+      // Save original image width and height once
+      if (!bgImg.originalWidth) {
+        bgImg.originalWidth = bgImg.width!;
+        bgImg.originalHeight = bgImg.height!;
+      }
+
+      const containerRect = editorRef.current?.getBoundingClientRect();
+      if (!containerRect) return;
+
+      const { canvasWidth, canvasHeight } = getResponsiveDimensions(
+        containerRect.width,
+        containerRect.height
+      );
+
+      const imgWidth = bgImg.originalWidth;
+      const imgHeight = bgImg.originalHeight;
+
+      // Calculate scale so that image fits perfectly without cropping or distortion
+      const scaleX = canvasWidth / imgWidth;
+      const scaleY = canvasHeight / imgHeight;
+      const scale = Math.min(scaleX, scaleY);
+
+      bgImg.set({
+        scaleX: scale,
+        scaleY: scale,
+        left: canvasWidth / 2,
+        top: canvasHeight / 2,
+        originX: "center",
+        originY: "center",
+        selectable: false,
+        evented: false,
+      });
+
+      // Resize canvas to container dimensions
+      canvas.setDimensions({ width: canvasWidth, height: canvasHeight });
+      canvas.renderAll();
+
+      console.info("Aspect ratio fix applied", {
+        canvasWidth,
+        canvasHeight,
+        scale,
+      });
+    } catch (e) {
+      console.warn("fixImageAspectRatio error:", e);
+    }
+  }, [instanceRef, editorRef]);
+
+  // Enhanced responsive resize handler
+  const handleResize = useCallback(() => {
+    if (resizeTimeoutRef.current) {
+      clearTimeout(resizeTimeoutRef.current);
+    }
+    resizeTimeoutRef.current = window.setTimeout(() => {
+      if (!instanceRef.current || !editorRef.current) return;
+      fixImageAspectRatio();
+    }, 150);
+  }, [fixImageAspectRatio]);
+
   const createAdjustPanel = useCallback(() => {
     if (!editorRef.current) return;
     if (!isAdjustPanelOpen) return;
@@ -523,21 +641,34 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
     adjustPanel.className = "tui-image-editor-adjust-panel";
     adjustPanel.setAttribute("role", "region");
     adjustPanel.setAttribute("aria-label", "Image Adjustments");
+
+    // Responsive panel width
+    const panelWidth = window.innerWidth < 768 ? "100%" : "280px";
+    const panelPosition = window.innerWidth < 768 ? "bottom" : "right";
+
     adjustPanel.style.cssText = `
-      position: absolute;
-      top: 0;
-      right: 0;
-      width: 280px;
-      height: 100%;
-      background: rgba(255, 255, 255, 0.95);
+      position: fixed;
+      ${
+        panelPosition === "bottom"
+          ? "bottom: 48px; left: 0; right: 0; max-height: 50vh; height: auto;"
+          : "top: 72px; right: 0; width: " +
+            panelWidth +
+            "; height: calc(100vh - 120px); max-height: calc(100vh - 120px);"
+      }
+      background: rgba(255, 255, 255, 0.98);
       backdrop-filter: blur(10px);
-      border-left: 1px solid #e0e0e0;
-      padding: 20px 16px;
+      border-${panelPosition === "bottom" ? "top" : "left"}: 1px solid #e0e0e0;
+      padding: 16px;
       box-sizing: border-box;
       overflow-y: auto;
-      z-index: 10000;
+      z-index: 100000;
+      pointer-events: auto;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      box-shadow: -2px 0 10px rgba(0,0,0,0.08);
+      box-shadow: ${
+        panelPosition === "bottom"
+          ? "0 -4px 20px rgba(0,0,0,0.15)"
+          : "-4px 0 20px rgba(0,0,0,0.15)"
+      };
     `;
 
     const panelContent = document.createElement("div");
@@ -571,14 +702,26 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
 
     const slidersContainer = panelContent.querySelector("#sliders-container")!;
     const adjustSliders = [
-      { key: "brightness", label: "Brightness", min: -1, max: 1, step: 0.01 },
-      { key: "contrast", label: "Contrast", min: -1, max: 1, step: 0.01 },
-      { key: "saturation", label: "Saturation", min: -1, max: 1, step: 0.01 },
-      { key: "highlights", label: "Highlights", min: -5, max: 5, step: 0.01 },
-      { key: "shadows", label: "Shadows", min: -5, max: 5, step: 0.01 },
-      { key: "whites", label: "Whites", min: -100, max: 100, step: 1 },
-      { key: "blacks", label: "Blacks", min: -100, max: 100, step: 1 },
-      { key: "hue", label: "Hue", min: -180, max: 180, step: 1 },
+      {
+        key: "brightness",
+        label: "Brightness",
+        min: -0.5,
+        max: 0.5,
+        step: 0.01,
+      },
+      { key: "contrast", label: "Contrast", min: -0.5, max: 0.5, step: 0.01 },
+      {
+        key: "saturation",
+        label: "Saturation",
+        min: -0.5,
+        max: 0.5,
+        step: 0.01,
+      },
+      { key: "highlights", label: "Highlights", min: -2, max: 2, step: 0.01 },
+      { key: "shadows", label: "Shadows", min: -2, max: 2, step: 0.01 },
+      { key: "whites", label: "Whites", min: -50, max: 50, step: 0.5 },
+      { key: "blacks", label: "Blacks", min: -50, max: 50, step: 0.5 },
+      { key: "hue", label: "Hue", min: -90, max: 90, step: 1 },
     ];
 
     adjustSliders.forEach(({ key, label, min, max, step }) => {
@@ -636,7 +779,7 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
       slidersContainer.appendChild(sliderDiv);
     });
 
-    // Add CSS block once
+    // Enhanced CSS for better mobile experience
     if (!document.getElementById("tui-adjust-style")) {
       const style = document.createElement("style");
       style.id = "tui-adjust-style";
@@ -683,11 +826,24 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
           background: #dee2e6;
           border-radius: 3px;
         }
+        
+        /* Mobile responsive adjustments */
+        @media (max-width: 768px) {
+          .tui-image-editor-adjust-panel {
+            max-height: 50vh;
+          }
+          .tui-image-editor-adjust-panel input[type="range"] {
+            height: 6px;
+          }
+          .tui-image-editor-adjust-panel input[type="range"]::-webkit-slider-thumb {
+            width: 20px;
+            height: 20px;
+          }
+        }
       `;
       document.head.appendChild(style);
     }
 
-    // Attach listeners for sliders (store them for cleanup)
     const adjustSlidersElements = slidersContainer.querySelectorAll(
       "input[type='range']"
     );
@@ -769,7 +925,6 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
       });
     }
 
-    // append and persist ref
     editorContainer.appendChild(adjustPanel);
     adjustPanelRef.current = adjustPanel;
     updatePanelUI(sessionRef.current);
@@ -795,7 +950,6 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
       );
       if (existingPanel) {
         try {
-          // remove event listeners explicitly first
           if (
             panelListenersRef.current &&
             panelListenersRef.current.length > 0
@@ -818,13 +972,32 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
     }
   }, [isAdjustPanelOpen, createAdjustPanel]);
 
-  // Main initialization & cleanup
+  const cleanupCanvasEvents = useCallback(() => {
+    try {
+      const canvas = instanceRef.current?._graphics?.getCanvas();
+      if (canvas) {
+        // Simplified cleanup
+      }
+    } catch (e) {
+      console.warn("Canvas event cleanup failed:", e);
+    }
+  }, []);
+
+  useEffect(() => {
+    window.addEventListener("resize", handleResize);
+    return () => {
+      window.removeEventListener("resize", handleResize);
+      if (resizeTimeoutRef.current) {
+        clearTimeout(resizeTimeoutRef.current);
+      }
+    };
+  }, [handleResize]);
+
   useEffect(() => {
     let resizeObs: ResizeObserver | null = null;
     let mounted = true;
 
     async function attemptImportPaths() {
-      // Try several import entrypoints that people use in different bundlers
       const tryPaths = [
         "tui-image-editor",
         "tui-image-editor/dist/tui-image-editor.esm.js",
@@ -835,7 +1008,6 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
           const mod = await import(/* @vite-ignore */ p);
           if (mod) return mod;
         } catch (e) {
-          // swallow and try next
           console.warn(`[import] failed for ${p}:`, e);
         }
       }
@@ -846,12 +1018,10 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
       setLoading(true);
       setError(null);
       try {
-        // load CSS first
         await loadCssWithBackups(TOAST_CSS_BACKUPS);
         await loadCssWithBackups(TOAST_COLOR_PICKER_CSS);
 
         let Constructor: any = undefined;
-        // 1) Try to import locally (best)
         try {
           const mod = await attemptImportPaths();
           Constructor =
@@ -864,9 +1034,7 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
           );
         }
 
-        // 2) If we don't have a constructor yet, load CDNs in correct order
         if (typeof Constructor !== "function") {
-          // Ensure fabric and helper libs loaded first (order matters)
           try {
             if (!window.fabric) {
               await loadScriptWithBackups([FABRIC_CDN], 20000);
@@ -897,21 +1065,12 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
             console.warn("[init] tui-color-picker load failed:", e);
           }
 
-          // finally load tui-image-editor
           await loadScriptWithBackups([TUI_IMAGE_EDITOR_CDN], 20000);
 
           Constructor =
             (window as any).tui?.ImageEditor ??
             (window as any).tui?.ImageEditor;
         }
-
-        // Diagnostic check
-        console.info("[init] globals after load:", {
-          fabric: !!window.fabric,
-          tui: !!window.tui,
-          tuiUtil: !!(window as any).tui?.util,
-          ImageEditor: !!(window as any).tui?.ImageEditor,
-        });
 
         if (typeof Constructor !== "function") {
           throw new Error("ImageEditor constructor not available");
@@ -963,73 +1122,119 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
           usageStatistics: false,
         });
 
-        // 🔧 Fix menubar alignment
+        // Apply image scaling with delays to ensure proper loading
+        setTimeout(() => fixImageAspectRatio(), 100);
+        setTimeout(() => fixImageAspectRatio(), 300);
+        setTimeout(() => fixImageAspectRatio(), 500);
+        setTimeout(() => fixImageAspectRatio(), 1000);
+
+        // Enhanced CSS for better alignment and responsive design
         if (!document.getElementById("tui-menu-alignment-fix")) {
           const style = document.createElement("style");
           style.id = "tui-menu-alignment-fix";
           style.textContent = `
-    .tui-image-editor .tui-image-editor-menu {
-      display: flex !important;
-      align-items: center !important;
-      gap: 6px;
-      height: 48px;
-      padding: 0 8px;
-      box-sizing: border-box;
-    }
-    .tui-image-editor-menu .tui-image-editor-menu-item {
-      display: inline-flex !important;
-      align-items: center !important;
-      height: 100% !important;
-      margin: 0 !important;
-      padding: 0 6px !important;
-      box-sizing: border-box !important;
-    }
-    .tui-image-editor-menu .tui-image-editor-button {
-      display: inline-flex !important;
-      align-items: center !important;
-      justify-content: center;
-      height: 100%;
-      padding: 8px 10px;
-      gap: 8px;
-      background: transparent;
-      border: none;
-      box-sizing: border-box;
-    }
-    .tui-image-editor-menu .tui-image-editor-menu-icon {
-      display: inline-flex !important;
-      align-items: center !important;
-      justify-content: center !important;
-      line-height: 0;
-      width: 20px;
-      height: 20px;
-    }
-    .tui-image-editor-menu .tui-image-editor-menu-icon img,
-    .tui-image-editor-menu .tui-image-editor-menu-icon svg {
-      width: 18px;
-      height: 18px;
-      display: block;
-      vertical-align: middle;
-    }
-    .tui-image-editor-menu .tui-image-editor-menu-title {
-      line-height: 1;
-      font-size: 12px;
-      display: inline-block;
-      vertical-align: middle;
-    }
-  `;
+            .tui-image-editor .tui-image-editor-menu {
+              display: flex !important;
+              align-items: center !important;
+              justify-content: center !important;
+              gap: 6px;
+              height: 48px;
+              padding: 0 8px;
+              box-sizing: border-box;
+            }
+            .tui-image-editor-menu .tui-image-editor-menu-item {
+              display: inline-flex !important;
+              align-items: center !important;
+              height: 100% !important;
+              margin: 0 !important;
+              padding: 0 6px !important;
+              box-sizing: border-box !important;
+            }
+            .tui-image-editor-menu .tui-image-editor-button {
+              display: inline-flex !important;
+              align-items: center !important;
+              justify-content: center;
+              height: 100%;
+              padding: 8px 10px;
+              gap: 8px;
+              background: transparent;
+              border: none;
+              box-sizing: border-box;
+            }
+            .tui-image-editor-menu .tui-image-editor-menu-icon {
+              display: inline-flex !important;
+              align-items: center !important;
+              justify-content: center !important;
+              line-height: 0;
+              width: 20px;
+              height: 20px;
+            }
+            .tui-image-editor-menu .tui-image-editor-menu-icon img,
+            .tui-image-editor-menu .tui-image-editor-menu-icon svg {
+              width: 18px;
+              height: 18px;
+              display: block;
+              vertical-align: middle;
+            }
+            .tui-image-editor-menu .tui-image-editor-menu-title {
+              line-height: 1;
+              font-size: 12px;
+              display: inline-block;
+              vertical-align: middle;
+            }
+            
+            /* Mobile responsive menu */
+            @media (max-width: 640px) {
+              .tui-image-editor .tui-image-editor-menu {
+                gap: 2px;
+                padding: 0 4px;
+              }
+              .tui-image-editor-menu .tui-image-editor-menu-item {
+                padding: 0 3px !important;
+              }
+              .tui-image-editor-menu .tui-image-editor-button {
+                padding: 6px 8px;
+                gap: 4px;
+              }
+              .tui-image-editor-menu .tui-image-editor-menu-icon {
+                width: 16px;
+                height: 16px;
+              }
+              .tui-image-editor-menu .tui-image-editor-menu-icon img,
+              .tui-image-editor-menu .tui-image-editor-menu-icon svg {
+                width: 16px;
+                height: 16px;
+              }
+              .tui-image-editor-menu .tui-image-editor-menu-title {
+                font-size: 10px;
+              }
+            }
+          `;
           document.head.appendChild(style);
         }
 
-        // Defensive: request willReadFrequently for canvas contexts
+        if (!document.getElementById("tui-hide-top-controls")) {
+          const style = document.createElement("style");
+          style.id = "tui-hide-top-controls";
+          style.textContent = `
+            .tui-image-editor-header {
+              display: none !important;
+            }
+            
+            .tui-image-editor-wrap {
+              top: 0 !important;
+            }
+          `;
+          document.head.appendChild(style);
+        }
+
         try {
           const fabricCanvas = instanceRef.current._graphics?.getCanvas();
           const trySetWillRead = (el: HTMLCanvasElement | null | undefined) => {
             if (!el) return;
             try {
               el.getContext("2d", { willReadFrequently: true });
-            } catch (e) {
-              // ignore if unsupported
-            }
+            } catch (e) {}
           };
           trySetWillRead(fabricCanvas?.lowerCanvasEl);
           trySetWillRead(fabricCanvas?.upperCanvasEl);
@@ -1041,96 +1246,29 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
             fabricCanvas.imageSmoothingEnabled = true;
             fabricCanvas.enableRetinaScaling = true;
 
-            // mouse wheel zoom
-            fabricCanvas.on("mouse:wheel", function (opt: any) {
-              const delta = opt.e.deltaY;
-              let zoom = fabricCanvas.getZoom();
-              zoom *= 0.999 ** delta;
-              if (zoom > 20) zoom = 20;
-              if (zoom < 0.01) zoom = 0.01;
-              fabricCanvas.zoomToPoint(
-                { x: opt.e.offsetX, y: opt.e.offsetY },
-                zoom
-              );
-              opt.e.preventDefault();
-              opt.e.stopPropagation();
-            });
-
-            // panning with Alt+drag
-            fabricCanvas.on("mouse:down", function (opt: any) {
-              const evt = opt.e;
-              if (evt.altKey === true) {
-                (fabricCanvas as any).isDragging = true;
-                fabricCanvas.selection = false;
-                (fabricCanvas as any).lastPosX = evt.clientX;
-                (fabricCanvas as any).lastPosY = evt.clientY;
-              }
-            });
-
-            fabricCanvas.on("mouse:move", function (opt: any) {
-              if ((fabricCanvas as any).isDragging) {
-                const e = opt.e;
-                const vpt = fabricCanvas.viewportTransform;
-                if (vpt) {
-                  vpt[4] += e.clientX - (fabricCanvas as any).lastPosX;
-                  vpt[5] += e.clientY - (fabricCanvas as any).lastPosY;
-                  fabricCanvas.requestRenderAll();
-                  (fabricCanvas as any).lastPosX = e.clientX;
-                  (fabricCanvas as any).lastPosY = e.clientY;
-                }
-              }
-            });
-
-            fabricCanvas.on("mouse:up", function () {
-              fabricCanvas.setViewportTransform(fabricCanvas.viewportTransform);
-              (fabricCanvas as any).isDragging = false;
-              fabricCanvas.selection = true;
-            });
-
-            // double click to reset zoom
-            fabricCanvas.on("mouse:dblclick", function () {
-              fabricCanvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
-              fabricCanvas.setZoom(1);
-            });
+            if (fabricCanvas.backgroundImage) {
+              fabricCanvas.backgroundImage.selectable = false;
+              fabricCanvas.backgroundImage.evented = false;
+            }
           }
         } catch (e) {
           console.warn("Canvas enhancement failed:", e);
         }
 
-        // Setup menu handling and canvas listeners after DOM settles
         setTimeout(() => {
           if (!editorRef.current || !instanceRef.current) return;
           setupMenuHandling();
           setupCanvasListeners();
         }, 600);
 
-        // Enhanced resize handling
-        const resizeFn = () => {
-          if (!instanceRef.current || !editorRef.current) return;
-          const rect = editorRef.current.getBoundingClientRect();
-          const width = Math.floor(rect.width);
-          const height = Math.floor(rect.height);
-
-          try {
-            instanceRef.current.ui?.resizeEditor?.({ width, height });
-
-            const canvas = instanceRef.current._graphics?.getCanvas();
-            if (canvas) {
-              canvas.setDimensions({
-                width: width - (panelVisibilityRef.current ? 280 : 0),
-                height: height - 60,
-              });
-              canvas.renderAll();
-            }
-          } catch (e) {
-            console.warn("Resize failed:", e);
-          }
-        };
-
+        // Enhanced resize observer
         resizeObs = new ResizeObserver(() => {
-          requestAnimationFrame(resizeFn);
+          handleResize();
         });
         if (editorRef.current) resizeObs.observe(editorRef.current);
+
+        // Also listen to window resize for better responsiveness
+        window.addEventListener("resize", handleResize);
 
         setLoading(false);
       } catch (err: any) {
@@ -1142,14 +1280,12 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
       }
     }
 
-    // Setup menu handling
     const setupMenuHandling = () => {
       const menuBar = editorRef.current?.querySelector(
         ".tui-image-editor-menu"
       ) as HTMLElement | null;
       if (!menuBar) return;
 
-      // Set icons for existing TUI menu items
       Object.entries(MENU_ICONS).forEach(([id, url]) => {
         const img = editorRef.current!.querySelector(
           `.tui-image-editor-menu [data-menu="${id}"] img`
@@ -1163,7 +1299,6 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
         }
       });
 
-      // Create or reuse adjust menu item
       if (!menuBar.querySelector('[data-menu="adjust"]')) {
         const li = document.createElement("li");
         li.setAttribute("data-menu", "adjust");
@@ -1175,27 +1310,18 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
         li.style.marginLeft = "6px";
 
         li.innerHTML = `
-              <button class="tui-image-editor-button tui-adjust-btn" title="Adjust" aria-label="Adjust" style=" display:inline-flex;align-items:center;border:none;background:transparent;border-radius:4px;transition:all 0.18s ease;color: #8a8a8a;">
-                <div class="tui-image-editor-menu-icon" style="display:inline-flex;align-items:center;justify-content:center;margin-right:6px;line-height:0;">
-                  <!-- inline SVG using currentColor so CSS color controls it -->
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false" style="display:block;">
-                    <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.5" fill="none"/>
-                    <path d="M12 1v6M12 17v6M4.22 4.22l4.24 4.24M15.54 15.54l4.24 4.24M1 12h6M17 12h6M4.22 19.78l4.24-4.24M15.54 8.46l4.24-4.24" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                  </svg>
-                </div>
-              </button>
-            `;
+          <button class="tui-image-editor-button tui-adjust-btn" title="Adjust" aria-label="Adjust" style="display:inline-flex;align-items:center;border:none;background:transparent;border-radius:4px;transition:all 0.18s ease;color: #8a8a8a;">
+            <div class="tui-image-editor-menu-icon" style="display:inline-flex;align-items:center;justify-content:center;margin-right:6px;line-height:0;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false" style="display:block;">
+                <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.5" fill="none"/>
+                <path d="M12 1v6M12 17v6M4.22 4.22l4.24 4.24M15.54 15.54l4.24 4.24M1 12h6M17 12h6M4.22 19.78l4.24-4.24M15.54 8.46l4.24-4.24" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+          </button>
+        `;
 
         menuBar.appendChild(li);
-        // 🔧 Normalize newly added menu item for alignment
-        li.style.display = "inline-flex";
-        li.style.alignItems = "center";
-        li.style.height = "100%";
-
         adjustMenuLiRef.current = li;
-
-        const imgEl = li.querySelector("img") as HTMLImageElement | null;
-        if (imgEl) imgEl.onerror = () => (imgEl.src = ICONS.adjust);
 
         const liClickHandler = (e: MouseEvent) => {
           e.preventDefault();
@@ -1238,17 +1364,6 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
         (menuBar as any).__tuiMenuHandlers =
           (menuBar as any).__tuiMenuHandlers || [];
         (menuBar as any).__tuiMenuHandlers.push(liClickHandler);
-      } else {
-        const existing = menuBar.querySelector(
-          '[data-menu="adjust"]'
-        ) as HTMLElement | null;
-        if (existing) {
-          adjustMenuLiRef.current = existing;
-          const imgEl = existing.querySelector(
-            "img"
-          ) as HTMLImageElement | null;
-          if (imgEl) imgEl.onerror = () => (imgEl.src = ICONS.adjust);
-        }
       }
 
       const delegatedHandler = (ev: Event) => {
@@ -1282,15 +1397,6 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
           }, 100);
         }
       };
-
-      try {
-        const existingHandlers = (menuBar as any).__tuiMenuHandlers || [];
-        existingHandlers.forEach((handler: any) => {
-          try {
-            menuBar.removeEventListener("click", handler, true);
-          } catch (e) {}
-        });
-      } catch (e) {}
 
       menuBar.addEventListener("click", delegatedHandler, true);
       (menuBar as any).__tuiMenuHandlers =
@@ -1384,9 +1490,14 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
     return () => {
       mounted = false;
 
+      if (resizeTimeoutRef.current) {
+        clearTimeout(resizeTimeoutRef.current);
+      }
+
+      window.removeEventListener("resize", handleResize);
+
       if (resizeObs && editorRef.current) resizeObs.disconnect();
 
-      // Remove menu listeners
       try {
         const menuBar = editorRef.current?.querySelector(
           ".tui-image-editor-menu"
@@ -1404,7 +1515,8 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
         console.warn("Menu cleanup failed:", e);
       }
 
-      // Remove canvas listeners
+      cleanupCanvasEvents();
+
       try {
         const canvas = instanceRef.current?._graphics?.getCanvas();
         if (canvas && canvasListenersRef.current) {
@@ -1424,7 +1536,6 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
         console.warn("Canvas cleanup failed:", e);
       }
 
-      // Destroy editor instance
       try {
         instanceRef.current?.destroy?.();
       } catch (e) {
@@ -1432,7 +1543,6 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
       }
       instanceRef.current = null;
 
-      // Remove panel listeners we attached earlier
       try {
         if (panelListenersRef.current && panelListenersRef.current.length > 0) {
           panelListenersRef.current.forEach(({ el, type, handler }) => {
@@ -1446,7 +1556,6 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
         console.warn("Panel listeners cleanup failed:", e);
       }
 
-      // Remove panel DOM
       try {
         const existingPanel = editorRef.current?.querySelector(
           ".tui-image-editor-adjust-panel"
@@ -1457,15 +1566,18 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
         console.warn("Panel cleanup failed:", e);
       }
 
-      // Cancel animation frames
       if (rafRef.current != null) {
         cancelAnimationFrame(rafRef.current);
         rafRef.current = null;
       }
       scheduledSessionRef.current = null;
     };
-    // run once
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [
+    fixImageAspectRatio,
+    cleanupCanvasEvents,
+    reapplySessionToCurrentTargets,
+    handleResize,
+  ]);
 
   return (
     <div
@@ -1473,19 +1585,51 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
         width: "100%",
         height: "100vh",
         position: "relative",
-        background: "#ffffff", // Set the background to white
+        background: "#ffffff",
         overflow: "hidden",
         display: "flex",
-        flexDirection: "column", // Stack header and editor vertically
+        flexDirection: "column",
       }}
     >
-      {/* Header Section */}
-      <header className="w-full bg-white px-4 py-3 flex justify-between items-center shadow-sm">
-        <div className="flex items-center gap-3">
-          {/* Back Button */}
+      {/* Header */}
+      <header
+        style={{
+          width: "100%",
+          background: "white",
+          padding: "12px 16px",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+          flexShrink: 0,
+          zIndex: 1000,
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
           <button
-            onClick={() => window.history.back()} // Navigate back to the previous page
-            className="flex items-center gap-1 text-gray-600 hover:text-gray-800"
+            onClick={() => window.history.back()}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "4px",
+              color: "#666",
+              background: "transparent",
+              border: "none",
+              cursor: "pointer",
+              fontSize: "14px",
+              fontWeight: "500",
+              padding: "6px 8px",
+              borderRadius: "4px",
+              transition: "all 0.2s ease",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = "#f5f5f5";
+              e.currentTarget.style.color = "#333";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = "transparent";
+              e.currentTarget.style.color = "#666";
+            }}
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -1493,7 +1637,7 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
               viewBox="0 0 24 24"
               strokeWidth={1.5}
               stroke="currentColor"
-              className="w-5 h-5"
+              style={{ width: "20px", height: "20px" }}
             >
               <path
                 strokeLinecap="round"
@@ -1501,23 +1645,41 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
                 d="M15.75 19.5L8.25 12l7.5-7.5"
               />
             </svg>
-            <span className="text-sm font-medium">Back</span>
+            <span>Back</span>
           </button>
-          <img src="/slfg.svg" alt="Selfie Gram Logo" className="w-13 ml-4" />
-          <h1 className="text-xs font-bold tracking-widest hidden md:block">
-            SELFIEGRAM PHOTO EDITOR POWERED BY TOAST UI
+          <img
+            src="/slfg.svg"
+            alt="Selfie Gram Logo"
+            style={{ width: "52px", marginLeft: "8px" }}
+          />
+          <h1
+            style={{
+              fontSize: "10px",
+              fontWeight: "bold",
+              letterSpacing: "0.08em",
+              margin: 0,
+              color: "#333",
+              whiteSpace: "nowrap",
+            }}
+            className="editor-title"
+          >
+            SELFIEGRAM PHOTO EDITOR
           </h1>
         </div>
       </header>
 
-      {/* Editor Section */}
+      {/* Editor Content */}
       <div
         style={{
-          flex: 1, // Take up the remaining space
+          flex: 1,
           display: "flex",
           justifyContent: "center",
           alignItems: "center",
-          padding: "16px",
+          padding: "0",
+          width: "100%",
+          minHeight: 0,
+          position: "relative",
+          overflow: "hidden",
         }}
       >
         {loading && (
@@ -1602,22 +1764,204 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
             width: "100%",
             height: "100%",
             position: "relative",
-            borderRadius: "12px",
             overflow: "hidden",
-            boxShadow: "0 8px 32px rgba(0,0,0,0.1)",
           }}
         />
       </div>
 
       <style>{`
-        @keyframes spin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
-        }
-        .tui-image-editor-menu-item-active {
-          background: #f0f8ff !important;
-        }
-      `}</style>
+  * {
+    box-sizing: border-box;
+  }
+  
+  body {
+    overflow: hidden !important;
+  }
+  
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+  
+  .tui-image-editor-menu-item-active {
+    background: #f0f8ff !important;
+  }
+  
+  /* Enhanced container sizing and responsiveness */
+  .tui-image-editor-container {
+    height: 100% !important;
+    width: 100% !important;
+    overflow: hidden !important;
+  }
+  
+  .tui-image-editor-wrap {
+    height: 100% !important;
+    width: 100% !important;
+    top: 0 !important;
+    bottom: 0 !important;
+    overflow: hidden !important;
+  }
+  
+  .tui-image-editor-main {
+    position: relative !important;
+    height: calc(100vh - 120px) !important;
+    width: 100% !important;
+    overflow: hidden !important;
+    padding: 10px !important;
+    box-sizing: border-box !important;
+    margin-bottom: 4px !important;
+  }
+  
+  .tui-image-editor {
+    height: 100% !important;
+    width: 100% !important;
+    overflow: hidden !important;
+  }
+  
+  /* Enhanced canvas sizing and centering */
+  .tui-image-editor .lower-canvas,
+  .tui-image-editor .upper-canvas {
+    max-width: 100% !important;
+    max-height: 100% !important;
+    object-fit: contain !important;
+  }
+  
+  /* Improved canvas background centering */
+  .tui-image-editor-main-container {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 100% !important;
+    height: 100% !important;
+    position: relative !important;
+  }
+
+  .tui-image-editor .lower-canvas-container {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 100% !important;
+    height: 100% !important;
+    position: relative !important;
+  }
+
+  canvas.lower-canvas,
+  canvas.upper-canvas {
+    position: absolute !important;
+    left: 50% !important;
+    top: 50% !important;
+    transform: translate(-50%, -50%) !important;
+  }
+  
+  /* Ensure bottom menu stays at bottom and is centered */
+  .tui-image-editor-menu-wrap {
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    height: 48px !important;
+    z-index: 0 !important;
+    background: #ffffff !important;
+    border-top: 1px solid #e5e5e5 !important;
+    pointer-events: auto !important;
+  }
+
+  /* Fix submenu positioning - must be ABOVE menu */
+  .tui-image-editor-submenu {
+    position: fixed !important;
+    bottom: 48px !important;
+    left: 0 !important;
+    right: 0 !important;
+    max-height: 50vh !important;
+    z-index: 99998 !important;
+    pointer-events: auto !important;
+    background: #1e1e1e !important;
+  }
+  
+  /* Remove scrollbar from body */
+  ::-webkit-scrollbar {
+    width: 0px !important;
+    height: 0px !important;
+  }
+  
+  /* Enhanced responsive adjustments */
+  @media (max-width: 768px) {
+    .editor-title {
+      display: none !important;
+    }
+    
+    /* Mobile canvas adjustments */
+    .tui-image-editor-main-container {
+      padding: 4px !important;
+    }
+  }
+  
+  @media (min-width: 769px) and (max-width: 1024px) {
+    .editor-title {
+      font-size: 9px !important;
+    }
+  }
+  
+  /* Enhanced mobile menu responsiveness */
+  @media (max-width: 640px) {
+    .tui-image-editor-menu {
+      font-size: 11px !important;
+      height: 44px !important;
+    }
+    
+    .tui-image-editor-menu-icon {
+      width: 16px !important;
+      height: 16px !important;
+    }
+    
+    .tui-image-editor-menu-title {
+      display: none !important;
+    }
+  }
+  
+  /* Very small screens */
+  @media (max-width: 480px) {
+    .tui-image-editor-menu {
+      height: 40px !important;
+    }
+    
+    .tui-image-editor-menu .tui-image-editor-button {
+      padding: 4px 6px !important;
+    }
+  }
+  
+  /* High DPI displays */
+  @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 2dppx) {
+    .tui-image-editor .lower-canvas,
+    .tui-image-editor .upper-canvas {
+      image-rendering: -webkit-optimize-contrast !important;
+      image-rendering: optimize-contrast !important;
+    }
+  }
+
+
+  /* CRITICAL: Prevent any submenu from covering the bottom menu bar */
+  .tui-image-editor-submenu-style,
+  .tui-image-editor-partition > div {
+    max-height: calc(100vh - 100px) !important;
+    bottom: 48px !important;
+  }
+
+  /* Make sure adjust panel never covers menu */
+  .tui-image-editor-adjust-panel {
+    position: fixed !important;
+    bottom: 48px !important;
+    z-index: 100000 !important;
+    pointer-events: auto !important;
+  }
+
+  /* Ensure built-in submenus also stay above menu */
+  .tui-colorpicker-clearfix,
+  .tui-image-editor-help-menu {
+    bottom: 48px !important;
+    max-height: calc(100vh - 100px) !important;
+  }
+`}</style>
     </div>
   );
 };
