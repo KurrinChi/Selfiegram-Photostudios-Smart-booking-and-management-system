@@ -147,12 +147,6 @@ class TransactionController extends Controller
             $maxBookingId = DB::table('booking')->max('bookingID') ?? 0;
             $newBookingId = $maxBookingId + 1;
 
-            // Prepare studio selection data
-            $studioSelection = null;
-            if ($request->has('studio_selection') && $request->studio_selection) {
-                $studioSelection = json_encode($request->studio_selection);
-            }
-
             // Create booking record (manually setting bookingID)
             DB::table('booking')->insert([
                 'bookingID' => $newBookingId,
@@ -173,21 +167,59 @@ class TransactionController extends Controller
                 'paymentStatus' => $paymentStatus,
                 'status' => $bookingStatus, // Use calculated status: 1 = pending approval (no payment), 2 = confirmed (with payment)
                 'date' => Carbon::now()->toDateString(),
-                'studio_selection' => $studioSelection,
+                'studio_selection' => null,
                 'addons_total' => $addonsTotal
             ]);
+
+            // Store studio selection (plain backdrop or concept) in booking_concepts table
+            if ($request->has('studio_selection') && $request->studio_selection) {
+                $studioSelection = $request->studio_selection;
+                
+                // Determine conceptID based on studio selection
+                $conceptID = null;
+                
+                if (isset($studioSelection['type'])) {
+                    if ($studioSelection['type'] === 'studioA') {
+                        // Plain backdrop - map color label to conceptID
+                        $colorMap = [
+                            'WHITE' => 104,
+                            'GRAY' => 105,
+                            'BLACK' => 106,
+                            'PINK' => 107,
+                            'BEIGE' => 108,
+                            'LAVENDER' => 109
+                        ];
+                        $label = strtoupper($studioSelection['label'] ?? '');
+                        $conceptID = $colorMap[$label] ?? null;
+                    } elseif ($studioSelection['type'] === 'studioB') {
+                        // Concept studio - map concept label to conceptID
+                        $conceptMap = [
+                            'CHINGU PINK' => 100,
+                            'BOHEMIAN DREAM' => 101,
+                            'SPOTLIGHT' => 102
+                        ];
+                        $label = strtoupper($studioSelection['label'] ?? '');
+                        $conceptID = $conceptMap[$label] ?? null;
+                    }
+                }
+                
+                // Insert into booking_concepts if we have a valid conceptID
+                if ($conceptID) {
+                    DB::table('booking_concepts')->insert([
+                        'bookingID' => $newBookingId,
+                        'conceptID' => $conceptID
+                    ]);
+                }
+            }
 
             // Store add-ons data if any
             if (!empty($addonsData)) {
                 foreach ($addonsData as $addon) {
-                    DB::table('booking_addons')->insert([
-                        'booking_id' => $newBookingId,
-                        'addon_id' => $addon['addon_id'],
+                    DB::table('booking_add_ons')->insert([
+                        'bookingID' => $newBookingId,
+                        'addOnID' => $addon['addon_id'],
                         'quantity' => $addon['quantity'],
-                        'price' => $addon['price'],
-                        'total' => $addon['total'],
-                        'created_at' => Carbon::now(),
-                        'updated_at' => Carbon::now()
+                        'price' => $addon['price']
                     ]);
                 }
             }
@@ -329,8 +361,8 @@ class TransactionController extends Controller
     $formattedEndTime = $this->formatTimeTo12Hour($booking->end_time);
 
         // Get booking addons
-        $addons = DB::table('booking_addons')
-            ->where('booking_id', $bookingId)
+        $addons = DB::table('booking_add_ons')
+            ->where('bookingID', $bookingId)
             ->get()
             ->toArray();
 

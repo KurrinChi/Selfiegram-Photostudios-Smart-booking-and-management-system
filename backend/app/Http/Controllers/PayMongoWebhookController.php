@@ -180,9 +180,6 @@ class PayMongoWebhookController extends Controller
         $maxBookingId = DB::table('booking')->max('bookingID') ?? 0;
         $newBookingId = $maxBookingId + 1;
         
-        // Prepare studio selection
-        $studioSelection = isset($bookingData['studio_selection']) ? json_encode($bookingData['studio_selection']) : null;
-        
         // Calculate payment fields
         $total = $bookingData['total'];
         $paymentType = $bookingData['payment_type'];
@@ -211,27 +208,63 @@ class PayMongoWebhookController extends Controller
             'paymentStatus' => $paymentStatus,
             'status' => $bookingStatus,
             'date' => now()->toDateString(),
-            'studio_selection' => $studioSelection,
+            'studio_selection' => null,
             'addons_total' => $bookingData['addons_total']
         ]);
+        
+        // Store studio selection (plain backdrop or concept) in booking_concepts table
+        if (isset($bookingData['studio_selection'])) {
+            $studioSelection = $bookingData['studio_selection'];
+            
+            // Determine conceptID based on studio selection
+            $conceptID = null;
+            
+            if (isset($studioSelection['type'])) {
+                if ($studioSelection['type'] === 'studioA') {
+                    // Plain backdrop - map color label to conceptID
+                    $colorMap = [
+                        'WHITE' => 104,
+                        'GRAY' => 105,
+                        'BLACK' => 106,
+                        'PINK' => 107,
+                        'BEIGE' => 108,
+                        'LAVENDER' => 109
+                    ];
+                    $label = strtoupper($studioSelection['label'] ?? '');
+                    $conceptID = $colorMap[$label] ?? null;
+                } elseif ($studioSelection['type'] === 'studioB') {
+                    // Concept studio - map concept label to conceptID
+                    $conceptMap = [
+                        'CHINGU PINK' => 100,
+                        'BOHEMIAN DREAM' => 101,
+                        'SPOTLIGHT' => 102
+                    ];
+                    $label = strtoupper($studioSelection['label'] ?? '');
+                    $conceptID = $conceptMap[$label] ?? null;
+                }
+            }
+            
+            // Insert into booking_concepts if we have a valid conceptID
+            if ($conceptID) {
+                DB::table('booking_concepts')->insert([
+                    'bookingID' => $newBookingId,
+                    'conceptID' => $conceptID
+                ]);
+            }
+        }
         
         // Store add-ons if any
         if (isset($bookingData['addons']) && is_array($bookingData['addons'])) {
             foreach ($bookingData['addons'] as $addon) {
                 if (isset($addon['value']) && $addon['value'] > 0) {
                     $addonPrice = isset($addon['price']) ? (float)$addon['price'] : 0;
-                    $addonType = isset($addon['type']) ? $addon['type'] : 'spinner';
                     $quantity = (int)$addon['value'];
-                    $addonTotal = $addonType === 'spinner' ? $addonPrice * $quantity : $addonPrice;
                     
-                    DB::table('booking_addons')->insert([
-                        'booking_id' => $newBookingId,
-                        'addon_id' => $addon['id'],
+                    DB::table('booking_add_ons')->insert([
+                        'bookingID' => $newBookingId,
+                        'addOnID' => $addon['id'],
                         'quantity' => $quantity,
-                        'price' => $addonPrice,
-                        'total' => $addonTotal,
-                        'created_at' => now(),
-                        'updated_at' => now()
+                        'price' => $addonPrice
                     ]);
                 }
             }
