@@ -1,7 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
+import { DayPicker } from "react-day-picker";
+import "react-day-picker/dist/style.css";
 import ChatWidget from "./ChatWidget";
 import { Menu, Plus, X, Search } from "lucide-react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import ModalTransactionDialog from "../components/ModalTransactionDialog";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
 
@@ -42,11 +44,23 @@ const ClientAppointmentsPageContent = () => {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [currentMonth, setCurrentMonth] = useState(new Date());
+  // Selected date for sidebar DayPicker
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [showSidebar, setShowSidebar] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const navigate = useNavigate();
   const [profilePicture, setProfilePicture] = useState<string | null>(null);
-  const [searchParams, setSearchParams] = useSearchParams();
+  // helper to compute week of month similar to admin sidebar
+  const getWeekOfMonth = (date: Date) => {
+    const first = new Date(date.getFullYear(), date.getMonth(), 1);
+    return Math.ceil((date.getDate() + first.getDay()) / 7);
+  };
+  // quick lookup for days that have appointments (YYYY-MM-DD)
+  const appointmentDates = useMemo(() => {
+    const set = new Set<string>();
+    appointments.forEach(a => set.add(a.date));
+    return set;
+  }, [appointments]);
   
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
@@ -121,15 +135,7 @@ const ClientAppointmentsPageContent = () => {
   };
 
   fetchAppointments();
-  
-  // Check if coming back from payment
-  const paymentStatus = searchParams.get('payment');
-  if (paymentStatus === 'success') {
-    console.log('Payment completed! Data will refresh automatically.');
-    // Clean up URL parameter
-    setSearchParams({});
-  }
-  }, [searchParams, setSearchParams]);
+  }, []);
 
   const getMonthDays = (date: Date) => {
     const year = date.getFullYear();
@@ -225,7 +231,7 @@ const ClientAppointmentsPageContent = () => {
       </div>
     );
   }
-  
+
   return (
     <div className="flex flex-col lg:flex-row h-[calc(100vh-64px)] overflow-hidden font-sf relative">
       {/* Toggle Button for Mobile */}
@@ -349,9 +355,9 @@ const ClientAppointmentsPageContent = () => {
 
       {/* Sidebar */}
       <div
-        className={`fixed top-0 right-0 z-50 h-full w-72 bg-white border-l shadow-md transform transition-transform duration-300 ease-in-out
+        className={`fixed top-0 right-0 z-50 h-full w-80 bg-white border-l shadow-md transform transition-transform duration-300 ease-in-out
       ${showSidebar ? "translate-x-0" : "translate-x-full"} 
-      lg:static lg:translate-x-0 lg:w-[300px]`}
+      lg:static lg:translate-x-0 lg:w-[360px] xl:w-[380px]`}
       >
         <div className="p-4 flex flex-col h-full">
           <button
@@ -360,19 +366,63 @@ const ClientAppointmentsPageContent = () => {
           >
             <X className="w-5 h-5" />
           </button>
+          {/* Sidebar content with unified spacing */}
+          <div className="flex flex-col gap-5 flex-1 overflow-hidden">
+          {/* Enhanced Selected Date Header */}
+          <div className="rounded-lg border border-gray-200 bg-white p-3 pb-2 shadow-sm">
+            <h2 className="text-xs md:text-sm font-semibold tracking-wide">
+              Selected: {selectedDate.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
+            </h2>
+            <p className="text-[11px] md:text-xs text-gray-500 mt-0.5 leading-snug">
+              Week {getWeekOfMonth(selectedDate)} of {selectedDate.toLocaleString('default', { month: 'long' })}
+            </p>
+          </div>
+          {/* Enlarged & Centered DayPicker (synced with main calendar) */}
+          <div className="rounded-lg border border-gray-200 bg-white shadow-sm" style={{ filter: "grayscale(100%)" }}>
+            <div className="w-full aspect-square p-1 flex items-center justify-center">
+              <DayPicker
+                mode="single"
+                month={currentMonth}
+                onMonthChange={(m) => setCurrentMonth(m)}
+                selected={selectedDate}
+                onSelect={(date) => {
+                  if (date) {
+                    setSelectedDate(date);
+                    setCurrentMonth(new Date(date.getFullYear(), date.getMonth(), 1));
+                  }
+                }}
+                showOutsideDays
+                captionLayout="label"
+                modifiers={{
+                  hasAppt: (d) => appointmentDates.has(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`)
+                }}
+                classNames={{
+                  caption: "text-[5px] text-black mb-1 font-medium",
+                  day: "text-xs relative",
+                  nav_button: "text-black hover:bg-gray-100 p-1 rounded",
+                  nav_icon: "stroke-black fill-black w-4 h-4",
+                }}
+                modifiersClassNames={{
+                  selected: "bg-gray-800 text-white",
+                  today: "font-bold text-black bg-gray-100 rounded-xl",
+                  hasAppt: "after:content-[''] after:w-1.5 after:h-1.5 after:bg-indigo-500 after:rounded-full after:absolute after:bottom-0 after:left-1/2 after:-translate-x-1/2"
+                }}
+              />
+            </div>
+          </div>
 
           <button
             onClick={() => navigate("/client/packages")}
-            className="bg-black text-white px-4 py-2 rounded-md shadow mb-4 hover:opacity-90"
+            className="bg-black text-white px-4 py-2 rounded-md shadow hover:opacity-90"
           >
             <Plus className="w-4 h-4 inline mr-1" /> Add New Booking
           </button>
 
-          <div className="relative mb-3">
+          <div className="relative">
             <input
               type="text"
               placeholder="Search by date, name, or package"
-              className="w-full px-3 py-2 text-sm border rounded-md pl-10"
+              className="w-full px-3 py-2 text-xs border rounded-md pl-10"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -380,59 +430,59 @@ const ClientAppointmentsPageContent = () => {
           </div>
 
           {/* Scheduled Photoshoots Section */}
-<div className="font-semibold mb-2">Scheduled Photoshoots</div>
-{appointments.some((a) => [2, 3, 4].includes(a.rawStatus)) ? (
-  <div className="space-y-4 overflow-y-auto">
-    {filteredAppointments.map((a, i) => {
-      if ([2, 3, 4].includes(a.rawStatus)) {
-        return (
-          <div
-            key={i}
-            className="flex items-start gap-3 cursor-pointer hover:bg-gray-100 p-2 rounded-lg"
-            onClick={() => {
-              setSelectedAppointment(a);
-              setShowSidebar(false);
-            }}
-          >
-            {profilePicture ? (
-              <img
-                src={profilePicture}
-                alt="Profile"
-                className="w-8 h-8 rounded-full object-cover border border-gray-300"
-                onError={(e) => {
-                  e.currentTarget.src = "/fallback.png";
-                }}
-              />
-            ) : (
-              <div className="w-8 h-8 rounded-full bg-gray-300" />
-            )}
-            <div className="text-xs text-gray-700">
-              <div className="font-bold">{getBookingLabel(Number(a.id), a.package)}</div>
-              <div className="text-[11px]">
-                {formatDate(a.date)} at {formatTime(a.time)}
-              </div>
-              <div className="text-[11px] leading-tight">
-                3rd Floor Kim Kar Building F Estrella St., Malolos, Philippines
-              </div>
-              <div className="text-[11px] italic mt-1">Name: {a.name}</div>
+          <div className="font-semibold text-sm">Scheduled Photoshoots</div>
+          {appointments.some((a) => [2, 3, 4].includes(a.rawStatus)) ? (
+            <div className="space-y-4 overflow-y-auto pr-1">
+              {filteredAppointments.map((a, i) => {
+                if ([2, 3, 4].includes(a.rawStatus)) {
+                  return (
+                    <div
+                      key={i}
+                      className="flex items-start gap-2 cursor-pointer hover:bg-gray-100 p-2 rounded-lg"
+                      onClick={() => {
+                        setSelectedAppointment(a);
+                        setShowSidebar(false);
+                      }}
+                    >
+                      {profilePicture ? (
+                        <img
+                          src={profilePicture ?? ''}
+                          alt="Profile"
+                          className="w-8 h-8 rounded-full object-cover border border-gray-300"
+                          onError={(e) => {
+                            e.currentTarget.src = "/fallback.png";
+                          }}
+                        />
+                      ) : (
+                        <div className="w-8 h-8 rounded-full bg-gray-300" />
+                      )}
+                      <div className="text-[11px] text-gray-700 leading-tight">
+                        <div className="font-semibold text-[11px]">{getBookingLabel(Number(a.id), a.package)}</div>
+                        <div className="text-[10px]">
+                          {formatDate(a.date)} at {formatTime(a.time)}
+                        </div>
+                        <div className="text-[10px] leading-tight">
+                          3rd Floor Kim Kar Building F Estrella St., Malolos, Philippines
+                        </div>
+                        <div className="text-[10px] italic mt-1">Name: {a.name}</div>
+                      </div>
+                    </div>
+                  );
+                }
+                return null;
+              })}
             </div>
-          </div>
-        );
-      }
-      return null;
-    })}
-  </div>
-) : (
-  <div className="text-center text-gray-500 mt-4">
-  No scheduled photoshoot appointments yet.{" "}Begin your booking{" "}
-  <button
-    onClick={() => navigate("/client/packages")}
-    className="text-gray-700 underline hover:text-blue-700 transition"
-  >
-     now!
-  </button>
-</div>
-)}
+          ) : (
+            <div className="text-center text-gray-500 text-xs">
+              No scheduled photoshoot appointments yet. Begin your booking {""}
+              <button
+                onClick={() => navigate("/client/packages")}
+                className="text-gray-700 underline hover:text-blue-700 transition text-xs"
+              >
+                now!
+              </button>
+            </div>
+          )}
 
         </div>
       </div>
@@ -466,6 +516,7 @@ const ClientAppointmentsPageContent = () => {
       />
     )}
       <ChatWidget />
+    </div>
     </div>
   );
 };

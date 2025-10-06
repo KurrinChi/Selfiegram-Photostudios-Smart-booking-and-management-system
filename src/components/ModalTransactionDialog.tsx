@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { format, parse } from "date-fns";
 import QRCode from "react-qr-code";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
 import ModalRequestedDialog from "./ModalRequestedDialog";
 import ModalOnRequestDialog from "./ModalOnRequestDialog";
 import ModalRescheduleDialog from "./ModalRescheduleDialog";
-import { id } from "date-fns/locale";
 import { toast } from "react-toastify";
 import ModalRequestedDialogReschedule from "./ModalRequestedDialogReschedule";
 import ModalRescheduleRequestedDialog from "./ModalRescheduleRequestedDialog";
@@ -199,76 +199,7 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
     setHasSelectedRating(true);
   };
 
-  const handleCancelSubmit = (reason: string) => {
-    // TODO: call API to process cancellation
-    if (!data) return;
-
-    setCancelData({
-      id: data.id,
-      reason,
-      bookingDate: data.bookingDate,
-      bookingTime: data.time,
-      transactionDate: data.transactionDate,
-      bookingId: data.id,
-      totalAmount: data.total, // or total refund logic
-      packageName: data.package,
-    });
-
-    setIsCancelModalOpen(false); // close modal
-    setIsRequestedModalOpen(true);
-  };
-
-  const handleRescheduleSubmit = async (
-    reason: string,
-    requestedDate: string,
-    requestedStartTime: string
-  ) => {
-    if (!data) return;
-
-    try {
-      const user_id = localStorage.getItem("userID") || "";
-
-      // Send the reschedule request to the backend
-      const res = await fetch(
-        `http://192.168.1.214:8000/api/booking-request/reschedule`,
-        {
-          method: "POST",
-          body: JSON.stringify({
-            bookingID: data.id,
-            userID: user_id,
-            reason,
-            requestedDate,
-            requestedStartTime,
-          }),
-        }
-      );
-
-      if (!res.ok) throw new Error("Failed to submit reschedule request");
-
-      const responseData = await res.json();
-
-      // Update the state with the response data
-      setRescheduleData({
-        id: data.id,
-        reason,
-        bookingDate: requestedDate,
-        bookingTime: requestedStartTime,
-        transactionDate: new Date().toISOString().split("T")[0],
-        bookingId: data.id,
-        totalAmount: data.subtotal,
-        packageName: data.package,
-      });
-
-      toast.success(
-        responseData.message || "Reschedule request submitted successfully!"
-      );
-      setIsRescheduleModalOpen(false); // Close the reschedule modal
-      setIsRequestedModalOpen(true); // Open the confirmation modal
-    } catch (err) {
-      console.error("Error submitting reschedule request:", err);
-      toast.error("Error submitting reschedule request. Please try again.");
-    }
-  };
+  // Removed unused local handlers (handleCancelSubmit, handleRescheduleSubmit) after refactor.
 
   const handleCompletePayment = async () => {
     if (!data) return;
@@ -349,8 +280,8 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
   }, [isOpen, data]);
   if (!isOpen || !data) return null;
 
-  return (
-    <div className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm transition-opacity duration-300 flex justify-center items-center p-4">
+  const overlay = (
+    <div className="fixed inset-0 z-[100] bg-black/40 backdrop-blur-sm transition-opacity duration-300 flex justify-center items-center p-4">
       {/* ModalOnRequestDialog goes here, always rendered but controlled via isOpen */}
       <ModalOnRequestDialog
         isOpen={isCancelModalOpen}
@@ -524,12 +455,16 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
         }}
       />
       <div
-        className={`bg-white text-gray-900 rounded-lg shadow-md overflow-y-auto max-h-[95vh] ${
-          data.paymentStatus === 1 && data.status === 2
-            ? "max-w-5xl w-full flex"
-            : "max-w-xl w-full p-6"
-        }`}
+        className="bg-white text-gray-900 rounded-lg shadow-xl overflow-y-auto max-h-[95vh] w-full max-w-xl p-6 relative"
       >
+        {/* Close button (optional) */}
+        <button
+          onClick={onClose}
+          className="absolute top-3 right-3 text-gray-400 hover:text-gray-600"
+          aria-label="Close"
+        >
+          ✕
+        </button>
         {/* Header Container */}
         {Number(data.status) === 3 && cancelRequest && (
           <div className="p-6 rounded-2xl bg-gray-100 mb-4">
@@ -856,21 +791,33 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
           </div>
         )}
 
+        {/* Unified layout (previous style) */}
         {data.paymentStatus === 1 && data.status === 2 ? (
           <>
-            {/* Left Panel */}
-            <div className="w-full md:w-2/3 p-6">
-              <h1 className="text-lg font-bold mb-1">{data.package}</h1>
-              <div className="grid grid-cols-2 text-sm gap-y-1 mb-6">
-                <p className="text-sm text-gray-500 mb-4">
+            {/* QR Code at top */}
+            <div className="w-full mb-6">
+              <div className="bg-gray-100 rounded-xl p-5 flex flex-col items-center justify-center border border-gray-200 shadow-inner">
+                <div className="w-56 h-56 md:w-64 md:h-64 border-2 border-dashed border-gray-300 rounded-xl flex items-center justify-center bg-white">
+                  <QRCode
+                    value={`${RECEIPT_URL}/receipt/booking/${data.id}`}
+                    size={220}
+                  />
+                </div>
+                {/* Optional subtle helper text (hidden for now) */}
+                {/* <p className="mt-3 text-xs text-gray-500">Present this QR code for receipt verification</p> */}
+              </div>
+            </div>
+            <div className="w-full">
+              <h1 className="text-base font-bold mb-1">{data.package}</h1>
+              <div className="grid grid-cols-2 text-xs gap-y-1 mb-4">
+                <p className="text-xs text-gray-500 mb-3">
                   Booking ID: {getBookingLabel(data.id, data.package)}
                 </p>
-                <p className="text-sm text-gray-500 mb-4">
+                <p className="text-xs text-gray-500 mb-3">
                   Transaction Date: {formatDate(data.transactionDate)}
                 </p>
               </div>
-
-              <div className="grid grid-cols-2 text-sm gap-y-1 mb-6">
+              <div className="grid grid-cols-2 text-xs gap-y-1 mb-5">
                 <span className="text-gray-500">Name</span>
                 <span>{data.customerName}</span>
                 <span className="text-gray-500">Email</span>
@@ -880,9 +827,8 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
                 <span className="text-gray-500">Contact No.</span>
                 <span>{data.contact}</span>
               </div>
-
-              <h2 className="font-semibold mb-2">Order Summary</h2>
-              <div className="text-sm mb-2">
+              <h2 className="font-semibold mb-1 text-sm">Order Summary</h2>
+              <div className="text-xs mb-2">
                 {data.package}
                 <span className="float-right font-semibold">
                   ₱{data.subtotal.toFixed(2)}
@@ -908,9 +854,9 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
                 </div>
               )}
 
-              <div className="grid grid-cols-2 gap-4 text-sm mb-4">
+              <div className="grid grid-cols-2 gap-4 text-xs mb-3">
                 <div>
-                  <label className="text-gray-500 block text-xs mb-1">
+                  <label className="text-gray-500 block text-[10px] mb-1">
                     Booking Date
                   </label>
                   <input
@@ -934,7 +880,7 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
                   />
                 </div>
                 <div>
-                  <label className="text-gray-500 block text-xs mb-1">
+                  <label className="text-gray-500 block text-[10px] mb-1">
                     Booking Time
                   </label>
                   <input
@@ -944,8 +890,7 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
                   />
                 </div>
               </div>
-
-              <div className="text-sm mb-4">
+              <div className="text-xs mb-3">
                 <div className="flex justify-between">
                   <span>Total</span>
                   <span>
@@ -972,7 +917,7 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
 
               {Number(data.status) === 1 ? (
                 <>
-                  <div className="mb-6 text-sm">
+                  <div className="mb-4 text-xs">
                     <label
                       className="block font-medium mb-1"
                       htmlFor="feedback"
@@ -988,8 +933,7 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
                       rows={4}
                     />
                   </div>
-
-                  <div className="mb-4 text-sm">
+                  <div className="mb-3 text-xs">
                     <span className="block font-medium mb-1">Rating</span>
                     <div className="flex gap-1">
                       {Array.from({ length: 5 }, (_, i) => (
@@ -1042,7 +986,7 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
                 </button>
               </div>
 
-              <div className="flex justify-between">
+              <div className="flex justify-between mt-2">
                 <button
                   onClick={onClose}
                   className="px-6 py-2 border rounded-md text-sm hover:bg-gray-100"
@@ -1059,27 +1003,11 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
                 )}
               </div>
             </div>
-
-            {/* QR Code Panel */}
-            {data.paymentStatus === 1 && data.status === 2 ? (
-              <div className="hidden md:flex w-1/3 items-center justify-center bg-gray-100 p-4 border-l border-gray-200">
-                <div className="w-full flex flex-col items-center justify-center">
-                  <div className="w-full aspect-square max-w-xs border-2 border-dashed border-gray-400 rounded-lg flex items-center justify-center">
-                    <span className="text-gray-400 text-center text-sm p-4">
-                      <QRCode
-                        value={`${RECEIPT_URL}/receipt/booking/${data.id}`}
-                        size={256}
-                      />
-                    </span>
-                  </div>
-                </div>
-              </div>
-            ) : null}
           </>
         ) : (
           <div>
             <h1 className="text-lg font-bold mb-1">{data.package}</h1>
-            <div className="grid grid-cols-2 text-sm gap-y-1 mb-6">
+            <div className="grid grid-cols-2 text-xs gap-y-1 mb-5">
               <p className="text-sm text-gray-500 mb-4">
                 Booking ID: {getBookingLabel(data.id, data.package)}
               </p>
@@ -1087,8 +1015,7 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
                 Transaction Date: {formatDate(data.transactionDate)}
               </p>
             </div>
-
-            <div className="grid grid-cols-2 text-sm gap-y-1 mb-6">
+            <div className="grid grid-cols-2 text-xs gap-y-1 mb-5">
               <span className="text-gray-500">Name</span>
               <span>{data.customerName}</span>
               <span className="text-gray-500">Email</span>
@@ -1098,9 +1025,8 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
               <span className="text-gray-500">Contact No.</span>
               <span>{data.contact}</span>
             </div>
-
-            <h2 className="font-semibold mb-2">Order Summary</h2>
-            <div className="text-sm mb-2">
+            <h2 className="font-semibold mb-1 text-sm">Order Summary</h2>
+            <div className="text-xs mb-2">
               {data.package}
               <span className="float-right font-semibold">
                 ₱{data.subtotal.toFixed(2)}
@@ -1126,11 +1052,11 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
               </div>
             )}
 
-            <div className="grid grid-cols-2 gap-4 text-sm mb-4">
+            <div className="grid grid-cols-2 gap-4 text-xs mb-3">
               {/* Previous Booking Date */}
               {rescheduleRequest?.status !== "approved" && (
               <div>
-                <label className="text-gray-500 block text-xs mb-1">Booking Date</label>
+                <label className="text-gray-500 block text-[10px] mb-1">Booking Date</label>
                 <input
                   disabled
                   value={
@@ -1152,7 +1078,7 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
               {/* Previous Booking Time */}
               {rescheduleRequest?.status !== "approved" && (
                   <div>
-                    <label className="text-gray-500 block text-xs mb-1">Booking Time</label>
+                    <label className="text-gray-500 block text-[10px] mb-1">Booking Time</label>
                     <input
                       disabled
                       value={data.time}
@@ -1165,7 +1091,7 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
               {rescheduleRequest?.requestedDate && (
                 <div>
                   <label
-                    className={`block text-xs mb-1 ${
+                    className={`block text-[10px] mb-1 ${
                       rescheduleRequest.status === "pending"
                         ? "text-gray-500"
                         : rescheduleRequest.status === "declined"
@@ -1211,7 +1137,7 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
                 rescheduleRequest?.requestedEndTime && (
                   <div>
                     <label
-                      className={`block text-xs mb-1 ${
+                      className={`block text-[10px] mb-1 ${
                         rescheduleRequest.status === "pending"
                           ? "text-gray-500"
                           : rescheduleRequest.status === "declined"
@@ -1238,7 +1164,7 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
                 )}
             </div>
 
-            <div className="text-sm mb-4">
+            <div className="text-xs mb-3">
               <div className="flex justify-between">
                 <span>Total</span>
                 <span>₱{data.total.toFixed(2)}</span>
@@ -1282,7 +1208,7 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
 
             {data.status === 1 ? (
               <>
-                <div className="mb-6 text-sm">
+                <div className="mb-4 text-xs">
                   <label className="block font-medium mb-1" htmlFor="feedback">
                     Feedback
                   </label>
@@ -1296,7 +1222,7 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
                   />
                 </div>
 
-                <div className="mb-4 text-sm">
+                <div className="mb-3 text-xs">
                   <span className="block font-medium mb-1">Rating</span>
                   <div className="flex gap-1">
                     {Array.from({ length: 5 }, (_, i) => (
@@ -1330,7 +1256,7 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
               </div>
             ) : null}
 
-            <div className="flex justify-between">
+            <div className="flex justify-between mt-2">
               <button
                 onClick={onClose}
                 className="px-6 py-2 border rounded-md text-sm hover:bg-gray-100"
@@ -1351,6 +1277,8 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
       </div>
     </div>
   );
+
+  return createPortal(overlay, document.body);
 };
 
 export default TransactionModal;
