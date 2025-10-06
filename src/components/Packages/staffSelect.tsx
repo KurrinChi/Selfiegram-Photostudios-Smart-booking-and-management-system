@@ -201,8 +201,6 @@ const SelectPackagePage = () => {
 
   const [setData, setSetData] = useState<PackageSet | null>(null);
 
-
-
   /*const hasPlain = !!setData?.concepts?.some(
       (c) => (c.type || "").toString().toLowerCase() === "plain"
     );*/
@@ -256,7 +254,7 @@ const SelectPackagePage = () => {
     const fetchAddOns = async () => {
       try {
         const res = await fetchWithAuth(
-          `${API_URL}/ap/staff/packages/${id}/addons`
+          `${API_URL}/api/staff/packages/${id}/addons`
         );
         if (!res.ok) throw new Error("Failed to fetch add-ons");
 

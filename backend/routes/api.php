@@ -388,7 +388,7 @@
         Route::put('/users/{id}', [UserController::class, 'update']);
     });
 
-    // Protected routes (user must be logged in) ADMIN
+    // Protected routes (user must be logged in) ADMIN and STAFF same access
     Route::middleware(['auth:sanctum', 'role:Admin,Staff'])->group(function () {
 
         //admin user management
