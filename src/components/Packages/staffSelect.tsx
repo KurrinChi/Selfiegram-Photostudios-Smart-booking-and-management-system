@@ -9,7 +9,7 @@ import "react-toastify/dist/ReactToastify.css";
 import { motion, AnimatePresence } from "framer-motion";
 import type { Tag } from "../../types";
 import type { SelectedAddon } from "../../typeSelect";
-import TransactionModalBooking from "../ModalTransactionDialogBooking";
+import TransactionModalBooking from "../StaffModalTransactionDialogBooking";
 
 interface AddOn {
   id: string;
@@ -129,6 +129,7 @@ interface PreviewBookingData {
   packageDuration?: string; // added for modal end-time display
   packageDurationMinutes?: number; // numeric duration for direct use
   predictedEndLabel?: string; // precomputed end time label
+  staffName?: string; // staff name for emergency purposes
 }
 
 const API_URL = import.meta.env.VITE_API_URL;
@@ -143,6 +144,7 @@ const SelectPackagePage = () => {
   const [contact, setContact] = useState("");
   const [email, setEmail] = useState("");
   const [address, setAddress] = useState("");
+  const [staffName, setStaffName] = useState("");
   const [paymentMode] = useState("");
   const [agreed, setAgreed] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -182,28 +184,7 @@ const SelectPackagePage = () => {
 
   const [setData, setSetData] = useState<PackageSet | null>(null);
 
-  // Prefill personal details from authenticated user
-  useEffect(() => {
-    const prefillUser = async () => {
-      try {
-        const userID = localStorage.getItem("userID");
-        if (!userID) return;
-        const res = await fetchWithAuth(`${API_URL}/api/users/${userID}`);
-        if (!res.ok) return;
-        const u = await res.json();
-        // Build a display name; fall back as needed
-        const displayName =
-          [u.fname, u.lname].filter(Boolean).join(" ") || u.username || "";
-        setName((prev) => (prev ? prev : displayName));
-        setEmail((prev) => (prev ? prev : u.email || ""));
-        setContact((prev) => (prev ? prev : u.contactNo || ""));
-        setAddress((prev) => (prev ? prev : u.address || ""));
-      } catch (e) {
-        console.warn("Could not prefill user details:", e);
-      }
-    };
-    prefillUser();
-  }, []);
+
 
   /*const hasPlain = !!setData?.concepts?.some(
       (c) => (c.type || "").toString().toLowerCase() === "plain"
@@ -736,6 +717,7 @@ const SelectPackagePage = () => {
       !contact ||
       !email ||
       !address ||
+      !staffName ||
       !pkg
     ) {
       toast.error("Please fill in all required fields");
@@ -828,6 +810,7 @@ const SelectPackagePage = () => {
       packageDuration: pkg.duration, // pass raw duration so modal can compute end time without refetch race
       packageDurationMinutes: effectivePackageDuration,
       predictedEndLabel,
+      staffName: staffName,
     };
 
     setPreviewData(preview);
@@ -1601,7 +1584,7 @@ const SelectPackagePage = () => {
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Name"
+              placeholder="Customer Name"
               className="w-full px-4 py-3 rounded bg-neutral-800 border border-neutral-700 text-sm placeholder-gray-400"
             />
             <input
@@ -1631,6 +1614,12 @@ const SelectPackagePage = () => {
               onChange={(e) => setAddress(e.target.value)}
               placeholder="Address"
               className="w-full px-4 py-3 rounded bg-neutral-800 border border-neutral-700 text-sm placeholder-gray-400"
+            />
+            <input
+              value={staffName}
+              onChange={(e) => setStaffName(e.target.value)}
+              placeholder="Staff Name"
+              className="w-full px-4 py-3 rounded bg-neutral-800 border border-neutral-700 text-sm placeholder-gray-400 md:col-span-2"
             />
           </div>
 
@@ -1701,6 +1690,7 @@ const SelectPackagePage = () => {
         tags={tags}
         addons={addOns}
         selectedAddons={selectedAddons}
+        staffName={staffName}
       />
 
       {/* Toast Container */}

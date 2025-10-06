@@ -435,8 +435,11 @@ class PackageController extends Controller
             $packageData = [
                 'name' => $request->input('title'),
                 'duration' => $request->input('duration'),
+                'base_price' => $request->input('price'),
                 'price' => $request->input('price'),
                 'description' => $request->input('description'),
+                'discount' => 0,
+                'is_discounted' => 0,
                 'status' => 1, // default to active
             ];
 
