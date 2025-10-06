@@ -104,25 +104,133 @@ class AppointmentController extends Controller
 
     public function rescheduleAppointment(Request $request)
     {
-        $bookingId = $request->input('id');
+        // --- Simplified implementation ---
+        $bookingId   = $request->input('id');
         $bookingDate = $request->input('bookingDate');
-        $startTime = $request->input('startTime');
-        $endTime = $request->input('endTime');
+        $startInput  = $request->input('startTime');
+        $previousTimeRange = $request->input('previousTimeRange'); // e.g. "1:00 PM - 1:15 PM"
+        $previousStart     = $request->input('previousStartTime');
+        $previousEnd       = $request->input('previousEndTime');
+        $explicitMinutes   = $request->input('originalDurationMinutes') ?? $request->input('desiredDurationMinutes') ?? $request->input('intendedDurationMinutes');
+        $directDuration    = $request->input('durationMinutes'); // new explicit override
+        $returnDebug       = filter_var($request->input('debugDuration'), FILTER_VALIDATE_BOOL);
+        $reasons = [];
+
+        if (!$bookingId || !$bookingDate || !$startInput) {
+            return response()->json(['message' => 'Missing required fields (id, bookingDate, startTime)'], 422);
+        }
+
+        $booking = DB::table('booking')->where('bookingID', $bookingId)->first();
+        if (!$booking) return response()->json(['message' => 'Booking not found'], 404);
+        $package = DB::table('packages')->where('packageID', $booking->packageID)->first();
+
+        $parsedStart = $this->normalizeAndParseTime($startInput);
+        if (!$parsedStart) return response()->json(['message' => 'Invalid start time format'], 422);
+
+        // Helper closure to compute duration (seconds) from 2 labels
+        $compute = function($a,$b) use (&$reasons){
+            if(!$a || !$b){ $reasons[] = 'compute: missing one endpoint'; return 0; }
+            $pa = $this->normalizeAndParseTime($a); $pb = $this->normalizeAndParseTime($b);
+            if (!$pa || !$pb) { $reasons[] = 'compute: parse failed '.$a.' '.$b; return 0; }
+            $sa=strtotime($pa); $sb=strtotime($pb);
+            if ($sa===false||$sb===false){ $reasons[]='compute: strtotime false'; return 0; }
+            if ($sb<=$sa){ $reasons[]='compute: non-positive interval'; return 0; }
+            return $sb-$sa;
+        };
+
+        $durationSeconds = 0; $durationSource = null;
+
+        // Priority 0: directDuration override (highest authority)
+        if (is_numeric($directDuration)) {
+            $dd = (int)$directDuration;
+            if ($dd>0 && $dd<=8*60) {
+                $durationSeconds = $dd*60; $durationSource='durationMinutes_param';
+                $reasons[]='Used durationMinutes direct override';
+            } else {
+                $reasons[]='durationMinutes invalid range';
+            }
+        }
+
+        // Priority 1: previousTimeRange
+        if (!$durationSeconds && $previousTimeRange && is_string($previousTimeRange)) {
+            $norm = trim(str_replace(["–","—","−"],'-',$previousTimeRange));
+            // Collapse multiple spaces
+            $norm = preg_replace('/\s+/', ' ', $norm);
+            // Ensure spaces around dash for consistent split
+            $norm = preg_replace('/\s?-\s?/', ' - ', $norm);
+            $parts = explode(' - ', $norm);
+            if (count($parts)===2) {
+                $tmp = $compute($parts[0], $parts[1]);
+                if ($tmp>0) { $durationSeconds=$tmp; $durationSource='previousTimeRange'; $reasons[]='Derived from previousTimeRange'; }
+                else $reasons[]='previousTimeRange produced non-positive';
+            } else {
+                $reasons[]='previousTimeRange split parts != 2 (norm: '.$norm.')';
+            }
+        }
+        // Priority 2: previousStartTime + previousEndTime
+        if (!$durationSeconds && ($previousStart||$previousEnd)) {
+            $tmp = $compute($previousStart,$previousEnd);
+            if ($tmp>0) { $durationSeconds=$tmp; $durationSource='previousStartEnd'; $reasons[]='Derived from previousStart/End'; }
+            else $reasons[]='previousStart/End failed to derive duration';
+        }
+        // Priority 3: explicit minutes field provided
+        if (!$durationSeconds && is_numeric($explicitMinutes)) {
+            $m = (int)$explicitMinutes; if ($m>0 && $m<=8*60) { $durationSeconds = $m*60; $durationSource='explicitMinutes'; }
+            else $reasons[]='explicitMinutes invalid';
+        }
+        // Priority 4: stored booking duration
+        if (!$durationSeconds && $booking->bookingStartTime && $booking->bookingEndTime) {
+            $s = strtotime($booking->bookingStartTime); $e=strtotime($booking->bookingEndTime);
+            if ($s!==false && $e!==false && $e>$s) { $durationSeconds=$e-$s; $durationSource='storedBooking'; $reasons[]='Used stored booking duration'; }
+            else $reasons[]='stored booking duration invalid';
+        }
+        // Priority 5: package duration
+        if (!$durationSeconds) {
+            $pm = $this->parseDurationToMinutes($package->duration ?? '') ?: 60; // fallback 60
+            $durationSeconds = $pm*60; $durationSource='packageFallback'; $reasons[]='Fallback to package duration';
+        }
+        // Safety minimum 5 min
+        if ($durationSeconds < 300) { $durationSeconds = 300; $reasons[]='Raised to 5min minimum'; if(!$durationSource) $durationSource='minFallback'; }
+
+        $parsedEnd = date('H:i:s', strtotime($parsedStart) + $durationSeconds);
+
+        // Basic overlap check
+        $overlap = DB::table('booking')
+            ->where('bookingDate', $bookingDate)
+            ->where('bookingID','<>',$bookingId)
+            ->where(function($q) use ($parsedStart,$parsedEnd){
+                $q->whereBetween('bookingStartTime',[$parsedStart,$parsedEnd])
+                  ->orWhereBetween('bookingEndTime',[$parsedStart,$parsedEnd])
+                  ->orWhere(function($q2) use ($parsedStart,$parsedEnd){
+                      $q2->where('bookingStartTime','<=',$parsedStart)
+                          ->where('bookingEndTime','>=',$parsedEnd);
+                  });
+            })
+            ->exists();
+    if ($overlap) return response()->json(['message'=>'Selected time range overlaps with another booking'],409);
 
         $updated = DB::table('booking')
-            ->where('bookingID', $bookingId)
+            ->where('bookingID',$bookingId)
             ->update([
                 'bookingDate' => $bookingDate,
-                'bookingStartTime' => $startTime,
-                'bookingEndTime' => $endTime,
-                'status' => 2, // Optional: reset to Pending on reschedule
+                'bookingStartTime' => $parsedStart,
+                'bookingEndTime' => $parsedEnd,
+                'status' => 2,
             ]);
 
-        if ($updated) {
-            return response()->json(['message' => 'Appointment rescheduled successfully'], 200);
-        } else {
-            return response()->json(['message' => 'Failed to reschedule appointment'], 400);
-        }
+        $resp = [
+            'message' => $updated ? 'Rescheduled with preserved duration' : 'No change (values identical) - duration applied',
+            'data' => [
+                'id' => $bookingId,
+                'bookingDate' => $bookingDate,
+                'startTime' => $parsedStart,
+                'endTime' => $parsedEnd,
+                'durationMinutes' => round($durationSeconds/60,2),
+                'durationSource' => $durationSource,
+            ]
+        ];
+        if ($returnDebug) { $resp['data']['reasons'] = $reasons; }
+        return response()->json($resp, 200);
     }
 
 
@@ -216,6 +324,64 @@ class AppointmentController extends Controller
 
     return response()->json($appointments);
 }
+
+    /* -----------------------------------------
+       Helper: parse flexible 12h/24h time labels
+       ----------------------------------------- */
+    private function normalizeAndParseTime(?string $label): ?string
+    {
+        if (!$label) return null;
+        $label = trim($label);
+
+        // If already looks like 24h HH:MM(:SS)
+        if (preg_match('/^([01]?\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/', $label)) {
+            // Ensure HH:MM:SS
+            if (strlen($label) === 5) $label .= ':00';
+            return $label;
+        }
+
+        $normalized = strtoupper(preg_replace('/\s+/', ' ', $label));
+        $formats = ['h:i A','g:i A','h:iA','g:iA'];
+        foreach ($formats as $fmt) {
+            $dt = \DateTime::createFromFormat($fmt, $normalized);
+            if ($dt instanceof \DateTime) {
+                return $dt->format('H:i:s');
+            }
+        }
+        // Loose parse like "2 PM" or "2:5 PM"
+        if (preg_match('/^(\d{1,2})(?::(\d{1,2}))?\s*(AM|PM)$/i', $normalized, $m)) {
+            $h = (int)$m[1]; $min = isset($m[2]) ? (int)$m[2] : 0; $ampm = strtoupper($m[3]);
+            if ($h>=1 && $h<=12 && $min>=0 && $min<=59) {
+                if ($ampm==='PM' && $h!==12) $h += 12; if ($ampm==='AM' && $h===12) $h = 0;
+                return sprintf('%02d:%02d:00',$h,$min);
+            }
+        }
+        return null;
+    }
+
+    private function parseDurationToMinutes(?string $raw): int
+    {
+        if (!$raw) return 0;
+        $s = strtolower(trim($raw));
+        if (preg_match('/^\d+$/', $s)) return (int)$s; // pure minutes
+        $total = 0;
+        if (preg_match('/(\d+)\s*(hour|hr|hrs|h)/', $s, $m)) { $total += ((int)$m[1])*60; }
+        if (preg_match('/(\d+)\s*(minute|min|mins|m)/', $s, $m2)) { $total += (int)$m2[1]; }
+        if ($total === 0) {
+            // Fallback: capture first two numbers
+            if (preg_match_all('/(\d+)/', $s, $nums) && isset($nums[1])) {
+                $ints = $nums[1];
+                if (str_contains($s,'hour') || str_contains($s,'hr') || str_contains($s,'h')) {
+                    $total += ((int)$ints[0]) * 60;
+                    if (isset($ints[1])) $total += (int)$ints[1];
+                } else {
+                    $total = (int)$ints[0];
+                }
+            }
+        }
+        return $total;
+    }
+
 
     /**
      * Get unavailable dates for booking

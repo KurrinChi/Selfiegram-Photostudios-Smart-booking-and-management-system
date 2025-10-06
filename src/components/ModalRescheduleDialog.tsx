@@ -5,10 +5,17 @@ import { DayPicker } from "react-day-picker";
 import "react-day-picker/dist/style.css";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
 
+interface RescheduleSubmitPayload {
+  reason: string;
+  requestedDate: string;
+  requestedStartTime: string; // HH:MM (24h)
+  durationMinutes?: number;
+}
+
 interface ModalRescheduleDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (reason: string, requestedDate: string, requestedStartTime: string) => void;
+  onSubmit: (payload: RescheduleSubmitPayload) => void;
   bookingID: number; // Add bookingID prop
   userID: number; // Add userID prop
   // Optional current package/session duration (e.g., "1 hr 30 mins" or "90 mins"). If not supplied we'll attempt to fetch.
@@ -335,7 +342,14 @@ const ModalRescheduleDialog: React.FC<ModalRescheduleDialogProps> = ({
     console.log("================================");
 
     // Call parent onSubmit with correct arguments
-    onSubmit(reason.trim(), requestedDate, formattedTime);
+    // Pass along duration so backend preserves original session length
+    // We extend onSubmit contract by embedding duration via a side-channel (will adapt parent handler accordingly)
+    (onSubmit as any)({
+      reason: reason.trim(),
+      requestedDate,
+      requestedStartTime: formattedTime,
+      durationMinutes: sessionDurationMinutes,
+    });
     onClose();
   };
 

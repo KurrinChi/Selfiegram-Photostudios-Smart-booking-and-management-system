@@ -400,14 +400,19 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
             ? Number(localStorage.getItem("userID"))
             : 0
         }
-        onSubmit={async (reason, requestedDate, requestedStartTime) => {
+        onSubmit={async (payload: any) => {
           try {
+            const { reason, requestedDate, requestedStartTime, durationMinutes } = payload || {};
             const user_id = localStorage.getItem("userID") || "";
-            console.log("API_URL:", API_URL);
-            console.log(
-              "Fetch URL:",
-              `${API_URL}/api/booking-request/reschedule`
-            );
+            const apiPayload = {
+              bookingID: data?.id ?? "",
+              userID: user_id,
+              requestedDate,
+              requestedStartTime,
+              reason,
+              durationMinutes, // new override param
+            };
+            console.log('[Reschedule] Submitting payload', apiPayload);
             const res = await fetchWithAuth(
               `${API_URL}/api/booking-request/reschedule`,
               {
@@ -415,19 +420,14 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
                 headers: {
                   "Content-Type": "application/json",
                 },
-                body: JSON.stringify({
-                  bookingID: data?.id ?? "",
-                  userID: user_id,
-                  requestedDate,
-                  requestedStartTime,
-                  reason,
-                }),
+                body: JSON.stringify(apiPayload),
               }
             );
 
             if (!res.ok) throw new Error("Failed to submit reschedule request");
 
             const responseData = await res.json();
+            console.log('[Reschedule] Response', responseData);
 
             // ✅ Save reschedule data for confirmation dialog
             if (!data) return;
@@ -448,6 +448,7 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
             setIsRescheduleModalOpen(false);
             setIsRequestedModalOpen(true);
           } catch (err) {
+            console.error('[Reschedule] Error submitting request', err);
             toast.error(
               "Error submitting reschedule request. Please try again."
             );
