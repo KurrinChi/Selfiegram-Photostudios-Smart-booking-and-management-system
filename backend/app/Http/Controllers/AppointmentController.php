@@ -40,6 +40,10 @@ class AppointmentController extends Controller
             ->join('packages', 'booking.packageID', '=', 'packages.packageID')
             ->join('users', 'booking.userID', '=', 'users.userID')
             ->leftJoin('transaction', 'transaction.bookingId', '=', 'booking.bookingID')
+            ->leftJoin('booking_add_ons as ba', 'booking.bookingID', '=', 'ba.bookingID')
+            ->leftJoin('package_add_ons as ao', 'ba.addOnID', '=', 'ao.addOnID')
+            ->leftJoin('booking_concepts as bc', 'booking.bookingID', '=', 'bc.bookingID')
+            ->leftJoin('package_concept as pc', 'bc.conceptID', '=', 'pc.conceptID')
             ->select(
                 'booking.bookingID as id',
                 'booking.customerName',
@@ -52,6 +56,7 @@ class AppointmentController extends Controller
                 'booking.bookingDate',
                 'transaction.date as transactionDate',
                 'booking.status',
+                'booking.paymentStatus',
                 'booking.receivedAmount as payment',
                 'booking.rem as balance',
                 'booking.total as subtotal',
@@ -60,9 +65,38 @@ class AppointmentController extends Controller
                 'booking.feedback',
                 'booking.rating',
                 DB::raw("CONCAT(booking.bookingStartTime, ' - ', booking.bookingEndTime) as time"),
-                DB::raw("IF(booking.status = 1, 'Done', IF(booking.status = 2, 'Pending', 'Cancelled')) as status")
+                DB::raw("IF(booking.status = 1, 'Done', IF(booking.status = 2, 'Pending', 'Cancelled')) as statusLabel"),
+                DB::raw("COALESCE(
+                    GROUP_CONCAT(DISTINCT CONCAT(ao.addOn, ' x', ba.quantity, ' (₱', FORMAT(ba.quantity * ba.price, 2), ')') SEPARATOR ', '),
+                    ''
+                ) AS selectedAddOns"),
+                DB::raw("COALESCE(
+                    GROUP_CONCAT(DISTINCT pc.backdrop SEPARATOR ', '),
+                    ''
+                ) AS selectedConcepts")
             )
             ->where('booking.status', '<>', 0)
+            ->groupBy(
+                'booking.bookingID',
+                'booking.customerName',
+                'users.email',
+                'users.address',
+                'users.contactNo',
+                'packages.name',
+                'packages.price',
+                'packages.duration',
+                'booking.bookingDate',
+                'transaction.date',
+                'booking.status',
+                'booking.paymentStatus',
+                'booking.receivedAmount',
+                'booking.rem',
+                'booking.total',
+                'booking.bookingStartTime',
+                'booking.bookingEndTime',
+                'booking.feedback',
+                'booking.rating'
+            )
             ->get();
 
         return response()->json($appointments);

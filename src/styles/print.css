@@ -9,26 +9,32 @@
     line-height: 1.4 !important;
     color: #000 !important;
     background: white !important;
+    letter-spacing: normal !important;
   }
 
   .dashboard-report * {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
+    letter-spacing: normal !important;
   }
 
   .dashboard-report h1 {
     font-size: 24px !important;
     margin-bottom: 10px !important;
+    letter-spacing: normal !important;
   }
 
   .dashboard-report h2 {
     font-size: 18px !important;
     margin-bottom: 8px !important;
+    letter-spacing: normal !important;
   }
 
   .dashboard-report h3 {
     font-size: 16px !important;
     margin-bottom: 8px !important;
+    margin-top: 12px !important;
+    letter-spacing: normal !important;
   }
 
   .dashboard-report p {
@@ -41,14 +47,18 @@
     border-collapse: collapse !important;
     margin-bottom: 15px !important;
     page-break-inside: auto !important;
+    table-layout: auto !important;
+    letter-spacing: normal !important;
   }
 
   .dashboard-report th,
   .dashboard-report td {
     border: 1px solid #000 !important;
-    padding: 6px !important;
+    padding: 6px 8px !important;
     font-size: 10px !important;
     line-height: 1.2 !important;
+    letter-spacing: normal !important;
+    white-space: normal !important;
   }
 
   .dashboard-report th {
@@ -116,6 +126,11 @@
   background: white !important;
   box-shadow: none !important;
   font-family: 'Arial', sans-serif !important;
+  letter-spacing: normal !important;
+}
+
+.dashboard-report.pdf-export * {
+  letter-spacing: normal !important;
 }
 
 .dashboard-report.pdf-export h1 {
@@ -136,6 +151,8 @@
 .dashboard-report.pdf-export table {
   font-size: 11px !important;
   border: 1px solid #333 !important;
+  table-layout: auto !important;
+  letter-spacing: normal !important;
 }
 
 .dashboard-report.pdf-export th {
@@ -147,4 +164,7 @@
 .dashboard-report.pdf-export td {
   border: 1px solid #333 !important;
   color: #212529 !important;
+  padding: 6px 8px !important;
+  letter-spacing: normal !important;
+  white-space: normal !important;
 }

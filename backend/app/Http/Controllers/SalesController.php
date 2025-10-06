@@ -12,7 +12,11 @@ class SalesController extends Controller
         $results = DB::table('transaction')
         ->join('booking', 'transaction.bookingId', '=', 'booking.bookingID')
         ->join('packages', 'booking.packageID', '=', 'packages.packageID')
-        ->join('users', 'booking.userID', '=', 'users.userID') // Join users table to get customer details
+        ->join('users', 'booking.userID', '=', 'users.userID')
+        ->leftJoin('booking_add_ons as ba', 'booking.bookingID', '=', 'ba.bookingID')
+        ->leftJoin('package_add_ons as ao', 'ba.addOnID', '=', 'ao.addOnID')
+        ->leftJoin('booking_concepts as bc', 'booking.bookingID', '=', 'bc.bookingID')
+        ->leftJoin('package_concept as pc', 'bc.conceptID', '=', 'pc.conceptID')
         ->select(
             'booking.bookingID as transactionID',
             'booking.customerName as customerName',
@@ -22,20 +26,50 @@ class SalesController extends Controller
             'booking.date as transactionDate',
             'booking.feedback',
             'booking.rating',
+            'booking.status',
             DB::raw("CONCAT(booking.bookingStartTime, ' - ', booking.bookingEndTime) as time"),
             DB::raw('booking.receivedAmount as downPayment'),
             'booking.rem as balance',
             'transaction.total as totalAmount',
+            'transaction.paymentStatus',
             DB::raw("
                 CASE
                     WHEN booking.status IN (3) THEN 'Cancelled'
                     WHEN transaction.paymentStatus = 1 THEN 'Completed'
                     ELSE 'Pending'
-                END as paymentStatus
+                END as paymentStatusLabel
             "),
             'users.email as customerEmail',
             'users.address as customerAddress',
-            'users.contactNo as customerContactNo'
+            'users.contactNo as customerContactNo',
+            DB::raw("COALESCE(
+                GROUP_CONCAT(DISTINCT CONCAT(ao.addOn, ' x', ba.quantity, ' (₱', FORMAT(ba.quantity * ba.price, 2), ')') SEPARATOR ', '),
+                ''
+            ) AS selectedAddOns"),
+            DB::raw("COALESCE(
+                GROUP_CONCAT(DISTINCT pc.backdrop SEPARATOR ', '),
+                ''
+            ) AS selectedConcepts")
+        )
+        ->groupBy(
+            'booking.bookingID',
+            'booking.customerName',
+            'packages.name',
+            'packages.price',
+            'booking.bookingDate',
+            'booking.date',
+            'booking.feedback',
+            'booking.rating',
+            'booking.status',
+            'booking.bookingStartTime',
+            'booking.bookingEndTime',
+            'booking.receivedAmount',
+            'booking.rem',
+            'transaction.total',
+            'transaction.paymentStatus',
+            'users.email',
+            'users.address',
+            'users.contactNo'
         )
         ->orderByRaw('transactionID')
         ->get();

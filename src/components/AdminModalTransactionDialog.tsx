@@ -1,5 +1,9 @@
-import React from "react";
+import React, { useState } from "react";
 import { format, parse } from "date-fns";
+import { fetchWithAuth } from "../utils/fetchWithAuth";
+import { toast } from "react-toastify";
+
+const API_URL = import.meta.env.VITE_API_URL;
 
 interface TransactionModalProps {
   isOpen: boolean;
@@ -19,7 +23,12 @@ interface TransactionModalProps {
     balance: number;
     feedback: string;
     rating: number; // 0–5
+    status: number;
+    paymentStatus: number;
+    selectedAddOns?: string;
+    selectedConcepts?: string;
   } | null;
+  onSaved?: () => void;
 }
 
 const getBookingLabel = (id: string, packageName: string) => {
@@ -35,7 +44,49 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
   isOpen,
   onClose,
   data,
+  onSaved,
 }) => {
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  const handleCompletePayment = async () => {
+    if (!data) return;
+
+    setIsProcessing(true);
+    try {
+      // Create PayMongo checkout session for remaining balance
+      const paymentPayload = {
+        booking_id: data.id,
+        payment_type: 'remaining',
+        return_url: '/admin/sales'
+      };
+
+      const paymentResponse = await fetchWithAuth(`${API_URL}/api/payment/checkout`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(paymentPayload),
+      });
+
+      const paymentResult = await paymentResponse.json();
+
+      if (paymentResponse.ok && paymentResult.success) {
+        // Open PayMongo checkout in new tab for admin
+        window.open(paymentResult.checkout_url, '_blank');
+        toast.success("Payment link opened in new tab. Complete the payment to update booking.");
+        onClose();
+        if (onSaved) onSaved();
+      } else {
+        toast.error(paymentResult.message || "Failed to create checkout session");
+      }
+    } catch (error) {
+      console.error("Payment checkout failed:", error);
+      toast.error("Failed to initiate payment. Please try again.");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   if (!isOpen || !data) return null;
 
   return (
@@ -65,6 +116,23 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
             ₱{data.price.toFixed(2)}
           </span>
         </div>
+
+        {/* Add-ons and Concepts */}
+        {(data.selectedAddOns || data.selectedConcepts) && (
+          <div className="mb-4 text-sm">
+            {data.selectedAddOns && (
+              <p className="mb-2">
+                <strong>Add-ons:</strong> {data.selectedAddOns}
+              </p>
+            )}
+
+            {data.selectedConcepts && (
+              <p>
+                <strong>Concepts:</strong> {data.selectedConcepts}
+              </p>
+            )}
+          </div>
+        )}
 
         <div className="grid grid-cols-2 gap-4 text-sm mb-4">
           <div>
@@ -129,6 +197,19 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
             ))}
           </div>
         </div>
+
+        {/* Complete Payment Button - shown when there's pending balance */}
+        {data.status === 2 && data.paymentStatus === 0 && data.balance > 0 && (
+          <div className="mb-4">
+            <button
+              onClick={handleCompletePayment}
+              disabled={isProcessing}
+              className="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700 transition disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+            >
+              {isProcessing ? "Processing..." : `Complete Payment (₱${data.balance.toFixed(2)})`}
+            </button>
+          </div>
+        )}
 
         <div className="flex justify-between print:hidden">
           <button

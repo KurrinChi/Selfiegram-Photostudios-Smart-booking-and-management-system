@@ -150,6 +150,11 @@ const WeekView: React.FC<WeekViewProps> = ({ currentDate, onEventClick, onReady 
                           paidAmount: Number(appt.raw.payment),
                           feedback: appt.raw.feedback,
                           rating: appt.raw.rating || 0,
+                          status: Number(appt.raw.status),
+                          paymentStatus: Number(appt.raw.paymentStatus),
+                          balance: Number(appt.raw.balance),
+                          selectedAddOns: appt.raw.selectedAddOns || '',
+                          selectedConcepts: appt.raw.selectedConcepts || '',
                         })
                       }
                       className={`absolute left-1 right-1 px-2 py-1 text-[11px] rounded-md border shadow-sm text-gray-700 cursor-pointer transition transform hover:scale-[1.02] hover:shadow-lg ${bgColor}`}

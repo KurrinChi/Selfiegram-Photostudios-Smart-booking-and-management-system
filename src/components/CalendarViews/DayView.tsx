@@ -141,6 +141,11 @@ const DayView: React.FC<DayViewProps> = ({ currentDate, onEventClick, onReady })
                   paidAmount: Number(raw.payment),
                   feedback: raw.feedback || "N/A",
                   rating: Number(raw.rating || 0),
+                  status: Number(raw.status),
+                  paymentStatus: Number(raw.paymentStatus),
+                  balance: Number(raw.balance),
+                  selectedAddOns: raw.selectedAddOns || '',
+                  selectedConcepts: raw.selectedConcepts || '',
                 })
               }
             >

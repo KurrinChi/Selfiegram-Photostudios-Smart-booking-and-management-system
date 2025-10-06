@@ -183,13 +183,23 @@ class PayMongoService
     public function getCheckoutSession($checkoutSessionId)
     {
         try {
+            // Expand payments to get the actual payment method used
             $response = Http::withBasicAuth($this->secretKey, '')
-                ->get($this->baseUrl . '/checkout_sessions/' . $checkoutSessionId);
+                ->get($this->baseUrl . '/checkout_sessions/' . $checkoutSessionId . '?expand[]=payments');
 
             if ($response->successful()) {
+                $data = $response->json();
+                
+                // Log the response to help debug payment method detection
+                Log::info('PayMongo Checkout Session Retrieved', [
+                    'checkout_session_id' => $checkoutSessionId,
+                    'has_payments' => isset($data['data']['attributes']['payments']),
+                    'payment_status' => $data['data']['attributes']['payment_status'] ?? 'unknown'
+                ]);
+
                 return [
                     'success' => true,
-                    'data' => $response->json()
+                    'data' => $data
                 ];
             }
 

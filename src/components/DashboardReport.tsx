@@ -5,12 +5,8 @@ import {
   faUser, 
   faCalendarAlt, 
   faPesoSign, 
-  faClipboardList,
-  faArrowUp,
-  faArrowDown,
-  faStar as fasStar
+  faClipboardList
 } from '@fortawesome/free-solid-svg-icons';
-import { faStar as farStar } from '@fortawesome/free-regular-svg-icons';
 
 interface ReportData {
   reportGenerated: string;
@@ -56,25 +52,6 @@ interface DashboardReportProps {
   data: ReportData;
 }
 
-const StarRating: React.FC<{ value: number }> = ({ value }) => (
-  <div className="flex gap-1">
-    {Array.from({ length: 5 }).map((_, idx) => (
-      <FontAwesomeIcon
-        key={idx}
-        icon={idx < value ? fasStar : farStar}
-        className="text-amber-400 text-xs"
-      />
-    ))}
-  </div>
-);
-
-const TrendArrow: React.FC<{ up: boolean }> = ({ up }) => (
-  <FontAwesomeIcon
-    icon={up ? faArrowUp : faArrowDown}
-    className={up ? "text-green-500" : "text-red-500"}
-  />
-);
-
 const DashboardReport: React.FC<DashboardReportProps> = ({ data }) => {
   const summaryCards = [
     {
@@ -91,7 +68,7 @@ const DashboardReport: React.FC<DashboardReportProps> = ({ data }) => {
     },
     {
       label: "Total Sales",
-      value: `₱ ${data.summary.totalSales?.toLocaleString() ?? "0"}`,
+      value: `PHP ${data.summary.totalSales?.toLocaleString() ?? "0"}`,
       icon: faPesoSign,
       trend: data.summary.salesTrend,
     },
@@ -107,19 +84,20 @@ const DashboardReport: React.FC<DashboardReportProps> = ({ data }) => {
     <div className="dashboard-report max-w-4xl mx-auto p-8 bg-white">
       {/* Header */}
       <div className="text-center mb-8 border-b pb-6">
-        <h1 className="text-3xl font-bold text-gray-800 mb-2">
+        <h1 className="text-3xl font-bold text-gray-800 mb-3">
           {data.companyInfo.name}
         </h1>
         <p className="text-gray-600 mb-1">{data.companyInfo.address}</p>
-        <p className="text-gray-600 mb-1">{data.companyInfo.phone} | {data.companyInfo.email}</p>
-        <h2 className="text-xl font-semibold text-gray-700 mt-4">
+        <p className="text-gray-600 mb-1">{data.companyInfo.phone}</p>
+        <p className="text-gray-600 mb-3">{data.companyInfo.email}</p>
+        <h2 className="text-xl font-semibold text-gray-700 mt-4 mb-3">
           Dashboard Report
         </h2>
-        <p className="text-sm text-gray-500 mt-2">
+        <p className="text-sm text-gray-500 mb-2">
           Report Period: {data.dateRange.formattedRange}
         </p>
         <p className="text-xs text-gray-400">
-          Generated on: {format(new Date(data.reportGenerated), 'PPP p')}
+          Generated: {format(new Date(data.reportGenerated), 'PPP p')}
         </p>
       </div>
 
@@ -136,10 +114,9 @@ const DashboardReport: React.FC<DashboardReportProps> = ({ data }) => {
                 <p className="text-sm text-gray-600 mb-1">{card.label}</p>
                 <h3 className="text-xl font-semibold text-gray-800">{card.value}</h3>
                 {!data.summary.hasDateRange && (
-                  <p className="text-xs flex items-center gap-1 mt-2 text-gray-500">
-                    <TrendArrow up={card.trend.up} />
+                  <p className="text-xs mt-2">
                     <span className={card.trend.up ? "text-green-600" : "text-red-600"}>
-                      {card.trend.value} {card.trend.up ? "Up" : "Down"} from past week
+                      {card.trend.up ? "+" : "-"}{card.trend.value} vs last week
                     </span>
                   </p>
                 )}
@@ -157,28 +134,28 @@ const DashboardReport: React.FC<DashboardReportProps> = ({ data }) => {
       <div className="mb-8">
         <h3 className="text-lg font-semibold mb-4 text-gray-800">Weekly Gross Income (Last 4 Months)</h3>
         <div className="overflow-x-auto">
-          <table className="min-w-full border border-gray-200 text-sm">
+          <table className="w-full border-collapse border border-gray-200 text-sm" style={{letterSpacing: 'normal'}}>
             <thead className="bg-gray-100">
               <tr>
-                <th className="border border-gray-200 px-4 py-2 text-left">Week</th>
-                <th className="border border-gray-200 px-4 py-2 text-right">Income</th>
+                <th className="border border-gray-200 px-4 py-2 text-left font-semibold" style={{letterSpacing: 'normal'}}>Week</th>
+                <th className="border border-gray-200 px-4 py-2 text-right font-semibold" style={{letterSpacing: 'normal'}}>Income</th>
               </tr>
             </thead>
             <tbody>
               {data.weeklyIncome.slice(-8).map((week, index) => (
                 <tr key={index} className={index % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
-                  <td className="border border-gray-200 px-4 py-2">{week.week}</td>
-                  <td className="border border-gray-200 px-4 py-2 text-right">
-                    ₱{week.income.toLocaleString()}
+                  <td className="border border-gray-200 px-4 py-2" style={{letterSpacing: 'normal'}}>{week.week}</td>
+                  <td className="border border-gray-200 px-4 py-2 text-right" style={{letterSpacing: 'normal'}}>
+                    PHP {week.income.toLocaleString()}
                   </td>
                 </tr>
               ))}
             </tbody>
             <tfoot className="bg-gray-100 font-semibold">
               <tr>
-                <td className="border border-gray-200 px-4 py-2">Total</td>
-                <td className="border border-gray-200 px-4 py-2 text-right">
-                  ₱{data.weeklyIncome.slice(-8).reduce((sum, week) => sum + week.income, 0).toLocaleString()}
+                <td className="border border-gray-200 px-4 py-2 font-semibold" style={{letterSpacing: 'normal'}}>Total</td>
+                <td className="border border-gray-200 px-4 py-2 text-right font-semibold" style={{letterSpacing: 'normal'}}>
+                  PHP {data.weeklyIncome.slice(-8).reduce((sum, week) => sum + week.income, 0).toLocaleString()}
                 </td>
               </tr>
             </tfoot>
@@ -190,38 +167,30 @@ const DashboardReport: React.FC<DashboardReportProps> = ({ data }) => {
       <div className="mb-8">
         <h3 className="text-lg font-semibold mb-4 text-gray-800">Package Performance</h3>
         <div className="overflow-x-auto">
-          <table className="min-w-full border border-gray-200 text-sm">
+          <table className="w-full border-collapse border border-gray-200 text-sm" style={{letterSpacing: 'normal'}}>
             <thead className="bg-gray-100">
               <tr>
-                <th className="border border-gray-200 px-4 py-2 text-left">Package Name</th>
-                <th className="border border-gray-200 px-4 py-2 text-center">Total Bookings</th>
-                <th className="border border-gray-200 px-4 py-2 text-right">Revenue</th>
-                <th className="border border-gray-200 px-4 py-2 text-center">Booking %</th>
-                <th className="border border-gray-200 px-4 py-2 text-center">Avg Rating</th>
-                <th className="border border-gray-200 px-4 py-2 text-center">Trend</th>
+                <th className="border border-gray-200 px-4 py-2 text-left font-semibold" style={{letterSpacing: 'normal'}}>Package Name</th>
+                <th className="border border-gray-200 px-4 py-2 text-center font-semibold" style={{letterSpacing: 'normal'}}>Total Bookings</th>
+                <th className="border border-gray-200 px-4 py-2 text-right font-semibold" style={{letterSpacing: 'normal'}}>Revenue</th>
+                <th className="border border-gray-200 px-4 py-2 text-center font-semibold" style={{letterSpacing: 'normal'}}>Share %</th>
+                <th className="border border-gray-200 px-4 py-2 text-center font-semibold" style={{letterSpacing: 'normal'}}>Rating</th>
+                <th className="border border-gray-200 px-4 py-2 text-center font-semibold" style={{letterSpacing: 'normal'}}>Trend</th>
               </tr>
             </thead>
             <tbody>
               {data.packages.map((pkg, index) => (
                 <tr key={index} className={index % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
-                  <td className="border border-gray-200 px-4 py-2">{pkg.name}</td>
-                  <td className="border border-gray-200 px-4 py-2 text-center">{pkg.totalBooking}</td>
-                  <td className="border border-gray-200 px-4 py-2 text-right">{pkg.revenue}</td>
-                  <td className="border border-gray-200 px-4 py-2 text-center">{pkg.bookingPct}</td>
-                  <td className="border border-gray-200 px-4 py-2 text-center">
-                    <div className="flex justify-center">
-                      <StarRating value={pkg.rating || 0} />
-                    </div>
+                  <td className="border border-gray-200 px-4 py-2" style={{letterSpacing: 'normal'}}>{pkg.name}</td>
+                  <td className="border border-gray-200 px-4 py-2 text-center" style={{letterSpacing: 'normal'}}>{pkg.totalBooking}</td>
+                  <td className="border border-gray-200 px-4 py-2 text-right" style={{letterSpacing: 'normal'}}>{pkg.revenue}</td>
+                  <td className="border border-gray-200 px-4 py-2 text-center" style={{letterSpacing: 'normal'}}>{pkg.bookingPct}</td>
+                  <td className="border border-gray-200 px-4 py-2 text-center" style={{letterSpacing: 'normal'}}>
+                    {pkg.rating ? `${pkg.rating.toFixed(1)}/5` : "N/A"}
                   </td>
-                  <td className="border border-gray-200 px-4 py-2 text-center">
-                    <span className={`inline-flex items-center gap-1 ${
-                      pkg.trendPositive ? "text-green-600" : "text-red-600"
-                    }`}>
-                      <FontAwesomeIcon
-                        icon={pkg.trendPositive ? faArrowUp : faArrowDown}
-                        className="text-xs"
-                      />
-                      {pkg.trend}
+                  <td className="border border-gray-200 px-4 py-2 text-center" style={{letterSpacing: 'normal'}}>
+                    <span className={pkg.trendPositive ? "text-green-600" : "text-red-600"}>
+                      {pkg.trendPositive ? "+" : "-"}{pkg.trend}
                     </span>
                   </td>
                 </tr>

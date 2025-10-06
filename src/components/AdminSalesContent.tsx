@@ -37,6 +37,10 @@ interface Sale {
   paymentStatus: "Completed" | "Pending" | "Cancelled";
   rating: number;
   feedback: string;
+  status: number;
+  paymentStatusValue: number;
+  selectedAddOns?: string;
+  selectedConcepts?: string;
 }
 
 const getBookingLabel = (transactionID: number, packageName: string) => {
@@ -182,12 +186,16 @@ const AdminSalesContent: React.FC = () => {
           balance: Number(item.balance),
           totalAmount: Number(item.totalAmount),
           price: Number(item.price),
-          paymentStatus: item.paymentStatus,
+          paymentStatus: item.paymentStatusLabel,
           email: item.customerEmail,
           address: item.customerAddress,
           contactNo: item.customerContactNo,
           feedback: item.feedback,
           rating: Number(item.rating),
+          status: Number(item.status),
+          paymentStatusValue: Number(item.paymentStatus),
+          selectedAddOns: item.selectedAddOns || '',
+          selectedConcepts: item.selectedConcepts || '',
         }));
         setSales(parsedData);
       })
@@ -620,6 +628,37 @@ const AdminSalesContent: React.FC = () => {
         isOpen={selectedSale !== null}
         data={selectedSale}
         onClose={() => setSelectedSale(null)}
+        onSaved={() => {
+          // Refresh sales data after payment
+          fetchWithAuth(`${API_URL}/api/sales`)
+            .then((res) => res.json())
+            .then((data) => {
+              const parsedData: Sale[] = (data || []).map((item: any) => ({
+                transactionID: item.transactionID,
+                customerName: item.customerName,
+                package: item.package,
+                transactionDate: item.transactionDate,
+                bookingDate: item.bookingDate,
+                time: item.time,
+                downPayment: Number(item.downPayment),
+                balance: Number(item.balance),
+                totalAmount: Number(item.totalAmount),
+                price: Number(item.price),
+                paymentStatus: item.paymentStatusLabel,
+                email: item.customerEmail,
+                address: item.customerAddress,
+                contactNo: item.customerContactNo,
+                feedback: item.feedback,
+                rating: Number(item.rating),
+                status: Number(item.status),
+                paymentStatusValue: Number(item.paymentStatus),
+                selectedAddOns: item.selectedAddOns || '',
+                selectedConcepts: item.selectedConcepts || '',
+              }));
+              setSales(parsedData);
+            })
+            .catch((err) => console.error("Failed refreshing sales:", err));
+        }}
       />
     </div>
   );

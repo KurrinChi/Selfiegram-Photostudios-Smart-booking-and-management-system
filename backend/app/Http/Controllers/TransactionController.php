@@ -175,31 +175,41 @@ class TransactionController extends Controller
             if ($request->has('studio_selection') && $request->studio_selection) {
                 $studioSelection = $request->studio_selection;
                 
-                // Determine conceptID based on studio selection
+                // Determine conceptID based on studio selection by querying database
                 $conceptID = null;
                 
-                if (isset($studioSelection['type'])) {
-                    if ($studioSelection['type'] === 'studioA') {
-                        // Plain backdrop - map color label to conceptID
-                        $colorMap = [
-                            'WHITE' => 104,
-                            'GRAY' => 105,
-                            'BLACK' => 106,
-                            'PINK' => 107,
-                            'BEIGE' => 108,
-                            'LAVENDER' => 109
-                        ];
-                        $label = strtoupper($studioSelection['label'] ?? '');
-                        $conceptID = $colorMap[$label] ?? null;
-                    } elseif ($studioSelection['type'] === 'studioB') {
-                        // Concept studio - map concept label to conceptID
-                        $conceptMap = [
-                            'CHINGU PINK' => 100,
-                            'BOHEMIAN DREAM' => 101,
-                            'SPOTLIGHT' => 102
-                        ];
-                        $label = strtoupper($studioSelection['label'] ?? '');
-                        $conceptID = $conceptMap[$label] ?? null;
+                if (isset($studioSelection['label'])) {
+                    $label = $studioSelection['label'];
+                    
+                    // Determine concept type based on studio type
+                    $conceptType = null;
+                    if (isset($studioSelection['type'])) {
+                        if ($studioSelection['type'] === 'studioA') {
+                            $conceptType = 'Plain'; // Plain backdrops
+                        } elseif ($studioSelection['type'] === 'studioB') {
+                            $conceptType = 'Studio'; // Concept studios
+                        }
+                    }
+                    
+                    // Query package_concept table for matching backdrop
+                    $query = DB::table('package_concept')
+                        ->where('backdrop', 'LIKE', $label);
+                    
+                    // Add concept type filter if available for better accuracy
+                    if ($conceptType) {
+                        $query->where('conceptType', $conceptType);
+                    }
+                    
+                    $concept = $query->first();
+                    
+                    if ($concept) {
+                        $conceptID = $concept->conceptID;
+                    } else {
+                        \Log::warning('Studio selection not found in database', [
+                            'label' => $label,
+                            'type' => $studioSelection['type'] ?? 'unknown',
+                            'conceptType' => $conceptType
+                        ]);
                     }
                 }
                 
@@ -447,53 +457,24 @@ class TransactionController extends Controller
 
     private function getAddonDetails($addonId)
     {
-        // Match the frontend addon mapping from select.tsx
-        $addons = [
-            'pax' => [
-                'id' => 'pax',
-                'label' => 'Addl pax',
-                'price' => 129,
-                'type' => 'spinner'
-            ],
-            'portrait' => [
-                'id' => 'portrait', 
-                'label' => 'Addl Portrait Picture',
-                'price' => 49,
-                'type' => 'spinner'
-            ],
-            'grid' => [
-                'id' => 'grid',
-                'label' => 'Addl Grid Picture',
-                'price' => 69,
-                'type' => 'spinner'
-            ],
-            'a4' => [
-                'id' => 'a4',
-                'label' => 'Addl A4 Picture',
-                'price' => 129,
-                'type' => 'spinner'
-            ],
-            'backdrop' => [
-                'id' => 'backdrop',
-                'label' => 'Addl Backdrop',
-                'price' => 129,
-                'type' => 'dropdown'
-            ],
-            'digital' => [
-                'id' => 'digital',
-                'label' => 'All digital copies',
-                'price' => 199,
-                'type' => 'checkbox'
-            ],
-            'extra5' => [
-                'id' => 'extra5',
-                'label' => 'Addl 5 mins',
-                'price' => 129,
-                'type' => 'checkbox'
-            ]
-        ];
+        // Fetch add-on details from package_add_ons table
+        $addon = DB::table('package_add_ons')
+            ->where('addOnID', $addonId)
+            ->first();
 
-        return $addons[$addonId] ?? null;
+        if (!$addon) {
+            \Log::warning('Add-on not found in database', ['addonId' => $addonId]);
+            return null;
+        }
+
+        return [
+            'id' => $addon->addOnID,
+            'label' => $addon->addOn,
+            'price' => (float)$addon->addOnPrice,
+            'type' => $addon->type ?? 'spinner',
+            'min_quantity' => $addon->min_quantity ?? 1,
+            'max_quantity' => $addon->max_quantity ?? null
+        ];
     }
 
     /**

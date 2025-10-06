@@ -35,7 +35,6 @@ import "../styles/print.css";
 import axios from "axios";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import DashboardReportPDF from "./DashboardReportPDF";
 import CenteredLoader from "./CenteredLoader";
 
 // -----------------------------------------------------------------------------
@@ -144,9 +143,6 @@ const AdminDashboardContents: React.FC = () => {
   // Loading state
   const [loading, setLoading] = useState(true);
 
-  // ADD THIS: Missing state declaration
-  const [showPreview, setShowPreview] = useState(false);
-
   useEffect(() => {
     setLoading(true);
     const token = localStorage.getItem("token");
@@ -223,7 +219,6 @@ const AdminDashboardContents: React.FC = () => {
   const [search, setSearch] = useState("");
   const [pickerOpen, setPickerOpen] = useState(false);
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
-  const [reportData, setReportData] = useState<any>(null);
 
   const filteredRows = useMemo(
     () =>
@@ -236,84 +231,6 @@ const AdminDashboardContents: React.FC = () => {
   );
 
   const tableCell = "py-3 px-4 text-xs whitespace-nowrap";
-
-  const handlePreview = () => {
-    // Create mock data based on current dashboard data
-    const mockReportData = {
-      reportGenerated: new Date().toISOString(),
-      dateRange: {
-        start: isDefaultRange ? subDays(new Date(), 7).toDateString() : start,
-        end: isDefaultRange ? new Date().toDateString() : end,
-        hasCustomRange: !isDefaultRange,
-        formattedRange: isDefaultRange
-          ? "Last 7 days"
-          : `${format(range[0].startDate, "MMM dd, yyyy")} - ${format(
-              range[0].endDate,
-              "MMM dd, yyyy"
-            )}`,
-      },
-      summary: {
-        totalUsers: summaryData?.totalUsers || 1250,
-        totalBookings: summaryData?.totalBookings || 89,
-        totalSales: summaryData?.totalSales || 145750,
-        totalAppointments: summaryData?.totalAppointments || 156,
-        hasDateRange: !isDefaultRange,
-        salesTrend: summaryData?.salesTrend || { value: "15.5%", up: true },
-        userTrend: summaryData?.userTrend || { value: "8.2%", up: true },
-        scheduleTrend: summaryData?.scheduleTrend || {
-          value: "12.8%",
-          up: false,
-        },
-        appointmentsTrend: summaryData?.appointmentsTrend || {
-          value: "6.4%",
-          up: true,
-        },
-      },
-      weeklyIncome:
-        grossIncomeWeeklyData.length > 0
-          ? grossIncomeWeeklyData
-          : [
-              { week: "Aug 05 - Aug 11", income: 18500 },
-              { week: "Aug 12 - Aug 18", income: 22300 },
-              { week: "Aug 19 - Aug 25", income: 19750 },
-              { week: "Aug 26 - Sep 01", income: 25100 },
-              { week: "Sep 02 - Sep 08", income: 28900 },
-              { week: "Sep 09 - Sep 15", income: 31200 },
-            ],
-      packages:
-        packageRows.length > 0
-          ? packageRows
-          : [
-              {
-                name: "Birthday Package Elite",
-                totalBooking: 15,
-                revenue: "₱45,000",
-                bookingPct: "16.9%",
-                rating: 5,
-                trend: "12%",
-                trendPositive: true,
-              },
-              {
-                name: "Graduation Premium",
-                totalBooking: 12,
-                revenue: "₱36,000",
-                bookingPct: "13.5%",
-                rating: 4,
-                trend: "8%",
-                trendPositive: true,
-              },
-            ],
-      companyInfo: {
-        name: "Selfiegram Photo Studios",
-        address: "Malolos, Bulacan",
-        phone: "+63 912 345 6789",
-        email: "info@selfiegram.com",
-      },
-    };
-
-    setReportData(mockReportData);
-    setShowPreview(true);
-  };
 
   const generateProfessionalPDF = (data: any) => {
     const pdf = new jsPDF("p", "mm", "a4");
@@ -344,30 +261,27 @@ const AdminDashboardContents: React.FC = () => {
     pdf.rect(0, 0, pageWidth, 40, "F");
 
     pdf.setTextColor(255, 255, 255);
-    pdf.setFontSize(24);
+    pdf.setFontSize(22);
     pdf.setFont("helvetica", "bold");
-    pdf.text(data.companyInfo.name, leftMargin, 20);
+    pdf.text(data.companyInfo.name, leftMargin, 18);
 
-    pdf.setFontSize(10);
+    pdf.setFontSize(9);
     pdf.setFont("helvetica", "normal");
-    pdf.text(data.companyInfo.address, leftMargin, 28);
-    pdf.text(
-      `${data.companyInfo.phone} | ${data.companyInfo.email}`,
-      leftMargin,
-      34
-    );
+    pdf.text(data.companyInfo.address, leftMargin, 26);
+    pdf.text(data.companyInfo.phone, leftMargin, 31);
+    pdf.text(data.companyInfo.email, leftMargin, 36);
 
     yPosition = 55;
 
     // Report Title and Info
     pdf.setTextColor(...primaryColor);
-    pdf.setFontSize(20);
+    pdf.setFontSize(18);
     pdf.setFont("helvetica", "bold");
     pdf.text("Dashboard Analytics Report", leftMargin, yPosition);
 
-    yPosition += 15;
+    yPosition += 12;
 
-    pdf.setFontSize(10);
+    pdf.setFontSize(9);
     pdf.setFont("helvetica", "normal");
     pdf.setTextColor(75, 85, 99);
     pdf.text(
@@ -375,13 +289,14 @@ const AdminDashboardContents: React.FC = () => {
       leftMargin,
       yPosition
     );
+    yPosition += 5;
     pdf.text(
       `Generated: ${format(new Date(data.reportGenerated), "PPP p")}`,
-      rightMargin - 60,
+      leftMargin,
       yPosition
     );
 
-    yPosition += 20;
+    yPosition += 15;
 
     // Summary Cards Section
     checkPageBreak(60);
@@ -449,7 +364,7 @@ const AdminDashboardContents: React.FC = () => {
         pdf.setTextColor(...trendColor);
         pdf.setFontSize(8);
         pdf.setFont("helvetica", "normal");
-        const trendText = `${item.trend.up ? "↑" : "↓"} ${item.trend.value}`;
+        const trendText = `${item.trend.up ? "+" : "-"}${item.trend.value} vs last week`;
         pdf.text(trendText, x + 5, y + 22);
       }
     });
@@ -512,8 +427,8 @@ const AdminDashboardContents: React.FC = () => {
         String(pkg.totalBooking),
         pkg.revenue,
         pkg.bookingPct,
-        pkg.rating ? "★".repeat(Math.floor(pkg.rating)) : "N/A",
-        `${pkg.trendPositive ? "↑" : "↓"} ${pkg.trend}`,
+        pkg.rating ? `${pkg.rating}/5` : "N/A",
+        `${pkg.trendPositive ? "+" : "-"}${pkg.trend}`,
       ]);
 
       autoTable(pdf, {
@@ -821,14 +736,6 @@ const AdminDashboardContents: React.FC = () => {
 
               {/* Action Buttons */}
               <div className="flex items-center gap-2">
-                {/* Preview Button */}
-                <button
-                  onClick={handlePreview}
-                  className="px-4 py-2 rounded-md text-xs transition focus:outline-none bg-gray-100 text-gray-700 hover:bg-gray-200 border"
-                >
-                  Preview Report
-                </button>
-
                 {/* Export Button */}
                 <button
                   onClick={handleExport}
@@ -893,8 +800,8 @@ const AdminDashboardContents: React.FC = () => {
                       {card.trend.value === "—"
                         ? "— Trend unavailable for custom range"
                         : `${card.trend.value} ${
-                            card.trend.up ? "Up" : "Down"
-                          } from past week`}
+                            card.trend.up ? "increase" : "decrease"
+                          } vs last week`}
                     </span>
                   </p>
                 </div>
@@ -1029,87 +936,6 @@ const AdminDashboardContents: React.FC = () => {
               </tbody>
             </table>
           </div>
-
-          {/* Report Preview Modal */}
-          {showPreview && reportData && (
-            <div
-              className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
-              onClick={(e) => {
-                if (e.target === e.currentTarget) {
-                  setShowPreview(false);
-                  setReportData(null);
-                }
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Escape") {
-                  setShowPreview(false);
-                  setReportData(null);
-                }
-              }}
-            >
-              <div className="bg-white rounded-lg max-w-5xl max-h-[90vh] overflow-auto relative shadow-2xl">
-                {/* Modal Header */}
-                <div className="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center z-10">
-                  <h2 className="text-xl font-semibold text-gray-800">
-                    Dashboard Report Preview
-                  </h2>
-                  <div className="flex gap-3">
-                    <button
-                      onClick={() => window.print()}
-                      className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center gap-2"
-                      title="Print (Ctrl+P)"
-                    >
-                      🖨️ Print
-                    </button>
-                    <button
-                      onClick={() => {
-                        setShowPreview(false);
-                        setReportData(null);
-                      }}
-                      className="px-4 py-2 text-sm bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition"
-                      title="Close (Esc)"
-                    >
-                      ✕ Close
-                    </button>
-                  </div>
-                </div>
-
-                {/* Report Content */}
-                <div className="bg-gray-50 p-6">
-                  <div className="bg-white rounded-lg shadow-sm">
-                    <DashboardReportPDF data={reportData} />
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Hidden Report Component for PDF Generation */}
-          {reportData && !showPreview && (
-            <div
-              id="dashboard-report"
-              style={{
-                position: "fixed",
-                top: "-10000px",
-                left: "-10000px",
-                zIndex: -1000,
-                opacity: 0,
-                pointerEvents: "none",
-                backgroundColor: "white",
-                width: "210mm",
-                minHeight: "297mm",
-                fontFamily: "Arial, sans-serif",
-                color: "black",
-                padding: "20px",
-                fontSize: "12px",
-                lineHeight: "1.4",
-              }}
-            >
-              <div style={{ width: "800px", margin: "0 auto" }}>
-                <DashboardReportPDF data={reportData} />
-              </div>
-            </div>
-          )}
         </div>
       )}
     </div>

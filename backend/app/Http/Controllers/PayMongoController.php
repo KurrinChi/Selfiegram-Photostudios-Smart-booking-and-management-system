@@ -305,16 +305,38 @@ class PayMongoController extends Controller
         }
         
         try {
-            // Check for payment method in payments array
+            // Log the full checkout data to debug
+            Log::info('Extracting payment method from checkout data', [
+                'checkout_data' => $checkoutData
+            ]);
+
+            // Check for payment method in payments array - this is where PayMongo stores the actual payment method
             if (isset($checkoutData['payments'][0]['attributes']['source']['type'])) {
                 $methodType = $checkoutData['payments'][0]['attributes']['source']['type'];
+                Log::info('Found payment method in payments[0].attributes.source.type', ['method' => $methodType]);
+                return $this->formatPaymentMethodName($methodType);
+            }
+
+            // Check in payments source (direct path)
+            if (isset($checkoutData['payments'][0]['source']['type'])) {
+                $methodType = $checkoutData['payments'][0]['source']['type'];
+                Log::info('Found payment method in payments[0].source.type', ['method' => $methodType]);
                 return $this->formatPaymentMethodName($methodType);
             }
             
-            // Check for payment method in other possible locations
+            // Check for payment method in payment_method_used field
             if (isset($checkoutData['payment_method_used'])) {
+                Log::info('Found payment method in payment_method_used', ['method' => $checkoutData['payment_method_used']]);
                 return $this->formatPaymentMethodName($checkoutData['payment_method_used']);
             }
+
+            // Check in line_items for payment method information
+            if (isset($checkoutData['line_items'][0]['payment_method'])) {
+                Log::info('Found payment method in line_items', ['method' => $checkoutData['line_items'][0]['payment_method']]);
+                return $this->formatPaymentMethodName($checkoutData['line_items'][0]['payment_method']);
+            }
+
+            Log::warning('Payment method not found in any expected location, defaulting to PayMongo');
             
         } catch (\Exception $e) {
             Log::warning('Could not extract payment method from checkout data', [
