@@ -197,6 +197,14 @@ const AdminSalesContent: React.FC = () => {
           selectedAddOns: item.selectedAddOns || '',
           selectedConcepts: item.selectedConcepts || '',
         }));
+        
+        // Debug: Log first 3 sales with their add-ons and concepts
+        console.log('🔍 AdminSalesContent - API Response Sample:', parsedData.slice(0, 3).map(s => ({
+          id: s.transactionID,
+          selectedAddOns: s.selectedAddOns,
+          selectedConcepts: s.selectedConcepts,
+        })));
+        
         setSales(parsedData);
       })
       .catch((err) => console.error("Failed fetching sales:", err))
@@ -535,6 +543,10 @@ const AdminSalesContent: React.FC = () => {
                         balance: s.balance,
                         feedback: s.feedback,
                         rating: s.rating,
+                        status: s.status,
+                        paymentStatus: s.paymentStatusValue,
+                        selectedAddOns: s.selectedAddOns,
+                        selectedConcepts: s.selectedConcepts,
                       })
                     }
                     className="border-t border-gray-100 hover:bg-gray-50 cursor-pointer transition"
