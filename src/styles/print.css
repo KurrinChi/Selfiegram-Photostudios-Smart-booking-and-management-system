@@ -1,3 +1,36 @@
+/* Print styles for cash receipt */
+@media print {
+  @page {
+    size: 80mm auto;
+    margin: 5mm;
+  }
+
+  /* Hide everything by default */
+  body * {
+    visibility: hidden !important;
+  }
+
+  /* Show only the receipt */
+  #receipt-print,
+  #receipt-print * {
+    visibility: visible !important;
+  }
+
+  #receipt-print {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    display: block !important;
+    width: 100% !important;
+  }
+
+  /* Ensure inline styles work */
+  * {
+    print-color-adjust: exact !important;
+    -webkit-print-color-adjust: exact !important;
+  }
+}
+
 /* Print styles for dashboard report */
 @media print {
   .dashboard-report {
