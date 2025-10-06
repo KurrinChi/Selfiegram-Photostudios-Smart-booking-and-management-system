@@ -348,7 +348,7 @@
     });
 
     // Protected routes (user must be logged in) ADMIN
-    Route::middleware(['auth:sanctum', 'role:Admin'])->group(function () {
+    Route::middleware(['auth:sanctum', 'role:Admin,Staff'])->group(function () {
 
         //admin user management
         Route::get('/admin/users', [UserController::class, 'users']);
@@ -407,6 +407,17 @@
         Route::delete('/admin/images/delete', [GalleryController::class, 'deleteImages']);
         Route::post('/admin/images/confirm', [GalleryController::class, 'confirmImages']);
     });
+
+    Route::middleware(['auth:sanctum', 'role:Staff'])->group(function () { //staff only
+        
+        //Staff Package
+        Route::get('/staff/packages', [PackageController::class, 'index']);
+        Route::get('/staff/packages/{id}', [PackageController::class, 'show']);
+        Route::get('/staff/packages/{id}/set-concepts', [PackageController::class, 'getPackageSetAndConcepts']);
+        Route::get('/staff/packages/{id}/addons', [PackageController::class, 'getAddOns']);
+    });
+
+    
 
     // Protected routes (user must be logged in) CUSTOMER
     Route::middleware(['auth:sanctum', 'role:Customer'])->group(function () {
@@ -482,7 +493,7 @@
      Route::get('/image-url/{imageID}', [ImageController::class, 'getImageUrl']);
         Route::get('/proxy-image', [ImageController::class, 'proxyImage']);
 
-    // PayMongo payment routes
+    // PayMongo payment routes  
     Route::post('/payment/create-checkout', [PayMongoController::class, 'createCheckoutSession']);
     Route::post('/payment/success', [PayMongoController::class, 'handlePaymentSuccess']);
     Route::get('/payment/history/{bookingId}', [PayMongoController::class, 'getPaymentHistory']);
@@ -491,7 +502,7 @@
     // Logged-in users submit messages
     Route::middleware(['auth:sanctum'])->post('/messages', [MessageController::class, 'store']);
     // Admin manage messages
-    Route::middleware(['auth:sanctum','role:Admin'])->group(function () {
+    Route::middleware(['auth:sanctum','role:Admin,Staff'])->group(function () {
         Route::get('/messages', [MessageController::class, 'index']);
         Route::post('/messages/{id}/status', [MessageController::class, 'updateStatus']);
         Route::post('/messages/{id}/starred', [MessageController::class, 'updateStarred']);

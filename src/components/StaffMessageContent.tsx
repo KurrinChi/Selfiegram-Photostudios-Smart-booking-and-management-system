@@ -1217,7 +1217,7 @@ export default function AdminMessageContent(): JSX.Element {
       </main>
 
       {/* Viewer */}
-      <aside className="w-[60%] min-w-[420px] bg-white p-2">
+      <aside className="w-[60%] min-w-[420px] p-2 bg-white">
         <div className="px-2 py-1">
           <div className="flex items-center justify-between">
             <div className="flex w-full items-center justify-between border-b border-slate-200 pb-2">

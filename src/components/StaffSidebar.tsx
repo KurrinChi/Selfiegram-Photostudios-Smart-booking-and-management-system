@@ -1,62 +1,73 @@
-// components/ClientSidebar.tsx
+// components/StaffSidebar.tsx
 import React from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import "@fortawesome/fontawesome-free/css/all.min.css";
 
-interface ClientSidebarProps {
+interface StaffSidebarProps {
   username: string;
+  profilePicture?: string;
   collapsed: boolean;
   toggle: () => void;
 }
 
+/**
+ * Staff navigation items - excludes User Management and Sales
+ */
 const navItems = [
   {
     label: "Dashboard",
-    path: "/admin/dashboard",
+    path: "/staff/dashboard",
     icon: "fas fa-tachometer-alt",
   },
   {
+    label: "Packages",
+    path: "/staff/packages",
+    icon: "fas fa-box",
+  },
+  {
     label: "Appointments",
-    path: "/admin/appointments",
+    path: "/staff/appointments",
     icon: "fas fa-calendar-alt",
   },
-  { label: "Packages", path: "/client/PackagePage", icon: "fas fa-box" },
-  { label: "Messages", path: "/admin/messages", icon: "fas fa-envelope" },
+  { label: "Messages", path: "/staff/messages", icon: "fas fa-envelope" },
+  { label: "Gallery", path: "/staff/gallery", icon: "fas fa-image" },
 ];
 
-const ClientSidebar: React.FC<ClientSidebarProps> = ({
+const StaffSidebar: React.FC<StaffSidebarProps> = ({
   username,
+  profilePicture,
   collapsed,
   toggle,
 }) => {
   const location = useLocation();
-  const isProfileActive = location.pathname === "/profile";
+  const isProfileActive = location.pathname === "/staff/profile";
 
   return (
     <aside
       className={`fixed top-0 left-0 z-40 h-screen
-                  bg-[#1e1e1e] text-white flex flex-col justify-between
+                  bg-[#383838] text-white flex flex-col justify-between
                   transition-all duration-300 ease-in-out
                   ${collapsed ? "w-16" : "w-48"}`}
+      aria-label="Staff sidebar"
     >
-      {/* ─── Toggle Button ────────────────────────────── */}
+      {/* Toggle Button */}
       <button
         onClick={() => {
           toggle();
           localStorage.setItem("sidebar-collapsed", String(!collapsed));
         }}
         className="absolute -right-4 top-4 w-8 h-8 flex items-center justify-center
-                   bg-[#1e1e1e] border border-gray-600 rounded-full
-                   text-white hover:scale-110 transition-transform duration-300"
+             bg-[#1e1e1e] border border-gray-600 rounded-full
+             text-white hover:scale-110 transition-transform duration-300"
+        aria-label="Toggle sidebar"
       >
         <i
-          className={`fas ${
-            collapsed ? "fa-chevron-right" : "fa-chevron-left"
-          } text-xs`}
+          className={`fas fa-chevron-left text-xs transform transition-transform duration-300
+            ${collapsed ? "rotate-180" : "rotate-0"}`}
         />
       </button>
 
-      {/* ─── Logo ─────────────────────────────────────── */}
+      {/* Logo */}
       <div className="flex justify-center my-6">
         <img
           src="/slfg.svg"
@@ -68,7 +79,7 @@ const ClientSidebar: React.FC<ClientSidebarProps> = ({
         />
       </div>
 
-      {/* ─── Nav Items ───────────────────────────────── */}
+      {/* NAV - Simple list without dropdown */}
       <nav className="flex-1 flex flex-col gap-1 px-2 relative overflow-visible">
         {navItems.map(({ label, path, icon }) => (
           <NavLink
@@ -89,20 +100,15 @@ const ClientSidebar: React.FC<ClientSidebarProps> = ({
                           transition-all duration-300 ease-in-out
                           group-[.active]:opacity-100 opacity-0 group-hover:opacity-30`}
             />
-
             <div
               className={`absolute inset-0 z-0 transition-all duration-300 ease-in-out rounded-md
                           ${collapsed ? "" : "group-hover:bg-gray-700"}`}
             />
-
             <i className={`${icon} w-4 text-sm z-10`} />
             <span
-              className={`z-10 transition-opacity duration-300
-                          ${
-                            collapsed
-                              ? "opacity-0 pointer-events-none"
-                              : "opacity-100"
-                          }`}
+              className={`z-10 transition-opacity duration-300 ${
+                collapsed ? "opacity-0 pointer-events-none" : "opacity-100"
+              }`}
             >
               {label}
             </span>
@@ -110,9 +116,9 @@ const ClientSidebar: React.FC<ClientSidebarProps> = ({
         ))}
       </nav>
 
-      {/* ─── User Info Link ───────────────────────────── */}
+      {/* User Info Link */}
       <NavLink
-        to="/profile"
+        to="/staff/profile"
         className={({ isActive }) =>
           `relative block group ${
             isActive
@@ -123,31 +129,40 @@ const ClientSidebar: React.FC<ClientSidebarProps> = ({
       >
         <div
           className={`relative flex items-center gap-2 text-[10px] px-3 py-4 rounded-md cursor-pointer 
-                      transition-all duration-300 ease-in-out group`}
+                    transition-all duration-300 ease-in-out group`}
         >
           <span
-            className={`absolute left-0 top-0 h-full w-1 bg-white rounded-tr-md rounded-br-md
-                        transition-opacity duration-300 ease-in-out
-                        ${
-                          isProfileActive
-                            ? "opacity-100"
-                            : "opacity-0 group-hover:opacity-30"
-                        }`}
+            className={`absolute left-0 top-0 h-full w-1 rounded-tr-md rounded-br-md
+                      transition-opacity duration-300 ease-in-out
+                      ${
+                        isProfileActive
+                          ? "opacity-100"
+                          : "opacity-0 group-hover:opacity-30"
+                      }`}
           />
 
           <div
             className={`absolute inset-0 z-0 rounded-md transition-all duration-300 ease-in-out 
-                        ${collapsed ? "" : "group-hover:bg-gray-700"}`}
+                      ${collapsed ? "" : "group-hover:bg-gray-700"}`}
           />
 
-          <div className="z-10 w-8 h-8 bg-white rounded-full flex items-center justify-center text-black font-semibold">
-            {username.charAt(0).toUpperCase()}
+          {/* Profile Picture or First Letter */}
+          <div className="z-10 w-8 h-8 rounded-full overflow-hidden flex items-center justify-center bg-white text-black font-semibold">
+            {profilePicture ? (
+              <img
+                src={profilePicture}
+                alt="Profile"
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              username.charAt(0).toUpperCase()
+            )}
           </div>
 
           {!collapsed && (
             <div className="z-10 transition-opacity duration-300">
               <div className="text-white font-medium text-xs">{username}</div>
-              <div className="text-gray-400">Admin</div>
+              <div className="text-gray-400">Staff</div>
             </div>
           )}
         </div>
@@ -156,4 +171,4 @@ const ClientSidebar: React.FC<ClientSidebarProps> = ({
   );
 };
 
-export default ClientSidebar;
+export default StaffSidebar;

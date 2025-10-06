@@ -602,46 +602,216 @@ export default function HomePage(): React.JSX.Element {
           </div>
         </section>
 
-        {/* ---------- CONCEPT STUDIO (DRAG CAROUSEL) ---------- */}
-        <section id="studio" className="bg-white mb-20 snap-start">
+        {/* ---------- CONCEPT STUDIO (FIXED SCROLLING) ---------- */}
+        <section id="studio" className="bg-white py-20 snap-start">
           <div className="max-w-7xl mx-auto px-6 lg:px-20">
-            <div className="text-center mb-6">
-              <h3 className="text-3xl font-bold">Our Concept Studio</h3>
-              <p className="text-gray-600 max-w-2xl mx-auto mt-2">
-                We offer a wide variety of themed studio booths designed to
-                inspire creativity and suit each client's unique style.
+            {/* Animated Header */}
+            <motion.div
+              className="text-center mb-16"
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.7, ease: "easeOut" }}
+              viewport={{ once: true }}
+            >
+              <h3 className="text-3xl font-bold text-gray-900 mb-3">
+                Our Concept Studio
+              </h3>
+              <p className="text-gray-600 text-base">
+                Explore our themed spaces in 360°
               </p>
-            </div>
+            </motion.div>
 
-            {/* Carousel */}
+            {/* Fixed Scrolling Carousel */}
             <div className="relative">
-              <div className="overflow-hidden h-fit">
+              <div className="overflow-hidden">
                 <motion.div
                   ref={carouselRef as any}
                   drag="x"
-                  dragConstraints={{ left: carouselWidth, right: 0 }}
-                  className="flex gap-4 px-4 items-center"
+                  dragConstraints={{
+                    left: carouselWidth,
+                    right: 0,
+                  }}
+                  dragElastic={0.05}
+                  dragTransition={{
+                    bounceStiffness: 300,
+                    bounceDamping: 30,
+                    power: 0.2,
+                    timeConstant: 200,
+                  }}
+                  className="flex gap-6 px-4 cursor-grab active:cursor-grabbing select-none"
                   whileTap={{ cursor: "grabbing" }}
+                  style={{ touchAction: "none" }}
                 >
-                  {Array.from({ length: 6 }).map((_, i) => (
-                    <motion.div
-                      key={i}
-                      className="min-w-[320px] md:min-w-[360px] rounded-lg overflow-hidden bg-gray-200"
-                      whileHover={{ scale: 1.02 }}
-                      transition={{ duration: 0.2 }}
-                    >
-                      <img
-                        src="/slfg-placeholder.png"
-                        alt={`studio-${i}`}
-                        className="w-full h-48 md:h-60 object-cover"
-                      />
-                      <div className="p-3 text-sm text-gray-700">
-                        Studio Theme {i + 1}
-                      </div>
-                    </motion.div>
-                  ))}
+                  {/* Studio 1 */}
+                  <motion.div
+                    className="min-w-[340px] md:min-w-[400px] flex-shrink-0"
+                    initial={{ opacity: 0, y: 50 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.6, delay: 0.1 }}
+                    viewport={{ once: true }}
+                    whileHover={{
+                      y: -12,
+                      transition: { duration: 0.3, ease: "easeOut" },
+                    }}
+                  >
+                    <div className="bg-white rounded-xl overflow-hidden shadow-md hover:shadow-2xl transition-shadow duration-300">
+                      <motion.div
+                        className="relative w-full h-64 md:h-72 bg-gray-100"
+                        initial={{ opacity: 0 }}
+                        whileInView={{ opacity: 1 }}
+                        transition={{ duration: 0.5, delay: 0.2 }}
+                        viewport={{ once: true }}
+                      >
+                        <iframe
+                          width="100%"
+                          height="100%"
+                          title="Bohemian Dream Studio"
+                          scrolling="no"
+                          allowFullScreen
+                          src="https://momento360.com/e/u/3e8d9218ba144d95981cadf4ab6e683e?utm_campaign=embed&utm_source=other&heading=0&pitch=0&field-of-view=75&size=medium&display-plan=true"
+                          className="border-0"
+                        />
+                      </motion.div>
+                      <motion.div
+                        className="p-5"
+                        initial={{ opacity: 0 }}
+                        whileInView={{ opacity: 1 }}
+                        transition={{ duration: 0.5, delay: 0.3 }}
+                        viewport={{ once: true }}
+                      >
+                        <h4 className="font-semibold text-lg text-gray-900 mb-2">
+                          Bohemian Dream
+                        </h4>
+                        <p className="text-sm text-gray-600">
+                          A warm, earthy set filled with rattan textures and
+                          natural light for a free-spirited vibe
+                        </p>
+                      </motion.div>
+                    </div>
+                  </motion.div>
+
+                  {/* Studio 2 */}
+                  <motion.div
+                    className="min-w-[340px] md:min-w-[400px] flex-shrink-0"
+                    initial={{ opacity: 0, y: 50 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.6, delay: 0.2 }}
+                    viewport={{ once: true }}
+                    whileHover={{
+                      y: -12,
+                      transition: { duration: 0.3, ease: "easeOut" },
+                    }}
+                  >
+                    <div className="bg-white rounded-xl overflow-hidden shadow-md hover:shadow-2xl transition-shadow duration-300">
+                      <motion.div
+                        className="relative w-full h-64 md:h-72 bg-gray-100"
+                        initial={{ opacity: 0 }}
+                        whileInView={{ opacity: 1 }}
+                        transition={{ duration: 0.5, delay: 0.3 }}
+                        viewport={{ once: true }}
+                      >
+                        <iframe
+                          width="100%"
+                          height="100%"
+                          title="Chingu Pink Studio"
+                          scrolling="no"
+                          allowFullScreen
+                          src="https://momento360.com/e/u/78143c713b1b4d2f83f7bb11663fbcaf?utm_campaign=embed&utm_source=other&heading=0&pitch=0&field-of-view=75&size=medium&display-plan=true"
+                          className="border-0"
+                        />
+                      </motion.div>
+                      <motion.div
+                        className="p-5"
+                        initial={{ opacity: 0 }}
+                        whileInView={{ opacity: 1 }}
+                        transition={{ duration: 0.5, delay: 0.4 }}
+                        viewport={{ once: true }}
+                      >
+                        <h4 className="font-semibold text-lg text-gray-900 mb-2">
+                          Chingu Pink
+                        </h4>
+                        <p className="text-sm text-gray-600">
+                          A soft pastel space inspired by Korean aesthetics,
+                          perfect for sweet and playful moments.
+                        </p>
+                      </motion.div>
+                    </div>
+                  </motion.div>
+
+                  {/* Studio 3 */}
+                  <motion.div
+                    className="min-w-[340px] md:min-w-[400px] flex-shrink-0"
+                    initial={{ opacity: 0, y: 50 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.6, delay: 0.3 }}
+                    viewport={{ once: true }}
+                    whileHover={{
+                      y: -12,
+                      transition: { duration: 0.3, ease: "easeOut" },
+                    }}
+                  >
+                    <div className="bg-white rounded-xl overflow-hidden shadow-md hover:shadow-2xl transition-shadow duration-300">
+                      <motion.div
+                        className="relative w-full h-64 md:h-72 bg-gray-100"
+                        initial={{ opacity: 0 }}
+                        whileInView={{ opacity: 1 }}
+                        transition={{ duration: 0.5, delay: 0.4 }}
+                        viewport={{ once: true }}
+                      >
+                        <iframe
+                          width="100%"
+                          height="100%"
+                          title="Christmas Studio"
+                          scrolling="no"
+                          allowFullScreen
+                          src="https://momento360.com/e/u/e131577b398b4bf3b6ca31a80fc1d3c9?utm_campaign=embed&utm_source=other&heading=-9&pitch=-4.1&field-of-view=75&size=medium&display-plan=true"
+                          className="border-0"
+                        />
+                      </motion.div>
+                      <motion.div
+                        className="p-5"
+                        initial={{ opacity: 0 }}
+                        whileInView={{ opacity: 1 }}
+                        transition={{ duration: 0.5, delay: 0.5 }}
+                        viewport={{ once: true }}
+                      >
+                        <h4 className="font-semibold text-lg text-gray-900 mb-2">
+                          Christmas
+                        </h4>
+                        <p className="text-sm text-gray-600">
+                          A festive, cozy setup with twinkling lights and
+                          holiday charm for timeless memories.
+                        </p>
+                      </motion.div>
+                    </div>
+                  </motion.div>
                 </motion.div>
               </div>
+
+              {/* Navigation Dots */}
+              <motion.div
+                className="flex justify-center mt-8 gap-2"
+                initial={{ opacity: 0 }}
+                whileInView={{ opacity: 1 }}
+                transition={{ duration: 0.5, delay: 0.6 }}
+                viewport={{ once: true }}
+              >
+                <motion.div
+                  className="w-2 h-2 rounded-full bg-gray-800 cursor-pointer"
+                  whileHover={{ scale: 1.3 }}
+                  transition={{ duration: 0.2 }}
+                />
+                <motion.div
+                  className="w-2 h-2 rounded-full bg-gray-300 cursor-pointer"
+                  whileHover={{ scale: 1.3 }}
+                  transition={{ duration: 0.2 }}
+                />
+                <motion.div
+                  className="w-2 h-2 rounded-full bg-gray-300 cursor-pointer"
+                  whileHover={{ scale: 1.3 }}
+                  transition={{ duration: 0.2 }}
+                />
+              </motion.div>
             </div>
           </div>
         </section>

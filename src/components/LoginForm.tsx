@@ -67,8 +67,7 @@ const LoginForm = () => {
             navigate("/client/home");
             break;
           case "Staff":
-            alert("Redirecting to staff page...");
-            //navigate("/staff/dashboard");
+            navigate("/staff/dashboard");
             break;
           default:
             navigate("/"); // fallback
@@ -158,12 +157,9 @@ const LoginForm = () => {
       const data = await res.json();
 
       if (res.ok) {
-        toast.success(
-          "Password reset successful, please login",
-          {
-            autoClose: 2000,
-          }
-        );
+        toast.success("Password reset successful, please login", {
+          autoClose: 2000,
+        });
         setShowPasswordModal(false);
       } else {
         toast.error(data.message || "Failed to reset password");
@@ -175,7 +171,6 @@ const LoginForm = () => {
   };
 
   return (
-
     <div className="w-full max-w-md mx-auto text-[#111] font-sf relative">
       {/* Back Button */}
       <button

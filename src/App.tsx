@@ -8,6 +8,7 @@ import Register from "./page/Register";
 import RegisterInfoForm from "./page/RegisterInfo";
 import RegisterSuccess from "./page/RegisterSuccess";
 
+// Admin pages
 import AdminDashboardPage from "./page/admin/DashboardPage.tsx";
 import AdminUsersPage from "./page/admin/UsersPage.tsx";
 import AdminAppointmentsPage from "./page/admin/AppointmentsPage.tsx";
@@ -22,6 +23,17 @@ import AdminPackageContent from "../src/components/AdminPackageContent.tsx";
 import AddPackagePage from "../src/components/Packages/add.tsx";
 import EditPackagePage from "../src/components/Packages/edit.tsx";
 import SelectPackagePage from "../src/components/Packages/select.tsx";
+
+// Staff pages (reuse admin pages with StaffLayout)
+import StaffDashboardPage from "./page/staff/DashboardPage.tsx";
+import StaffAppointmentsPage from "./page/staff/AppointmentsPage.tsx";
+import StaffMessagesPage from "./page/staff/MessagesPage.tsx";
+import StaffProfilePage from "./page/staff/ProfilePage.tsx";
+import StaffGalleryPage from "./page/staff/GalleryPage.tsx";
+import StaffPackageContent from "../src/components/StaffPackageContent.tsx";
+import StaffPackagesPage from "./page/staff/PackagesPage.tsx";
+import StaffEditExtrasPage from "./page/staff/EditExtrasPage.tsx";
+import StaffSelectPackagePage from "../src/components/Packages/staffSelect.tsx";
 
 // Client pages
 import ClientHomePage from "./page/client/HomePage.tsx";
@@ -46,7 +58,7 @@ const App = () => {
   return (
     <AnimatePresence mode="wait">
       <Routes location={location} key={location.pathname}>
-        {/* Public routes */}
+        {/* ========== PUBLIC ROUTES ========== */}
         <Route
           path="/login"
           element={
@@ -88,26 +100,7 @@ const App = () => {
           }
         />
 
-        {/* Routes that are not found */}
-        <Route
-          path="*"
-          element={
-            <PublicRoute>
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "center",
-                  alignItems: "center",
-                  height: "100vh",
-                }}
-              >
-                404 Not Found
-              </div>
-            </PublicRoute>
-          }
-        />
-        {/* <Route path="/" element={<ProtectedRoute><div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh" }}>Already Logged In</div></ProtectedRoute>} /> */}
-        {/* Admin routes */}
+        {/* ========== ADMIN ROUTES ========== */}
         <Route
           path="/admin/dashboard"
           element={
@@ -194,7 +187,74 @@ const App = () => {
           }
         />
 
-        {/* Client Routes */}
+        {/* ========== STAFF ROUTES ========== */}
+        <Route
+          path="/staff/dashboard"
+          element={
+            <ProtectedRoute allowedRoles={["Staff"]}>
+              <StaffDashboardPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/staff/appointments"
+          element={
+            <ProtectedRoute allowedRoles={["Staff"]}>
+              <StaffAppointmentsPage />
+              <ToastContainer position="bottom-right" />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/staff/messages"
+          element={
+            <ProtectedRoute allowedRoles={["Staff"]}>
+              <StaffMessagesPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/staff/profile"
+          element={
+            <ProtectedRoute allowedRoles={["Staff"]}>
+              <StaffProfilePage />
+              <ToastContainer position="bottom-right" />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/staff/packages"
+          element={
+            <ProtectedRoute allowedRoles={["Staff"]}>
+              <StaffPackagesPage />
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<StaffPackageContent />} />
+          <Route path="select/:id" element={<StaffSelectPackagePage />} />
+        </Route>
+
+        <Route
+          path="/staff/packages/extras"
+          element={
+            <ProtectedRoute allowedRoles={["Staff"]}>
+              <StaffEditExtrasPage />
+              <ToastContainer position="bottom-right" />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/staff/gallery"
+          element={
+            <ProtectedRoute allowedRoles={["Staff"]}>
+              <StaffGalleryPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* ========== CLIENT ROUTES ========== */}
         <Route
           path="/client/home"
           element={
@@ -264,15 +324,14 @@ const App = () => {
           }
         />
 
+        {/* ========== UTILITY ROUTES ========== */}
         <Route path="/edit" element={<PhotoEditorAPI />} />
         <Route path="/pusher-debug" element={<PusherDebugPage />} />
-
         <Route path="/receipt/booking/:bookingID" element={<ReceiptPage />} />
-        {/* Fallback */}
 
+        {/* ========== FALLBACK ========== */}
         <Route path="*" element={<LandingPage />} />
       </Routes>
-
     </AnimatePresence>
   );
 };
