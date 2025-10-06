@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { ChevronDown, Heart } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { ChevronDown } from "lucide-react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faSearch } from "@fortawesome/free-solid-svg-icons";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
@@ -31,40 +30,10 @@ const ClientPackagePageContent: React.FC = () => {
   );
   const [fadingImages, setFadingImages] = useState<Record<string, boolean>>({});
   const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
 
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-
-  const fetchFavorites = async () => {
-    const user = JSON.parse(localStorage.getItem("user") || "{}");
-    const userId = user?.userID;
-    console.log("LocalStorage user:", user);
-
-    if (!userId) {
-      console.warn("No user ID found in localStorage.");
-      return;
-    }
-
-    try {
-      const res = await fetchWithAuth(
-        `${API_URL}/api/favorites/user/${userId}`
-      );
-      const data = await res.json();
-      console.log("Fetched favorites from backend:", data);
-
-      if (Array.isArray(data)) {
-        const idSet = new Set(data.map((id) => id.toString()));
-        console.log("Converted favorite ID set:", idSet);
-        setFavoriteIds(idSet);
-      } else {
-        console.error("Unexpected response for favorites:", data);
-      }
-    } catch (error) {
-      console.error("Failed to fetch favorites:", error);
-    }
-  };
 
   useEffect(() => {
     const fetchPackages = async () => {
@@ -145,7 +114,6 @@ const ClientPackagePageContent: React.FC = () => {
     };
 
     fetchPackages();
-    fetchFavorites();
 
     // Check if coming back from payment
     const paymentStatus = searchParams.get("payment");
@@ -160,55 +128,6 @@ const ClientPackagePageContent: React.FC = () => {
     setSelectedTags((prev) =>
       prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
     );
-  };
-
-  const toggleFavorite = async (packageId: string) => {
-    const user = JSON.parse(localStorage.getItem("user") || "{}");
-    const userId = user?.userID;
-
-    if (!userId) {
-      alert("Please log in to favorite packages.");
-      return;
-    }
-
-    const idStr = packageId.toString();
-    const isAlreadyFavorite = favoriteIds.has(idStr);
-
-    const url = isAlreadyFavorite
-      ? `${API_URL}/api/favorites/remove`
-      : `${API_URL}/api/favorites/add`;
-
-    try {
-      const response = await fetchWithAuth(url, {
-        method: "POST", // keep it POST for both add/remove if backend expects it
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          userID: userId,
-          packageID: packageId,
-        }),
-      });
-
-      const data = await response.json();
-      console.log("Favorite toggle response:", data);
-
-      if (data.success) {
-        setFavoriteIds((prev) => {
-          const newSet = new Set(prev);
-          if (isAlreadyFavorite) {
-            newSet.delete(idStr);
-          } else {
-            newSet.add(idStr);
-          }
-          return newSet;
-        });
-      } else {
-        console.error("Favorite update failed:", data.message);
-      }
-    } catch (error) {
-      console.error("Error in toggleFavorite:", error);
-    }
   };
 
   const allTags = Array.from(new Set(allPackages.flatMap((pkg) => pkg.tags)));
@@ -320,7 +239,6 @@ const ClientPackagePageContent: React.FC = () => {
           {filtered.map((pkg) => {
             const currentImgIdx = imageIndexMap[pkg.id] ?? 0;
             const isFading = fadingImages[pkg.id];
-            const isFav = favoriteIds.has(pkg.id.toString());
 
             return (
               <div
