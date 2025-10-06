@@ -166,15 +166,95 @@ class PayMongoWebhookController extends Controller
      */
     private function createBookingFromPaymentSession($bookingData, $paymentMethod, $paidAmount)
     {
-        // Parse time slot
-        $timeSlot = $bookingData['time_slot'];
-        $time = \DateTime::createFromFormat('h:i A', $timeSlot);
-        $startTime = $time ? $time->format('H:i:s') : '09:00:00';
-        
-        // Calculate end time (add 1 hour)
-        $endTimeObj = clone $time;
-        $endTimeObj->add(new \DateInterval('PT1H'));
-        $endTime = $endTimeObj->format('H:i:s');
+        /************************************
+         * TIME PARSING & END TIME RESOLUTION
+         ************************************/
+        $rawStart = $bookingData['time_slot'] ?? null;
+        $rawEnd = $bookingData['end_time_slot'] ?? null; // newly stored from frontend
+
+        // Normalize helper
+        $normalize = function($label) {
+            if (!$label || !is_string($label)) return null;
+            return preg_replace('/\s+/', ' ', strtoupper(trim($label)));
+        };
+
+        $normalizedStart = $normalize($rawStart);
+        $normalizedEnd = $normalize($rawEnd);
+
+        $parseFormats = ['h:i A','g:i A','h:iA','g:iA'];
+        $parse = function($label) use ($parseFormats) {
+            if (!$label) return null;
+            foreach ($parseFormats as $fmt) {
+                $dt = \DateTime::createFromFormat($fmt, $label);
+                if ($dt instanceof \DateTime) {
+                    return $dt->format('H:i:s');
+                }
+            }
+            try {
+                $carbon = \Carbon\Carbon::parse($label);
+                return $carbon->format('H:i:s');
+            } catch (\Exception $e) {
+                return null;
+            }
+        };
+
+        $startTime = $parse($normalizedStart) ?? '09:00:00';
+        $endTime = $parse($normalizedEnd); // may be null
+        $endParseFailedInitial = $endTime === null && $normalizedEnd !== null;
+
+        // Loose parse as final salvage (e.g., "2:5 PM", "2 PM")
+        if (!$endTime && $normalizedEnd) {
+            if (preg_match('/^(\d{1,2})(?::(\d{1,2}))?\s*(AM|PM)$/', $normalizedEnd, $m)) {
+                $h = (int)$m[1];
+                $min = isset($m[2]) ? (int)$m[2] : 0;
+                if ($h >=1 && $h <=12 && $min>=0 && $min<=59) {
+                    if ($m[3]==='PM' && $h!=12) $h+=12; if ($m[3]==='AM' && $h===12) $h=0;
+                    $endTime = sprintf('%02d:%02d:00',$h,$min);
+                }
+            }
+        }
+
+        $endNeedsFallback = false;
+        if (!$endTime) {
+            $endNeedsFallback = true; // no parse
+        } elseif (strtotime($endTime) <= strtotime($startTime)) {
+            $endNeedsFallback = true; // non-positive interval
+        }
+
+        if ($endNeedsFallback) {
+            // If we had an end label that differs from start, prefer a minimal +5m buffer
+            if ($normalizedEnd && strcasecmp($normalizedEnd, $normalizedStart) !== 0) {
+                $dt = \DateTime::createFromFormat('H:i:s', $startTime) ?: new \DateTime('09:00:00');
+                $dt->add(new \DateInterval('PT5M'));
+                $endTime = $dt->format('H:i:s');
+                Log::warning('Webhook booking end time recovered with +5m minimal buffer (avoided +1h)', [
+                    'raw_start' => $rawStart,
+                    'raw_end' => $rawEnd,
+                    'startTime' => $startTime,
+                    'endTime' => $endTime,
+                    'end_parse_failed_initially' => $endParseFailedInitial
+                ]);
+            } else {
+                // Last resort: +60m
+                $dt = \DateTime::createFromFormat('H:i:s', $startTime) ?: new \DateTime('09:00:00');
+                $dt->add(new \DateInterval('PT1H'));
+                $endTime = $dt->format('H:i:s');
+                Log::warning('Webhook booking end time defaulting to +60m fallback', [
+                    'raw_start' => $rawStart,
+                    'raw_end' => $rawEnd,
+                    'startTime' => $startTime,
+                    'endTime' => $endTime,
+                    'end_parse_failed_initially' => $endParseFailedInitial
+                ]);
+            }
+        } else {
+            Log::info('Webhook booking times parsed successfully', [
+                'raw_start' => $rawStart,
+                'raw_end' => $rawEnd,
+                'startTime' => $startTime,
+                'endTime' => $endTime
+            ]);
+        }
         
         // Get next booking ID
         $maxBookingId = DB::table('booking')->max('bookingID') ?? 0;

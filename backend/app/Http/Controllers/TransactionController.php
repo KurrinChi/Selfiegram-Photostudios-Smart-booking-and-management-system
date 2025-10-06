@@ -128,19 +128,108 @@ class TransactionController extends Controller
             // Parse start & end time slots provided by UI (UI already accounts for package + addons duration)
             $timeSlot = $request->time_slot; // e.g. "09:00 AM"
             $endTimeSlot = $request->end_time_slot; // e.g. "09:30 AM" or other
-            $startTime = $this->parseTimeSlot($timeSlot);
-            $endTime = $this->parseTimeSlot($endTimeSlot);
+            $rawStartLabel = $timeSlot;
+            $rawEndLabel = $endTimeSlot;
+            $startTime = $this->parseTimeSlot($rawStartLabel);
+            $endTime = $this->parseTimeSlot($rawEndLabel);
 
-            // Basic sanity check: if end <= start, fallback to +60 mins to avoid DB storing inverted interval
-            if (strtotime($endTime) <= strtotime($startTime)) {
-                \Log::warning('End time provided is not after start time. Falling back to +60 minutes', [
-                    'start' => $startTime,
-                    'end' => $endTime,
-                    'original_end_label' => $endTimeSlot,
-                    'booking_date' => $request->booking_date,
-                    'package_id' => $request->package_id
+            // If parsing failed for start, use safe fallback but log
+            if (!$startTime) {
+                \Log::warning('Start time failed to parse; applying safe fallback 09:00:00', [
+                    'raw_label' => $rawStartLabel
                 ]);
-                $endTime = $this->addHourToTime($startTime);
+                $startTime = '09:00:00';
+            }
+
+            // If parsing failed for end, DO NOT immediately add +1h (avoid artificial inflation) – leave null for now
+            $endParseFailed = false;
+            if (!$endTime) {
+                $endParseFailed = true;
+                \Log::warning('End time failed to parse; deferring fallback until validation', [
+                    'raw_label' => $rawEndLabel
+                ]);
+            }
+
+            // Diagnostic logging to verify UI -> parsed times integrity
+            try {
+                $parsedStartOk = $startTime !== null; // independent of end parsing
+                $parsedEndOk = $endTime !== null && !$endParseFailed;
+                $diffMinutes = ($endTime && $startTime) ? (strtotime($endTime) - strtotime($startTime)) / 60 : null;
+                \Log::info('Booking time parse diagnostic (initial)', [
+                    'raw_start_label' => $rawStartLabel,
+                    'raw_end_label' => $rawEndLabel,
+                    'parsed_start_time' => $startTime,
+                    'parsed_end_time' => $endTime,
+                    'minutes_difference' => $diffMinutes,
+                    'start_parse_success' => $parsedStartOk,
+                    'end_parse_success' => $parsedEndOk,
+                    'end_parse_failed_initially' => $endParseFailed,
+                ]);
+            } catch (\Throwable $diagEx) {
+                \Log::warning('Booking time parse diagnostic failed', [ 'error' => $diagEx->getMessage() ]);
+            }
+
+            // Basic sanity check & controlled fallback logic
+            $needEndFallback = false;
+            if (!$endTime) { // parse failed
+                $needEndFallback = true;
+            } elseif (strtotime($endTime) <= strtotime($startTime)) { // inverted or equal interval
+                $needEndFallback = true;
+            }
+
+            if ($needEndFallback) {
+                $recoveryReason = $endParseFailed ? 'parse_failed' : 'non_positive_interval';
+                \Log::info('End time fallback path entered', [
+                    'reason' => $recoveryReason,
+                    'start_time' => $startTime,
+                    'current_end' => $endTime,
+                    'raw_end_label' => $rawEndLabel
+                ]);
+
+                // 1. Try Carbon parse if not already parsed
+                $inferredEnd = null;
+                if (!$endTime && $rawEndLabel) {
+                    try {
+                        $carbon = \Carbon\Carbon::parse($rawEndLabel);
+                        $inferredEnd = $carbon->format('H:i:s');
+                        if ($inferredEnd && strtotime($inferredEnd) > strtotime($startTime)) {
+                            $endTime = $inferredEnd;
+                            \Log::info('End time recovered via Carbon lenient parse', [ 'recovered_end_time' => $endTime ]);
+                        }
+                    } catch (\Exception $e) {
+                        \Log::debug('Carbon parse for end label failed', [ 'label' => $rawEndLabel, 'error' => $e->getMessage() ]);
+                    }
+                }
+
+                // 2. Try loose regex parser if still invalid
+                if ((!$endTime || strtotime($endTime) <= strtotime($startTime)) && $rawEndLabel) {
+                    $loose = $this->parseTimeSlotLoose($rawEndLabel);
+                    if ($loose && strtotime($loose) > strtotime($startTime)) {
+                        $endTime = $loose;
+                        \Log::info('End time recovered via loose regex parse', [ 'recovered_end_time' => $endTime ]);
+                    }
+                }
+
+                // 3. If still invalid AND label different from start, do not inflate by +60; keep start+5m minimal buffer
+                if ((!$endTime || strtotime($endTime) <= strtotime($startTime)) && $rawEndLabel && strcasecmp(trim($rawEndLabel), trim($rawStartLabel)) !== 0) {
+                    $minimal = (new \DateTime($startTime))->add(new \DateInterval('PT5M'))->format('H:i:s');
+                    \Log::warning('End time unresolved after recovery attempts; applying minimal +5m buffer instead of +60m', [
+                        'applied_end_time' => $minimal
+                    ]);
+                    $endTime = $minimal;
+                }
+
+                // 4. Absolute last resort (+60) only if end is still null or non-positive AND labels identical / absent
+                if (!$endTime || strtotime($endTime) <= strtotime($startTime)) {
+                    \Log::warning('Applying final +60m fallback for end time', [
+                        'start' => $startTime,
+                        'previous_end' => $endTime,
+                        'raw_end_label' => $rawEndLabel,
+                        'reason' => $recoveryReason
+                    ]);
+                    $endTime = $this->addHourToTime($startTime);
+                    \Log::info('End time set by +60m ultimate fallback', [ 'adjusted_end_time' => $endTime ]);
+                }
             }
 
                         // Get the next bookingID since auto-increment is not working
@@ -172,7 +261,7 @@ class TransactionController extends Controller
             ]);
 
             // Store studio selection (plain backdrop or concept) in booking_concepts table
-            if ($request->has('studio_selection') && $request->studio_selection) {
+             if ($request->has('studio_selection') && $request->studio_selection) {
                 $studioSelection = $request->studio_selection;
                 
                 // Determine conceptID based on studio selection by querying database
@@ -319,9 +408,55 @@ class TransactionController extends Controller
 
     private function parseTimeSlot($timeSlot)
     {
-        // Convert "09:00 AM" format to "09:00:00" format
-        $time = \DateTime::createFromFormat('h:i A', $timeSlot);
-        return $time ? $time->format('H:i:s') : '09:00:00';
+        if (!$timeSlot || !is_string($timeSlot)) {
+            return null;
+        }
+        $original = $timeSlot;
+        $timeSlot = trim($timeSlot);
+        // Normalize spacing & case
+        $normalized = preg_replace('/\s+/', ' ', strtoupper($timeSlot));
+
+        $formats = [
+            'h:i A', // 09:30 AM
+            'g:i A', // 9:30 AM (single digit hour)
+            'h:iA',  // 09:30AM
+            'g:iA',  // 9:30AM
+        ];
+
+        foreach ($formats as $fmt) {
+            $dt = \DateTime::createFromFormat($fmt, $normalized);
+            if ($dt instanceof \DateTime) {
+                return $dt->format('H:i:s');
+            }
+        }
+
+        // Last resort: Carbon's natural language parser (more lenient)
+        try {
+            $carbon = \Carbon\Carbon::parse($original);
+            return $carbon->format('H:i:s');
+        } catch (\Exception $e) {
+            // swallow
+        }
+
+        return null; // signal failure so caller can decide fallback
+    }
+
+    // Very loose parser to salvage partial time strings like "2:5 pm" or "2 pm"
+    private function parseTimeSlotLoose(string $label = null)
+    {
+        if (!$label) return null;
+        $s = trim(strtolower($label));
+        // Match hh(:mm)? (am|pm)?
+        if (!preg_match('/^(\d{1,2})(?::(\d{1,2}))?\s*(am|pm)$/i', $s, $m)) {
+            return null;
+        }
+        $h = (int)$m[1];
+        $min = isset($m[2]) ? (int)$m[2] : 0;
+        $ampm = strtolower($m[3]);
+        if ($h < 1 || $h > 12 || $min < 0 || $min > 59) return null;
+        if ($ampm === 'pm' && $h !== 12) $h += 12;
+        if ($ampm === 'am' && $h === 12) $h = 0;
+        return sprintf('%02d:%02d:00', $h, $min);
     }
 
     private function addHourToTime($timeString)
@@ -489,6 +624,7 @@ class TransactionController extends Controller
                 'package_id' => 'required|integer',
                 'booking_date' => 'required|date',
                 'time_slot' => 'required|string',
+                'end_time_slot' => 'required|string', // new: ensure UI-computed end time arrives
                 'name' => 'required|string|max:255',
                 'contact' => 'required|string|max:20',
                 'email' => 'required|email|max:255',
@@ -540,6 +676,7 @@ class TransactionController extends Controller
                 'package_name' => $package->name,
                 'booking_date' => $request->booking_date,
                 'time_slot' => $request->time_slot,
+                'end_time_slot' => $request->end_time_slot, // preserve UI computed end time
                 'customer_name' => $request->name,
                 'customer_contact' => $request->contact,
                 'customer_email' => $request->email,
@@ -584,7 +721,9 @@ class TransactionController extends Controller
                     'payment_session_id' => $paymentSessionId,
                     'checkout_session_id' => $checkoutSession['session_id'],
                     'amount' => $amount,
-                    'customer' => $request->name
+                    'customer' => $request->name,
+                    'start_time_slot' => $request->time_slot,
+                    'end_time_slot' => $request->end_time_slot
                 ]);
 
                 return response()->json([
