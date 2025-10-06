@@ -74,6 +74,17 @@ class SalesController extends Controller
         ->orderByRaw('transactionID')
         ->get();
 
+        // Debug: Log first 3 results to see add-ons and concepts
+        \Log::info('🔍 SalesController - First 3 results:', [
+            'results' => $results->take(3)->map(function($r) {
+                return [
+                    'transactionID' => $r->transactionID,
+                    'selectedAddOns' => $r->selectedAddOns,
+                    'selectedConcepts' => $r->selectedConcepts,
+                ];
+            })->toArray()
+        ]);
+
         return response()->json($results);
     }
 

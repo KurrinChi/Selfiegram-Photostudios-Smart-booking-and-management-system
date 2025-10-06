@@ -198,12 +198,57 @@ class BookingRequestController extends Controller
             'requestedDate' => 'required|date',
             'requestedStartTime' => 'required|date_format:H:i',
             'reason' => 'nullable|string|max:1000',
+            // Optional override for duration in minutes (allows preserving original shorter/longer session)
+            'durationMinutes' => 'nullable|integer|min:5|max:480',
         ]);
         \Log::info('Updating booking status', ['bookingID' => $request->bookingID]);
 
-        // Calculate requestedEndTime as 30 minutes after requestedStartTime
-        $startTime = $request->requestedStartTime;
-        $endTime = date("H:i:s", strtotime($startTime . " +30 minutes"));
+        $startTime = $request->requestedStartTime; // validated H:i
+
+        // --- Determine duration to apply ---
+        $explicitDuration = $request->input('durationMinutes');
+        $durationToUse = null; // minutes
+
+        if (is_numeric($explicitDuration) && $explicitDuration > 0) {
+            $durationToUse = (int) $explicitDuration;
+        }
+
+        if ($durationToUse === null) {
+            // Fallback 1: derive from existing booking's stored start/end
+            $bookingRow = \DB::table('booking')->where('bookingID', $request->bookingID)->first();
+            if ($bookingRow && $bookingRow->bookingStartTime && $bookingRow->bookingEndTime) {
+                $s = strtotime($bookingRow->bookingStartTime);
+                $e = strtotime($bookingRow->bookingEndTime);
+                if ($s !== false && $e !== false && $e > $s) {
+                    $minutes = (int) ceil(($e - $s) / 60);
+                    if ($minutes >= 5 && $minutes <= 480) {
+                        $durationToUse = $minutes;
+                    }
+                }
+            }
+        }
+
+        if ($durationToUse === null) {
+            // Fallback 2: package duration
+            $bookingPkg = isset($bookingRow) ? $bookingRow : \DB::table('booking')->where('bookingID', $request->bookingID)->first();
+            if ($bookingPkg && $bookingPkg->packageID) {
+                $pkgRow = \DB::table('packages')->where('packageID', $bookingPkg->packageID)->first();
+                if ($pkgRow && $pkgRow->duration) {
+                    $parsed = $this->parseFlexibleDurationToMinutes($pkgRow->duration);
+                    if ($parsed >= 5) {
+                        $durationToUse = min($parsed, 480); // cap at 8h
+                    }
+                }
+            }
+        }
+
+        if ($durationToUse === null) {
+            // Fallback 3: preserve legacy behavior (30 minutes)
+            $durationToUse = 30;
+        }
+
+        // Compute end time from chosen duration
+        $endTime = date('H:i:s', strtotime($startTime . " +{$durationToUse} minutes"));
 
         // Wrap in transaction to ensure both succeed
         DB::beginTransaction();
@@ -247,7 +292,9 @@ class BookingRequestController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Reschedule request submitted and booking status updated.',
-                'requestID' => $bookingRequestID
+                'requestID' => $bookingRequestID,
+                'appliedDurationMinutes' => $durationToUse,
+                'requestedEndTime' => $endTime,
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -256,6 +303,30 @@ class BookingRequestController extends Controller
                 'message' => 'Failed to reschedule booking: ' . $e->getMessage()
             ], 500);
         }
+    }
+
+    /**
+     * Lightweight duration parser (e.g. "1 hr 30 mins", "90", "2h").
+     */
+    private function parseFlexibleDurationToMinutes($raw): int
+    {
+        if (!$raw || !is_string($raw)) return 0;
+        $s = strtolower(trim($raw));
+        if (preg_match('/^\d+$/', $s)) return (int) $s;
+        $total = 0;
+        if (preg_match('/(\d+)\s*(hour|hr|hrs|h)/', $s, $m)) { $total += ((int)$m[1]) * 60; }
+        if (preg_match('/(\d+)\s*(minute|min|mins|m)/', $s, $m2)) { $total += (int)$m2[1]; }
+        if ($total === 0 && preg_match_all('/(\d+)/', $s, $nums) && isset($nums[1][0])) {
+            // If contains hour token, treat first as hours, second as minutes
+            if (str_contains($s,'hour') || str_contains($s,'hr') || str_contains($s,'hrs') || str_contains($s,'h ')) {
+                $ints = $nums[1];
+                $total += ((int)$ints[0]) * 60;
+                if (isset($ints[1])) $total += (int)$ints[1];
+            } else {
+                $total = (int)$nums[1][0];
+            }
+        }
+        return $total;
     }
 
     public function getRescheduleRequest($bookingId)

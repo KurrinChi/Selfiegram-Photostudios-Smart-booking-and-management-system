@@ -962,15 +962,34 @@ if (isPreviewMode && previewData) {
                 <span>{displayData?.package}</span>
                 <span>₱{displayData?.subtotal.toFixed(2)}</span>
               </div>
-              {selectedAddons.filter(a => a.value > 0).map((addon) => (
-                <div key={addon.id} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px', fontSize: '10px' }}>
-                  <span>
-                    {addon.label} {addon.type === "spinner" && `x${addon.value}`}
-                    {addon.type === "dropdown" && addon.option && `(${addon.option})`}
-                  </span>
-                  <span>₱{(addon.type === "spinner" ? addon.price * addon.value : addon.price).toFixed(2)}</span>
+              
+              {/* Studio/Backdrop Information */}
+              {tags && tags.length > 0 && (
+                <div style={{ marginTop: '8px', marginBottom: '8px', paddingTop: '5px', borderTop: '1px dashed #ccc' }}>
+                  <p style={{ fontSize: '10px', fontWeight: 'bold', marginBottom: '3px' }}>Studio/Backdrop:</p>
+                  {tags.map((tag, idx) => (
+                    <div key={idx} style={{ fontSize: '10px', marginBottom: '2px', paddingLeft: '5px' }}>
+                      • {tag.label}
+                    </div>
+                  ))}
                 </div>
-              ))}
+              )}
+              
+              {/* Add-ons */}
+              {selectedAddons.filter(a => a.value > 0).length > 0 && (
+                <div style={{ marginTop: '8px', paddingTop: '5px', borderTop: '1px dashed #ccc' }}>
+                  <p style={{ fontSize: '10px', fontWeight: 'bold', marginBottom: '3px' }}>Add-ons:</p>
+                  {selectedAddons.filter(a => a.value > 0).map((addon) => (
+                    <div key={addon.id} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px', fontSize: '10px' }}>
+                      <span>
+                        • {addon.label} {addon.type === "spinner" && `x${addon.value}`}
+                        {addon.type === "dropdown" && addon.option && `(${addon.option})`}
+                      </span>
+                      <span>₱{(addon.type === "spinner" ? addon.price * addon.value : addon.price).toFixed(2)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 
