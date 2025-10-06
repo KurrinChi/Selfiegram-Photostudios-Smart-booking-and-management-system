@@ -146,6 +146,23 @@ const SelectPackagePage = () => {
   const [address, setAddress] = useState("");
   const [staffName, setStaffName] = useState("");
   const [paymentMode] = useState("");
+
+  // Get logged-in staff name from localStorage on mount
+  useEffect(() => {
+    const userStr = localStorage.getItem("user");
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        const fullName = `${user.fname || ''} ${user.lname || ''}`.trim();
+        setStaffName(fullName || "Staff");
+      } catch (error) {
+        console.error("Failed to parse user from localStorage:", error);
+        setStaffName("Staff");
+      }
+    } else {
+      setStaffName("Staff");
+    }
+  }, []);
   const [agreed, setAgreed] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [previewData, setPreviewData] = useState<PreviewBookingData | null>(
@@ -717,7 +734,6 @@ const SelectPackagePage = () => {
       !contact ||
       !email ||
       !address ||
-      !staffName ||
       !pkg
     ) {
       toast.error("Please fill in all required fields");
@@ -1615,12 +1631,12 @@ const SelectPackagePage = () => {
               placeholder="Address"
               className="w-full px-4 py-3 rounded bg-neutral-800 border border-neutral-700 text-sm placeholder-gray-400"
             />
-            <input
-              value={staffName}
-              onChange={(e) => setStaffName(e.target.value)}
-              placeholder="Staff Name"
-              className="w-full px-4 py-3 rounded bg-neutral-800 border border-neutral-700 text-sm placeholder-gray-400 md:col-span-2"
-            />
+          </div>
+
+          {/* Staff Name Display */}
+          <div className="mt-4 text-sm">
+            <span className="text-gray-400">Staff: </span>
+            <span className="text-white font-medium">{staffName}</span>
           </div>
 
           <div className="text-sm space-y-4">

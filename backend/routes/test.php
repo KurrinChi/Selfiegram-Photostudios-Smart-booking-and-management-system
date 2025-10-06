@@ -4,6 +4,51 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\DB;
 use App\Events\GalleryImagesConfirmed;
 use App\Models\Notification;
+use Carbon\Carbon;
+
+Route::get('/test-trend-data', function () {
+    $currentWeekStart = Carbon::now()->startOfWeek();
+    $currentWeekEnd = Carbon::now()->endOfWeek();
+    $lastWeekStart = Carbon::now()->subWeek()->startOfWeek();
+    $lastWeekEnd = Carbon::now()->subWeek()->endOfWeek();
+    
+    $currentBookings = DB::table('booking')
+        ->whereBetween('date', [$currentWeekStart, $currentWeekEnd])
+        ->count();
+    
+    $lastBookings = DB::table('booking')
+        ->whereBetween('date', [$lastWeekStart, $lastWeekEnd])
+        ->count();
+    
+    $packageData = DB::table('transaction')
+        ->join('booking', 'transaction.bookingId', '=', 'booking.bookingID')
+        ->join('packages', 'booking.packageID', '=', 'packages.packageID')
+        ->select(
+            'packages.name',
+            'packages.packageID',
+            'booking.date',
+            DB::raw('COUNT(*) as count')
+        )
+        ->where('transaction.paymentStatus', 1)
+        ->groupBy('packages.packageID', 'packages.name', 'booking.date')
+        ->orderBy('booking.date', 'desc')
+        ->limit(20)
+        ->get();
+    
+    return response()->json([
+        'current_week' => [
+            'start' => $currentWeekStart->toDateString(),
+            'end' => $currentWeekEnd->toDateString(),
+            'bookings' => $currentBookings
+        ],
+        'last_week' => [
+            'start' => $lastWeekStart->toDateString(),
+            'end' => $lastWeekEnd->toDateString(),
+            'bookings' => $lastBookings
+        ],
+        'recent_bookings_by_package' => $packageData
+    ]);
+});
 
 Route::get('/test-pusher', function () {
     // Create a test notification
