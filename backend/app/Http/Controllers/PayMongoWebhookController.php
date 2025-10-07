@@ -576,7 +576,7 @@ class PayMongoWebhookController extends Controller
                     $paymentTypeText = 'payment';
             }
 
-            $dynamicMessage = "Your {$paymentTypeText} of ₱" . number_format($amount, 2) . " for SFO#{$booking->bookingID} {$booking->packageName} (Booking Date: {$bookingDate} at {$bookingTime}) has been successfully processed via {$paymentMethod}.";
+            $dynamicMessage = "Your {$paymentTypeText} of ₱" . number_format($amount, 2) . " for SFO#{$booking->bookingID} {$booking->packageName} (Booking Date: {$bookingDate} at {$bookingTime}) has been successfully processed.";
 
             // Get payment transaction ID
             $transactionId = DB::table('payment_transactions')->where('booking_id', $bookingId)->latest('created_at')->value('id') ?? 0;
@@ -584,7 +584,7 @@ class PayMongoWebhookController extends Controller
             // Create notification
             $notification = Notification::create([
                 'userID' => $booking->userID,
-                'title' => 'Payment Successful! 💳',
+                'title' => 'Payment Successful!',
                 'label' => 'Payment',
                 'message' => $dynamicMessage,
                 'time' => now(),

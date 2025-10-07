@@ -594,15 +594,7 @@ const BookingDetails = ({ details }: { details: any }) => {
       <BookingDetails details={bookingDetails} />
     )}
 
-    {/* Placeholder for Payment Label */}
-    {selected.label === "Payment" && (
-      <div className="mt-4 p-4 bg-gray-50 rounded-lg shadow">
-        <h4 className="text-xl font-semibold mb-2">PayMongo API</h4>
-        <p className="text-sm text-gray-500">
-          This is a placeholder for the PayMongo API integration. Payment details will be displayed here in the future.
-        </p>
-      </div>
-    )}
+
   </div>
       )}
        <ChatWidget />
