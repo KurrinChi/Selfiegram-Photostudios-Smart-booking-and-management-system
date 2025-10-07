@@ -279,6 +279,10 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
   const [error, setError] = useState<string | null>(null);
   const [isAdjustPanelOpen, setIsAdjustPanelOpen] = useState(false);
   const [, setCurrentActiveMenu] = useState<string>("");
+  const [showSaveFeedback, setShowSaveFeedback] = useState<string | null>(null);
+  // Track unsaved changes
+  const [isDirty, setIsDirty] = useState(false);
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
 
   // ========== SYNC STATE TO REF ==========
   useEffect(() => {
@@ -617,6 +621,7 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
       setSessionValues((prev) => {
         const next = { ...prev, [key]: value };
         scheduleApplySession(next);
+        if (!isDirty) setIsDirty(true);
 
         const panel = adjustPanelRef.current;
         if (panel) {
@@ -631,7 +636,7 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
         return next;
       });
     },
-    [scheduleApplySession]
+    [scheduleApplySession, isDirty]
   );
 
   const fixImageAspectRatio = useCallback(() => {
@@ -1529,6 +1534,7 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
               );
               renderTimeoutRefs.current.push(timeoutId);
             }
+            if (!isDirty) setIsDirty(true);
           } catch (ex) {
             console.warn("[Canvas] Object added handler failed:", ex);
           }
@@ -1545,6 +1551,7 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
               30
             );
             renderTimeoutRefs.current.push(timeoutId);
+            if (!isDirty) setIsDirty(true);
           } catch (ex) {
             console.warn("[Canvas] Object modified handler failed:", ex);
           }
@@ -1699,6 +1706,62 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
     };
   }, [fixImageAspectRatio, reapplySessionToCurrentTargets, handleResize]);
 
+  // Export / Save logic
+  const handleExport = useCallback(
+    (format: 'jpeg' | 'png' = 'jpeg') => {
+      const instance: any = instanceRef.current;
+      if (!instance) {
+        setError('Editor not ready');
+        setTimeout(() => setError(null), 2500);
+        return;
+      }
+      try {
+        let dataURL: string | null = null;
+        // Prefer public API if present
+        if (typeof instance.toDataURL === 'function') {
+          try {
+            dataURL = instance.toDataURL({ format: format === 'jpeg' ? 'jpeg' : 'png', quality: 0.92 });
+          } catch (e) {
+            console.warn('[Export] instance.toDataURL failed, falling back', e);
+          }
+        }
+        if (!dataURL) {
+          const canvas = instance._graphics?.getCanvas?.() || instance.graphics?.getCanvas?.();
+            if (canvas?.lowerCanvasEl) {
+              try {
+                dataURL = canvas.lowerCanvasEl.toDataURL(`image/${format}`, 0.92);
+              } catch (e) {
+                console.warn('[Export] canvas lowerCanvasEl toDataURL failed', e);
+              }
+            }
+        }
+        if (!dataURL) {
+          setError('Failed to export image');
+          setTimeout(() => setError(null), 3000);
+          return;
+        }
+        const a = document.createElement('a');
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        a.href = dataURL;
+        a.download = `selfiegram-edited-${timestamp}.${format === 'jpeg' ? 'jpg' : 'png'}`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setShowSaveFeedback('Saved');
+        setIsDirty(false);
+        setTimeout(() => setShowSaveFeedback(null), 2000);
+      } catch (e) {
+        console.error('[Export] Unexpected failure', e);
+        setError('Export failed');
+        setTimeout(() => setError(null), 3000);
+      }
+    }, [setError]);
+
+  // Back button handler with confirmation if unsaved changes exist
+  const handleBackClick = useCallback(() => {
+    setShowLeaveConfirm(true);
+  }, []);
+
   return (
     <div
       style={{
@@ -1726,7 +1789,7 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
       >
         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
           <button
-            onClick={() => window.history.back()}
+            onClick={handleBackClick}
             style={{
               display: "flex",
               alignItems: "center",
@@ -1785,7 +1848,64 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
             SELFIEGRAM PHOTO EDITOR
           </h1>
         </div>
+        <div style={{display: 'flex', alignItems: 'center', gap: '12px'}}>
+          {showSaveFeedback && (
+            <span style={{
+              fontSize: '12px',
+              color: '#16a34a',
+              fontWeight: 600,
+              background: '#ecfdf5',
+              padding: '4px 8px',
+              borderRadius: '6px',
+              border: '1px solid #a7f3d0'
+            }}>
+              {showSaveFeedback}
+            </span>
+          )}
+          <button
+            onClick={() => handleExport('jpeg')}
+            title="Save edited image"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              background: '#111827',
+              color: 'white',
+              border: '1px solid #111827',
+              fontSize: '13px',
+              fontWeight: 600,
+              padding: '8px 14px',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              letterSpacing: '.5px',
+              boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
+              transition: 'background .2s ease, transform .15s ease'
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = '#1f2937'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = '#111827'; }}
+            onMouseDown={(e) => { e.currentTarget.style.transform = 'translateY(1px)'; }}
+            onMouseUp={(e) => { e.currentTarget.style.transform = 'translateY(0)'; }}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3v14"/><path d="M5 10l7 7 7-7"/><path d="M5 21h14"/></svg>
+            <span>Save</span>
+          </button>
+        </div>
       </header>
+      {showLeaveConfirm && (
+        <div style={{position:'fixed', inset:0, background:'rgba(0,0,0,0.55)', backdropFilter:'blur(4px)', zIndex:2000, display:'flex', alignItems:'center', justifyContent:'center', padding:'16px'}}>
+          <div style={{background:'#ffffff', width:'100%', maxWidth:480, borderRadius:16, padding:'28px 28px 24px', boxShadow:'0 12px 32px rgba(0,0,0,0.25)', fontFamily:'-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif', position:'relative'}}>
+            <h2 style={{margin:'0 0 12px', fontSize:18, fontWeight:700, letterSpacing:'-.25px', color:'#111827'}}>Leave editor?</h2>
+            <p style={{margin:'0 0 20px', fontSize:14, lineHeight:1.5, color:'#374151'}}>
+              You have unsaved changes. Leaving now will discard recent adjustments and this action cannot be undone.
+            </p>
+            <div style={{display:'flex', flexWrap:'wrap', gap:12, justifyContent:'flex-end'}}>
+              <button onClick={() => setShowLeaveConfirm(false)} style={{background:'#f3f4f6', border:'1px solid #e5e7eb', color:'#374151', padding:'10px 16px', fontSize:13, fontWeight:600, borderRadius:8, cursor:'pointer'}}>Stay</button>
+              <button onClick={() => { handleExport('jpeg'); setShowLeaveConfirm(false); setTimeout(()=>window.history.back(), 600); }} style={{background:'#111827', border:'1px solid #111827', color:'#fff', padding:'10px 16px', fontSize:13, fontWeight:600, borderRadius:8, cursor:'pointer', display:'flex', alignItems:'center', gap:6}}>Save & Leave</button>
+              <button onClick={() => { setShowLeaveConfirm(false); window.history.back(); }} style={{background:'transparent', border:'none', color:'#b91c1c', padding:'10px 12px', fontSize:13, fontWeight:600, cursor:'pointer'}}>Leave Without Saving</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div
         style={{
