@@ -553,7 +553,7 @@ const SelectPackagePage = () => {
     try {
       const formattedDate = formatDateForDatabase(date);
       const response = await fetchWithAuth(
-        `${API_URL}/api/booked-slots?date=${formattedDate}`
+        `${API_URL}/api/appointments/taken-times?date=${formattedDate}`
       );
       const data = await response.json();
 
