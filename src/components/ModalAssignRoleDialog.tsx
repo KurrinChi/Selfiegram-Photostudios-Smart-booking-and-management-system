@@ -58,7 +58,10 @@ const ModalAssignRoleDialog: React.FC<{
       })
       .then((data) => {
         console.log("Profile created:", data);
-        toast.success("Profile created successfully. Check email for verification.", { autoClose: 4000 });
+        toast.success(
+          "Profile created successfully. Check email for verification.",
+          { autoClose: 4000 }
+        );
         setTimeout(() => {
           window.location.reload();
         }, 4000);
@@ -103,7 +106,7 @@ const ModalAssignRoleDialog: React.FC<{
             {/* Header */}
             <div className="text-center mb-6">
               <img src="/slfg.svg" alt="logo" className="mx-auto h-10 mb-3" />
-              <h2 className="text-xl font-semibold">Account Setup</h2>
+              <h2 className="text-xl font-semibold">Add Staff Account</h2>
               <p className="text-sm text-gray-500">
                 Update user details to complete the profile.
               </p>
@@ -239,10 +242,11 @@ const ModalAssignRoleDialog: React.FC<{
               {/* Submit */}
               <button
                 type="submit"
-                className={`w-full py-2 flex justify-center items-center gap-2 text-white rounded-md text-sm font-medium ${loading
+                className={`w-full py-2 flex justify-center items-center gap-2 text-white rounded-md text-sm font-medium ${
+                  loading
                     ? "bg-gray-400 cursor-not-allowed"
                     : "bg-black hover:opacity-80"
-                  }`}
+                }`}
                 disabled={loading}
               >
                 {loading && (

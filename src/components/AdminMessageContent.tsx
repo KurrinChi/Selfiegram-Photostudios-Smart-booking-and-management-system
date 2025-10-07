@@ -20,12 +20,10 @@ import {
   Send as SendIcon,
   Plus as PlusIcon,
 } from "lucide-react";
-// Toast notifications removed per request; using inline flash messages instead.
 import pusher from "../utils/pusher";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
 
-// Toggle verbose debug logs for the admin messages panel
-const DEBUG_MESSAGES = true; // set to false to silence debug logs
+const DEBUG_MESSAGES = true;
 
 export type Email = {
   id: string;
@@ -33,14 +31,13 @@ export type Email = {
   to: string[];
   subject: string;
   body: string;
-  time: string; // ISO timestamp
-  mailbox: string; // inbox | sent | trash (derived)
-  starred: boolean; // tinyint -> boolean
-  archived: boolean; // archived flag -> trash
+  time: string;
+  mailbox: string;
+  starred: boolean;
+  archived: boolean;
   avatar?: string | null;
   senderID?: number;
-  messageStatus?: number; // 0 pending, 1 accommodated
-  // For sent (replied) messages we can attach the admin's reply notification(s)
+  messageStatus?: number;
   replies?: {
     notificationID: number;
     title: string;
@@ -49,7 +46,6 @@ export type Email = {
   }[];
 };
 
-/* ---------------- Utilities ---------------- */
 const timeShort = (iso?: string) => {
   if (!iso) return "";
   const d = new Date(iso);
@@ -62,27 +58,26 @@ const timeShort = (iso?: string) => {
   if (days < 7) return d.toLocaleDateString([], { weekday: "short" });
   return d.toLocaleDateString([], { month: "short", day: "numeric" });
 };
+
 const extractAddress = (raw: string) => {
   const m = raw.match(/<([^>]+)>/);
   return m ? m[1] : raw.trim();
 };
 
-/* -------------- Backend Types / Mapping -------------- */
 interface RawMessage {
   messageID: number;
   senderID: number;
   senderName: string;
   senderEmail: string;
   message: string;
-  inquiryOptions: string; // pricing | promotions | account | payment | other
-  messageStatus: number; // 0 unread / 1 processed(read)
-  createdAt?: string; // may exist (nullable)
-  profilePicture?: string | null; // appended in controller transform
-  starred?: number; // 0/1 from DB
-  archived?: number; // 0/1 from DB
+  inquiryOptions: string;
+  messageStatus: number;
+  createdAt?: string;
+  profilePicture?: string | null;
+  starred?: number;
+  archived?: number;
 }
 
-// Canonical labels for inquiryOptions -> subject/title mapping
 const INQUIRY_LABELS: Record<string, string> = {
   other: "General",
   pricing: "Pricing & Packages",
@@ -90,6 +85,7 @@ const INQUIRY_LABELS: Record<string, string> = {
   account: "Account / Technical Support",
   payment: "Payment & Billing",
 };
+
 const inquiryToSubject = (raw: RawMessage) =>
   INQUIRY_LABELS[raw.inquiryOptions] || "General";
 
@@ -98,11 +94,8 @@ function buildAvatarURL(
   apiBase: string
 ): string | null {
   if (!raw) return null;
-  // If already absolute (http/https/data) return as-is
   if (/^(https?:)?\/\//i.test(raw) || raw.startsWith("data:")) return raw;
-  // Normalize common storage prefixes
   const cleaned = raw.replace(/^storage\//, "").replace(/^\/+/, "");
-  // Attempt to detect if backend serves /storage publicly (Laravel default with storage:link)
   return apiBase ? `${apiBase}/storage/${cleaned}` : `/storage/${cleaned}`;
 }
 
@@ -132,30 +125,12 @@ function mapRawToEmail(r: RawMessage, apiBase: string): Email {
   };
 }
 
-// ---------------------------------------------------------------------------
-// Reply Template Helper
-// This function builds the pre-filled body that appears when an admin clicks
-// "Reply". Modify this if you want to change the formatting, add a greeting,
-// or remove the original quoted message. Keep the trailing original content
-// clearly separated for user context.
-// ---------------------------------------------------------------------------
 function buildReplyBody(email: Email, adminName: string) {
   const timestamp = new Date(email.time).toLocaleString();
   const header = `On ${timestamp}, ${email.from} wrote:`;
-  // Normalize any accidental double newlines before #ID to a single newline
   const original = email.body.replace(/\n\n(#\d+)/g, "\n$1");
-  // Requested final format:
-  // ---
-  // If you have more questions, kindly send us a new contact form and we hope that you are satisfied with our service.
-  //
-  // Regards,
-  // {Admin Name}
-  // SelfieGram Support Staff
-  // ---
-  // On TIMESTAMP, Name <email> wrote:
-  // original message
   return [
-    "", // leading blank line for typing space if desired
+    "",
     "---",
     "If you have more questions, kindly send us a new contact form and we hope that you are satisfied with our service.",
     "",
@@ -168,12 +143,10 @@ function buildReplyBody(email: Email, adminName: string) {
   ].join("\n");
 }
 
-// Extract all #<number> tokens from a text blob (e.g. "Thanks... #54")
-// Returns an array of numeric ID strings without the leading '#'.
 function extractHashIds(text: string | null | undefined): string[] {
   if (!text) return [];
   const out: string[] = [];
-  const re = /#(\d{1,10})/g; // up to 10 digits just to be safe
+  const re = /#(\d{1,10})/g;
   let m: RegExpExecArray | null;
   while ((m = re.exec(text)) !== null) {
     out.push(m[1]);
@@ -181,13 +154,13 @@ function extractHashIds(text: string | null | undefined): string[] {
   return out;
 }
 
-/* -------------- Component -------------- */
 export default function AdminMessageContent(): JSX.Element {
   const [adminName, setAdminName] = useState<string>("Support Staff");
   const [flash, setFlash] = useState<{
     type: "success" | "error";
     message: string;
   } | null>(null);
+
   const pushFlash = useCallback(
     (type: "success" | "error", message: string, ttl = 3200) => {
       setFlash({ type, message });
@@ -200,12 +173,12 @@ export default function AdminMessageContent(): JSX.Element {
     },
     []
   );
+
   useEffect(() => {
     try {
       const raw = localStorage.getItem("user");
       if (raw) {
         const u = JSON.parse(raw);
-        // Try common name fields; fallback to username or 'Admin'
         const name =
           [u.fname, u.lname].filter(Boolean).join(" ").trim() ||
           u.username ||
@@ -214,10 +187,11 @@ export default function AdminMessageContent(): JSX.Element {
       }
     } catch {}
   }, []);
+
   const [emails, setEmails] = useState<Email[]>([]);
-  const [selectedEmailId, setSelectedEmailId] = useState<string | null>(null); // stays null on load until user clicks
+  const [selectedEmailId, setSelectedEmailId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [q, setQ] = useState(""); // immediate input for debounce
+  const [q, setQ] = useState("");
   const [selectedMailbox, setSelectedMailbox] = useState<
     "inbox" | "sent" | "trash" | "starred"
   >("inbox");
@@ -225,15 +199,68 @@ export default function AdminMessageContent(): JSX.Element {
   const [error, setError] = useState<string | null>(null);
   const [lastFetched, setLastFetched] = useState<Date | null>(null);
   const abortRef = useRef<AbortController | null>(null);
-  const initialFetchDoneRef = useRef(false); // guard against StrictMode double invocation
-  const dataSnapshotRef = useRef<string | null>(null); // cache of last dataset signature
+  const initialFetchDoneRef = useRef(false);
+  const dataSnapshotRef = useRef<string | null>(null);
+
+  const [composeOpen, setComposeOpen] = useState(false);
+  const [composeMinimized, setComposeMinimized] = useState(false);
+  const [composeDraft, setComposeDraft] = useState({
+    to: "",
+    subject: "",
+    body: "",
+  });
+  const [broadcastMode, setBroadcastMode] = useState(false);
+  const [customerList, setCustomerList] = useState<
+    { userID: number; name: string; email: string }[]
+  >([]);
+  const [recipient, setRecipient] = useState<"ALL" | number>("ALL");
+  const [replyTargetUserID, setReplyTargetUserID] = useState<number | null>(
+    null
+  );
+  const [replyTargetMessageID, setReplyTargetMessageID] = useState<
+    string | null
+  >(null);
+  const [sending, setSending] = useState(false);
+  const loadingRepliesRef = useRef<Set<string>>(new Set());
+
+  // ✅ FIXED: ADD MISSING STATES FOR SEARCHABLE DROPDOWN
+  const [recipientSearch, setRecipientSearch] = useState("");
+  const [recipientDropdownOpen, setRecipientDropdownOpen] = useState(false);
+  const recipientInputRef = useRef<HTMLInputElement>(null);
+
+  const [confirmDialog, setConfirmDialog] = useState<{
+    open: boolean;
+    title: string;
+    message: string;
+    confirmLabel: string;
+    onConfirm: () => void;
+    variant?: "danger" | "trash";
+  }>({
+    open: false,
+    title: "",
+    message: "",
+    confirmLabel: "Confirm",
+    onConfirm: () => {},
+    variant: "danger",
+  });
 
   const API_URL = (import.meta as any).env?.VITE_API_URL || "";
   const token =
     typeof window !== "undefined" ? localStorage.getItem("token") : null;
 
+  // ✅ FIXED: ADD FILTERED CUSTOMERS MEMO
+  const filteredCustomers = useMemo(() => {
+    if (!recipientSearch.trim()) return customerList;
+
+    const query = recipientSearch.toLowerCase();
+    return customerList.filter(
+      (c) =>
+        c.name.toLowerCase().includes(query) ||
+        c.email.toLowerCase().includes(query)
+    );
+  }, [customerList, recipientSearch]);
+
   const fetchMessages = useCallback(async () => {
-    // If token/API URL not ready yet (e.g., first render before login state re-hydrates), just skip silently.
     if (!API_URL || !token) {
       if (DEBUG_MESSAGES)
         console.debug("[Messages] Skip fetch: missing", {
@@ -249,28 +276,16 @@ export default function AdminMessageContent(): JSX.Element {
       abortRef.current?.abort();
       const controller = new AbortController();
       abortRef.current = controller;
-      if (DEBUG_MESSAGES)
-        console.debug("[Messages] Fetch start", {
-          url: `${API_URL}/api/messages?per_page=100`,
-        });
+
       const res = await fetchWithAuth(`${API_URL}/api/messages?per_page=100`, {
         signal: controller.signal,
       });
-      if (DEBUG_MESSAGES)
-        console.debug("[Messages] Fetch response", {
-          status: res.status,
-          ok: res.ok,
-        });
+
       if (!res.ok) {
         let bodyText = "";
         try {
           bodyText = await res.text();
         } catch {}
-        console.warn("Messages fetch failed", {
-          status: res.status,
-          statusText: res.statusText,
-          body: bodyText,
-        });
         let parsed: any = null;
         try {
           parsed = bodyText ? JSON.parse(bodyText) : null;
@@ -282,15 +297,14 @@ export default function AdminMessageContent(): JSX.Element {
           `Request failed (${res.status})`;
         throw new Error(msg);
       }
+
       const json = await res.json();
       const data: RawMessage[] = Array.isArray(json) ? json : json.data || [];
-      if (DEBUG_MESSAGES)
-        console.debug("[Messages] Raw data length", data.length, {
-          sample: data[0],
-        });
+
       const mapped = data
         .map((r) => mapRawToEmail(r, API_URL))
         .sort((a, b) => +new Date(b.time) - +new Date(a.time));
+
       const snapshotKey =
         mapped.length +
         ":" +
@@ -298,6 +312,7 @@ export default function AdminMessageContent(): JSX.Element {
           .slice(0, 5)
           .map((m) => m.id)
           .join(",");
+
       if (dataSnapshotRef.current === snapshotKey) {
         if (DEBUG_MESSAGES)
           console.debug("[Messages] No data change; skip state update");
@@ -306,18 +321,9 @@ export default function AdminMessageContent(): JSX.Element {
         setEmails(mapped);
         setLastFetched(new Date());
       }
-      setError(null); // ensure previous error cleared if this succeeds
-      if (DEBUG_MESSAGES)
-        console.debug("[Messages] Mapped emails length", mapped.length, {
-          first: mapped[0],
-        });
-      if (DEBUG_MESSAGES)
-        console.debug(
-          "[Messages] Fetch duration ms",
-          Math.round(performance.now() - start)
-        );
+      setError(null);
     } catch (e: any) {
-      if (e?.name === "AbortError") return; // ignore abort
+      if (e?.name === "AbortError") return;
       if (DEBUG_MESSAGES) console.debug("[Messages] Fetch error", e);
       setError(e?.message || "Failed to load messages");
     } finally {
@@ -325,26 +331,18 @@ export default function AdminMessageContent(): JSX.Element {
     }
   }, [API_URL, token]);
 
-  // Initial load with StrictMode guard
   useEffect(() => {
     if (!token) return;
-    if (initialFetchDoneRef.current) {
-      if (DEBUG_MESSAGES)
-        console.debug("[Messages] Skip duplicate initial fetch");
-      return;
-    }
+    if (initialFetchDoneRef.current) return;
     initialFetchDoneRef.current = true;
     fetchMessages();
   }, [fetchMessages, token]);
 
-  // Real-time subscription for new messages via private admin channel (auth required)
   useEffect(() => {
     const channelName = "private-admin.messages";
     const channel = pusher.subscribe(channelName);
     const handler = (data: any) => {
       if (!data || !data.messageID) return;
-      if (DEBUG_MESSAGES)
-        console.debug("[Messages] Pusher event received", data);
       const raw: RawMessage = {
         messageID: data.messageID,
         senderID: 0,
@@ -359,8 +357,6 @@ export default function AdminMessageContent(): JSX.Element {
       setEmails((prev) => {
         if (prev.some((e) => e.id === String(raw.messageID))) return prev;
         const mapped = mapRawToEmail(raw, API_URL);
-        if (DEBUG_MESSAGES)
-          console.debug("[Messages] Adding new message from Pusher", mapped);
         return [mapped, ...prev].sort(
           (a, b) => +new Date(b.time) - +new Date(a.time)
         );
@@ -368,51 +364,39 @@ export default function AdminMessageContent(): JSX.Element {
     };
     channel.bind("admin.message.created", handler);
     return () => {
-      if (DEBUG_MESSAGES)
-        console.debug("[Messages] Unsubscribe pusher channel");
       channel.unbind("admin.message.created", handler);
       pusher.unsubscribe(channelName);
     };
   }, [API_URL]);
 
-  // compose state
-  const [composeOpen, setComposeOpen] = useState(false); // reply or broadcast
-  const [composeMinimized, setComposeMinimized] = useState(false);
-  const [composeDraft, setComposeDraft] = useState({
-    to: "",
-    subject: "",
-    body: "",
-  });
-  const [broadcastMode, setBroadcastMode] = useState(false); // true when creating a system broadcast / direct manual message
-  const [customerList, setCustomerList] = useState<
-    { userID: number; name: string; email: string }[]
-  >([]);
-  const [recipient, setRecipient] = useState<"ALL" | number>("ALL");
-  const [replyTargetUserID, setReplyTargetUserID] = useState<number | null>(
-    null
-  );
-  const [replyTargetMessageID, setReplyTargetMessageID] = useState<
-    string | null
-  >(null);
-  const [sending, setSending] = useState(false);
-  // Track which message IDs are currently loading replies to avoid duplicate fetches
-  const loadingRepliesRef = useRef<Set<string>>(new Set());
-
-  /* Debounce search */
   useEffect(() => {
     const id = window.setTimeout(() => setSearchQuery(q.trim()), 250);
     return () => clearTimeout(id);
   }, [q]);
 
-  /* Ensure selected email remains valid */
   useEffect(() => {
-    // If the currently selected email was removed, clear selection (do not auto select a new one)
     if (selectedEmailId && !emails.some((e) => e.id === selectedEmailId)) {
       setSelectedEmailId(null);
     }
   }, [emails, selectedEmailId]);
 
-  // Removed mark-as-read logic per new requirement
+  // ✅ FIXED: ADD CLICK-OUTSIDE HANDLER
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        recipientInputRef.current &&
+        !recipientInputRef.current.parentElement?.contains(event.target as Node)
+      ) {
+        setRecipientDropdownOpen(false);
+      }
+    };
+
+    if (recipientDropdownOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () =>
+        document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [recipientDropdownOpen]);
 
   const selectedEmail = useMemo(
     () => emails.find((e) => e.id === selectedEmailId) ?? null,
@@ -449,83 +433,22 @@ export default function AdminMessageContent(): JSX.Element {
       ).length,
     [emails]
   );
+
   const sentCount = useMemo(
     () => emails.filter((e) => e.mailbox === "sent" && !e.archived).length,
     [emails]
   );
+
   const trashCount = useMemo(
     () => emails.filter((e) => e.archived).length,
     [emails]
   );
+
   const starredCount = useMemo(
     () => emails.filter((e) => e.starred && !e.archived).length,
     [emails]
   );
 
-  useEffect(() => {
-    const inView = (e: Email) => {
-      switch (selectedMailbox) {
-        case "starred":
-          return e.starred && !e.archived;
-        case "trash":
-          return e.archived;
-        case "sent":
-          return e.mailbox === "sent" && !e.archived;
-        case "inbox":
-          return e.mailbox === "inbox" && !e.archived;
-        default:
-          return false;
-      }
-    };
-    const current = emails.find((e) => e.id === selectedEmailId && inView(e));
-    if (!current) {
-      const first = emails.find(inView) || null;
-      setSelectedEmailId(first ? first.id : null);
-    }
-  }, [selectedMailbox, emails, selectedEmailId]);
-
-  /* Compose helpers */
-  const toggleCompose = useCallback(
-    (opts?: { to?: string; subject?: string; body?: string }) => {
-      if (!composeOpen) {
-        setComposeDraft({
-          to: opts?.to ?? "",
-          subject: opts?.subject ?? "",
-          body: opts?.body ?? "",
-        });
-        setComposeMinimized(false);
-        setComposeOpen(true);
-        return;
-      }
-      if (composeOpen && !composeMinimized && !opts) {
-        // close
-        setComposeOpen(false);
-        return;
-      }
-      if (composeOpen && composeMinimized) {
-        // restore
-        setComposeMinimized(false);
-        if (opts) setComposeDraft((s) => ({ ...s, ...opts }));
-        return;
-      }
-      if (opts) {
-        // already open, fill
-        setComposeDraft((s) => ({ ...s, ...opts }));
-        setComposeMinimized(false);
-      }
-    },
-    [composeOpen, composeMinimized]
-  );
-
-  const closeCompose = useCallback(() => {
-    setComposeDraft({ to: "", subject: "", body: "" });
-    setComposeOpen(false);
-    setComposeMinimized(false);
-    setBroadcastMode(false);
-    setRecipient("ALL");
-  }, []);
-
-  // Fetch customers only when composing a broadcast/direct (manual compose)
   useEffect(() => {
     if (!broadcastMode) return;
     if (!API_URL || !token) return;
@@ -552,8 +475,47 @@ export default function AdminMessageContent(): JSX.Element {
       .catch((err) => console.error("Fetch customers failed", err));
   }, [broadcastMode, API_URL, token]);
 
+  const toggleCompose = useCallback(
+    (opts?: { to?: string; subject?: string; body?: string }) => {
+      if (!composeOpen) {
+        setComposeDraft({
+          to: opts?.to ?? "",
+          subject: opts?.subject ?? "",
+          body: opts?.body ?? "",
+        });
+        setComposeMinimized(false);
+        setComposeOpen(true);
+        return;
+      }
+      if (composeOpen && !composeMinimized && !opts) {
+        setComposeOpen(false);
+        return;
+      }
+      if (composeOpen && composeMinimized) {
+        setComposeMinimized(false);
+        if (opts) setComposeDraft((s) => ({ ...s, ...opts }));
+        return;
+      }
+      if (opts) {
+        setComposeDraft((s) => ({ ...s, ...opts }));
+        setComposeMinimized(false);
+      }
+    },
+    [composeOpen, composeMinimized]
+  );
+
+  // ✅ FIXED: UPDATE closeCompose TO RESET NEW STATES
+  const closeCompose = useCallback(() => {
+    setComposeDraft({ to: "", subject: "", body: "" });
+    setComposeOpen(false);
+    setComposeMinimized(false);
+    setBroadcastMode(false);
+    setRecipient("ALL");
+    setRecipientSearch("");
+    setRecipientDropdownOpen(false);
+  }, []);
+
   const sendCompose = useCallback(() => {
-    // Helper to trigger a browser (push-like) notification via the Notification API
     const fireBrowserNotification = (title: string, body: string) => {
       if (typeof window === "undefined" || !("Notification" in window)) return;
       try {
@@ -568,11 +530,9 @@ export default function AdminMessageContent(): JSX.Element {
             })
             .catch(() => {});
         }
-      } catch {
-        /* ignore */
-      }
+      } catch {}
     };
-    // If broadcast mode: send system notification (ALL) or direct manual message.
+
     if (broadcastMode) {
       if (!composeDraft.subject.trim()) {
         pushFlash("error", "Subject is required.");
@@ -624,7 +584,6 @@ export default function AdminMessageContent(): JSX.Element {
               ? "Your system broadcast was delivered to all customers."
               : "Direct support message delivered to selected customer."
           );
-          // record sent copy locally (purely client-side for UI consistency)
           setEmails((prev) => [
             {
               id: `sent-${Date.now()}-${Math.random()}`,
@@ -653,6 +612,7 @@ export default function AdminMessageContent(): JSX.Element {
         .finally(() => setSending(false));
       return;
     }
+
     if (!replyTargetUserID || !replyTargetMessageID) {
       pushFlash(
         "error",
@@ -692,7 +652,6 @@ export default function AdminMessageContent(): JSX.Element {
           const txt = await res.text();
           throw new Error(txt || `Failed (${res.status})`);
         }
-        // Mark original message as accommodated (messageStatus=1) and move to 'sent'
         if (replyTargetMessageID) {
           fetch(`${API_URL}/api/messages/${replyTargetMessageID}/status`, {
             method: "POST",
@@ -718,7 +677,6 @@ export default function AdminMessageContent(): JSX.Element {
           "Reply Sent",
           "Your support reply was delivered successfully."
         );
-        // Clear draft and selection to avoid showing stale opened message
         setComposeDraft({ to: "", subject: "", body: "" });
         setReplyTargetUserID(null);
         setReplyTargetMessageID(null);
@@ -741,6 +699,10 @@ export default function AdminMessageContent(): JSX.Element {
     composeDraft,
     closeCompose,
     selectedEmailId,
+    broadcastMode,
+    recipient,
+    adminName,
+    pushFlash,
   ]);
 
   const updateMessageFlags = useCallback(
@@ -778,9 +740,6 @@ export default function AdminMessageContent(): JSX.Element {
 
   const deleteMessage = useCallback(
     (id: string) => {
-      if (DEBUG_MESSAGES)
-        console.debug("[Messages] Request move to trash", { id });
-      // open confirm dialog instead of native confirm
       setConfirmDialog({
         open: true,
         title: "Move to Trash",
@@ -805,7 +764,6 @@ export default function AdminMessageContent(): JSX.Element {
 
   const restoreMessage = useCallback(
     (id: string) => {
-      if (DEBUG_MESSAGES) console.debug("[Messages] Restore message", { id });
       setEmails((prev) =>
         prev.map((e) => {
           if (e.id !== id) return e;
@@ -823,12 +781,6 @@ export default function AdminMessageContent(): JSX.Element {
     (id?: string) => {
       const bulk = selectedMailbox === "trash";
       const archivedCount = emails.filter((e) => e.archived).length;
-      if (DEBUG_MESSAGES)
-        console.debug("[Messages] Permanent delete dialog", {
-          bulk,
-          archivedCount,
-          id,
-        });
       setConfirmDialog({
         open: true,
         title: bulk ? "Empty Trash" : "Delete Message",
@@ -868,7 +820,6 @@ export default function AdminMessageContent(): JSX.Element {
 
   const toggleStar = useCallback(
     (id: string) => {
-      if (DEBUG_MESSAGES) console.debug("[Messages] Toggle star", { id });
       setEmails((prev) =>
         prev.map((e) => (e.id === id ? { ...e, starred: !e.starred } : e))
       );
@@ -881,11 +832,6 @@ export default function AdminMessageContent(): JSX.Element {
 
   const replyTo = useCallback(
     (email: Email) => {
-      if (DEBUG_MESSAGES)
-        console.debug("[Messages] Reply to", {
-          id: email.id,
-          senderID: email.senderID,
-        });
       const to = extractAddress(email.from);
       const body = buildReplyBody(email, adminName);
       toggleCompose({ to, subject: `Re: ${email.subject}`, body });
@@ -895,13 +841,11 @@ export default function AdminMessageContent(): JSX.Element {
     [toggleCompose, adminName]
   );
 
-  // Load admin reply notifications for a given sent message (original customer message moved to sent)
   const loadReplies = useCallback(
     async (email: Email) => {
       if (!API_URL || !token) return;
-      if (!email.senderID) return; // need user association
+      if (!email.senderID) return;
       if (loadingRepliesRef.current.has(email.id)) return;
-      // Only load if we are in sent mailbox context and replies not already loaded
       if (email.mailbox !== "sent" || email.replies !== undefined) return;
       loadingRepliesRef.current.add(email.id);
       try {
@@ -917,8 +861,7 @@ export default function AdminMessageContent(): JSX.Element {
         if (!res.ok) return;
         const rows = await res.json();
         if (!Array.isArray(rows)) return;
-        const targetId = String(email.id); // messageID of original message
-        // Strategy: scan each notification message body for any #<number> tokens; if one matches the target messageID we treat it as the admin reply to that thread.
+        const targetId = String(email.id);
         const matches = rows
           .filter((n: any) => n && n.label === "Support")
           .filter((n: any) => {
@@ -931,16 +874,10 @@ export default function AdminMessageContent(): JSX.Element {
             message: n.message,
             time: n.time,
           }));
-        if (DEBUG_MESSAGES)
-          console.debug("[Messages] Reply resolution (hash match)", {
-            messageID: targetId,
-            matched: matches.length,
-          });
         setEmails((prev) =>
           prev.map((e) => (e.id === email.id ? { ...e, replies: matches } : e))
         );
       } catch (err) {
-        if (DEBUG_MESSAGES) console.debug("[Messages] loadReplies error", err);
       } finally {
         loadingRepliesRef.current.delete(email.id);
       }
@@ -948,20 +885,17 @@ export default function AdminMessageContent(): JSX.Element {
     [API_URL, token, setEmails]
   );
 
-  // Whenever a sent message is selected, attempt to load its replies (once)
   useEffect(() => {
     if (selectedMailbox === "sent" && selectedEmail) {
       loadReplies(selectedEmail);
     }
   }, [selectedMailbox, selectedEmail, loadReplies]);
 
-  /* Keyboard shortcuts */
   useEffect(() => {
     const handler = (ev: KeyboardEvent) => {
       const tag = (ev.target as HTMLElement)?.tagName?.toLowerCase();
       if (tag === "input" || tag === "textarea") return;
       if (ev.key === "c") {
-        // Manual compose broadcast (re-added)
         ev.preventDefault();
         setBroadcastMode(true);
         toggleCompose({ to: "", subject: "", body: "" });
@@ -979,38 +913,26 @@ export default function AdminMessageContent(): JSX.Element {
         const prev = filteredEmails[Math.max(0, idx - 1)];
         if (prev) setSelectedEmailId(prev.id);
       } else if (ev.key === "r") {
-        if (selectedMailbox !== "inbox") return; // reply only in inbox
+        if (selectedMailbox !== "inbox") return;
         ev.preventDefault();
         if (selectedEmail) replyTo(selectedEmail);
       }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [filteredEmails, selectedEmailId, selectedEmail, replyTo, toggleCompose]);
-
-  // Draft feature removed
-
-  // ----------------- Confirm Dialog State -----------------
-  const [confirmDialog, setConfirmDialog] = useState<{
-    open: boolean;
-    title: string;
-    message: string;
-    confirmLabel: string;
-    onConfirm: () => void;
-    variant?: "danger" | "trash";
-  }>({
-    open: false,
-    title: "",
-    message: "",
-    confirmLabel: "Confirm",
-    onConfirm: () => {},
-    variant: "danger",
-  });
+  }, [
+    filteredEmails,
+    selectedEmailId,
+    selectedEmail,
+    replyTo,
+    toggleCompose,
+    selectedMailbox,
+  ]);
 
   return (
-    <div className="h-screen bg-white text-[#212121] flex">
-      {/* Side Mailbox Panel */}
-      <aside className="w-56 border-r border-slate-100 bg-white px-4 py-6 flex flex-col gap-4">
+    <div className="h-screen bg-white text-[#212121] flex flex-col md:flex-row overflow-hidden">
+      {/* Sidebar - Hidden on mobile, shown on desktop */}
+      <aside className="hidden md:flex md:w-56 border-r border-slate-100 bg-white px-4 py-6 flex-col gap-4">
         <div className="text-lg font-semibold">Messages</div>
         <nav className="flex flex-col gap-2 text-sm">
           <button
@@ -1027,7 +949,7 @@ export default function AdminMessageContent(): JSX.Element {
               Inbox
             </span>
             {inboxPendingCount > 0 && (
-              <span className="text-[10px] bg-[#111] text-white px-2 py-0.5 rounded-full">
+              <span className="text-[10px] bg-[#212121] text-white px-2 py-0.5 rounded-full">
                 {inboxPendingCount}
               </span>
             )}
@@ -1091,74 +1013,111 @@ export default function AdminMessageContent(): JSX.Element {
           </button>
         </nav>
       </aside>
-      {/* List Column */}
-      <main className="flex-1 min-w-0 border-r border-slate-100 bg-white">
-        <div className="px-6 py-6">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold flex items-center gap-3 capitalize">
+
+      {/* Mobile Bottom Navigation - Only show on mobile */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 z-40">
+        <nav className="flex items-center justify-around px-2 py-2">
+          <button
+            onClick={() => setSelectedMailbox("inbox")}
+            className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition ${
+              selectedMailbox === "inbox"
+                ? "bg-[#212121] text-white"
+                : "text-slate-600"
+            }`}
+          >
+            <InboxIcon className="w-5 h-5" />
+            <span className="text-[10px] font-medium">Inbox</span>
+          </button>
+          <button
+            onClick={() => setSelectedMailbox("sent")}
+            className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition ${
+              selectedMailbox === "sent"
+                ? "bg-[#212121] text-white"
+                : "text-slate-600"
+            }`}
+          >
+            <SendIcon className="w-5 h-5" />
+            <span className="text-[10px] font-medium">Sent</span>
+          </button>
+          <button
+            onClick={() => setSelectedMailbox("starred")}
+            className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition ${
+              selectedMailbox === "starred"
+                ? "bg-[#212121] text-white"
+                : "text-slate-600"
+            }`}
+          >
+            <StarIcon className="w-5 h-5" />
+            <span className="text-[10px] font-medium">Starred</span>
+          </button>
+          <button
+            onClick={() => setSelectedMailbox("trash")}
+            className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition ${
+              selectedMailbox === "trash"
+                ? "bg-[#212121] text-white"
+                : "text-slate-600"
+            }`}
+          >
+            <TrashIcon className="w-5 h-5" />
+            <span className="text-[10px] font-medium">Trash</span>
+          </button>
+        </nav>
+      </div>
+
+      {/* List Column - Hide when message selected on mobile */}
+      <main
+        className={`${
+          selectedEmail ? "hidden md:flex" : "flex"
+        } flex-1 min-w-0 border-r border-slate-100 bg-white flex-col overflow-hidden`}
+      >
+        <div className="px-4 md:px-6 py-4 md:py-6 flex-1 flex flex-col overflow-hidden">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg md:text-xl font-semibold capitalize">
               {selectedMailbox}
-              {loading && (
-                <span className="text-xs font-normal text-slate-400 animate-pulse">
-                  Loading...
-                </span>
-              )}
             </h2>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => fetchMessages()}
-                className="flex items-center gap-1 px-3 py-2 rounded-md border border-slate-200 text-xs hover:bg-slate-50"
-                aria-label="Refresh"
-                disabled={loading}
-              >
-                <RefreshIcon
-                  className={`w-3 h-3 ${loading ? "animate-spin" : ""}`}
-                />
-                Refresh
-              </button>
-              {lastFetched && (
-                <span className="text-[10px] text-slate-400">
-                  {lastFetched.toLocaleTimeString()}
-                </span>
-              )}
-            </div>
-          </div>
-
-          <div className="mt-4 flex flex-col gap-3">
-            <div className="relative w-full">
-              <SearchIcon className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#999]" />
-              <input
-                value={q}
-                onChange={(e) => setQ(e.target.value)}
-                placeholder="Search"
-                className="block w-full pl-10 pr-3 py-2 rounded-full border border-slate-100 text-sm"
-                aria-label="Search messages"
+            <button
+              onClick={() => fetchMessages()}
+              className="flex items-center gap-1 px-2 md:px-3 py-1.5 md:py-2 rounded-md border border-slate-200 text-xs hover:bg-slate-50"
+              disabled={loading}
+            >
+              <RefreshIcon
+                className={`w-3 h-3 ${loading ? "animate-spin" : ""}`}
               />
-            </div>
-            {/* Status tabs removed in favor of mailbox navigation */}
+              <span className="hidden sm:inline">Refresh</span>
+            </button>
           </div>
 
-          <div className="mt-4 h-[calc(100vh-220px)] overflow-auto relative">
+          <div className="relative w-full mb-4">
+            <SearchIcon className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Search messages..."
+              className="block w-full pl-10 pr-3 py-2 rounded-full border border-slate-100 text-sm outline-none focus:border-[#212121]"
+            />
+          </div>
+
+          <div className="flex-1 overflow-auto pb-20 md:pb-4">
             {error && (
               <div className="p-3 mb-2 rounded bg-red-50 text-red-600 text-xs flex items-center gap-2">
                 <AlertIcon className="w-4 h-4" /> {error}
               </div>
             )}
             {!loading && filteredEmails.length === 0 && !error && (
-              <div className="p-6 text-sm text-slate-500">No messages</div>
+              <div className="p-6 text-sm text-slate-500 text-center">
+                No messages
+              </div>
             )}
             {filteredEmails.map((e) => (
               <button
                 key={e.id}
-                onClick={() => {
-                  setSelectedEmailId(e.id);
-                }}
-                className={`w-full text-left px-4 py-3 border-b border-slate-100 cursor-pointer hover:bg-slate-50 ${
+                onClick={() => setSelectedEmailId(e.id)}
+                className={`w-full text-left px-3 md:px-4 py-3 border-b border-slate-100 hover:bg-slate-50 transition ${
                   selectedEmailId === e.id ? "bg-slate-50" : ""
                 }`}
-                aria-pressed={selectedEmailId === e.id}
               >
                 <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-full bg-[#f3f3f3] flex items-center justify-center text-sm font-semibold text-[#212121] overflow-hidden">
+                  <div className="w-10 h-10 rounded-full bg-[#f3f3f3] flex items-center justify-center text-sm font-semibold overflow-hidden flex-shrink-0">
                     {e.avatar ? (
                       <img
                         src={e.avatar}
@@ -1170,11 +1129,11 @@ export default function AdminMessageContent(): JSX.Element {
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="truncate font-medium text-[#212121] flex items-center gap-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="truncate font-medium text-[#212121] text-sm">
                         {e.from.split("<")[0].trim()}
                       </div>
-                      <div className="text-xs text-slate-500">
+                      <div className="text-xs text-slate-500 flex-shrink-0">
                         {timeShort(e.time)}
                       </div>
                     </div>
@@ -1182,32 +1141,26 @@ export default function AdminMessageContent(): JSX.Element {
                       {e.subject}
                     </div>
                     <div className="text-xs text-slate-500 truncate">
-                      {e.body.replace(/\n/g, " ").slice(0, 80)}
+                      {e.body.replace(/\n/g, " ").slice(0, 60)}
                     </div>
-                    {/* Removed secondary star indicator to avoid duplicate icon in inbox; the toggle button at right already reflects state */}
                   </div>
                   {(selectedMailbox === "inbox" ||
                     selectedMailbox === "sent") && (
-                    <div className="ml-auto pl-2 flex items-start">
-                      <button
-                        onClick={(ev) => {
-                          ev.stopPropagation();
-                          toggleStar(e.id);
-                        }}
-                        aria-label={
-                          e.starred ? "Unstar message" : "Star message"
-                        }
-                        className={`p-1 rounded transition hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-400 ${
-                          e.starred ? "text-amber-400" : "text-slate-400"
+                    <button
+                      onClick={(ev) => {
+                        ev.stopPropagation();
+                        toggleStar(e.id);
+                      }}
+                      className={`p-1.5 rounded hover:bg-slate-100 flex-shrink-0 ${
+                        e.starred ? "text-amber-400" : "text-slate-400"
+                      }`}
+                    >
+                      <StarIcon
+                        className={`w-4 h-4 ${
+                          e.starred ? "fill-amber-400" : "fill-transparent"
                         }`}
-                      >
-                        <StarIcon
-                          className={`w-4 h-4 ${
-                            e.starred ? "fill-amber-400" : "fill-transparent"
-                          }`}
-                        />
-                      </button>
-                    </div>
+                      />
+                    </button>
                   )}
                 </div>
               </button>
@@ -1216,215 +1169,156 @@ export default function AdminMessageContent(): JSX.Element {
         </div>
       </main>
 
-      {/* Viewer */}
-      <aside className="w-[60%] min-w-[420px] bg-white p-2">
-        <div className="px-2 py-1">
-          <div className="flex items-center justify-between">
-            <div className="flex w-full items-center justify-between border-b border-slate-200 pb-2">
-              <div className="text-sm text-slate-400 capitalize">
-                {selectedMailbox}
-              </div>
-              <div className="flex items-center gap-1">
-                {selectedEmail && selectedMailbox === "inbox" && (
-                  <button
-                    onClick={() => replyTo(selectedEmail)}
-                    className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-slate-100 transition"
-                    aria-label="Reply"
-                  >
-                    <ReplyIcon className="w-4 h-4" />
-                    <span className="hidden sm:inline text-sm">Reply</span>
-                  </button>
-                )}
-                {selectedEmail && selectedMailbox === "inbox" && (
-                  <button
-                    onClick={() => toggleStar(selectedEmail.id)}
-                    className={`flex items-center gap-2 px-3 py-2 rounded-md transition ${
-                      selectedEmail.starred
-                        ? "text-amber-500 hover:bg-amber-50"
-                        : "hover:bg-slate-100"
-                    }`}
-                    aria-label={selectedEmail.starred ? "Unstar" : "Star"}
-                  >
-                    <StarIcon
-                      className={`w-4 h-4 ${
-                        selectedEmail.starred
-                          ? "fill-amber-400 text-amber-500"
-                          : ""
-                      }`}
+      {/* Viewer - Full screen on mobile when message selected */}
+
+      <aside
+        className={`${
+          selectedEmail ? "flex" : "hidden md:flex"
+        } flex-2 p-4 bg-white flex-col overflow-auto pb-20 md:pb-4 w-60%`}
+      >
+        {selectedEmail ? (
+          <div className="flex flex-col h-full">
+            {/* Mobile back button */}
+            <button
+              onClick={() => setSelectedEmailId(null)}
+              className="md:hidden flex items-center gap-2 px-3 py-2 mb-3 ml-18 text-sm text-slate-600 hover:bg-slate-50 rounded-lg"
+            >
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M15 19l-7-7 7-7"
+                />
+              </svg>
+              Back
+            </button>
+
+            <div className="flex items-start justify-between gap-3 pb-4 border-b border-slate-100">
+              <div className="flex items-start gap-3 flex-1 min-w-0">
+                <div className="w-12 h-12 rounded-full bg-[#f3f3f3] flex items-center justify-center text-base font-semibold overflow-hidden flex-shrink-0">
+                  {selectedEmail.avatar ? (
+                    <img
+                      src={selectedEmail.avatar}
+                      alt={selectedEmail.from}
+                      className="w-full h-full object-cover"
                     />
-                    <span className="hidden sm:inline text-sm">
-                      {selectedEmail.starred ? "Unstar" : "Star"}
-                    </span>
-                  </button>
-                )}
-                {selectedMailbox === "sent" && selectedEmail && (
-                  <>
-                    <button
-                      onClick={() => deleteMessage(selectedEmail.id)}
-                      className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-red-50 text-red-600 hover:text-red-700 transition"
-                      aria-label="Move to Trash"
-                    >
-                      <TrashIcon className="w-4 h-4" />
-                      <span className="hidden sm:inline text-sm">Trash</span>
-                    </button>
-                    <button
-                      onClick={() => toggleStar(selectedEmail.id)}
-                      className={`flex items-center gap-2 px-3 py-2 rounded-md transition ${
-                        selectedEmail.starred
-                          ? "text-amber-500 hover:bg-amber-50"
-                          : "hover:bg-slate-100"
-                      }`}
-                      aria-label={selectedEmail.starred ? "Unstar" : "Star"}
-                    >
-                      <StarIcon
-                        className={`w-4 h-4 ${
-                          selectedEmail.starred
-                            ? "fill-amber-400 text-amber-500"
-                            : ""
-                        }`}
-                      />
-                      <span className="hidden sm:inline text-sm">
-                        {selectedEmail.starred ? "Unstar" : "Star"}
-                      </span>
-                    </button>
-                  </>
-                )}
-                {selectedMailbox === "trash" && (
-                  <>
-                    <button
-                      onClick={() =>
-                        selectedEmail && restoreMessage(selectedEmail.id)
-                      }
-                      className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-slate-100 transition"
-                      aria-label="Restore"
-                    >
-                      <ReplyIcon className="w-4 h-4 rotate-180" />
-                      <span className="hidden sm:inline text-sm">Restore</span>
-                    </button>
-                    <div className="w-px h-6 bg-slate-200 mx-2" />
-                    <button
-                      onClick={() => permanentlyDelete()}
-                      className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-red-50 text-red-600 hover:text-red-700 transition"
-                      aria-label="Empty Trash"
-                    >
-                      <TrashIcon className="w-4 h-4" />
-                      <span className="hidden sm:inline text-sm">
-                        Empty Trash
-                      </span>
-                    </button>
-                  </>
-                )}
-                {selectedMailbox === "starred" && selectedEmail && (
-                  <>
-                    <button
-                      onClick={() => deleteMessage(selectedEmail.id)}
-                      className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-red-50 text-red-600 hover:text-red-700 transition"
-                      aria-label="Move to Trash"
-                    >
-                      <TrashIcon className="w-4 h-4" />
-                      <span className="hidden sm:inline text-sm">Trash</span>
-                    </button>
-                    <button
-                      onClick={() => toggleStar(selectedEmail.id)}
-                      className={`flex items-center gap-2 px-3 py-2 rounded-md transition ${
-                        selectedEmail?.starred
-                          ? "text-yellow-500 hover:bg-yellow-50"
-                          : "hover:bg-slate-100"
-                      }`}
-                      aria-label={selectedEmail?.starred ? "Unstar" : "Star"}
-                    >
-                      <StarIcon className="w-4 h-4" />
-                      <span className="hidden sm:inline text-sm">
-                        {selectedEmail?.starred ? "Unstar" : "Star"}
-                      </span>
-                    </button>
-                  </>
-                )}
+                  ) : (
+                    selectedEmail.from.charAt(0).toUpperCase()
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="font-semibold text-base truncate">
+                    {selectedEmail.from.split("<")[0].trim()}
+                  </div>
+                  <div className="text-xs text-slate-500 truncate">
+                    {extractAddress(selectedEmail.from)}
+                  </div>
+                  <div className="text-xs text-slate-500 mt-1">
+                    {new Date(selectedEmail.time).toLocaleString()}
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-1 flex-shrink-0">
+                <button
+                  onClick={() => toggleStar(selectedEmail.id)}
+                  className={`p-2 rounded hover:bg-slate-100 ${
+                    selectedEmail.starred ? "text-amber-400" : "text-slate-400"
+                  }`}
+                >
+                  <StarIcon
+                    className={`w-4 h-4 ${
+                      selectedEmail.starred
+                        ? "fill-amber-400"
+                        : "fill-transparent"
+                    }`}
+                  />
+                </button>
+                <button
+                  onClick={() => deleteMessage(selectedEmail.id)}
+                  className="p-2 rounded hover:bg-slate-100 text-slate-600"
+                >
+                  <TrashIcon className="w-4 h-4" />
+                </button>
               </div>
             </div>
-          </div>
 
-          <div className="mt-6 bg-white border border-slate-100 rounded p-6 max-h-[calc(100vh-120px)] overflow-y-auto">
-            {selectedEmail ? (
-              <>
-                <div className="flex items-start justify-between">
-                  <div className="space-y-2">
-                    <h3 className="text-xl font-semibold">
-                      {selectedEmail.subject}
-                    </h3>
-                    <div className="text-xs inline-block rounded bg-slate-100 px-2 py-1 text-slate-600">
-                      {selectedEmail.body.includes("\n#")
-                        ? selectedEmail.body.split("\n").pop()
-                        : ""}
-                    </div>
-                    <div className="text-sm text-slate-500">
-                      {(() => {
-                        const show =
-                          selectedEmail.mailbox === "sent"
-                            ? selectedEmail.from.split("<")[0].trim()
-                            : selectedEmail.from;
-                        return (
-                          <>
-                            From:{" "}
-                            <span className="font-medium text-[#212121]">
-                              {show}
-                            </span>
-                          </>
-                        );
-                      })()}
-                    </div>
-                    <div className="text-xs text-slate-400">
-                      Received: {new Date(selectedEmail.time).toLocaleString()}
-                    </div>
-                  </div>
-                </div>
-                <div className="mt-6 prose prose-slate">
-                  {selectedMailbox === "sent" &&
-                    selectedEmail.replies !== undefined && (
-                      <div className="mb-6 space-y-4">
-                        {selectedEmail.replies.length === 0 && (
-                          <div className="text-xs text-slate-400">
-                            (No stored admin reply notification matched this
-                            subject)
-                          </div>
-                        )}
-                        {selectedEmail.replies.map((r) => (
-                          <div
-                            key={r.notificationID}
-                            className="border border-emerald-100 bg-emerald-50/50 rounded p-4"
-                          >
-                            <div className="text-[11px] uppercase tracking-wide font-semibold text-emerald-600 mb-1">
-                              Admin Reply
-                            </div>
-                            <pre className="whitespace-pre-wrap font-sans text-[#212121] leading-relaxed">
-                              {r.message}
-                            </pre>
-                            <div className="mt-2 text-[10px] text-emerald-500">
-                              {new Date(r.time).toLocaleString()}
-                            </div>
-                          </div>
-                        ))}
+            <div className="flex-1 overflow-auto py-4">
+              <h3 className="text-lg font-semibold mb-3">
+                {selectedEmail.subject}
+              </h3>
+              <div className="text-sm text-slate-700 whitespace-pre-wrap break-words">
+                {selectedEmail.body}
+              </div>
+
+              {selectedEmail.replies && selectedEmail.replies.length > 0 && (
+                <div className="mt-6 pt-4 border-t border-slate-100">
+                  <h4 className="text-sm font-semibold mb-3">
+                    Replies ({selectedEmail.replies.length})
+                  </h4>
+                  {selectedEmail.replies.map((r) => (
+                    <div
+                      key={r.notificationID}
+                      className="mb-3 p-3 rounded-lg bg-slate-50 border border-slate-100"
+                    >
+                      <div className="text-xs font-semibold mb-1">
+                        {r.title}
                       </div>
-                    )}
-                  <div className="border border-slate-100 rounded p-4 bg-white">
-                    <div className="text-[11px] uppercase tracking-wide font-semibold text-slate-500 mb-2">
-                      Customer Message
+                      <div className="text-xs text-slate-600 whitespace-pre-wrap">
+                        {r.message}
+                      </div>
+                      <div className="text-[10px] text-slate-400 mt-2">
+                        {new Date(r.time).toLocaleString()}
+                      </div>
                     </div>
-                    <pre className="whitespace-pre-wrap font-sans text-[#212121] leading-relaxed">
-                      {selectedEmail.body}
-                    </pre>
-                  </div>
+                  ))}
                 </div>
-              </>
-            ) : (
-              <div className="text-slate-500">...</div>
+              )}
+            </div>
+
+            {selectedMailbox === "inbox" && (
+              <div className="pt-4 border-t border-slate-100">
+                <button
+                  onClick={() => replyTo(selectedEmail)}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-md bg-[#212121] text-white text-sm hover:bg-[#333]"
+                >
+                  <ReplyIcon className="w-4 h-4" />
+                  Reply
+                </button>
+              </div>
+            )}
+
+            {selectedMailbox === "trash" && (
+              <div className="pt-4 border-t border-slate-100 flex flex-col sm:flex-row gap-2">
+                <button
+                  onClick={() => restoreMessage(selectedEmail.id)}
+                  className="flex-1 px-4 py-2.5 rounded-md border border-slate-200 text-sm hover:bg-slate-50"
+                >
+                  Restore
+                </button>
+                <button
+                  onClick={() => permanentlyDelete(selectedEmail.id)}
+                  className="flex-1 px-4 py-2.5 rounded-md bg-[#212121] text-white text-sm hover:bg-[#333]"
+                >
+                  Delete Forever
+                </button>
+              </div>
             )}
           </div>
-        </div>
+        ) : (
+          <div className="flex items-center justify-center h-full text-slate-400 text-sm">
+            Select a message to view
+          </div>
+        )}
       </aside>
 
-      {/* Compose / Reply Modal */}
-      <div className="fixed right-6 bottom-6 z-50">
+      {/* Compose Modal with Fixed Recipient Selector */}
+      <div className="fixed right-2 md:right-6 bottom-20 md:bottom-6 z-50 w-auto max-w-[calc(100vw-1rem)] sm:max-w-[520px]">
         <AnimatePresence>
           {composeOpen ? (
             <motion.div
@@ -1432,7 +1326,7 @@ export default function AdminMessageContent(): JSX.Element {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 12 }}
               transition={{ duration: 0.12 }}
-              className="w-[520px] bg-white border border-slate-100 rounded-xl shadow-lg overflow-hidden flex flex-col"
+              className="w-[calc(100vw-1rem)] sm:w-[520px] bg-white border border-slate-100 rounded-xl shadow-lg overflow-hidden flex flex-col max-h-[80vh]"
               role="dialog"
               aria-label={
                 broadcastMode ? "Broadcast or Direct Message" : "Reply"
@@ -1495,34 +1389,430 @@ export default function AdminMessageContent(): JSX.Element {
                       disabled
                     />
                   )}
+
+                  {/* ✅ PREMIUM SEARCHABLE RECIPIENT SELECTOR */}
                   {broadcastMode && (
-                    <div className="flex flex-col gap-1">
-                      <label className="text-[11px] uppercase tracking-wide text-slate-500 font-medium">
+                    <div className="flex flex-col gap-2">
+                      <label className="text-xs font-semibold text-slate-700 flex items-center gap-2">
+                        <svg
+                          className="w-4 h-4 text-slate-500"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                          />
+                        </svg>
                         Recipient
                       </label>
-                      <select
-                        value={recipient === "ALL" ? "ALL" : String(recipient)}
-                        onChange={(e) => {
-                          const v = e.target.value;
-                          if (v === "ALL") setRecipient("ALL");
-                          else setRecipient(Number(v));
-                        }}
-                        className="w-full border border-slate-100 rounded px-3 py-2 text-sm outline-none bg-white"
+
+                      <div className="relative group">
+                        <div className="relative">
+                          <SearchIcon className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none z-10" />
+
+                          <input
+                            ref={recipientInputRef}
+                            type="text"
+                            value={
+                              recipient !== "ALL" && !recipientSearch
+                                ? customerList.find(
+                                    (c) => c.userID === recipient
+                                  )?.name || ""
+                                : recipientSearch
+                            }
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              setRecipientSearch(value);
+                              if (value && recipient !== "ALL") {
+                                setRecipient("ALL"); // Reset selection when typing
+                              }
+                              setRecipientDropdownOpen(true);
+                            }}
+                            onFocus={() => setRecipientDropdownOpen(true)}
+                            placeholder="Search by name or email..."
+                            className="w-full border-2 border-slate-200 rounded-xl pl-10 pr-24 py-3 text-sm 
+             outline-none bg-white hover:border-slate-300 
+             focus:border-blue-500 focus:ring-4 focus:ring-blue-50
+             transition-all duration-200 placeholder:text-slate-400
+             shadow-sm"
+                          />
+
+                          {/* Selection Pills - Show when NOT searching */}
+                          <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                            {recipient !== "ALL" && !recipientSearch && (
+                              <div
+                                className="flex items-center gap-1.5 bg-gradient-to-r from-blue-50 to-indigo-50 
+                      border border-blue-200 rounded-lg px-3 py-1.5 max-w-[200px]"
+                              >
+                                <div
+                                  className="w-5 h-5 rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 
+                        flex items-center justify-center text-white text-xs font-semibold flex-shrink-0"
+                                >
+                                  {customerList
+                                    .find((c) => c.userID === recipient)
+                                    ?.name.charAt(0)
+                                    .toUpperCase()}
+                                </div>
+                                <span className="text-xs font-medium text-blue-700 truncate">
+                                  {
+                                    customerList.find(
+                                      (c) => c.userID === recipient
+                                    )?.name
+                                  }
+                                </span>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setRecipient("ALL");
+                                    setRecipientSearch("");
+                                  }}
+                                  className="text-blue-600 hover:text-blue-800 hover:bg-blue-100 rounded p-0.5 transition"
+                                  type="button"
+                                >
+                                  <XIcon size={14} />
+                                </button>
+                              </div>
+                            )}
+
+                            {recipient === "ALL" && !recipientSearch && (
+                              <div
+                                className="flex items-center gap-1.5 bg-gradient-to-r from-green-50 to-emerald-50 
+                      border border-green-200 rounded-lg px-3 py-1.5"
+                              >
+                                <svg
+                                  className="w-4 h-4 text-green-600"
+                                  fill="currentColor"
+                                  viewBox="0 0 20 20"
+                                >
+                                  <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
+                                  <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
+                                </svg>
+                                <span className="text-xs font-semibold text-green-700">
+                                  All Users
+                                </span>
+                              </div>
+                            )}
+
+                            {recipientSearch && (
+                              <button
+                                onClick={() => {
+                                  setRecipientSearch("");
+                                  setRecipientDropdownOpen(true);
+                                }}
+                                className="text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg p-1.5 transition"
+                                type="button"
+                              >
+                                <XIcon size={16} />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+
+                        {recipientDropdownOpen && (
+                          <div
+                            className="absolute z-[70] w-full mt-2 bg-white border-2 border-slate-200 
+                                          rounded-xl shadow-2xl overflow-hidden"
+                          >
+                            <div className="bg-gradient-to-r from-slate-50 to-slate-100 px-4 py-2 border-b border-slate-200">
+                              <div className="text-[10px] uppercase tracking-wider font-bold text-slate-500">
+                                Quick Select
+                              </div>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setRecipient("ALL");
+                                setRecipientSearch("");
+                                setRecipientDropdownOpen(false);
+                              }}
+                              className={`w-full px-4 py-3 text-left hover:bg-gradient-to-r hover:from-green-50 hover:to-emerald-50
+                                          transition-all duration-150 flex items-center gap-3 group border-b-2 border-slate-100
+                                          ${
+                                            recipient === "ALL"
+                                              ? "bg-gradient-to-r from-green-50 to-emerald-50 border-l-4 border-l-green-500"
+                                              : ""
+                                          }`}
+                            >
+                              <div
+                                className={`w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm
+                                              transition-all duration-200 group-hover:scale-105
+                                              ${
+                                                recipient === "ALL"
+                                                  ? "bg-gradient-to-br from-green-500 to-emerald-600"
+                                                  : "bg-gradient-to-br from-slate-400 to-slate-500 group-hover:from-green-500 group-hover:to-emerald-600"
+                                              }`}
+                              >
+                                <svg
+                                  className="w-6 h-6 text-white"
+                                  fill="currentColor"
+                                  viewBox="0 0 20 20"
+                                >
+                                  <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
+                                </svg>
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div
+                                  className={`font-bold text-sm transition-colors
+                                                ${
+                                                  recipient === "ALL"
+                                                    ? "text-green-700"
+                                                    : "text-slate-800 group-hover:text-green-700"
+                                                }`}
+                                >
+                                  Broadcast to All Customers
+                                </div>
+                                <div className="text-xs text-slate-500 mt-0.5 flex items-center gap-1.5">
+                                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                                  {customerList.length} active recipients
+                                </div>
+                              </div>
+                              {recipient === "ALL" && (
+                                <div className="flex-shrink-0">
+                                  <svg
+                                    className="w-6 h-6 text-green-600"
+                                    fill="currentColor"
+                                    viewBox="0 0 20 20"
+                                  >
+                                    <path
+                                      fillRule="evenodd"
+                                      d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                                      clipRule="evenodd"
+                                    />
+                                  </svg>
+                                </div>
+                              )}
+                            </button>
+
+                            {filteredCustomers.length > 0 && (
+                              <div className="bg-gradient-to-r from-slate-50 to-slate-100 px-4 py-2 border-b border-slate-200">
+                                <div className="text-[10px] uppercase tracking-wider font-bold text-slate-500">
+                                  Individual Recipients (
+                                  {filteredCustomers.length})
+                                </div>
+                              </div>
+                            )}
+
+                            <div
+                              className="overflow-y-auto max-h-64"
+                              style={{
+                                scrollbarWidth: "thin",
+                                scrollbarColor: "#cbd5e1 #f1f5f9",
+                              }}
+                            >
+                              {filteredCustomers.length > 0 ? (
+                                filteredCustomers.map((customer, index) => (
+                                  <button
+                                    key={customer.userID}
+                                    type="button"
+                                    onMouseDown={(e) => {
+                                      e.preventDefault();
+                                      console.log(
+                                        "Selected:",
+                                        customer.userID,
+                                        customer.name
+                                      );
+                                      setRecipient(customer.userID);
+                                      setRecipientSearch("");
+                                      setRecipientDropdownOpen(false);
+                                    }}
+                                    className={`w-full px-4 py-3 text-left hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50
+                                                transition-all duration-150 flex items-center gap-3 group
+                                                ${
+                                                  index !==
+                                                  filteredCustomers.length - 1
+                                                    ? "border-b border-slate-100"
+                                                    : ""
+                                                }
+                                                ${
+                                                  recipient === customer.userID
+                                                    ? "bg-gradient-to-r from-blue-50 to-indigo-50 border-l-4 border-l-gray-400"
+                                                    : ""
+                                                }`}
+                                  >
+                                    <div className="relative">
+                                      <div
+                                        className={`w-10 h-10 rounded-xl flex items-center justify-center
+                                                      text-white text-sm font-bold flex-shrink-0 shadow-sm
+                                                      transition-all duration-200 group-hover:scale-105
+                                                      ${
+                                                        recipient ===
+                                                        customer.userID
+                                                          ? "bg-gradient-to-br from-gray-400 to-gray-700"
+                                                          : "bg-gradient-to-br from-gray-700 to-gray-400 group-hover:from-gray-400 group-hover:to-gray-700"
+                                                      }`}
+                                      >
+                                        {customer.name.charAt(0).toUpperCase()}
+                                      </div>
+                                    </div>
+
+                                    <div className="flex-1 min-w-0">
+                                      <div
+                                        className={`font-semibold text-sm truncate transition-colors
+                                                      ${
+                                                        recipient ===
+                                                        customer.userID
+                                                          ? "text-blue-700"
+                                                          : "text-slate-800 group-hover:text-blue-700"
+                                                      }`}
+                                      >
+                                        {customer.name}
+                                      </div>
+                                      <div className="text-xs text-slate-500 truncate mt-0.5">
+                                        {customer.email}
+                                      </div>
+                                    </div>
+
+                                    {recipient === customer.userID ? (
+                                      <div className="flex-shrink-0">
+                                        <svg
+                                          className="w-5 h-5 text-blue-600"
+                                          fill="currentColor"
+                                          viewBox="0 0 20 20"
+                                        >
+                                          <path
+                                            fillRule="evenodd"
+                                            d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                                            clipRule="evenodd"
+                                          />
+                                        </svg>
+                                      </div>
+                                    ) : (
+                                      <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <svg
+                                          className="w-5 h-5 text-slate-400"
+                                          fill="none"
+                                          viewBox="0 0 24 24"
+                                          stroke="currentColor"
+                                        >
+                                          <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth={2}
+                                            d="M9 5l7 7-7 7"
+                                          />
+                                        </svg>
+                                      </div>
+                                    )}
+                                  </button>
+                                ))
+                              ) : (
+                                <div className="px-4 py-10 text-center">
+                                  <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-slate-100 flex items-center justify-center">
+                                    <SearchIcon className="w-8 h-8 text-slate-300" />
+                                  </div>
+                                  <div className="text-sm font-semibold text-slate-700 mb-1">
+                                    No customers found
+                                  </div>
+                                  <div className="text-xs text-slate-500">
+                                    {recipientSearch
+                                      ? `Try different search terms for "${recipientSearch}"`
+                                      : "Start typing to search by name or email"}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+
+                            <div className="bg-gradient-to-r from-slate-50 to-slate-100 px-4 py-2 border-t border-slate-200">
+                              <div className="text-[10px] text-slate-500 flex items-center gap-1">
+                                <svg
+                                  className="w-3 h-3"
+                                  fill="currentColor"
+                                  viewBox="0 0 20 20"
+                                >
+                                  <path
+                                    fillRule="evenodd"
+                                    d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                                    clipRule="evenodd"
+                                  />
+                                </svg>
+                                <span>
+                                  Type to filter • Select one recipient or
+                                  broadcast to all
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      <div
+                        className={`flex items-start gap-3 p-3 rounded-lg border-2 transition-all duration-200
+                                      ${
+                                        recipient === "ALL"
+                                          ? "bg-gradient-to-r from-green-50 to-emerald-50 border-green-200"
+                                          : "bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200"
+                                      }`}
                       >
-                        <option value="ALL">ALL USERS</option>
-                        {customerList.map((c) => (
-                          <option key={c.userID} value={c.userID}>
-                            {c.name} - {c.email}
-                          </option>
-                        ))}
-                      </select>
-                      <span className="text-[11px] text-slate-500">
-                        {recipient === "ALL"
-                          ? "Label will be System (broadcast to all customers)."
-                          : "Direct support message to selected customer."}
-                      </span>
+                        <div
+                          className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 shadow-sm
+                                        ${
+                                          recipient === "ALL"
+                                            ? "bg-gradient-to-br from-green-500 to-emerald-600"
+                                            : "bg-gradient-to-br from-blue-500 to-indigo-600"
+                                        }`}
+                        >
+                          <svg
+                            className="w-4 h-4 text-white"
+                            fill="currentColor"
+                            viewBox="0 0 20 20"
+                          >
+                            {recipient === "ALL" ? (
+                              <>
+                                <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
+                                <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
+                              </>
+                            ) : (
+                              <path
+                                fillRule="evenodd"
+                                d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
+                                clipRule="evenodd"
+                              />
+                            )}
+                          </svg>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div
+                            className={`text-xs font-bold mb-0.5 ${
+                              recipient === "ALL"
+                                ? "text-green-700"
+                                : "text-blue-700"
+                            }`}
+                          >
+                            {recipient === "ALL"
+                              ? "System Broadcast"
+                              : "Direct Message"}
+                          </div>
+                          <div className="text-[11px] text-slate-600 leading-relaxed">
+                            {recipient === "ALL" ? (
+                              <>
+                                Notification will be sent to{" "}
+                                <span className="font-semibold">
+                                  {customerList.length} customers
+                                </span>
+                              </>
+                            ) : (
+                              <>
+                                Sending private message to{" "}
+                                <span className="font-semibold">
+                                  {
+                                    customerList.find(
+                                      (c) => c.userID === recipient
+                                    )?.name
+                                  }
+                                </span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   )}
+
                   <input
                     value={composeDraft.subject}
                     onChange={(e) =>
@@ -1597,7 +1887,7 @@ export default function AdminMessageContent(): JSX.Element {
           )}
         </AnimatePresence>
       </div>
-      {/* Inline flash message (replaces toast) */}
+
       {flash && (
         <div
           className={`fixed bottom-6 right-6 px-4 py-2 rounded-md shadow text-sm font-medium z-[999] transition-opacity duration-300
@@ -1619,7 +1909,7 @@ export default function AdminMessageContent(): JSX.Element {
           </div>
         </div>
       )}
-      {/* Confirmation Dialog */}
+
       {confirmDialog.open && (
         <div className="fixed inset-0 z-[1000] flex items-center justify-center">
           <div
