@@ -106,6 +106,7 @@ const App = () => {
           element={
             <ProtectedRoute allowedRoles={["Admin"]}>
               <AdminDashboardPage />
+              <ToastContainer position="bottom-right" />
             </ProtectedRoute>
           }
         />

@@ -19,6 +19,10 @@ import { ChevronDown } from "lucide-react";
 import { DateRange } from "react-date-range";
 import type { Range } from "react-date-range";
 import CenteredLoader from "./CenteredLoader";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+import { toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 interface Sale {
   transactionID: number;
@@ -167,6 +171,7 @@ const AdminSalesContent: React.FC = () => {
   ]);
 
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [isGeneratingReport, setIsGeneratingReport] = useState(false);
 
   const API_URL = import.meta.env.VITE_API_URL;
 
@@ -197,14 +202,14 @@ const AdminSalesContent: React.FC = () => {
           selectedAddOns: item.selectedAddOns || '',
           selectedConcepts: item.selectedConcepts || '',
         }));
-        
+
         // Debug: Log first 3 sales with their add-ons and concepts
         console.log('🔍 AdminSalesContent - API Response Sample:', parsedData.slice(0, 3).map(s => ({
           id: s.transactionID,
           selectedAddOns: s.selectedAddOns,
           selectedConcepts: s.selectedConcepts,
         })));
-        
+
         setSales(parsedData);
       })
       .catch((err) => console.error("Failed fetching sales:", err))
@@ -266,102 +271,200 @@ const AdminSalesContent: React.FC = () => {
 
   const pickerButtonRef = useRef<HTMLButtonElement | null>(null);
 
-  const handleExport = () => {
-    const printWindow = window.open("", "_blank");
-    if (!printWindow) return;
+  const handleExport = async () => {
+  if (filtered.length === 0) {
+    toast.warn("No sales data available to export.");
+    return;
+  }
 
-    const totalPayment = filtered.reduce((acc, s) => acc + s.downPayment, 0);
-    const pendingCount = filtered.filter(
-      (s) => s.paymentStatus === "Pending"
-    ).length;
-    const completedCount = filtered.filter(
-      (s) => s.paymentStatus === "Completed"
-    ).length;
-    const cancelledCount = filtered.filter(
-      (s) => s.paymentStatus === "Cancelled"
-    ).length;
+  setIsGeneratingReport(true);
 
-    const htmlContent = `
-      <html>
-        <head>
-          <title>Sales Report</title>
-          <style>
-            body { font-family: Arial, sans-serif; padding: 20px; }
-            h2 { text-align: center;  margin: 0; padding: 0; }
-            h5 { text-align: center;  margin: 0; padding: 0; }
-            table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 12px; }
-            th, td { border: 1px solid #ccc; padding: 6px; text-align: left; vertical-align: top; }
-            th { background-color: #f2f2f2; text-align: center;}
-            tfoot td { font-weight: bold; }
-            .summary { margin: 2px 0 5px 0; font-size: 13px }
-            .summary p { margin: 2px 0; padding: 0; }
-          </style>
-        </head>
-        <body>
-          <h2>Sales Report</h2>
-          <h5>${format(
-      range[0].startDate ?? new Date(),
-      "MMM dd yyyy"
-    )} - ${format(range[0].endDate ?? new Date(), "MMM dd yyyy")}</h5>
-          <div class="summary">
-            <p><strong>Completed:</strong> ${completedCount}</p>
-            <p><strong>Pending:</strong> ${pendingCount}</p>
-            <p><strong>Cancelled:</strong> ${cancelledCount}</p>
-          </div>
-          <table>
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Customer Name</th>
-                <th>Email</th>
-                <th>Contact No.</th>
-                <th>Package</th>
-                <th>Date</th>
-                <th>Payment</th>
-                <th>Balance</th>
-                <th>Total Amount</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${filtered
-        .map(
-          (s) => `
-                <tr>
-                  <td>${getBookingLabel(s.transactionID, s.package)}</td>
-                  <td>${s.customerName}</td>
-                  <td>${s.email || "-"}</td>
-                  <td>${s.contactNo || "-"}</td>
-                  <td>${s.package}</td>
-                  <td>${format(
-            parseISO(s.transactionDate),
-            "MMMM d, yyyy"
-          )}</td>
-                  <td>${s.downPayment.toFixed(2)}</td>
-                  <td>${s.balance.toFixed(2)}</td>
-                  <td>${s.totalAmount.toFixed(2)}</td>
-                  <td>${s.paymentStatus}</td>
-                </tr>`
-        )
-        .join("")}
-            </tbody>
-            <tfoot>
-              <tr>
-                <td colspan="9" style="text-align:right">TOTAL PAYMENT:</td>
-                <td colspan="2">${totalPayment.toFixed(2)}</td>
-              </tr>
-            </tfoot>
-          </table>
-        </body>
-      </html>
-    `;
+  setTimeout(async () => {
+    try {
+      const pdf = new jsPDF("l", "mm", "a4");
 
-    printWindow.document.write(htmlContent);
-    printWindow.document.close();
-    printWindow.focus();
-    printWindow.print();
-    printWindow.close();
-  };
+      // --- Colors ---
+      const primaryColor: [number, number, number] = [31, 41, 55];
+      const successColor: [number, number, number] = [16, 185, 129];
+      const warningColor: [number, number, number] = [234, 179, 8];
+      const errorColor: [number, number, number] = [239, 68, 68];
+
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const leftMargin = 10;
+      const rightMargin = pageWidth - 10;
+      let y = 25;
+
+      const checkPageBreak = (needed: number) => {
+        if (y + needed > pageHeight - 20) {
+          pdf.addPage();
+          y = 25;
+        }
+      };
+
+      // --- Header ---
+      pdf.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+      pdf.rect(0, 0, pageWidth, 30, "F");
+
+      pdf.setTextColor(255, 255, 255);
+      pdf.setFontSize(20);
+      pdf.setFont("helvetica", "bold");
+      pdf.text("Sales Report", leftMargin, 18);
+
+      pdf.setFontSize(9);
+      pdf.setFont("helvetica", "normal");
+      pdf.text("Selfiegram Photo Studios - Malolos, Bulacan", leftMargin, 24);
+      pdf.text(`Generated: ${format(new Date(), "PPP p")}`, leftMargin, 28);
+
+      y = 45;
+
+      // --- Section Title ---
+      pdf.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(13);
+      pdf.text("Sales Records", leftMargin, y);
+      y += 8;
+
+      // --- Table Data ---
+      const peso = (value: number): string =>
+        `P${value.toLocaleString("en-PH", { minimumFractionDigits: 2 })}`;
+
+      const salesData = filtered.map((s) => [
+        getBookingLabel(s.transactionID, s.package),
+        s.customerName,
+        s.email || "N/A",
+        s.contactNo || "N/A",
+        s.package,
+        format(parseISO(s.transactionDate), "MMM dd, yyyy"),
+        peso(s.downPayment),
+        peso(s.balance),
+        peso(s.totalAmount),
+        s.paymentStatus,
+      ]);
+
+      // --- Table (landscape adjusted widths) ---
+      autoTable(pdf, {
+        startY: y,
+        head: [
+          [
+            "Booking ID",
+            "Customer",
+            "Email",
+            "Contact",
+            "Package",
+            "Date",
+            "Payment",
+            "Balance",
+            "Total",
+            "Status",
+          ],
+        ],
+        body: salesData,
+        styles: {
+          font: "helvetica",
+          fontSize: 8,
+          cellPadding: 2,
+          overflow: "linebreak",
+          lineColor: [230, 230, 230],
+          lineWidth: 0.1,
+        },
+        headStyles: {
+          fillColor: primaryColor,
+          textColor: [255, 255, 255],
+          fontStyle: "bold",
+        },
+        columnStyles: {
+          0: { cellWidth: 25 },
+          1: { cellWidth: 25 },
+          2: { cellWidth: 40 },
+          3: { cellWidth: 25 },
+          4: { cellWidth: 22 },
+          5: { cellWidth: 25 },
+          6: { cellWidth: 25, halign: "right" },
+          7: { cellWidth: 25, halign: "right" },
+          8: { cellWidth: 25, halign: "right" },
+          9: { cellWidth: 25, halign: "center" },
+        },
+        margin: { left: leftMargin, right: leftMargin },
+        tableWidth: "auto",
+      });
+
+      y =
+        (pdf as unknown as { lastAutoTable?: { finalY?: number } }).lastAutoTable
+          ?.finalY ?? y + 10;
+      checkPageBreak(50);
+
+      // --- Summary Section ---
+      const totalAmount = filtered.reduce((sum, s) => sum + s.totalAmount, 0);
+      const totalDown = filtered.reduce((sum, s) => sum + s.downPayment, 0);
+      const totalBalance = filtered.reduce((sum, s) => sum + s.balance, 0);
+
+      const statusCounts = {
+        Completed: filtered.filter((s) => s.paymentStatus === "Completed").length,
+        Pending: filtered.filter((s) => s.paymentStatus === "Pending").length,
+        Cancelled: filtered.filter((s) => s.paymentStatus === "Cancelled").length,
+      };
+
+      y += 15;
+
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(11);
+      pdf.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+      pdf.text("Summary Report", leftMargin, y);
+      y += 6;
+
+      pdf.setFont("helvetica", "normal");
+      pdf.setFontSize(9);
+      pdf.setTextColor(0, 0, 0);
+      pdf.text(`Total Sales Amount: ${peso(totalAmount)}`, leftMargin, y);
+      y += 5;
+      pdf.text(`Total Downpayment: ${peso(totalDown)}`, leftMargin, y);
+      y += 5;
+      pdf.text(`Total Balance: ${peso(totalBalance)}`, leftMargin, y);
+      y += 8;
+
+      pdf.setFont("helvetica", "bold");
+      pdf.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+      pdf.text("Booking Status Breakdown", leftMargin, y);
+      y += 6;
+
+      pdf.setFont("helvetica", "normal");
+      pdf.setFontSize(9);
+
+      pdf.setTextColor(successColor[0], successColor[1], successColor[2]);
+      pdf.text(`Completed: ${statusCounts.Completed}`, leftMargin, y);
+      y += 5;
+
+      pdf.setTextColor(warningColor[0], warningColor[1], warningColor[2]);
+      pdf.text(`Pending: ${statusCounts.Pending}`, leftMargin, y);
+      y += 5;
+
+      pdf.setTextColor(errorColor[0], errorColor[1], errorColor[2]);
+      pdf.text(`Cancelled: ${statusCounts.Cancelled}`, leftMargin, y);
+      y += 10;
+
+      // --- Footer ---
+      pdf.setDrawColor(209, 213, 219);
+      pdf.line(leftMargin, pageHeight - 10, rightMargin, pageHeight - 10);
+      pdf.setTextColor(107, 114, 128);
+      pdf.setFontSize(8);
+      pdf.text("Generated by Selfiegram Admin System", leftMargin, pageHeight - 5);
+
+      const timestamp = format(new Date(), "yyyyMMdd-HHmmss");
+      pdf.save(`Selfiegram-Sales-Report-${timestamp}.pdf`);
+
+      toast.success("Sales report exported successfully!");
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to generate sales report.");
+    } finally {
+      setIsGeneratingReport(false);
+    }
+  }, 1000);
+};
+
+
+
 
   return (
     <div className="p-4 space-y-4">
@@ -369,12 +472,6 @@ const AdminSalesContent: React.FC = () => {
         <h1 className="text-lg sm:text-xl font-semibold pl-12 sm:pl-0">
           Sales
         </h1>
-        <button
-          onClick={handleExport}
-          className="px-4 py-2 bg-black text-white text-sm rounded-md hover:opacity-80 transition"
-        >
-          Export Data
-        </button>
       </div>
 
       {/* Filters */}
@@ -592,6 +689,26 @@ const AdminSalesContent: React.FC = () => {
           {/* Rows per page + Prev/Next */}
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                  className="px-3 py-1 rounded-lg bg-gray-100 hover:bg-gray-200 transition disabled:opacity-50"
+                >
+                  &lt;
+                </button>
+                <div className="text-xs text-gray-600">
+                  {page} / {totalPages}
+                </div>
+                <button
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={page === totalPages}
+                  className="px-3 py-1 rounded-lg bg-gray-100 hover:bg-gray-200 transition disabled:opacity-50"
+                >
+                  &gt;
+                </button>
+              </div>
+
               <label htmlFor="pageSize" className="text-gray-600 text-xs">
                 Rows per page:
               </label>
@@ -610,25 +727,38 @@ const AdminSalesContent: React.FC = () => {
                   </option>
                 ))}
               </select>
-            </div>
 
-            <div className="flex items-center gap-2">
               <button
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page === 1}
-                className="px-3 py-1 rounded-lg bg-gray-100 hover:bg-gray-200 transition disabled:opacity-50"
+                onClick={handleExport}
+                disabled={isGeneratingReport}
+                className={`px-5 py-2 rounded-md text-xs font-semibold transition focus:outline-none flex items-center gap-2 ${isGeneratingReport
+                  ? "bg-gray-400 text-white cursor-not-allowed"
+                  : "bg-black text-white hover:bg-gray-800 hover:scale-[1.02]"
+                  }`}
               >
-                &lt;
-              </button>
-              <div className="text-xs text-gray-600">
-                {page} / {totalPages}
-              </div>
-              <button
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                disabled={page === totalPages}
-                className="px-3 py-1 rounded-lg bg-gray-100 hover:bg-gray-200 transition disabled:opacity-50"
-              >
-                &gt;
+                {isGeneratingReport && (
+                  <svg
+                    className="animate-spin h-3 w-3 text-white"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    ></circle>
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    ></path>
+                  </svg>
+                )}
+                {isGeneratingReport ? "Generating PDF..." : "Export Data"}
               </button>
             </div>
           </div>

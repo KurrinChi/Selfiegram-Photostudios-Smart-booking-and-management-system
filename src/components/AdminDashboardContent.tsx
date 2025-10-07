@@ -35,8 +35,8 @@ import "../styles/print.css";
 import axios from "axios";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import DashboardReportPDF from "./DashboardReportPDF";
 import CenteredLoader from "./CenteredLoader";
+import { toast } from "react-toastify";
 
 // -----------------------------------------------------------------------------
 // Types
@@ -140,14 +140,18 @@ const AdminDashboardContents: React.FC = () => {
   const { startDate, endDate } = range[0];
   const start = format(startDate, "yyyy-MM-dd");
   const end = format(endDate, "yyyy-MM-dd");
+  const [pendingRange, setPendingRange] = useState(range);
+
 
   // Loading state
   const [loading, setLoading] = useState(true);
 
   // ADD THIS: Missing state declaration
-  const [showPreview, setShowPreview] = useState(false);
 
   useEffect(() => {
+    // Wait until both start and end dates exist
+    if (!range[0].startDate || !range[0].endDate) return;
+
     setLoading(true);
     const token = localStorage.getItem("token");
 
@@ -223,105 +227,26 @@ const AdminDashboardContents: React.FC = () => {
   const [search, setSearch] = useState("");
   const [pickerOpen, setPickerOpen] = useState(false);
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
-  const [reportData, setReportData] = useState<any>(null);
 
   const filteredRows = useMemo(
     () =>
       search
         ? packageRows.filter((r) =>
-            r.name.toLowerCase().includes(search.toLowerCase())
-          )
+          r.name.toLowerCase().includes(search.toLowerCase())
+        )
         : packageRows,
     [search, packageRows]
   );
 
   const tableCell = "py-3 px-4 text-xs whitespace-nowrap";
 
-  const handlePreview = () => {
-    // Create mock data based on current dashboard data
-    const mockReportData = {
-      reportGenerated: new Date().toISOString(),
-      dateRange: {
-        start: isDefaultRange ? subDays(new Date(), 7).toDateString() : start,
-        end: isDefaultRange ? new Date().toDateString() : end,
-        hasCustomRange: !isDefaultRange,
-        formattedRange: isDefaultRange
-          ? "Last 7 days"
-          : `${format(range[0].startDate, "MMM dd, yyyy")} - ${format(
-              range[0].endDate,
-              "MMM dd, yyyy"
-            )}`,
-      },
-      summary: {
-        totalUsers: summaryData?.totalUsers || 1250,
-        totalBookings: summaryData?.totalBookings || 89,
-        totalSales: summaryData?.totalSales || 145750,
-        totalAppointments: summaryData?.totalAppointments || 156,
-        hasDateRange: !isDefaultRange,
-        salesTrend: summaryData?.salesTrend || { value: "15.5%", up: true },
-        userTrend: summaryData?.userTrend || { value: "8.2%", up: true },
-        scheduleTrend: summaryData?.scheduleTrend || {
-          value: "12.8%",
-          up: false,
-        },
-        appointmentsTrend: summaryData?.appointmentsTrend || {
-          value: "6.4%",
-          up: true,
-        },
-      },
-      weeklyIncome:
-        grossIncomeWeeklyData.length > 0
-          ? grossIncomeWeeklyData
-          : [
-              { week: "Aug 05 - Aug 11", income: 18500 },
-              { week: "Aug 12 - Aug 18", income: 22300 },
-              { week: "Aug 19 - Aug 25", income: 19750 },
-              { week: "Aug 26 - Sep 01", income: 25100 },
-              { week: "Sep 02 - Sep 08", income: 28900 },
-              { week: "Sep 09 - Sep 15", income: 31200 },
-            ],
-      packages:
-        packageRows.length > 0
-          ? packageRows
-          : [
-              {
-                name: "Birthday Package Elite",
-                totalBooking: 15,
-                revenue: "₱45,000",
-                bookingPct: "16.9%",
-                rating: 5,
-                trend: "12%",
-                trendPositive: true,
-              },
-              {
-                name: "Graduation Premium",
-                totalBooking: 12,
-                revenue: "₱36,000",
-                bookingPct: "13.5%",
-                rating: 4,
-                trend: "8%",
-                trendPositive: true,
-              },
-            ],
-      companyInfo: {
-        name: "Selfiegram Photo Studios",
-        address: "Malolos, Bulacan",
-        phone: "+63 912 345 6789",
-        email: "info@selfiegram.com",
-      },
-    };
-
-    setReportData(mockReportData);
-    setShowPreview(true);
-  };
-
   const generateProfessionalPDF = (data: any) => {
     const pdf = new jsPDF("p", "mm", "a4");
 
-    // Company colors and styling
-    const primaryColor: [number, number, number] = [31, 41, 55]; // Gray-800
-    const successColor: [number, number, number] = [16, 185, 129]; // Green-500
-    const errorColor: [number, number, number] = [239, 68, 68]; // Red-500
+    // Colors
+    const primaryColor: [number, number, number] = [31, 41, 55];
+    const successColor: [number, number, number] = [16, 185, 129];
+    const errorColor: [number, number, number] = [239, 68, 68];
 
     let yPosition = 25;
     const leftMargin = 20;
@@ -329,17 +254,14 @@ const AdminDashboardContents: React.FC = () => {
     const pageWidth = 210;
     const pageHeight = 297;
 
-    // Helper function to add a new page if needed
     const checkPageBreak = (neededSpace: number) => {
       if (yPosition + neededSpace > pageHeight - 20) {
         pdf.addPage();
         yPosition = 25;
-        return true;
       }
-      return false;
     };
 
-    // Header Section
+    // Header
     pdf.setFillColor(...primaryColor);
     pdf.rect(0, 0, pageWidth, 40, "F");
 
@@ -361,65 +283,58 @@ const AdminDashboardContents: React.FC = () => {
 
     // Report Title and Info
     pdf.setTextColor(...primaryColor);
-    pdf.setFontSize(20);
+    pdf.setFontSize(18);
     pdf.setFont("helvetica", "bold");
     pdf.text("Dashboard Analytics Report", leftMargin, yPosition);
 
-    yPosition += 15;
+    yPosition += 12;
 
     pdf.setFontSize(10);
     pdf.setFont("helvetica", "normal");
     pdf.setTextColor(75, 85, 99);
-    pdf.text(
-      `Report Period: ${data.dateRange.formattedRange}`,
-      leftMargin,
-      yPosition
-    );
+    pdf.text(`Report Period: ${data.dateRange.formattedRange}`, leftMargin, yPosition);
     pdf.text(
       `Generated: ${format(new Date(data.reportGenerated), "PPP p")}`,
       rightMargin - 60,
       yPosition
     );
 
-    yPosition += 20;
+    yPosition += 18;
 
-    // Summary Cards Section
-    checkPageBreak(60);
-
+    // Executive Summary
     pdf.setTextColor(...primaryColor);
-    pdf.setFontSize(16);
+    pdf.setFontSize(14);
     pdf.setFont("helvetica", "bold");
     pdf.text("Executive Summary", leftMargin, yPosition);
 
     yPosition += 10;
 
-    // Draw summary cards in a 2x2 grid
-    const cardWidth = 80;
-    const cardHeight = 25;
-    const cardSpacing = 10;
-
     const summaryItems = [
       {
         label: "Total Users",
-        value: data.summary.totalUsers,
+        value: data.summary.totalUsers.toLocaleString(),
         trend: data.summary.userTrend,
       },
       {
         label: "Total Bookings",
-        value: data.summary.totalBookings,
+        value: data.summary.totalBookings.toLocaleString(),
         trend: data.summary.scheduleTrend,
       },
       {
         label: "Total Sales",
-        value: `₱${data.summary.totalSales?.toLocaleString() || "0"}`,
+        value: `PHP ${data.summary.totalSales.toLocaleString()}`,
         trend: data.summary.salesTrend,
       },
       {
         label: "Total Appointments",
-        value: data.summary.totalAppointments,
+        value: data.summary.totalAppointments.toLocaleString(),
         trend: data.summary.appointmentsTrend,
       },
     ];
+
+    const cardWidth = 80;
+    const cardHeight = 25;
+    const cardSpacing = 10;
 
     summaryItems.forEach((item, index) => {
       const col = index % 2;
@@ -427,93 +342,83 @@ const AdminDashboardContents: React.FC = () => {
       const x = leftMargin + col * (cardWidth + cardSpacing);
       const y = yPosition + row * (cardHeight + cardSpacing);
 
-      // Card background
       pdf.setFillColor(249, 250, 251);
       pdf.setDrawColor(209, 213, 219);
       pdf.rect(x, y, cardWidth, cardHeight, "FD");
 
-      // Card content
       pdf.setTextColor(75, 85, 99);
       pdf.setFontSize(9);
       pdf.setFont("helvetica", "normal");
       pdf.text(item.label, x + 5, y + 8);
 
       pdf.setTextColor(...primaryColor);
-      pdf.setFontSize(16);
+      pdf.setFontSize(15);
       pdf.setFont("helvetica", "bold");
       pdf.text(String(item.value), x + 5, y + 16);
 
-      // Trend indicator (only if not custom date range)
       if (!data.summary.hasDateRange && item.trend) {
         const trendColor = item.trend.up ? successColor : errorColor;
         pdf.setTextColor(...trendColor);
         pdf.setFontSize(8);
-        pdf.setFont("helvetica", "normal");
-        const trendText = `${item.trend.up ? "↑" : "↓"} ${item.trend.value}`;
-        pdf.text(trendText, x + 5, y + 22);
+        pdf.text(
+          `${item.trend.up ? "UP" : "DOWN"} ${item.trend.value}`,
+          x + 5,
+          y + 22
+        );
       }
     });
 
-    yPosition += 60;
+    yPosition += 75;
 
     // Weekly Income Table
     if (data.weeklyIncome && data.weeklyIncome.length > 0) {
       checkPageBreak(80);
 
       pdf.setTextColor(...primaryColor);
-      pdf.setFontSize(14);
+      pdf.setFontSize(13);
       pdf.setFont("helvetica", "bold");
       pdf.text("Weekly Income Analysis", leftMargin, yPosition);
 
-      yPosition += 10;
+      yPosition += 8;
 
       const weeklyData = data.weeklyIncome
         .slice(-10)
-        .map((week: any) => [week.week, `₱${week.income.toLocaleString()}`]);
+        .map((week: any) => [week.week, `PHP ${week.income.toLocaleString()}`]);
 
       autoTable(pdf, {
         startY: yPosition,
         head: [["Week Period", "Income"]],
         body: weeklyData,
         margin: { left: leftMargin, right: leftMargin },
-        styles: {
-          fontSize: 9,
-          cellPadding: 4,
-        },
+        styles: { font: "helvetica", fontSize: 9, cellPadding: 4 },
         headStyles: {
           fillColor: primaryColor,
           textColor: [255, 255, 255],
           fontStyle: "bold",
         },
-        alternateRowStyles: {
-          fillColor: [249, 250, 251],
-        },
-        columnStyles: {
-          1: { halign: "right", fontStyle: "bold" },
-        },
+        alternateRowStyles: { fillColor: [249, 250, 251] },
+        columnStyles: { 1: { halign: "right" } },
       });
 
-      yPosition = (pdf as any).lastAutoTable.finalY + 15;
+      yPosition = (pdf as any).lastAutoTable.finalY + 12;
     }
 
     // Package Performance Table
     if (data.packages && data.packages.length > 0) {
-      checkPageBreak(80);
-
       pdf.setTextColor(...primaryColor);
-      pdf.setFontSize(14);
-      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(13);
       pdf.text("Package Performance Analysis", leftMargin, yPosition);
-
-      yPosition += 10;
+      yPosition += 8;
 
       const packageData = data.packages.map((pkg: any) => [
         pkg.name,
-        String(pkg.totalBooking),
-        pkg.revenue,
+        pkg.totalBooking.toLocaleString(),
+        `PHP ${Number(
+          String(pkg.revenue).replace(/[^\d.-]/g, "")
+        ).toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
         pkg.bookingPct,
-        pkg.rating ? "★".repeat(Math.floor(pkg.rating)) : "N/A",
-        `${pkg.trendPositive ? "↑" : "↓"} ${pkg.trend}`,
+        pkg.rating ? `${pkg.rating.toFixed(1)}/5` : "N/A",
+        `${pkg.trendPositive ? "UP" : "DOWN"} ${pkg.trend}`,
       ]);
 
       autoTable(pdf, {
@@ -523,35 +428,26 @@ const AdminDashboardContents: React.FC = () => {
         ],
         body: packageData,
         margin: { left: leftMargin, right: leftMargin },
-        styles: {
-          fontSize: 8,
-          cellPadding: 3,
-        },
+        styles: { font: "helvetica", fontSize: 8, cellPadding: 3 },
         headStyles: {
           fillColor: primaryColor,
           textColor: [255, 255, 255],
           fontStyle: "bold",
         },
-        alternateRowStyles: {
-          fillColor: [249, 250, 251],
-        },
+        alternateRowStyles: { fillColor: [249, 250, 251] },
         columnStyles: {
           0: { cellWidth: 50 },
           1: { halign: "center" },
-          2: { halign: "right", fontStyle: "bold" },
+          2: { halign: "right" },
           3: { halign: "center" },
           4: { halign: "center" },
           5: { halign: "center" },
         },
-        didParseCell: function (data: any) {
-          // Color the trend column based on direction
+        didParseCell: (data: any) => {
           if (data.column.index === 5 && data.section === "body") {
-            const trend = data.cell.raw;
-            if (trend.includes("↑")) {
-              data.cell.styles.textColor = successColor;
-            } else if (trend.includes("↓")) {
-              data.cell.styles.textColor = errorColor;
-            }
+            data.cell.styles.textColor = data.cell.raw.includes("UP")
+              ? successColor
+              : errorColor;
           }
         },
       });
@@ -559,61 +455,37 @@ const AdminDashboardContents: React.FC = () => {
       yPosition = (pdf as any).lastAutoTable.finalY + 15;
     }
 
-    // Key Insights Section
-    checkPageBreak(50);
-
+    // Insights Section
     pdf.setTextColor(...primaryColor);
-    pdf.setFontSize(14);
-    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(13);
     pdf.text("Key Performance Insights", leftMargin, yPosition);
 
     yPosition += 10;
-
-    pdf.setFontSize(10);
     pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(10);
     pdf.setTextColor(55, 65, 81);
 
-    const insights = [];
-
-    if (data.summary.totalSales > 0) {
-      const avgPerBooking =
-        data.summary.totalBookings > 0
-          ? (data.summary.totalSales / data.summary.totalBookings).toFixed(0)
-          : 0;
-      insights.push(
-        `• Average revenue per booking: ₱${Number(
-          avgPerBooking
-        ).toLocaleString()}`
-      );
+    const insights: string[] = [];
+    if (data.summary.totalSales > 0 && data.summary.totalBookings > 0) {
+      const avg = (data.summary.totalSales / data.summary.totalBookings).toFixed(2);
+      insights.push(`• Average revenue per booking: PHP ${Number(avg).toLocaleString()}`);
     }
-
     if (data.packages && data.packages.length > 0) {
-      const topPackage = data.packages.reduce(
-        (max: any, pkg: any) =>
-          pkg.totalBooking > max.totalBooking ? pkg : max,
-        data.packages[0]
+      const top = data.packages.reduce((a: any, b: any) =>
+        b.totalBooking > a.totalBooking ? b : a
       );
-      insights.push(
-        `• Most popular package: ${topPackage.name} (${topPackage.totalBooking} bookings)`
-      );
+      insights.push(`• Most popular package: ${top.name} (${top.totalBooking} bookings)`);
     }
-
     if (data.weeklyIncome && data.weeklyIncome.length >= 2) {
-      const recent = data.weeklyIncome.slice(-2);
-      const growth = (
-        ((recent[1].income - recent[0].income) / recent[0].income) *
-        100
-      ).toFixed(1);
-      insights.push(`• Week-over-week growth: ${growth}%`);
+      const [prev, curr] = data.weeklyIncome.slice(-2);
+      const growth = ((curr.income - prev.income) / prev.income) * 100;
+      insights.push(`• Week-over-week growth: ${growth.toFixed(1)}%`);
     }
-
-    insights.push(
-      `• Total system users: ${data.summary.totalUsers.toLocaleString()}`
-    );
+    insights.push(`• Total system users: ${data.summary.totalUsers}`);
     insights.push(`• Active appointment slots: ${data.summary.totalBookings}`);
 
-    insights.forEach((insight) => {
-      pdf.text(insight, leftMargin, yPosition);
+    insights.forEach((line) => {
+      pdf.text(line, leftMargin, yPosition);
       yPosition += 6;
     });
 
@@ -621,34 +493,20 @@ const AdminDashboardContents: React.FC = () => {
     const footerY = pageHeight - 20;
     pdf.setDrawColor(209, 213, 219);
     pdf.line(leftMargin, footerY - 5, rightMargin, footerY - 5);
-
     pdf.setTextColor(107, 114, 128);
     pdf.setFontSize(8);
-    pdf.setFont("helvetica", "normal");
     pdf.text("Generated by Selfiegram Dashboard System", leftMargin, footerY);
-    pdf.text(
-      `Page 1 of ${pdf.internal.pages.length - 1}`,
-      rightMargin - 20,
-      footerY
-    );
+
+    const timestamp = format(new Date(), "yyyyMMdd-HHmmss");
+    const fileName = `Selfiegram-Dashboard-${timestamp}.pdf`;
+
+    toast.success(`Report successfully exported as ${fileName}`);
 
     return pdf;
   };
 
+
   const handleExport = async () => {
-    // Add confirmation dialog
-    const confirmed = window.confirm(
-      `Are you sure you want to generate a PDF report for the selected date range?\n\n` +
-        (isDefaultRange
-          ? `Period: All time data`
-          : `Period: ${format(range[0].startDate, "MMM dd, yyyy")} - ${format(
-              range[0].endDate,
-              "MMM dd, yyyy"
-            )}`)
-    );
-
-    if (!confirmed) return;
-
     setIsGeneratingReport(true);
 
     try {
@@ -716,9 +574,9 @@ const AdminDashboardContents: React.FC = () => {
           formattedRange: isDefaultRange
             ? "All Time Data"
             : `${format(range[0].startDate, "MMM dd, yyyy")} - ${format(
-                range[0].endDate,
-                "MMM dd, yyyy"
-              )}`,
+              range[0].endDate,
+              "MMM dd, yyyy"
+            )}`,
         },
         reportGenerated: new Date().toISOString(),
       };
@@ -733,9 +591,9 @@ const AdminDashboardContents: React.FC = () => {
       const dateRange = isDefaultRange
         ? "AllTime"
         : `${format(range[0].startDate, "yyyyMMdd")}-${format(
-            range[0].endDate,
-            "yyyyMMdd"
-          )}`;
+          range[0].endDate,
+          "yyyyMMdd"
+        )}`;
       const filename = `Selfiegram-Dashboard-${dateRange}-${timestamp}.pdf`;
 
       // Save the PDF
@@ -772,31 +630,44 @@ const AdminDashboardContents: React.FC = () => {
                   {isDefaultRange
                     ? "Select Date Range"
                     : `${format(range[0].startDate, "MMM dd yyyy")} — ${format(
-                        range[0].endDate,
-                        "MMM dd yyyy"
-                      )}`}
+                      range[0].endDate,
+                      "MMM dd yyyy"
+                    )}`}
                 </button>
                 {pickerOpen && (
-                  <div className="absolute left-0 z-20 mt-2 bg-white shadow-lg rounded-md p-3">
+                  <div className="absolute right-0 z-20 mt-2 bg-white shadow-lg rounded-md p-3">
                     <DateRange
-                      ranges={range}
+                      ranges={pendingRange}
                       onChange={(item) => {
                         const { startDate, endDate, key } = item.selection;
-                        setRange([
+                        const newRange = [
                           {
                             startDate: startDate ?? new Date(),
                             endDate: endDate ?? new Date(),
                             key: key ?? "selection",
                           },
-                        ]);
-                        setIsDefaultRange(false); // User has actively changed the range
+                        ];
+                        setPendingRange(newRange);
                       }}
                       moveRangeOnFirstSelection={false}
                       rangeColors={["#000"]}
                       maxDate={new Date()}
                     />
+                    <div className="flex justify-end mt-2">
+                      <button
+                        onClick={() => {
+                          setRange(pendingRange);
+                          setIsDefaultRange(false);
+                          setPickerOpen(false);
+                        }}
+                        className="text-xs bg-black text-white px-3 py-1 rounded hover:bg-gray-800 transition"
+                      >
+                        Apply
+                      </button>
+                    </div>
                   </div>
                 )}
+
               </div>
 
               {/* Reset Button */}
@@ -818,52 +689,6 @@ const AdminDashboardContents: React.FC = () => {
                   Reset
                 </button>
               )}
-
-              {/* Action Buttons */}
-              <div className="flex items-center gap-2">
-                {/* Preview Button */}
-                <button
-                  onClick={handlePreview}
-                  className="px-4 py-2 rounded-md text-xs transition focus:outline-none bg-gray-100 text-gray-700 hover:bg-gray-200 border"
-                >
-                  Preview Report
-                </button>
-
-                {/* Export Button */}
-                <button
-                  onClick={handleExport}
-                  disabled={isGeneratingReport}
-                  className={`px-4 py-2 rounded-md text-xs transition focus:outline-none flex items-center gap-2 ${
-                    isGeneratingReport
-                      ? "bg-gray-400 text-white cursor-not-allowed"
-                      : "bg-black text-white hover:bg-gray-800 hover:scale-[1.02]"
-                  }`}
-                >
-                  {isGeneratingReport && (
-                    <svg
-                      className="animate-spin h-3 w-3 text-white"
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                    >
-                      <circle
-                        className="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                      ></circle>
-                      <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                      ></path>
-                    </svg>
-                  )}
-                  {isGeneratingReport ? "Generating PDF..." : "Export Data"}
-                </button>
-              </div>
             </div>
           </div>
 
@@ -886,15 +711,14 @@ const AdminDashboardContents: React.FC = () => {
                         card.trend.value === "—"
                           ? "text-gray-500"
                           : card.trend.up
-                          ? "text-green-500"
-                          : "text-red-500"
+                            ? "text-green-500"
+                            : "text-red-500"
                       }
                     >
                       {card.trend.value === "—"
                         ? "— Trend unavailable for custom range"
-                        : `${card.trend.value} ${
-                            card.trend.up ? "Up" : "Down"
-                          } from past week`}
+                        : `${card.trend.value} ${card.trend.up ? "Up" : "Down"
+                        } from past week`}
                     </span>
                   </p>
                 </div>
@@ -990,8 +814,8 @@ const AdminDashboardContents: React.FC = () => {
                     // Ensure revenue is parsed correctly by removing '₱' and commas
                     const parsedRevenue = row.revenue
                       ? parseFloat(
-                          row.revenue.replace("₱", "").replace(",", "")
-                        )
+                        row.revenue.replace("₱", "").replace(",", "")
+                      )
                       : 0;
 
                     // Ensure that the revenue is valid before formatting
@@ -1010,11 +834,10 @@ const AdminDashboardContents: React.FC = () => {
                         </td>
                         <td className={tableCell}>
                           <span
-                            className={`inline-flex items-center gap-1 text-[10px] ${
-                              row.trendPositive
-                                ? "text-green-500"
-                                : "text-red-500"
-                            }`}
+                            className={`inline-flex items-center gap-1 text-[10px] ${row.trendPositive
+                              ? "text-green-500"
+                              : "text-red-500"
+                              }`}
                           >
                             <FontAwesomeIcon
                               icon={row.trendPositive ? faArrowUp : faArrowDown}
@@ -1029,87 +852,41 @@ const AdminDashboardContents: React.FC = () => {
               </tbody>
             </table>
           </div>
-
-          {/* Report Preview Modal */}
-          {showPreview && reportData && (
-            <div
-              className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
-              onClick={(e) => {
-                if (e.target === e.currentTarget) {
-                  setShowPreview(false);
-                  setReportData(null);
-                }
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Escape") {
-                  setShowPreview(false);
-                  setReportData(null);
-                }
-              }}
+          {/* Export Button*/}
+          <div className="flex justify-end mt-8">
+            <button
+              onClick={handleExport}
+              disabled={isGeneratingReport}
+              className={`px-5 py-2 rounded-md text-xs font-semibold transition focus:outline-none flex items-center gap-2 ${isGeneratingReport
+                ? "bg-gray-400 text-white cursor-not-allowed"
+                : "bg-black text-white hover:bg-gray-800 hover:scale-[1.02]"
+                }`}
             >
-              <div className="bg-white rounded-lg max-w-5xl max-h-[90vh] overflow-auto relative shadow-2xl">
-                {/* Modal Header */}
-                <div className="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center z-10">
-                  <h2 className="text-xl font-semibold text-gray-800">
-                    Dashboard Report Preview
-                  </h2>
-                  <div className="flex gap-3">
-                    <button
-                      onClick={() => window.print()}
-                      className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center gap-2"
-                      title="Print (Ctrl+P)"
-                    >
-                      🖨️ Print
-                    </button>
-                    <button
-                      onClick={() => {
-                        setShowPreview(false);
-                        setReportData(null);
-                      }}
-                      className="px-4 py-2 text-sm bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition"
-                      title="Close (Esc)"
-                    >
-                      ✕ Close
-                    </button>
-                  </div>
-                </div>
-
-                {/* Report Content */}
-                <div className="bg-gray-50 p-6">
-                  <div className="bg-white rounded-lg shadow-sm">
-                    <DashboardReportPDF data={reportData} />
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Hidden Report Component for PDF Generation */}
-          {reportData && !showPreview && (
-            <div
-              id="dashboard-report"
-              style={{
-                position: "fixed",
-                top: "-10000px",
-                left: "-10000px",
-                zIndex: -1000,
-                opacity: 0,
-                pointerEvents: "none",
-                backgroundColor: "white",
-                width: "210mm",
-                minHeight: "297mm",
-                fontFamily: "Arial, sans-serif",
-                color: "black",
-                padding: "20px",
-                fontSize: "12px",
-                lineHeight: "1.4",
-              }}
-            >
-              <div style={{ width: "800px", margin: "0 auto" }}>
-                <DashboardReportPDF data={reportData} />
-              </div>
-            </div>
-          )}
+              {isGeneratingReport && (
+                <svg
+                  className="animate-spin h-3 w-3 text-white"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  ></circle>
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  ></path>
+                </svg>
+              )}
+              {isGeneratingReport ? "Generating PDF..." : "Export Data"}
+            </button>
+          </div>
         </div>
       )}
     </div>
