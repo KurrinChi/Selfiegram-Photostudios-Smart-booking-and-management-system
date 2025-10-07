@@ -343,9 +343,17 @@ export default function AdminMessageContent(): JSX.Element {
     const channel = pusher.subscribe(channelName);
     const handler = (data: any) => {
       if (!data || !data.messageID) return;
+      // Derive sender ID from multiple possible keys coming over the socket
+      let derivedSenderID =
+        data.senderID ??
+        data.userID ??
+        data.customerID ??
+        data.fromUserID ??
+        null;
+
       const raw: RawMessage = {
         messageID: data.messageID,
-        senderID: 0,
+        senderID: derivedSenderID,
         senderName: data.senderName,
         senderEmail: data.senderEmail,
         message: data.message,
@@ -353,7 +361,43 @@ export default function AdminMessageContent(): JSX.Element {
         messageStatus: data.messageStatus,
         createdAt: data.createdAt,
         profilePicture: data.profilePicture || null,
+        starred: data.starred,
+        archived: data.archived,
       };
+
+      // If we still have no senderID, schedule a lightweight recovery fetch
+      if (raw.senderID == null && typeof fetch === "function" && API_URL) {
+        // Delay slightly to let backend persist fully
+        setTimeout(() => {
+          const recoveryHeaders: Record<string, string> = { Accept: "application/json" };
+          if (token) recoveryHeaders.Authorization = `Bearer ${token}`;
+          fetch(`${API_URL}/api/messages?recent=1`, {
+            headers: recoveryHeaders,
+          })
+            .then((r) => (r.ok ? r.json() : null))
+            .then((json) => {
+              if (!json) return;
+              const list: any[] = Array.isArray(json) ? json : json.data || [];
+              const match = list.find(
+                (m) => String(m.messageID) === String(data.messageID)
+              );
+              if (match && match.senderID != null) {
+                setEmails((prev) =>
+                  prev.map((e) =>
+                    e.id === String(data.messageID)
+                      ? {
+                          ...e,
+                          senderID: match.senderID,
+                          avatar: buildAvatarURL(match.profilePicture, API_URL),
+                        }
+                      : e
+                  )
+                );
+              }
+            })
+            .catch(() => {});
+        }, 600);
+      }
       setEmails((prev) => {
         if (prev.some((e) => e.id === String(raw.messageID))) return prev;
         const mapped = mapRawToEmail(raw, API_URL);
@@ -613,7 +657,13 @@ export default function AdminMessageContent(): JSX.Element {
       return;
     }
 
-    if (!replyTargetUserID || !replyTargetMessageID) {
+    if (replyTargetUserID == null || replyTargetMessageID == null) {
+      if (DEBUG_MESSAGES) {
+        console.debug("[Reply] Blocked send due to missing targets", {
+          replyTargetUserID,
+          replyTargetMessageID,
+        });
+      }
       pushFlash(
         "error",
         "No target message. Select a message then click Reply."
@@ -834,6 +884,8 @@ export default function AdminMessageContent(): JSX.Element {
     (email: Email) => {
       const to = extractAddress(email.from);
       const body = buildReplyBody(email, adminName);
+      // Force reply mode (disable any broadcast state)
+      setBroadcastMode(false);
       toggleCompose({ to, subject: `Re: ${email.subject}`, body });
       setReplyTargetUserID(email.senderID ?? null);
       setReplyTargetMessageID(email.id);
