@@ -33,6 +33,47 @@
         ]);
     });
     
+    Route::middleware('api')->get('/test-trend-debug', function () {
+        $currentWeekStart = \Carbon\Carbon::now()->startOfWeek();
+        $currentWeekEnd = \Carbon\Carbon::now()->endOfWeek();
+        $lastWeekStart = \Carbon\Carbon::now()->subWeek()->startOfWeek();
+        $lastWeekEnd = \Carbon\Carbon::now()->subWeek()->endOfWeek();
+        
+        // Get booking dates for current week
+        $currentBookings = \DB::table('booking')
+            ->join('transaction', 'booking.bookingID', '=', 'transaction.bookingId')
+            ->join('packages', 'booking.packageID', '=', 'packages.packageID')
+            ->where('transaction.paymentStatus', 1)
+            ->whereBetween('booking.date', [$currentWeekStart, $currentWeekEnd])
+            ->select('packages.name', 'booking.date', 'booking.bookingID')
+            ->get();
+        
+        // Get booking dates for last week
+        $lastBookings = \DB::table('booking')
+            ->join('transaction', 'booking.bookingID', '=', 'transaction.bookingId')
+            ->join('packages', 'booking.packageID', '=', 'packages.packageID')
+            ->where('transaction.paymentStatus', 1)
+            ->whereBetween('booking.date', [$lastWeekStart, $lastWeekEnd])
+            ->select('packages.name', 'booking.date', 'booking.bookingID')
+            ->get();
+        
+        return response()->json([
+            'today' => \Carbon\Carbon::now()->toDateString(),
+            'current_week' => [
+                'start' => $currentWeekStart->toDateString(),
+                'end' => $currentWeekEnd->toDateString(),
+                'count' => $currentBookings->count(),
+                'bookings' => $currentBookings
+            ],
+            'last_week' => [
+                'start' => $lastWeekStart->toDateString(),
+                'end' => $lastWeekEnd->toDateString(),
+                'count' => $lastBookings->count(),
+                'bookings' => $lastBookings
+            ]
+        ]);
+    });
+    
     // Test PayMongo payment method extraction (for testing purposes)
     Route::get('/test-paymongo-webhook', [TestPayMongoController::class, 'testWebhook']);
     

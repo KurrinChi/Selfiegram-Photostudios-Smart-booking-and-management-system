@@ -245,44 +245,99 @@ class DashboardController extends Controller
         
         public function getPackageDetails(Request $request)
         {
+            // Define date ranges for current week and last week
+            $currentWeekStart = Carbon::now()->startOfWeek();
+            $currentWeekEnd = Carbon::now()->endOfWeek();
+            $lastWeekStart = Carbon::now()->subWeek()->startOfWeek();
+            $lastWeekEnd = Carbon::now()->subWeek()->endOfWeek();
 
-            // 2) Total bookings in the overall data (for booking %)
+            // Total bookings in the overall data (for booking %)
             $totalBookings = DB::table('transaction')
                 ->where('transaction.paymentStatus', 1) // Only successful transactions
                 ->count();
 
-            // 3) Current data: group by packageID from transaction (overall data)
-            $current = DB::table('transaction')
+            // Current week data: group by packageID
+            $currentWeekData = DB::table('transaction')
                 ->join('booking', 'transaction.bookingId', '=', 'booking.bookingID')
                 ->join('packages', 'booking.packageID', '=', 'packages.packageID')
                 ->select(
                     'packages.packageID',
                     'packages.name',
                     DB::raw('COUNT(*) as totalBooking'),
-                    DB::raw('COALESCE(SUM(transaction.receivedAmount), 0) as revenue'),  // Summing `DOUBLE` and using `COALESCE`
+                    DB::raw('COALESCE(SUM(transaction.receivedAmount), 0) as revenue'),
                     DB::raw('AVG(booking.rating) as rating'),
                 )
-                ->where('transaction.paymentStatus', 1) // Only successful transactions
+                ->where('transaction.paymentStatus', 1)
+                ->whereBetween('booking.date', [$currentWeekStart, $currentWeekEnd])
+                ->groupBy('packages.packageID', 'packages.name')
+                ->get()
+                ->keyBy('packageID');
+
+            // Last week data: group by packageID
+            $lastWeekData = DB::table('transaction')
+                ->join('booking', 'transaction.bookingId', '=', 'booking.bookingID')
+                ->join('packages', 'booking.packageID', '=', 'packages.packageID')
+                ->select(
+                    'packages.packageID',
+                    DB::raw('COUNT(*) as totalBooking')
+                )
+                ->where('transaction.paymentStatus', 1)
+                ->whereBetween('booking.date', [$lastWeekStart, $lastWeekEnd])
+                ->groupBy('packages.packageID')
+                ->get()
+                ->keyBy('packageID');
+
+            // Overall data for packages (all time)
+            $allTimeData = DB::table('transaction')
+                ->join('booking', 'transaction.bookingId', '=', 'booking.bookingID')
+                ->join('packages', 'booking.packageID', '=', 'packages.packageID')
+                ->select(
+                    'packages.packageID',
+                    'packages.name',
+                    DB::raw('COUNT(*) as totalBooking'),
+                    DB::raw('COALESCE(SUM(transaction.receivedAmount), 0) as revenue'),
+                    DB::raw('AVG(booking.rating) as rating'),
+                )
+                ->where('transaction.paymentStatus', 1)
                 ->groupBy('packages.packageID', 'packages.name')
                 ->get();
 
-            // 4) Build response rows
+            // Build response rows with trend calculation
             $rows = [];
-            foreach ($current as $pkg) {
-                // Calculate trend (since there's no "previous window" anymore, we just set trend to 0 for all-time data)
+            foreach ($allTimeData as $pkg) {
+                // Get current week and last week bookings for this package
+                $currentCount = $currentWeekData->get($pkg->packageID)?->totalBooking ?? 0;
+                $lastCount = $lastWeekData->get($pkg->packageID)?->totalBooking ?? 0;
+
+                // Calculate trend percentage
                 $trendPct = 0;
+                $trendPositive = true;
+
+                if ($lastCount > 0) {
+                    $trendPct = round((($currentCount - $lastCount) / $lastCount) * 100, 1);
+                    $trendPositive = $trendPct >= 0;
+                    $trendPct = abs($trendPct);
+                } elseif ($currentCount > 0) {
+                    // If there were no bookings last week but there are this week, it's 100% increase
+                    $trendPct = 100;
+                    $trendPositive = true;
+                }
+                // else: both are 0, trend stays at 0%
 
                 // Add the row data
                 $rows[] = [
                     'name' => $pkg->name,
                     'totalBooking' => (int) $pkg->totalBooking,
-                    'revenue' => '₱' . number_format((float)$pkg->revenue, 2), // Ensure float and correct formatting
+                    'revenue' => '₱' . number_format((float)$pkg->revenue, 2),
                     'bookingPct' => $totalBookings
                         ? round($pkg->totalBooking / $totalBookings * 100, 2) . "% of the total {$totalBookings}"
                         : "0% of the total 0",
                     'rating' => $pkg->rating !== null ? (float)$pkg->rating : null, 
-                    'trend' => "{$trendPct}% all-time", // Trend is always 0 for overall data
-                    'trendPositive' => true, // As we have no trend calculation, we can set it to true for all-time data
+                    'trend' => $trendPct . '%',
+                    'trendPositive' => $trendPositive,
+                    // Debug info (will remove later)
+                    'debug_currentWeek' => $currentCount,
+                    'debug_lastWeek' => $lastCount,
                 ];
             }
 
