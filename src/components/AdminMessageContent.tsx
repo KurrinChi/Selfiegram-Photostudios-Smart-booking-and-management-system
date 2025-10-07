@@ -78,6 +78,31 @@ interface RawMessage {
   archived?: number;
 }
 
+// Outbound support reply (notification) joined with original target message structure from /api/messages/outbound
+interface OutboundJoinedRecord {
+  type: string; // 'support_reply'
+  notificationID: number;
+  userID: number;
+  title: string;
+  label: string; // 'Support'
+  message: string;
+  time: string;
+  starred: number;
+  targetMessageID: number | null;
+  targetMessage: null | {
+    messageID: number;
+    senderID: number;
+    senderName: string;
+    senderEmail: string;
+    inquiryOptions: string;
+    message: string;
+    messageStatus: number;
+    archived: number;
+    starred: number;
+    createdAt: string;
+  };
+}
+
 const INQUIRY_LABELS: Record<string, string> = {
   other: "General",
   pricing: "Pricing & Packages",
@@ -104,8 +129,7 @@ function mapRawToEmail(r: RawMessage, apiBase: string): Email {
   const starred = (r.starred ?? 0) === 1;
   let mailbox: string;
   if (archived) mailbox = "trash";
-  else if (r.messageStatus === 1) mailbox = "sent";
-  else mailbox = "inbox";
+  else mailbox = "inbox"; // keep replied messages in inbox; Sent tab derives them via messageStatus
   return {
     id: String(r.messageID),
     from: `${r.senderName || "User"} <${
@@ -121,6 +145,29 @@ function mapRawToEmail(r: RawMessage, apiBase: string): Email {
     avatar: buildAvatarURL(r.profilePicture, apiBase),
     senderID: r.senderID,
     messageStatus: r.messageStatus,
+    replies: undefined,
+  };
+}
+
+function mapOutboundToEmail(r: OutboundJoinedRecord): Email {
+  // For direct support replies we treat them as true outbound items distinct from original user message.
+  const related = r.targetMessage;
+  const toEmail = related?.senderEmail || 'user@example.com';
+  const toName = related?.senderName || 'User';
+  const hashRef = related ? `\n#${related.messageID}` : '';
+  return {
+    id: `notif-${r.notificationID}`,
+    from: `Support Staff <support@selfiegram.local>` ,
+    to: [ `${toName} <${toEmail}>` ],
+    subject: r.title || 'Support Reply',
+    body: r.message + hashRef,
+    time: r.time,
+    mailbox: 'sent',
+    starred: r.starred === 1,
+    archived: false,
+    avatar: null,
+    senderID: related?.senderID ?? r.userID,
+    messageStatus: 1,
     replies: undefined,
   };
 }
@@ -197,7 +244,7 @@ export default function AdminMessageContent(): JSX.Element {
   >("inbox");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [lastFetched, setLastFetched] = useState<Date | null>(null);
+  // removed lastFetched (unused)
   const abortRef = useRef<AbortController | null>(null);
   const initialFetchDoneRef = useRef(false);
   const dataSnapshotRef = useRef<string | null>(null);
@@ -270,45 +317,59 @@ export default function AdminMessageContent(): JSX.Element {
       return;
     }
     try {
-      const start = performance.now();
+  // removed start timing variable (unused after merge logic)
       setLoading(true);
       setError(null);
       abortRef.current?.abort();
       const controller = new AbortController();
       abortRef.current = controller;
 
-      const res = await fetchWithAuth(`${API_URL}/api/messages?per_page=100`, {
-        signal: controller.signal,
-      });
+      // Fetch inbound messages and outbound replies concurrently
+      const [messagesRes, outboundRes] = await Promise.all([
+        fetchWithAuth(`${API_URL}/api/messages?per_page=100`, { signal: controller.signal }),
+        fetchWithAuth(`${API_URL}/api/messages/outbound?per_page=200`, { signal: controller.signal }).catch((e) => {
+          if (DEBUG_MESSAGES) console.warn('[Outbound] fetch failed', e);
+          return null; // don't fail whole fetch if outbound fails
+        }),
+      ]);
 
-      if (!res.ok) {
+      if (!messagesRes.ok) {
         let bodyText = "";
-        try {
-          bodyText = await res.text();
-        } catch {}
+        try { bodyText = await messagesRes.text(); } catch {}
         let parsed: any = null;
-        try {
-          parsed = bodyText ? JSON.parse(bodyText) : null;
-        } catch {}
-        const msg =
-          parsed?.message ||
-          parsed?.error ||
-          bodyText ||
-          `Request failed (${res.status})`;
+        try { parsed = bodyText ? JSON.parse(bodyText) : null; } catch {}
+        const msg = parsed?.message || parsed?.error || bodyText || `Request failed (${messagesRes.status})`;
         throw new Error(msg);
       }
 
-      const json = await res.json();
-      const data: RawMessage[] = Array.isArray(json) ? json : json.data || [];
+      const jsonMessages = await messagesRes.json();
+      const baseData: RawMessage[] = Array.isArray(jsonMessages) ? jsonMessages : jsonMessages.data || [];
 
-      const mapped = data
-        .map((r) => mapRawToEmail(r, API_URL))
-        .sort((a, b) => +new Date(b.time) - +new Date(a.time));
+      let outboundData: OutboundJoinedRecord[] = [];
+      if (outboundRes && outboundRes.ok) {
+        try {
+          const outboundJson = await outboundRes.json();
+            const arr = Array.isArray(outboundJson) ? outboundJson : outboundJson.data || [];
+            outboundData = arr.filter((r: any) => r && r.label === 'Support');
+        } catch (e) {
+          if (DEBUG_MESSAGES) console.warn('[Outbound] parse failed', e);
+        }
+      }
+
+      const mappedInbound = baseData.map((r) => mapRawToEmail(r, API_URL));
+      const mappedOutbound = outboundData.map(mapOutboundToEmail);
+
+      // Merge ensuring no duplicate IDs
+      const mergedMap = new Map<string, Email>();
+      [...mappedInbound, ...mappedOutbound].forEach((m) => {
+        if (!mergedMap.has(m.id)) mergedMap.set(m.id, m);
+      });
+      const merged = Array.from(mergedMap.values()).sort((a, b) => +new Date(b.time) - +new Date(a.time));
 
       const snapshotKey =
-        mapped.length +
+        merged.length +
         ":" +
-        mapped
+        merged
           .slice(0, 5)
           .map((m) => m.id)
           .join(",");
@@ -318,8 +379,8 @@ export default function AdminMessageContent(): JSX.Element {
           console.debug("[Messages] No data change; skip state update");
       } else {
         dataSnapshotRef.current = snapshotKey;
-        setEmails(mapped);
-        setLastFetched(new Date());
+        setEmails(merged);
+  // lastFetched removed
       }
       setError(null);
     } catch (e: any) {
@@ -338,13 +399,14 @@ export default function AdminMessageContent(): JSX.Element {
     fetchMessages();
   }, [fetchMessages, token]);
 
-  useEffect(() => {
+    useEffect(() => {
     const channelName = "private-admin.messages";
     const channel = pusher.subscribe(channelName);
-    const handler = (data: any) => {
+      const handler = (data: any) => {
       if (!data || !data.messageID) return;
-      // Derive sender ID from multiple possible keys coming over the socket
-      let derivedSenderID =
+
+      // NEW: derive sender ID properly (stop forcing 0)
+      const realSenderID =
         data.senderID ??
         data.userID ??
         data.customerID ??
@@ -353,7 +415,7 @@ export default function AdminMessageContent(): JSX.Element {
 
       const raw: RawMessage = {
         messageID: data.messageID,
-        senderID: derivedSenderID,
+        senderID: realSenderID, // was 0
         senderName: data.senderName,
         senderEmail: data.senderEmail,
         message: data.message,
@@ -365,39 +427,25 @@ export default function AdminMessageContent(): JSX.Element {
         archived: data.archived,
       };
 
-      // If we still have no senderID, schedule a lightweight recovery fetch
-      if (raw.senderID == null && typeof fetch === "function" && API_URL) {
-        // Delay slightly to let backend persist fully
+      // Recovery: if senderID still null, try a delayed shallow fetch to hydrate it
+      if (raw.senderID == null && API_URL) {
         setTimeout(() => {
           const recoveryHeaders: Record<string, string> = { Accept: "application/json" };
-          if (token) recoveryHeaders.Authorization = `Bearer ${token}`;
-          fetch(`${API_URL}/api/messages?recent=1`, {
-            headers: recoveryHeaders,
-          })
+            if (token) recoveryHeaders.Authorization = `Bearer ${token}`;
+          fetch(`${API_URL}/api/messages?recent=1`, { headers: recoveryHeaders })
             .then((r) => (r.ok ? r.json() : null))
             .then((json) => {
               if (!json) return;
               const list: any[] = Array.isArray(json) ? json : json.data || [];
-              const match = list.find(
-                (m) => String(m.messageID) === String(data.messageID)
-              );
+              const match = list.find((m) => String(m.messageID) === String(data.messageID));
               if (match && match.senderID != null) {
-                setEmails((prev) =>
-                  prev.map((e) =>
-                    e.id === String(data.messageID)
-                      ? {
-                          ...e,
-                          senderID: match.senderID,
-                          avatar: buildAvatarURL(match.profilePicture, API_URL),
-                        }
-                      : e
-                  )
-                );
+                setEmails((prev) => prev.map((e) => e.id === String(data.messageID) ? { ...e, senderID: match.senderID, avatar: buildAvatarURL(match.profilePicture, API_URL) } : e));
               }
             })
             .catch(() => {});
         }, 600);
       }
+
       setEmails((prev) => {
         if (prev.some((e) => e.id === String(raw.messageID))) return prev;
         const mapped = mapRawToEmail(raw, API_URL);
@@ -407,8 +455,40 @@ export default function AdminMessageContent(): JSX.Element {
       });
     };
     channel.bind("admin.message.created", handler);
+
+    // Outbound support replies (sent notifications) real-time
+    const outboundHandler = (data: any) => {
+      if (!data || !data.notification) return;
+      const n = data.notification;
+      if (n.label !== 'Support') return;
+      const targetMessageID = data.targetMessageID ? String(data.targetMessageID) : null;
+      setEmails(prev => {
+        const id = `notif-${n.notificationID}`;
+        if (prev.some(e => e.id === id)) return prev;
+        const email: Email = {
+          id,
+          from: 'Support Staff <support@selfiegram.local>',
+          to: ['user'],
+          subject: n.title || 'Support Reply',
+          body: n.message,
+          time: n.time,
+          mailbox: 'sent',
+          starred: n.starred === 1,
+          archived: false,
+          avatar: null,
+          senderID: undefined,
+          messageStatus: 1,
+          replies: undefined,
+        };
+        let updated = prev.map(e => (targetMessageID && e.id === targetMessageID) ? { ...e, messageStatus: 1 } : e);
+        updated = [email, ...updated];
+        return updated.sort((a,b)=>+new Date(b.time)-+new Date(a.time));
+      });
+    };
+    channel.bind('support.reply.created', outboundHandler);
     return () => {
       channel.unbind("admin.message.created", handler);
+      channel.unbind('support.reply.created', outboundHandler);
       pusher.unsubscribe(channelName);
     };
   }, [API_URL]);
@@ -453,10 +533,12 @@ export default function AdminMessageContent(): JSX.Element {
       .filter((e) => {
         if (selectedMailbox === "trash") return e.archived;
         if (selectedMailbox === "starred") return e.starred && !e.archived;
-        if (selectedMailbox === "sent")
-          return e.mailbox === "sent" && !e.archived;
+        if (selectedMailbox === "sent") {
+          // Only show true outbound notifications / synthetic sent entries
+          return !e.archived && e.mailbox === 'sent';
+        }
         if (selectedMailbox === "inbox")
-          return e.mailbox === "inbox" && !e.archived;
+          return e.mailbox === 'inbox' && !e.archived && (e.messageStatus ?? 0) === 0; // only unreplied
         return false;
       })
       .filter(
@@ -479,7 +561,7 @@ export default function AdminMessageContent(): JSX.Element {
   );
 
   const sentCount = useMemo(
-    () => emails.filter((e) => e.mailbox === "sent" && !e.archived).length,
+    () => emails.filter((e) => !e.archived && e.mailbox === 'sent').length,
     [emails]
   );
 
@@ -628,22 +710,26 @@ export default function AdminMessageContent(): JSX.Element {
               ? "Your system broadcast was delivered to all customers."
               : "Direct support message delivered to selected customer."
           );
-          setEmails((prev) => [
-            {
-              id: `sent-${Date.now()}-${Math.random()}`,
-              from: `${adminName} <support@selfiegram.local>`,
-              to: [isAll ? "ALL USERS" : "user"],
-              subject: composeDraft.subject.trim(),
-              body: composeDraft.body,
-              time: new Date().toISOString(),
-              mailbox: "sent",
-              starred: false,
-              archived: false,
-              avatar: null,
-              messageStatus: 1,
-            },
-            ...prev,
-          ]);
+          // Only add a synthetic Sent entry for DIRECT support replies (label 'Support').
+          // System broadcasts (label 'System') are intentionally excluded from Sent.
+          if (!isAll) {
+            setEmails((prev) => [
+              {
+                id: `sent-${Date.now()}-${Math.random()}`,
+                from: `Support Staff <support@selfiegram.local>`,
+                to: ["user"],
+                subject: composeDraft.subject.trim(),
+                body: composeDraft.body,
+                time: new Date().toISOString(),
+                mailbox: "sent",
+                starred: false,
+                archived: false,
+                avatar: null,
+                messageStatus: 1,
+              },
+              ...prev,
+            ]);
+          }
           closeCompose();
         })
         .catch((err) => {
@@ -715,7 +801,7 @@ export default function AdminMessageContent(): JSX.Element {
           setEmails((prev) =>
             prev.map((e) =>
               e.id === replyTargetMessageID
-                ? { ...e, messageStatus: 1, mailbox: "sent" }
+                ? { ...e, messageStatus: 1 }
                 : e
             )
           );
@@ -817,8 +903,7 @@ export default function AdminMessageContent(): JSX.Element {
       setEmails((prev) =>
         prev.map((e) => {
           if (e.id !== id) return e;
-          const mailbox = e.messageStatus === 1 ? "sent" : "inbox";
-          return { ...e, archived: false, mailbox };
+          return { ...e, archived: false, mailbox: "inbox" };
         })
       );
       updateMessageFlags(id, { archived: false });
@@ -884,7 +969,7 @@ export default function AdminMessageContent(): JSX.Element {
     (email: Email) => {
       const to = extractAddress(email.from);
       const body = buildReplyBody(email, adminName);
-      // Force reply mode (disable any broadcast state)
+      // Ensure we are in reply mode (not broadcast)
       setBroadcastMode(false);
       toggleCompose({ to, subject: `Re: ${email.subject}`, body });
       setReplyTargetUserID(email.senderID ?? null);

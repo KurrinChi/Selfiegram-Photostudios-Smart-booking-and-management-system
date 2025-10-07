@@ -166,4 +166,123 @@ class MessageController extends Controller
             'message' => $count . ' trashed message(s) permanently deleted.'
         ]);
     }
+
+    /**
+     * Return outbound staff/admin direct messages (support replies) joined with the
+     * original user messages they reference. We infer linkage by extracting the first
+     * #<messageID> token from the notification body (reply format preserves original body
+     * with an appended #ID marker).
+     *
+     * Query params:
+     *  - user_id (optional): limit to a specific userID (notification recipient)
+     *  - per_page (optional, default 50)
+     *  - page (optional, default 1)
+     */
+    public function staffOutbound(Request $request)
+    {
+        $user = $request->user();
+        if (!$user) {
+            return response()->json(['status' => 'error', 'message' => 'Unauthenticated'], 401);
+        }
+        $role = strtolower($user->usertype ?? $user->userType ?? '');
+        if (!in_array($role, ['admin','staff'])) {
+            return response()->json(['status' => 'error', 'message' => 'Forbidden'], 403);
+        }
+
+        $filterUserId = $request->query('user_id');
+        $perPage = max(1, (int)$request->query('per_page', 50));
+        $page = max(1, (int)$request->query('page', 1));
+
+        $notifQuery = Notification::where('label', 'Support');
+        if ($filterUserId !== null && $filterUserId !== '') {
+            $notifQuery->where('userID', (int)$filterUserId);
+        }
+        $notifications = $notifQuery->orderByDesc('time')->get();
+
+        if ($notifications->isEmpty()) {
+            return response()->json([
+                'data' => [],
+                'pagination' => [
+                    'total' => 0,
+                    'per_page' => $perPage,
+                    'current_page' => $page,
+                    'last_page' => 0,
+                ],
+            ]);
+        }
+
+        // Extract candidate messageIDs from notifications
+        $mapNotifToMsgId = [];
+        $messageIds = [];
+        foreach ($notifications as $n) {
+            if (preg_match_all('/#(\d{1,10})\b/', (string)$n->message, $matches)) {
+                // Use the first ID that looks valid
+                foreach ($matches[1] as $rawId) {
+                    $mid = (int)$rawId;
+                    if ($mid > 0) {
+                        $mapNotifToMsgId[$n->notificationID] = $mid;
+                        $messageIds[] = $mid;
+                        break;
+                    }
+                }
+            }
+        }
+
+        $messagesById = [];
+        if (!empty($messageIds)) {
+            $uniqueIds = array_values(array_unique($messageIds));
+            $msgs = Message::whereIn('messageID', $uniqueIds)->get();
+            foreach ($msgs as $m) {
+                $messagesById[$m->messageID] = $m;
+            }
+        }
+
+        $joined = [];
+        foreach ($notifications as $n) {
+            $relatedMessage = null;
+            if (isset($mapNotifToMsgId[$n->notificationID])) {
+                $mid = $mapNotifToMsgId[$n->notificationID];
+                $relatedMessage = $messagesById[$mid] ?? null;
+            }
+            $joined[] = [
+                'type' => 'support_reply',
+                'notificationID' => $n->notificationID,
+                'userID' => $n->userID,
+                'title' => $n->title,
+                'label' => $n->label,
+                'message' => $n->message,
+                'time' => $n->time,
+                'starred' => $n->starred,
+                'targetMessageID' => $relatedMessage ? $relatedMessage->messageID : null,
+                'targetMessage' => $relatedMessage ? [
+                    'messageID' => $relatedMessage->messageID,
+                    'senderID' => $relatedMessage->senderID,
+                    'senderName' => $relatedMessage->senderName,
+                    'senderEmail' => $relatedMessage->senderEmail,
+                    'inquiryOptions' => $relatedMessage->inquiryOptions,
+                    'message' => $relatedMessage->message,
+                    'messageStatus' => $relatedMessage->messageStatus,
+                    'archived' => $relatedMessage->archived,
+                    'starred' => $relatedMessage->starred,
+                    'createdAt' => $relatedMessage->createdAt,
+                ] : null,
+            ];
+        }
+
+        // Manual pagination on the in-memory collection (notifications are typically not huge; adjust if necessary)
+        $total = count($joined);
+        $offset = ($page - 1) * $perPage;
+        $paged = array_slice($joined, $offset, $perPage);
+        $lastPage = (int)ceil($total / $perPage);
+
+        return response()->json([
+            'data' => $paged,
+            'pagination' => [
+                'total' => $total,
+                'per_page' => $perPage,
+                'current_page' => $page,
+                'last_page' => $lastPage,
+            ],
+        ]);
+    }
 }

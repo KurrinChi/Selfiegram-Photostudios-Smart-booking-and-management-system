@@ -19,9 +19,15 @@
                 <tr>
                     <td style="padding:30px;">
                         <h2 style="margin-top:0; font-size:18px; color:#333;">Hello {{ $user->fname }} {{ $user->lname }},</h2>
+@php
+    // Heuristic: treat as a reply only if the composed body contains a hash reference (#<id>)
+    $isReply = preg_match('/#\d{1,10}\b/', $bodyMessage) === 1;
+@endphp
+@if($isReply)
                         <p style="line-height:1.55; font-size:14px; color:#555; margin:0 0 16px;">
                             We are responding to your recent inquiry.
                         </p>
+@endif
                         <p style="line-height:1.55; font-size:15px; color:#111; font-weight:bold; margin:0 0 16px;">
                             Subject: {{ $subjectLine }}
                         </p>

@@ -10,7 +10,6 @@ type ImageItem = {
   id: string;
   url: string;
   date: string; // formatted display date, e.g. "October 1, 2025"
-  edited?: boolean;
   isFavorite?: boolean;
   bookingID?: number;
   packageName?: string; // raw package name from backend
@@ -20,7 +19,6 @@ type ImageItem = {
 type GroupImage = {
   id: string;
   url: string;
-  edited?: boolean;
   isFavorite?: boolean;
 };
 
@@ -35,7 +33,8 @@ type DateGroup = {
 };
 
 /* --------------------------- Constants --------------------------- */
-const TABS = ["Gallery", "Favorites"];
+// Tabs (Removed Edited tab per request)
+const TABS = ["Gallery", "Favorites"]; 
 
 /* --------------------------- Component --------------------------- */
 const ClientGalleryPageContent: React.FC = () => {
@@ -73,7 +72,6 @@ const ClientGalleryPageContent: React.FC = () => {
             month: "long",
             day: "numeric",
           }),
-          edited: img.tag === "edited",
           isFavorite: img.isFavorite === 1 || img.isFavorite === true,
           bookingID: img.bookingID ?? img.booking_id ?? undefined,
           packageName: img.packageName ?? undefined,
@@ -121,7 +119,6 @@ const ClientGalleryPageContent: React.FC = () => {
           byPackage[pkg].push({
             id: img.id,
             url: img.url,
-            edited: img.edited,
             isFavorite: img.isFavorite,
           });
         });
@@ -240,30 +237,19 @@ const ClientGalleryPageContent: React.FC = () => {
   };
 
   /* --------------------------- Filters ---------------------------- */
-  const filteredData =
-    activeTab === "Favorites"
-      ? galleryData
-          .map((dg) => ({
-            date: dg.date,
+  const filteredData = activeTab === "Favorites"
+    ? galleryData
+        .map((dg) => ({
+          date: dg.date,
             packages: dg.packages
               .map((pg) => ({
                 packageName: pg.packageName,
                 images: pg.images.filter((img) => img.isFavorite),
               }))
               .filter((pg) => pg.images.length > 0),
-          }))
-          .filter((dg) => dg.packages.length > 0)
-      : activeTab === "Edited"
-      ? galleryData
-          .map((dg) => ({
-            date: dg.date,
-            packages: dg.packages.map((pg) => ({
-              packageName: pg.packageName,
-              images: pg.images.filter((img) => img.edited),
-            })),
-          }))
-          .filter((dg) => dg.packages.some((pg) => pg.images.length > 0))
-      : galleryData;
+        }))
+        .filter((dg) => dg.packages.length > 0)
+    : galleryData;
 
   const isSelected = (id: string) => selectedImages.includes(id);
 
