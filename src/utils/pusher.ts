@@ -12,7 +12,7 @@ const pusher = new Pusher(import.meta.env.VITE_PUSHER_APP_KEY || '9e0e3462ef1544
     headers: {
       get Authorization() {
         const token = localStorage.getItem('token');
-        console.log('🔑 Getting auth token for Pusher:', token ? `${token.substring(0, 10)}...` : 'null');
+        console.log('Getting auth token for Pusher:', token ? `${token.substring(0, 10)}...` : 'null');
         return token ? `Bearer ${token}` : '';
       },
     },
@@ -21,19 +21,19 @@ const pusher = new Pusher(import.meta.env.VITE_PUSHER_APP_KEY || '9e0e3462ef1544
 
 // Connection event listeners for debugging
 pusher.connection.bind('connected', () => {
-  console.log('✅ Pusher connected successfully');
+  console.log('Pusher connected successfully');
 });
 
 pusher.connection.bind('error', (err: any) => {
-  console.error('❌ Pusher connection error:', err);
+  console.error('Pusher connection error:', err);
 });
 
 pusher.connection.bind('disconnected', () => {
-  console.log('⚠️ Pusher disconnected');
+  console.log('Pusher disconnected');
 });
 
 pusher.connection.bind('state_change', (states: any) => {
-  console.log('🔄 Pusher state change:', states);
+  console.log('3Pusher state change:', states);
 });
 
 export default pusher;

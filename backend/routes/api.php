@@ -275,7 +275,7 @@
             // Private admin messages channel authorization
             if ($channelName === 'private-admin.messages') {
                 $role = strtolower($user->usertype ?? $user->userType ?? '');
-                if ($role === 'admin') {
+                if (in_array($role, ['admin', 'staff'])) {
                     $authKey = config('broadcasting.connections.pusher.key');
                     $authSecret = config('broadcasting.connections.pusher.secret');
                     $stringToSign = $socketId . ':' . $channelName;
