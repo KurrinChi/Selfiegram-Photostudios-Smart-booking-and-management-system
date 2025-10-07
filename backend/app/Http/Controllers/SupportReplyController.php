@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Mail\SupportReply;
 use Illuminate\Support\Facades\Mail;
 use App\Events\SupportReplyCreated;
+use App\Events\AdminSupportReplyCreated;
 
 class SupportReplyController extends Controller
 {
@@ -51,15 +52,27 @@ class SupportReplyController extends Controller
             }
         }
 
-        // Broadcast to the user's private channel
-        event(new SupportReplyCreated($userID, [
+        // Prepare payload
+        $payload = [
             'notificationID' => $notification->notificationID,
             'title'          => $notification->title,
             'label'          => $notification->label,
             'message'        => $notification->message,
             'time'           => $notification->time,
             'starred'        => $notification->starred,
-        ]));
+        ];
+
+        // Attempt to extract first referenced message ID (#<id>) for admin real-time linkage
+        $targetMessageID = null;
+        if (preg_match('/#(\d{1,10})\b/', $notification->message, $m)) {
+            $targetMessageID = (int)$m[1];
+        }
+
+        // Broadcast to the user's private channel (user.<id>)
+        event(new SupportReplyCreated($userID, $payload));
+
+        // Broadcast separately to admin channel so Sent tab updates in real time
+        event(new AdminSupportReplyCreated($payload, $targetMessageID));
 
         return response()->json([
             'status' => 'success',

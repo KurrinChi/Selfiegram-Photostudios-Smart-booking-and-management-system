@@ -545,6 +545,7 @@
     // Admin manage messages
     Route::middleware(['auth:sanctum','role:Admin,Staff'])->group(function () {
         Route::get('/messages', [MessageController::class, 'index']);
+    Route::get('/messages/outbound', [MessageController::class, 'staffOutbound']);
         Route::post('/messages/{id}/status', [MessageController::class, 'updateStatus']);
         Route::post('/messages/{id}/starred', [MessageController::class, 'updateStarred']);
         Route::post('/messages/{id}/archived', [MessageController::class, 'updateArchived']);
