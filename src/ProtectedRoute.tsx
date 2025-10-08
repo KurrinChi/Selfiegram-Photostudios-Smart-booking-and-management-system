@@ -9,7 +9,6 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowedRoles 
   const token = localStorage.getItem("token");
   let userType = localStorage.getItem("userType") || "";
   userType = userType.replace(/"/g, "").trim();
-  console.log("token:", token, "userType:", userType, "allowedRoles:", allowedRoles);
 
   if (!token) {
     return <Navigate to="/" replace />;

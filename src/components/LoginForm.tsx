@@ -45,18 +45,14 @@ const LoginForm = () => {
       const data = await response.json();
 
       if (data.status === "success") {
-        console.log("Login successful:", data.user);
 
         //store userid
         localStorage.setItem("token", data.token);
         localStorage.setItem("userID", data.user.userID);
         localStorage.setItem("user", JSON.stringify(data.user));
         localStorage.setItem("userType", JSON.stringify(data.user.userType));
-        console.log("Saving user to localStorage:", data.user);
-        console.log("saving userID to localStorage:", data.user.userID);
 
         const userType = data.user.userType;
-        console.log("User Type:", userType);
 
         // Redirect based on usertype
         switch (userType) {
@@ -77,7 +73,6 @@ const LoginForm = () => {
       }
     } catch (error) {
       console.error("Login error:", error);
-      console.log("API_URL =", API_URL);
       toast.error("Something went wrong. Please try again.");
     }
   };

@@ -72,7 +72,6 @@ const AddPackagePage = () => {
         if (!res.ok) throw new Error(`Failed to fetch types: ${res.status}`);
         const data = await res.json();
         setPackageTypes(data);
-        console.log("Fetched package types:", data);
       } catch (err) {
         console.error(err);
         setTypesError("Failed to load package types.");
@@ -212,9 +211,6 @@ const AddPackagePage = () => {
         console.error("Server error:", errorText);
         throw new Error('Failed to create package');
       }
-
-      const data = await res.json();
-      console.log('Package created:', data);
 
       navigate("/admin/packages", {
         state: { toast: { type: "success", message: "Package added successfully!" } },

@@ -202,14 +202,6 @@ const AdminSalesContent: React.FC = () => {
           selectedAddOns: item.selectedAddOns || '',
           selectedConcepts: item.selectedConcepts || '',
         }));
-
-        // Debug: Log first 3 sales with their add-ons and concepts
-        console.log('🔍 AdminSalesContent - API Response Sample:', parsedData.slice(0, 3).map(s => ({
-          id: s.transactionID,
-          selectedAddOns: s.selectedAddOns,
-          selectedConcepts: s.selectedConcepts,
-        })));
-
         setSales(parsedData);
       })
       .catch((err) => console.error("Failed fetching sales:", err))

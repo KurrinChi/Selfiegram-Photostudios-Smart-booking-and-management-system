@@ -1776,11 +1776,6 @@ export default function AdminMessageContent(): JSX.Element {
                                     type="button"
                                     onMouseDown={(e) => {
                                       e.preventDefault();
-                                      console.log(
-                                        "Selected:",
-                                        customer.userID,
-                                        customer.name
-                                      );
                                       setRecipient(customer.userID);
                                       setRecipientSearch("");
                                       setRecipientDropdownOpen(false);
