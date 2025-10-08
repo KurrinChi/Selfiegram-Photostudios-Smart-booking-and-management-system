@@ -710,26 +710,8 @@ export default function AdminMessageContent(): JSX.Element {
               ? "Your system broadcast was delivered to all customers."
               : "Direct support message delivered to selected customer."
           );
-          // Only add a synthetic Sent entry for DIRECT support replies (label 'Support').
-          // System broadcasts (label 'System') are intentionally excluded from Sent.
-          if (!isAll) {
-            setEmails((prev) => [
-              {
-                id: `sent-${Date.now()}-${Math.random()}`,
-                from: `Support Staff <support@selfiegram.local>`,
-                to: ["user"],
-                subject: composeDraft.subject.trim(),
-                body: composeDraft.body,
-                time: new Date().toISOString(),
-                mailbox: "sent",
-                starred: false,
-                archived: false,
-                avatar: null,
-                messageStatus: 1,
-              },
-              ...prev,
-            ]);
-          }
+          // Removed optimistic insertion for direct messages to prevent duplicate "Sent" entries.
+          // Real-time Pusher event (support.reply.created) will add the sent item.
           closeCompose();
         })
         .catch((err) => {
@@ -1463,7 +1445,8 @@ export default function AdminMessageContent(): JSX.Element {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 12 }}
               transition={{ duration: 0.12 }}
-              className="w-[calc(100vw-1rem)] sm:w-[520px] bg-white border border-slate-100 rounded-xl shadow-lg overflow-hidden flex flex-col max-h-[80vh]"
+              /* Changed overflow-hidden -> overflow-visible so dropdown isn't clipped */
+              className="w-[calc(100vw-1rem)] sm:w-[520px] bg-white border border-slate-100 rounded-xl shadow-lg overflow-visible flex flex-col max-h-[80vh]"
               role="dialog"
               aria-label={
                 broadcastMode ? "Broadcast or Direct Message" : "Reply"
@@ -1652,7 +1635,7 @@ export default function AdminMessageContent(): JSX.Element {
                         {recipientDropdownOpen && (
                           <div
                             className="absolute z-[70] w-full mt-2 bg-white border-2 border-slate-200 
-                                          rounded-xl shadow-2xl overflow-hidden"
+                                          rounded-xl shadow-2xl flex flex-col max-h-[430px]"
                           >
                             <div className="bg-gradient-to-r from-slate-50 to-slate-100 px-4 py-2 border-b border-slate-200">
                               <div className="text-[10px] uppercase tracking-wider font-bold text-slate-500">
@@ -1667,8 +1650,7 @@ export default function AdminMessageContent(): JSX.Element {
                                 setRecipientSearch("");
                                 setRecipientDropdownOpen(false);
                               }}
-                              className={`w-full px-4 py-3 text-left hover:bg-gradient-to-r hover:from-green-50 hover:to-emerald-50
-                                          transition-all duration-150 flex items-center gap-3 group border-b-2 border-slate-100
+                              className={`w-full px-4 py-3 text-left transition-all duration-150 flex items-center gap-3 border-b-2 border-slate-100
                                           ${
                                             recipient === "ALL"
                                               ? "bg-gradient-to-r from-green-50 to-emerald-50 border-l-4 border-l-green-500"
@@ -1677,11 +1659,11 @@ export default function AdminMessageContent(): JSX.Element {
                             >
                               <div
                                 className={`w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm
-                                              transition-all duration-200 group-hover:scale-105
+                                              transition-all duration-200
                                               ${
                                                 recipient === "ALL"
                                                   ? "bg-gradient-to-br from-green-500 to-emerald-600"
-                                                  : "bg-gradient-to-br from-slate-400 to-slate-500 group-hover:from-green-500 group-hover:to-emerald-600"
+                                                  : "bg-gradient-to-br from-slate-400 to-slate-500"
                                               }`}
                               >
                                 <svg
@@ -1698,7 +1680,7 @@ export default function AdminMessageContent(): JSX.Element {
                                                 ${
                                                   recipient === "ALL"
                                                     ? "text-green-700"
-                                                    : "text-slate-800 group-hover:text-green-700"
+                                                    : "text-slate-800"
                                                 }`}
                                 >
                                   Broadcast to All Customers
@@ -1726,20 +1708,25 @@ export default function AdminMessageContent(): JSX.Element {
                             </button>
 
                             {filteredCustomers.length > 0 && (
-                              <div className="bg-gradient-to-r from-slate-50 to-slate-100 px-4 py-2 border-b border-slate-200">
+                              <div className="bg-gradient-to-r from-slate-50 to-slate-100 px-4 py-2 border-b border-slate-200 flex items-center justify-between">
                                 <div className="text-[10px] uppercase tracking-wider font-bold text-slate-500">
-                                  Individual Recipients (
-                                  {filteredCustomers.length})
+                                  Individual Recipients ({filteredCustomers.length})
+                                </div>
+                                <div className="text-[10px] text-slate-400 font-medium">
+                                  Total Loaded: {customerList.length}
                                 </div>
                               </div>
                             )}
 
                             <div
-                              className="overflow-y-auto max-h-64"
+                              className="overflow-y-auto max-h-60"
                               style={{
                                 scrollbarWidth: "thin",
                                 scrollbarColor: "#cbd5e1 #f1f5f9",
                               }}
+                              role="listbox"
+                              aria-label="Select recipient"
+                              onWheel={(e) => e.stopPropagation()}
                             >
                               {filteredCustomers.length > 0 ? (
                                 filteredCustomers.map((customer, index) => (
@@ -1757,8 +1744,7 @@ export default function AdminMessageContent(): JSX.Element {
                                       setRecipientSearch("");
                                       setRecipientDropdownOpen(false);
                                     }}
-                                    className={`w-full px-4 py-3 text-left hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50
-                                                transition-all duration-150 flex items-center gap-3 group
+                                    className={`w-full px-4 py-3 text-left transition-all duration-150 flex items-center gap-3
                                                 ${
                                                   index !==
                                                   filteredCustomers.length - 1
@@ -1775,12 +1761,12 @@ export default function AdminMessageContent(): JSX.Element {
                                       <div
                                         className={`w-10 h-10 rounded-xl flex items-center justify-center
                                                       text-white text-sm font-bold flex-shrink-0 shadow-sm
-                                                      transition-all duration-200 group-hover:scale-105
+                                                      transition-all duration-200
                                                       ${
                                                         recipient ===
                                                         customer.userID
                                                           ? "bg-gradient-to-br from-gray-400 to-gray-700"
-                                                          : "bg-gradient-to-br from-gray-700 to-gray-400 group-hover:from-gray-400 group-hover:to-gray-700"
+                                                          : "bg-gradient-to-br from-gray-700 to-gray-400"
                                                       }`}
                                       >
                                         {customer.name.charAt(0).toUpperCase()}
@@ -1794,7 +1780,7 @@ export default function AdminMessageContent(): JSX.Element {
                                                         recipient ===
                                                         customer.userID
                                                           ? "text-blue-700"
-                                                          : "text-slate-800 group-hover:text-blue-700"
+                                                          : "text-slate-800"
                                                       }`}
                                       >
                                         {customer.name}
@@ -1804,7 +1790,7 @@ export default function AdminMessageContent(): JSX.Element {
                                       </div>
                                     </div>
 
-                                    {recipient === customer.userID ? (
+                                    {recipient === customer.userID && (
                                       <div className="flex-shrink-0">
                                         <svg
                                           className="w-5 h-5 text-blue-600"
@@ -1815,22 +1801,6 @@ export default function AdminMessageContent(): JSX.Element {
                                             fillRule="evenodd"
                                             d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
                                             clipRule="evenodd"
-                                          />
-                                        </svg>
-                                      </div>
-                                    ) : (
-                                      <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <svg
-                                          className="w-5 h-5 text-slate-400"
-                                          fill="none"
-                                          viewBox="0 0 24 24"
-                                          stroke="currentColor"
-                                        >
-                                          <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth={2}
-                                            d="M9 5l7 7-7 7"
                                           />
                                         </svg>
                                       </div>
@@ -1867,10 +1837,7 @@ export default function AdminMessageContent(): JSX.Element {
                                     clipRule="evenodd"
                                   />
                                 </svg>
-                                <span>
-                                  Type to filter • Select one recipient or
-                                  broadcast to all
-                                </span>
+                                <span>Type to filter • Select one recipient or broadcast to all</span>
                               </div>
                             </div>
                           </div>

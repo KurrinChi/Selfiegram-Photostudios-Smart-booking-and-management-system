@@ -443,17 +443,17 @@ const handleExport = async () => {
       yPosition += 7;
 
       // Table data
-      const peso = (value: number): string =>
-        `₱${value.toLocaleString("en-PH", { minimumFractionDigits: 2 })}`;
+    const php = (value: number): string =>
+      `PHP ${value.toLocaleString("en-PH", { minimumFractionDigits: 2 })}`
 
       const salesData = filtered.map((s) => [
         getBookingLabel(s.transactionID, s.package),
         s.customerName,
         s.package,
         format(parseISO(s.transactionDate), "MMM dd, yy"),
-        peso(s.downPayment),
-        peso(s.balance),
-        peso(s.totalAmount),
+        php(s.downPayment),
+        php(s.balance),
+        php(s.totalAmount),
         s.paymentStatus,
       ]);
 
@@ -595,9 +595,9 @@ const handleExport = async () => {
       // Column 1: Financial metrics
       let col1Y = yPosition;
       const metrics = [
-        { label: "Total Sales:", value: peso(totalAmount) },
-        { label: "Total Payment:", value: peso(totalDown) },
-        { label: "Total Balance:", value: peso(totalBalance) },
+        { label: "Total Sales:", value: php(totalAmount) },
+        { label: "Total Payment:", value: php(totalDown) },
+        { label: "Total Balance:", value: php(totalBalance) },
       ];
 
       metrics.forEach((metric) => {

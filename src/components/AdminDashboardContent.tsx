@@ -240,503 +240,509 @@ const AdminDashboardContents: React.FC = () => {
 
   const tableCell = "py-3 px-4 text-xs whitespace-nowrap";
 
-const generateProfessionalPDF = async (data: any) => {
-  const pdf = new jsPDF("p", "mm", "a4");
+  const generateProfessionalPDF = async (data: any) => {
+    const pdf = new jsPDF("p", "mm", "a4");
 
-  // Monochrome color palette
-  const primaryBlack: [number, number, number] = [33, 33, 33];
-  const darkGray: [number, number, number] = [102, 102, 102];
-  const mediumGray: [number, number, number] = [153, 153, 153];
-  const lightGray: [number, number, number] = [245, 245, 245];
-  const borderGray: [number, number, number] = [208, 208, 208];
-  const white: [number, number, number] = [255, 255, 255];
+    // Monochrome color palette
+    const primaryBlack: [number, number, number] = [33, 33, 33];
+    const darkGray: [number, number, number] = [102, 102, 102];
+    const mediumGray: [number, number, number] = [153, 153, 153];
+    const lightGray: [number, number, number] = [245, 245, 245];
+    const borderGray: [number, number, number] = [208, 208, 208];
+    const white: [number, number, number] = [255, 255, 255];
 
-  let yPosition = 18;
-  const leftMargin = 20;
-  const rightMargin = 190;
-  const pageWidth = 210;
-  const pageHeight = 297;
+    let yPosition = 18;
+    const leftMargin = 20;
+    const rightMargin = 190;
+    const pageWidth = 210;
+    const pageHeight = 297;
 
-  const checkPageBreak = (neededSpace: number) => {
-    if (yPosition + neededSpace > pageHeight - 25) {
-      pdf.addPage();
-      yPosition = 18;
-      return true;
-    }
-    return false;
-  };
+    const checkPageBreak = (neededSpace: number) => {
+      if (yPosition + neededSpace > pageHeight - 25) {
+        pdf.addPage();
+        yPosition = 18;
+        return true;
+      }
+      return false;
+    };
 
-  // Helper function to convert SVG to PNG via Canvas
-  const loadSvgAsImage = (svgPath: string): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const img = new Image();
-      img.crossOrigin = "anonymous";
-      
-      img.onload = () => {
-        const canvas = document.createElement("canvas");
-        canvas.width = 200;
-        canvas.height = 200;
-        const ctx = canvas.getContext("2d");
-        
-        if (ctx) {
-          ctx.drawImage(img, 0, 0, 200, 200);
-          const dataUrl = canvas.toDataURL("image/png");
-          resolve(dataUrl);
-        } else {
-          reject(new Error("Could not get canvas context"));
-        }
-      };
-      
-      img.onerror = () => reject(new Error("Failed to load image"));
-      img.src = svgPath;
-    });
-  };
+    // Helper function to convert SVG to PNG via Canvas
+    const loadSvgAsImage = (svgPath: string): Promise<string> => {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.crossOrigin = "anonymous";
 
-  // ===== COMPACT HEADER SECTION =====
-  pdf.setFillColor(...primaryBlack);
-  pdf.rect(0, 0, pageWidth, 2, "F");
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          canvas.width = 200;
+          canvas.height = 200;
+          const ctx = canvas.getContext("2d");
 
-  yPosition = 12;
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, 200, 200);
+            const dataUrl = canvas.toDataURL("image/png");
+            resolve(dataUrl);
+          } else {
+            reject(new Error("Could not get canvas context"));
+          }
+        };
 
-  // Load and add logo from public/slfg.svg
-  try {
-    const logoDataUrl = await loadSvgAsImage("/slfg.svg");
-    pdf.addImage(logoDataUrl, "PNG", leftMargin, yPosition, 18, 18);
-  } catch (error) {
-    console.error("Failed to load logo:", error);
-    // Fallback: draw placeholder box with "LOGO" text
-    pdf.setDrawColor(...borderGray);
-    pdf.setLineWidth(0.3);
-    pdf.rect(leftMargin, yPosition, 18, 18);
-    
-    pdf.setTextColor(...mediumGray);
-    pdf.setFontSize(6);
-    pdf.text("LOGO", leftMargin + 6, yPosition + 10);
-  }
+        img.onerror = () => reject(new Error("Failed to load image"));
+        img.src = svgPath;
+      });
+    };
 
-  const textStartX = leftMargin + 22;
-
-  pdf.setTextColor(...primaryBlack);
-  pdf.setFontSize(18);
-  pdf.text("SELFIGRAM PHOTOSTUDIOS", textStartX, yPosition + 6);
-
-  pdf.setFontSize(8);
-  pdf.setTextColor(...darkGray);
-  pdf.text(
-    "3rd Floor Kim Kar Building F Estrella St., Malolos, Philippines",
-    textStartX,
-    yPosition + 11
-  );
-
-  pdf.setFontSize(7);
-  pdf.setTextColor(...mediumGray);
-  pdf.text(
-    "0968 885 6035  •  selfiegrammalolos@gmail.com",
-    textStartX,
-    yPosition + 15
-  );
-
-  yPosition += 22;
-
-  pdf.setDrawColor(...primaryBlack);
-  pdf.setLineWidth(0.8);
-  pdf.line(leftMargin, yPosition, rightMargin, yPosition);
-
-  yPosition += 10;
-
-  // ===== COMPACT REPORT HEADER =====
-  pdf.setTextColor(...primaryBlack);
-  pdf.setFontSize(16);
-  pdf.text("DASHBOARD REPORT", leftMargin, yPosition);
-
-  const reportId = `RPT-${format(new Date(data.reportGenerated), "yyyyMMdd")}`;
-  const idWidth = pdf.getTextWidth(reportId) + 8;
-  pdf.setFillColor(...primaryBlack);
-  pdf.rect(rightMargin - idWidth, yPosition - 5, idWidth, 7, "F");
-  pdf.setTextColor(...white);
-  pdf.setFontSize(7);
-  pdf.text(reportId, rightMargin - idWidth + 4, yPosition - 1);
-
-  yPosition += 7;
-
-  pdf.setFontSize(8);
-  pdf.setTextColor(...darkGray);
-
-  const periodLabel = "Period:";
-  const periodLabelWidth = pdf.getTextWidth(periodLabel);
-  pdf.text(periodLabel, leftMargin, yPosition);
-
-  pdf.setTextColor(...primaryBlack);
-  pdf.text(
-    data.dateRange.formattedRange,
-    leftMargin + periodLabelWidth + 2,
-    yPosition
-  );
-
-  yPosition += 4;
-
-  pdf.setTextColor(...darkGray);
-  const generatedLabel = "Generated:";
-  const generatedLabelWidth = pdf.getTextWidth(generatedLabel);
-  pdf.text(generatedLabel, leftMargin, yPosition);
-
-  pdf.setTextColor(...primaryBlack);
-  pdf.text(
-    format(new Date(data.reportGenerated), "MMM dd, yyyy • h:mm a"),
-    leftMargin + generatedLabelWidth + 2,
-    yPosition
-  );
-
-  yPosition += 12;
-
-  // ===== COMPACT EXECUTIVE SUMMARY =====
-  pdf.setFillColor(...primaryBlack);
-  pdf.rect(leftMargin - 4, yPosition - 3, 2, 5, "F");
-
-  pdf.setTextColor(...primaryBlack);
-  pdf.setFontSize(10);
-  pdf.text("EXECUTIVE SUMMARY", leftMargin + 2, yPosition);
-
-  pdf.setDrawColor(...lightGray);
-  pdf.setLineWidth(0.4);
-  pdf.line(leftMargin + 45, yPosition - 1, rightMargin, yPosition - 1);
-
-  yPosition += 8;
-
-  const summaryItems = [
-    {
-      label: "TOTAL USERS",
-      value: data.summary.totalUsers.toLocaleString(),
-      trend: data.summary.userTrend,
-    },
-    {
-      label: "TOTAL SCHEDULE",
-      value: data.summary.totalBookings.toLocaleString(),
-      trend: data.summary.scheduleTrend,
-    },
-    {
-      label: "TOTAL SALES",
-      value: `PHP ${data.summary.totalSales.toLocaleString()}`,
-      trend: data.summary.salesTrend,
-    },
-    {
-      label: "TOTAL APPOINTMENTS",
-      value: data.summary.totalAppointments.toLocaleString(),
-      trend: data.summary.appointmentsTrend,
-    },
-  ];
-
-  const cardWidth = 83;
-  const cardHeight = 24;
-  const cardSpacing = 4;
-
-  summaryItems.forEach((item, index) => {
-    const col = index % 2;
-    const row = Math.floor(index / 2);
-    const x = leftMargin + col * (cardWidth + cardSpacing);
-    const y = yPosition + row * (cardHeight + cardSpacing + 2);
-
-    pdf.setDrawColor(...borderGray);
-    pdf.setLineWidth(0.3);
-    pdf.rect(x, y, cardWidth, cardHeight);
-
+    // ===== COMPACT HEADER SECTION =====
     pdf.setFillColor(...primaryBlack);
-    pdf.rect(x, y, cardWidth, 1.2, "F");
+    pdf.rect(0, 0, pageWidth, 2, "F");
 
-    pdf.setTextColor(...darkGray);
-    pdf.setFontSize(6.5);
-    pdf.text(item.label, x + 3, y + 5);
+    yPosition = 12;
 
-    pdf.setTextColor(...primaryBlack);
-    pdf.setFontSize(14);
-    pdf.text(String(item.value), x + 3, y + 13);
-
-    if (!data.summary.hasDateRange && item.trend) {
-      const trendSymbol = item.trend.up ? "↑" : "↓";
-
-      pdf.setFontSize(8);
-      pdf.setTextColor(...primaryBlack);
-      pdf.text(trendSymbol, x + 3, y + 20);
-
-      pdf.setFontSize(6.5);
-      pdf.setTextColor(...darkGray);
-      pdf.text(`${item.trend.value}`, x + 7, y + 20);
+    // Load and add logo from public/slfg.svg
+    try {
+      const logoDataUrl = await loadSvgAsImage("/slfg.svg");
+      pdf.addImage(logoDataUrl, "PNG", leftMargin, yPosition, 18, 18);
+    } catch (error) {
+      console.error("Failed to load logo:", error);
+      // Fallback: draw placeholder box with "LOGO" text
+      pdf.setDrawColor(...borderGray);
+      pdf.setLineWidth(0.3);
+      pdf.rect(leftMargin, yPosition, 18, 18);
 
       pdf.setTextColor(...mediumGray);
-      pdf.text(
-        "vs last week",
-        x + 7 + pdf.getTextWidth(item.trend.value) + 1.5,
-        y + 20
+      pdf.setFontSize(6);
+      pdf.text("LOGO", leftMargin + 6, yPosition + 10);
+    }
+
+    const textStartX = leftMargin + 22;
+
+    pdf.setTextColor(...primaryBlack);
+    pdf.setFontSize(18);
+    pdf.text("SELFIGRAM PHOTOSTUDIOS", textStartX, yPosition + 6);
+
+    pdf.setFontSize(8);
+    pdf.setTextColor(...darkGray);
+    pdf.text(
+      "3rd Floor Kim Kar Building F Estrella St., Malolos, Philippines",
+      textStartX,
+      yPosition + 11
+    );
+
+    pdf.setFontSize(7);
+    pdf.setTextColor(...mediumGray);
+    pdf.text(
+      "0968 885 6035  •  selfiegrammalolos@gmail.com",
+      textStartX,
+      yPosition + 15
+    );
+
+    yPosition += 22;
+
+    pdf.setDrawColor(...primaryBlack);
+    pdf.setLineWidth(0.8);
+    pdf.line(leftMargin, yPosition, rightMargin, yPosition);
+
+    yPosition += 10;
+
+    // ===== COMPACT REPORT HEADER =====
+    pdf.setTextColor(...primaryBlack);
+    pdf.setFontSize(16);
+    pdf.text("DASHBOARD REPORT", leftMargin, yPosition);
+
+    const reportId = `RPT-${format(new Date(data.reportGenerated), "yyyyMMdd")}`;
+    const idWidth = pdf.getTextWidth(reportId) + 8;
+    pdf.setFillColor(...primaryBlack);
+    pdf.rect(rightMargin - idWidth, yPosition - 5, idWidth, 7, "F");
+    pdf.setTextColor(...white);
+    pdf.setFontSize(7);
+    pdf.text(reportId, rightMargin - idWidth + 4, yPosition - 1);
+
+    yPosition += 7;
+
+    pdf.setFontSize(8);
+    pdf.setTextColor(...darkGray);
+
+    const periodLabel = "Period:";
+    const periodLabelWidth = pdf.getTextWidth(periodLabel);
+    pdf.text(periodLabel, leftMargin, yPosition);
+
+    pdf.setTextColor(...primaryBlack);
+    pdf.text(
+      data.dateRange.formattedRange,
+      leftMargin + periodLabelWidth + 2,
+      yPosition
+    );
+
+    yPosition += 4;
+
+    pdf.setTextColor(...darkGray);
+    const generatedLabel = "Generated:";
+    const generatedLabelWidth = pdf.getTextWidth(generatedLabel);
+    pdf.text(generatedLabel, leftMargin, yPosition);
+
+    pdf.setTextColor(...primaryBlack);
+    pdf.text(
+      format(new Date(data.reportGenerated), "MMM dd, yyyy • h:mm a"),
+      leftMargin + generatedLabelWidth + 2,
+      yPosition
+    );
+
+    yPosition += 12;
+
+    // ===== COMPACT EXECUTIVE SUMMARY =====
+    pdf.setFillColor(...primaryBlack);
+    pdf.rect(leftMargin - 4, yPosition - 3, 2, 5, "F");
+
+    pdf.setTextColor(...primaryBlack);
+    pdf.setFontSize(10);
+    pdf.text("EXECUTIVE SUMMARY", leftMargin + 2, yPosition);
+
+    pdf.setDrawColor(...lightGray);
+    pdf.setLineWidth(0.4);
+    pdf.line(leftMargin + 45, yPosition - 1, rightMargin, yPosition - 1);
+
+    yPosition += 8;
+
+    const summaryItems = [
+      {
+        label: "TOTAL USERS",
+        value: data.summary.totalUsers.toLocaleString(),
+        trend: data.summary.userTrend,
+      },
+      {
+        label: "TOTAL SCHEDULE",
+        value: data.summary.totalBookings.toLocaleString(),
+        trend: data.summary.scheduleTrend,
+      },
+      {
+        label: "TOTAL SALES",
+        value: `PHP ${data.summary.totalSales.toLocaleString()}`,
+        trend: data.summary.salesTrend,
+      },
+      {
+        label: "TOTAL APPOINTMENTS",
+        value: data.summary.totalAppointments.toLocaleString(),
+        trend: data.summary.appointmentsTrend,
+      },
+    ];
+
+    const cardWidth = 83;
+    const cardHeight = 24;
+    const cardSpacing = 4;
+
+    summaryItems.forEach((item, index) => {
+      const col = index % 2;
+      const row = Math.floor(index / 2);
+      const x = leftMargin + col * (cardWidth + cardSpacing);
+      const y = yPosition + row * (cardHeight + cardSpacing + 2);
+
+      pdf.setDrawColor(...borderGray);
+      pdf.setLineWidth(0.3);
+      pdf.rect(x, y, cardWidth, cardHeight);
+
+      pdf.setFillColor(...primaryBlack);
+      pdf.rect(x, y, cardWidth, 1.2, "F");
+
+      pdf.setTextColor(...darkGray);
+      pdf.setFontSize(6.5);
+      pdf.text(item.label, x + 3, y + 5);
+
+      pdf.setTextColor(...primaryBlack);
+      pdf.setFontSize(14);
+      pdf.text(String(item.value), x + 3, y + 13);
+
+      if (!data.summary.hasDateRange && item.trend) {
+        const trendSymbol = item.trend.up ? "UP" : "DOWN";
+
+        pdf.setFontSize(8);
+        pdf.setTextColor(...primaryBlack);
+        pdf.text(trendSymbol, x + 3, y + 20);
+
+        pdf.setFontSize(6.5);
+        pdf.setTextColor(...darkGray);
+        pdf.text(`${item.trend.value}`, x + 14, y + 20);
+
+        pdf.setTextColor(...mediumGray);
+        pdf.text(
+          "vs last week",
+          x + 14 + pdf.getTextWidth(item.trend.value) + 1.5,
+          y + 20
+        );
+      }
+    });
+
+    yPosition += (cardHeight + cardSpacing + 2) * 2 + 6;
+
+    // ===== COMPACT REVENUE ANALYSIS =====
+    if (data.weeklyIncome && data.weeklyIncome.length > 0) {
+      checkPageBreak(70);
+
+      pdf.setFillColor(...primaryBlack);
+      pdf.rect(leftMargin - 4, yPosition - 3, 2, 5, "F");
+
+      pdf.setTextColor(...primaryBlack);
+      pdf.setFontSize(10);
+      pdf.text("REVENUE ANALYSIS", leftMargin + 2, yPosition);
+
+      pdf.setDrawColor(...lightGray);
+      pdf.setLineWidth(0.4);
+      pdf.line(leftMargin + 40, yPosition - 1, rightMargin, yPosition - 1);
+
+      yPosition += 7;
+
+      const weeklyData = data.weeklyIncome
+        .slice(-10)
+        .map((week: any) => [week.week, `PHP ${week.income.toLocaleString()}`]);
+
+      autoTable(pdf, {
+        startY: yPosition,
+        head: [["Week Period", "Gross Income"]],
+        body: weeklyData,
+        foot: [
+          [
+            "TOTAL REVENUE",
+            `PHP ${data.weeklyIncome
+              .slice(-10)
+              .reduce((sum: number, week: any) => sum + week.income, 0)
+              .toLocaleString()}`,
+          ],
+        ],
+        margin: { left: leftMargin, right: leftMargin },
+        styles: {
+          fontSize: 8,
+          cellPadding: { top: 3, right: 4, bottom: 3, left: 4 },
+          lineColor: borderGray,
+          lineWidth: 0.2,
+        },
+        headStyles: {
+          fillColor: primaryBlack,
+          textColor: white,
+          fontSize: 8,
+          halign: "left",
+          cellPadding: { top: 4, right: 4, bottom: 4, left: 4 },
+        },
+        bodyStyles: {
+          textColor: primaryBlack,
+          fillColor: white,
+        },
+        footStyles: {
+          fillColor: lightGray,
+          textColor: primaryBlack,
+          fontSize: 8,
+          lineWidth: 0.6,
+          lineColor: primaryBlack,
+          cellPadding: { top: 4, right: 4, bottom: 4, left: 4 },
+        },
+        columnStyles: {
+          0: { cellWidth: 100 },
+          1: { halign: "right" },
+        },
+      });
+
+      yPosition = (pdf as any).lastAutoTable.finalY + 10;
+    }
+
+    // ===== COMPACT PACKAGE PERFORMANCE (ALL CENTERED EXCEPT PACKAGE) =====
+    if (data.packages && data.packages.length > 0) {
+      checkPageBreak(70);
+
+      pdf.setFillColor(...primaryBlack);
+      pdf.rect(leftMargin - 4, yPosition - 3, 2, 5, "F");
+
+      pdf.setTextColor(...primaryBlack);
+      pdf.setFontSize(10);
+      pdf.text("PACKAGE PERFORMANCE", leftMargin + 2, yPosition);
+
+      pdf.setDrawColor(...lightGray);
+      pdf.setLineWidth(0.4);
+      pdf.line(leftMargin + 48, yPosition - 1, rightMargin, yPosition - 1);
+
+      yPosition += 7;
+
+      const packageData = data.packages.map((pkg: any) => {
+        const revenueValue = parseFloat(
+          String(pkg.revenue).replace(/[^0-9.-]/g, "")
+        );
+
+        return [
+          pkg.name,
+          pkg.totalBooking?.toLocaleString() ?? "0",
+          `PHP ${isNaN(revenueValue) ? "0" : revenueValue.toLocaleString()}`,
+          `${pkg.bookingPct} (${data.summary.totalBookings} total)`,
+          pkg.rating ? `${pkg.rating.toFixed(1)}/5` : "N/A",
+          pkg.trendPositive ? `UP ${pkg.trend} vs last week` : `DOWN ${pkg.trend} vs last week`,
+        ];
+      });
+
+      autoTable(pdf, {
+        startY: yPosition,
+        head: [["Package", "Bookings", "Revenue", "Share", "Rating", "Trend"]],
+        body: packageData,
+        margin: { left: 10, right: 10 },
+        styles: {
+          fontSize: 8,
+          cellPadding: { top: 3.5, right: 3, bottom: 3.5, left: 3 },
+          lineColor: borderGray,
+          lineWidth: 0.2,
+          valign: "middle",
+          halign: "center",
+        },
+        headStyles: {
+          fillColor: primaryBlack,
+          textColor: white,
+          fontSize: 8,
+          fontStyle: "bold",
+          halign: "center",
+          cellPadding: { top: 4.5, right: 3, bottom: 4.5, left: 3 },
+        },
+        bodyStyles: {
+          textColor: primaryBlack,
+          fillColor: white,
+          fontSize: 8,
+          halign: "center",
+        },
+        columnStyles: {
+          0: {
+            cellWidth: 48,
+            halign: "left",
+            fontStyle: "bold",
+            textColor: primaryBlack
+          },
+          1: {
+            cellWidth: 24,
+            halign: "center",
+            fontStyle: "bold",
+            textColor: primaryBlack
+          },
+          2: {
+            cellWidth: 32,
+            halign: "center",
+            fontStyle: "bold",
+            textColor: primaryBlack
+          },
+          3: {
+            cellWidth: 25,
+            halign: "center",
+            textColor: darkGray
+          },
+          4: {
+            cellWidth: 20,
+            halign: "center",
+            textColor: darkGray
+          },
+          5: {
+            cellWidth: 40,
+            halign: "center",
+            fontStyle: "bold",
+            textColor: primaryBlack
+          },
+        },
+        alternateRowStyles: {
+          fillColor: [252, 252, 252],
+        },
+      });
+
+      yPosition = (pdf as any).lastAutoTable.finalY + 10;
+    }
+
+    // ===== COMPACT KEY INSIGHTS =====
+    checkPageBreak(40);
+
+    pdf.setFillColor(...primaryBlack);
+    pdf.rect(leftMargin - 4, yPosition - 3, 2, 5, "F");
+
+    pdf.setTextColor(...primaryBlack);
+    pdf.setFontSize(10);
+    pdf.text("KEY INSIGHTS", leftMargin + 2, yPosition);
+
+    pdf.setDrawColor(...lightGray);
+    pdf.setLineWidth(0.4);
+    pdf.line(leftMargin + 30, yPosition - 1, rightMargin, yPosition - 1);
+
+    yPosition += 8;
+
+    const insights: string[] = [];
+    if (data.summary.totalSales > 0 && data.summary.totalBookings > 0) {
+      const avg = (data.summary.totalSales / data.summary.totalBookings).toFixed(2);
+      insights.push(
+        `Average revenue per booking: PHP ${Number(avg).toLocaleString()}`
       );
     }
-  });
+    if (data.packages && data.packages.length > 0) {
+      const top = data.packages.reduce((a: any, b: any) =>
+        b.totalBooking > a.totalBooking ? b : a
+      );
+      insights.push(
+        `Most popular package: ${top.name} with ${top.totalBooking} bookings`
+      );
+    }
+    if (data.weeklyIncome && data.weeklyIncome.length >= 2) {
+      const [prev, curr] = data.weeklyIncome.slice(-2);
+      const growth = ((curr.income - prev.income) / prev.income) * 100;
+      insights.push(
+        `Week-over-week revenue growth: ${growth > 0 ? "+" : ""}${growth.toFixed(1)}%`
+      );
+    }
+    insights.push(`Total registered users in system: ${data.summary.totalUsers}`);
+    insights.push(
+      `Active appointment schedule count: ${data.summary.totalBookings}`
+    );
 
-  yPosition += (cardHeight + cardSpacing + 2) * 2 + 6;
+    pdf.setFontSize(8);
+    pdf.setTextColor(...darkGray);
 
-  // ===== COMPACT REVENUE ANALYSIS =====
-  if (data.weeklyIncome && data.weeklyIncome.length > 0) {
-    checkPageBreak(70);
+    insights.forEach((line) => {
+      pdf.setFillColor(...primaryBlack);
+      pdf.circle(leftMargin + 1.5, yPosition - 1.2, 0.7, "F");
 
-    pdf.setFillColor(...primaryBlack);
-    pdf.rect(leftMargin - 4, yPosition - 3, 2, 5, "F");
-
-    pdf.setTextColor(...primaryBlack);
-    pdf.setFontSize(10);
-    pdf.text("REVENUE ANALYSIS", leftMargin + 2, yPosition);
-
-    pdf.setDrawColor(...lightGray);
-    pdf.setLineWidth(0.4);
-    pdf.line(leftMargin + 40, yPosition - 1, rightMargin, yPosition - 1);
-
-    yPosition += 7;
-
-    const weeklyData = data.weeklyIncome
-      .slice(-10)
-      .map((week: any) => [week.week, `PHP ${week.income.toLocaleString()}`]);
-
-    autoTable(pdf, {
-      startY: yPosition,
-      head: [["Week Period", "Gross Income"]],
-      body: weeklyData,
-      foot: [
-        [
-          "TOTAL REVENUE",
-          `PHP ${data.weeklyIncome
-            .slice(-10)
-            .reduce((sum: number, week: any) => sum + week.income, 0)
-            .toLocaleString()}`,
-        ],
-      ],
-      margin: { left: leftMargin, right: leftMargin },
-      styles: {
-        fontSize: 8,
-        cellPadding: { top: 3, right: 4, bottom: 3, left: 4 },
-        lineColor: borderGray,
-        lineWidth: 0.2,
-      },
-      headStyles: {
-        fillColor: primaryBlack,
-        textColor: white,
-        fontSize: 8,
-        halign: "left",
-        cellPadding: { top: 4, right: 4, bottom: 4, left: 4 },
-      },
-      bodyStyles: {
-        textColor: primaryBlack,
-        fillColor: white,
-      },
-      footStyles: {
-        fillColor: lightGray,
-        textColor: primaryBlack,
-        fontSize: 8,
-        lineWidth: 0.6,
-        lineColor: primaryBlack,
-        cellPadding: { top: 4, right: 4, bottom: 4, left: 4 },
-      },
-      columnStyles: {
-        0: { cellWidth: 100 },
-        1: { halign: "right" },
-      },
+      pdf.text(line, leftMargin + 5, yPosition);
+      yPosition += 5;
     });
 
-    yPosition = (pdf as any).lastAutoTable.finalY + 10;
-  }
+    // ===== COMPACT FOOTER =====
+    const footerY = pageHeight - 15;
 
-  // ===== COMPACT PACKAGE PERFORMANCE (ALL CENTERED EXCEPT PACKAGE) =====
-  if (data.packages && data.packages.length > 0) {
-    checkPageBreak(70);
+    pdf.setDrawColor(...borderGray);
+    pdf.setLineWidth(0.3);
+    pdf.line(leftMargin, footerY - 7, rightMargin, footerY - 7);
 
-    pdf.setFillColor(...primaryBlack);
-    pdf.rect(leftMargin - 4, yPosition - 3, 2, 5, "F");
-
-    pdf.setTextColor(...primaryBlack);
-    pdf.setFontSize(10);
-    pdf.text("PACKAGE PERFORMANCE", leftMargin + 2, yPosition);
-
-    pdf.setDrawColor(...lightGray);
-    pdf.setLineWidth(0.4);
-    pdf.line(leftMargin + 48, yPosition - 1, rightMargin, yPosition - 1);
-
-    yPosition += 7;
-
-    const packageData = data.packages.map((pkg: any) => [
-      pkg.name,
-      pkg.totalBooking.toLocaleString(),
-      pkg.revenue,
-      pkg.bookingPct,
-      pkg.rating ? `${pkg.rating.toFixed(1)}/5` : "N/A",
-      `${pkg.trendPositive ? "↑" : "↓"} ${pkg.trend}`,
-    ]);
-
-    autoTable(pdf, {
-      startY: yPosition,
-      head: [["Package", "Bookings", "Revenue", "Share", "Rating", "Trend"]],
-      body: packageData,
-      margin: { left: leftMargin, right: leftMargin },
-      styles: {
-        fontSize: 8,
-        cellPadding: { top: 3.5, right: 3, bottom: 3.5, left: 3 },
-        lineColor: borderGray,
-        lineWidth: 0.2,
-        valign: "middle",
-        halign: "center",
-      },
-      headStyles: {
-        fillColor: primaryBlack,
-        textColor: white,
-        fontSize: 8,
-        fontStyle: "bold",
-        halign: "center",
-        cellPadding: { top: 4.5, right: 3, bottom: 4.5, left: 3 },
-      },
-      bodyStyles: {
-        textColor: primaryBlack,
-        fillColor: white,
-        fontSize: 8,
-        halign: "center",
-      },
-      columnStyles: {
-        0: { 
-          cellWidth: 48, 
-          halign: "left",
-          fontStyle: "bold",
-          textColor: primaryBlack 
-        },
-        1: { 
-          cellWidth: 24, 
-          halign: "center", 
-          fontStyle: "bold",
-          textColor: primaryBlack 
-        },
-        2: { 
-          cellWidth: 32, 
-          halign: "center",
-          fontStyle: "bold",
-          textColor: primaryBlack 
-        },
-        3: { 
-          cellWidth: 22, 
-          halign: "center",
-          textColor: darkGray 
-        },
-        4: { 
-          cellWidth: 20, 
-          halign: "center",
-          textColor: darkGray 
-        },
-        5: { 
-          cellWidth: 20, 
-          halign: "center", 
-          fontStyle: "bold",
-          textColor: primaryBlack 
-        },
-      },
-      alternateRowStyles: {
-        fillColor: [252, 252, 252],
-      },
-    });
-
-    yPosition = (pdf as any).lastAutoTable.finalY + 10;
-  }
-
-  // ===== COMPACT KEY INSIGHTS =====
-  checkPageBreak(40);
-
-  pdf.setFillColor(...primaryBlack);
-  pdf.rect(leftMargin - 4, yPosition - 3, 2, 5, "F");
-
-  pdf.setTextColor(...primaryBlack);
-  pdf.setFontSize(10);
-  pdf.text("KEY INSIGHTS", leftMargin + 2, yPosition);
-
-  pdf.setDrawColor(...lightGray);
-  pdf.setLineWidth(0.4);
-  pdf.line(leftMargin + 30, yPosition - 1, rightMargin, yPosition - 1);
-
-  yPosition += 8;
-
-  const insights: string[] = [];
-  if (data.summary.totalSales > 0 && data.summary.totalBookings > 0) {
-    const avg = (data.summary.totalSales / data.summary.totalBookings).toFixed(2);
-    insights.push(
-      `Average revenue per booking: PHP ${Number(avg).toLocaleString()}`
+    pdf.setTextColor(...mediumGray);
+    pdf.setFontSize(6.5);
+    pdf.text(
+      "This report was automatically generated by Selfigram Photostudios Dashboard System",
+      leftMargin,
+      footerY - 3
     );
-  }
-  if (data.packages && data.packages.length > 0) {
-    const top = data.packages.reduce((a: any, b: any) =>
-      b.totalBooking > a.totalBooking ? b : a
+
+    pdf.setFontSize(6.5);
+    pdf.text("© 2025 Selfigram Photostudios", leftMargin, footerY + 1);
+
+    pdf.text("•", leftMargin + 46, footerY + 1);
+
+    pdf.text("All Rights Reserved", leftMargin + 49, footerY + 1);
+
+    pdf.text("•", leftMargin + 78, footerY + 1);
+
+    pdf.setTextColor(...darkGray);
+    const reportIdFull = `ID: RPT-${format(new Date(), "yyyyMMdd-HHmmss")}`;
+    pdf.text(
+      reportIdFull,
+      rightMargin - pdf.getTextWidth(reportIdFull),
+      footerY + 1
     );
-    insights.push(
-      `Most popular package: ${top.name} with ${top.totalBooking} bookings`
-    );
-  }
-  if (data.weeklyIncome && data.weeklyIncome.length >= 2) {
-    const [prev, curr] = data.weeklyIncome.slice(-2);
-    const growth = ((curr.income - prev.income) / prev.income) * 100;
-    insights.push(
-      `Week-over-week revenue growth: ${growth > 0 ? "+" : ""}${growth.toFixed(1)}%`
-    );
-  }
-  insights.push(`Total registered users in system: ${data.summary.totalUsers}`);
-  insights.push(
-    `Active appointment schedule count: ${data.summary.totalBookings}`
-  );
 
-  pdf.setFontSize(8);
-  pdf.setTextColor(...darkGray);
+    const timestamp = format(new Date(), "yyyyMMdd-HHmmss");
+    const fileName = `Selfigram-Report-${timestamp}.pdf`;
 
-  insights.forEach((line) => {
-    pdf.setFillColor(...primaryBlack);
-    pdf.circle(leftMargin + 1.5, yPosition - 1.2, 0.7, "F");
+    toast.success(`Report successfully exported as ${fileName}`);
 
-    pdf.text(line, leftMargin + 5, yPosition);
-    yPosition += 5;
-  });
-
-  // ===== COMPACT FOOTER =====
-  const footerY = pageHeight - 15;
-
-  pdf.setDrawColor(...borderGray);
-  pdf.setLineWidth(0.3);
-  pdf.line(leftMargin, footerY - 7, rightMargin, footerY - 7);
-
-  pdf.setTextColor(...mediumGray);
-  pdf.setFontSize(6.5);
-  pdf.text(
-    "This report was automatically generated by Selfigram Photostudios Dashboard System",
-    leftMargin,
-    footerY - 3
-  );
-
-  pdf.setFontSize(6.5);
-  pdf.text("© 2025 Selfigram Photostudios", leftMargin, footerY + 1);
-
-  pdf.text("•", leftMargin + 46, footerY + 1);
-
-  pdf.text("All Rights Reserved", leftMargin + 49, footerY + 1);
-
-  pdf.text("•", leftMargin + 78, footerY + 1);
-
-  pdf.setTextColor(...darkGray);
-  const reportIdFull = `ID: RPT-${format(new Date(), "yyyyMMdd-HHmmss")}`;
-  pdf.text(
-    reportIdFull,
-    rightMargin - pdf.getTextWidth(reportIdFull),
-    footerY + 1
-  );
-
-  const timestamp = format(new Date(), "yyyyMMdd-HHmmss");
-  const fileName = `Selfigram-Report-${timestamp}.pdf`;
-
-  toast.success(`Report successfully exported as ${fileName}`);
-
-  return pdf;
-};
+    return pdf;
+  };
 
 
 
 
-// Helper function to convert SVG to Base64
+  // Helper function to convert SVG to Base64
 
 
 
