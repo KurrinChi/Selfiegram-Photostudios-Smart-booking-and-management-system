@@ -37,6 +37,7 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import DashboardReportPDF from "./DashboardReportPDF";
 import CenteredLoader from "./CenteredLoader";
+import { toast } from "react-toastify";
 
 // -----------------------------------------------------------------------------
 // Types
@@ -315,325 +316,498 @@ const AdminDashboardContents: React.FC = () => {
     setShowPreview(true);
   };
 
-  const generateProfessionalPDF = (data: any) => {
-    const pdf = new jsPDF("p", "mm", "a4");
+const generateProfessionalPDF = async (data: any) => {
+  const pdf = new jsPDF("p", "mm", "a4");
 
-    // Company colors and styling
-    const primaryColor: [number, number, number] = [31, 41, 55]; // Gray-800
-    const successColor: [number, number, number] = [16, 185, 129]; // Green-500
-    const errorColor: [number, number, number] = [239, 68, 68]; // Red-500
+  // Monochrome color palette
+  const primaryBlack: [number, number, number] = [33, 33, 33];
+  const darkGray: [number, number, number] = [102, 102, 102];
+  const mediumGray: [number, number, number] = [153, 153, 153];
+  const lightGray: [number, number, number] = [245, 245, 245];
+  const borderGray: [number, number, number] = [208, 208, 208];
+  const white: [number, number, number] = [255, 255, 255];
 
-    let yPosition = 25;
-    const leftMargin = 20;
-    const rightMargin = 190;
-    const pageWidth = 210;
-    const pageHeight = 297;
+  let yPosition = 18;
+  const leftMargin = 20;
+  const rightMargin = 190;
+  const pageWidth = 210;
+  const pageHeight = 297;
 
-    // Helper function to add a new page if needed
-    const checkPageBreak = (neededSpace: number) => {
-      if (yPosition + neededSpace > pageHeight - 20) {
-        pdf.addPage();
-        yPosition = 25;
-        return true;
-      }
-      return false;
-    };
-
-    // Header Section
-    pdf.setFillColor(...primaryColor);
-    pdf.rect(0, 0, pageWidth, 40, "F");
-
-    pdf.setTextColor(255, 255, 255);
-    pdf.setFontSize(24);
-    pdf.setFont("helvetica", "bold");
-    pdf.text(data.companyInfo.name, leftMargin, 20);
-
-    pdf.setFontSize(10);
-    pdf.setFont("helvetica", "normal");
-    pdf.text(data.companyInfo.address, leftMargin, 28);
-    pdf.text(
-      `${data.companyInfo.phone} | ${data.companyInfo.email}`,
-      leftMargin,
-      34
-    );
-
-    yPosition = 55;
-
-    // Report Title and Info
-    pdf.setTextColor(...primaryColor);
-    pdf.setFontSize(20);
-    pdf.setFont("helvetica", "bold");
-    pdf.text("Dashboard Analytics Report", leftMargin, yPosition);
-
-    yPosition += 15;
-
-    pdf.setFontSize(10);
-    pdf.setFont("helvetica", "normal");
-    pdf.setTextColor(75, 85, 99);
-    pdf.text(
-      `Report Period: ${data.dateRange.formattedRange}`,
-      leftMargin,
-      yPosition
-    );
-    pdf.text(
-      `Generated: ${format(new Date(data.reportGenerated), "PPP p")}`,
-      rightMargin - 60,
-      yPosition
-    );
-
-    yPosition += 20;
-
-    // Summary Cards Section
-    checkPageBreak(60);
-
-    pdf.setTextColor(...primaryColor);
-    pdf.setFontSize(16);
-    pdf.setFont("helvetica", "bold");
-    pdf.text("Executive Summary", leftMargin, yPosition);
-
-    yPosition += 10;
-
-    // Draw summary cards in a 2x2 grid
-    const cardWidth = 80;
-    const cardHeight = 25;
-    const cardSpacing = 10;
-
-    const summaryItems = [
-      {
-        label: "Total Users",
-        value: data.summary.totalUsers,
-        trend: data.summary.userTrend,
-      },
-      {
-        label: "Total Bookings",
-        value: data.summary.totalBookings,
-        trend: data.summary.scheduleTrend,
-      },
-      {
-        label: "Total Sales",
-        value: `₱${data.summary.totalSales?.toLocaleString() || "0"}`,
-        trend: data.summary.salesTrend,
-      },
-      {
-        label: "Total Appointments",
-        value: data.summary.totalAppointments,
-        trend: data.summary.appointmentsTrend,
-      },
-    ];
-
-    summaryItems.forEach((item, index) => {
-      const col = index % 2;
-      const row = Math.floor(index / 2);
-      const x = leftMargin + col * (cardWidth + cardSpacing);
-      const y = yPosition + row * (cardHeight + cardSpacing);
-
-      // Card background
-      pdf.setFillColor(249, 250, 251);
-      pdf.setDrawColor(209, 213, 219);
-      pdf.rect(x, y, cardWidth, cardHeight, "FD");
-
-      // Card content
-      pdf.setTextColor(75, 85, 99);
-      pdf.setFontSize(9);
-      pdf.setFont("helvetica", "normal");
-      pdf.text(item.label, x + 5, y + 8);
-
-      pdf.setTextColor(...primaryColor);
-      pdf.setFontSize(16);
-      pdf.setFont("helvetica", "bold");
-      pdf.text(String(item.value), x + 5, y + 16);
-
-      // Trend indicator (only if not custom date range)
-      if (!data.summary.hasDateRange && item.trend) {
-        const trendColor = item.trend.up ? successColor : errorColor;
-        pdf.setTextColor(...trendColor);
-        pdf.setFontSize(8);
-        pdf.setFont("helvetica", "normal");
-        const trendText = `${item.trend.up ? "↑" : "↓"} ${item.trend.value}`;
-        pdf.text(trendText, x + 5, y + 22);
-      }
-    });
-
-    yPosition += 60;
-
-    // Weekly Income Table
-    if (data.weeklyIncome && data.weeklyIncome.length > 0) {
-      checkPageBreak(80);
-
-      pdf.setTextColor(...primaryColor);
-      pdf.setFontSize(14);
-      pdf.setFont("helvetica", "bold");
-      pdf.text("Weekly Income Analysis", leftMargin, yPosition);
-
-      yPosition += 10;
-
-      const weeklyData = data.weeklyIncome
-        .slice(-10)
-        .map((week: any) => [week.week, `₱${week.income.toLocaleString()}`]);
-
-      autoTable(pdf, {
-        startY: yPosition,
-        head: [["Week Period", "Income"]],
-        body: weeklyData,
-        margin: { left: leftMargin, right: leftMargin },
-        styles: {
-          fontSize: 9,
-          cellPadding: 4,
-        },
-        headStyles: {
-          fillColor: primaryColor,
-          textColor: [255, 255, 255],
-          fontStyle: "bold",
-        },
-        alternateRowStyles: {
-          fillColor: [249, 250, 251],
-        },
-        columnStyles: {
-          1: { halign: "right", fontStyle: "bold" },
-        },
-      });
-
-      yPosition = (pdf as any).lastAutoTable.finalY + 15;
+  const checkPageBreak = (neededSpace: number) => {
+    if (yPosition + neededSpace > pageHeight - 25) {
+      pdf.addPage();
+      yPosition = 18;
+      return true;
     }
-
-    // Package Performance Table
-    if (data.packages && data.packages.length > 0) {
-      checkPageBreak(80);
-
-      pdf.setTextColor(...primaryColor);
-      pdf.setFontSize(14);
-      pdf.setFont("helvetica", "bold");
-      pdf.text("Package Performance Analysis", leftMargin, yPosition);
-
-      yPosition += 10;
-
-      const packageData = data.packages.map((pkg: any) => [
-        pkg.name,
-        String(pkg.totalBooking),
-        pkg.revenue,
-        pkg.bookingPct,
-        pkg.rating ? "★".repeat(Math.floor(pkg.rating)) : "N/A",
-        `${pkg.trendPositive ? "↑" : "↓"} ${pkg.trend}`,
-      ]);
-
-      autoTable(pdf, {
-        startY: yPosition,
-        head: [
-          ["Package Name", "Bookings", "Revenue", "Share %", "Rating", "Trend"],
-        ],
-        body: packageData,
-        margin: { left: leftMargin, right: leftMargin },
-        styles: {
-          fontSize: 8,
-          cellPadding: 3,
-        },
-        headStyles: {
-          fillColor: primaryColor,
-          textColor: [255, 255, 255],
-          fontStyle: "bold",
-        },
-        alternateRowStyles: {
-          fillColor: [249, 250, 251],
-        },
-        columnStyles: {
-          0: { cellWidth: 50 },
-          1: { halign: "center" },
-          2: { halign: "right", fontStyle: "bold" },
-          3: { halign: "center" },
-          4: { halign: "center" },
-          5: { halign: "center" },
-        },
-        didParseCell: function (data: any) {
-          // Color the trend column based on direction
-          if (data.column.index === 5 && data.section === "body") {
-            const trend = data.cell.raw;
-            if (trend.includes("↑")) {
-              data.cell.styles.textColor = successColor;
-            } else if (trend.includes("↓")) {
-              data.cell.styles.textColor = errorColor;
-            }
-          }
-        },
-      });
-
-      yPosition = (pdf as any).lastAutoTable.finalY + 15;
-    }
-
-    // Key Insights Section
-    checkPageBreak(50);
-
-    pdf.setTextColor(...primaryColor);
-    pdf.setFontSize(14);
-    pdf.setFont("helvetica", "bold");
-    pdf.text("Key Performance Insights", leftMargin, yPosition);
-
-    yPosition += 10;
-
-    pdf.setFontSize(10);
-    pdf.setFont("helvetica", "normal");
-    pdf.setTextColor(55, 65, 81);
-
-    const insights = [];
-
-    if (data.summary.totalSales > 0) {
-      const avgPerBooking =
-        data.summary.totalBookings > 0
-          ? (data.summary.totalSales / data.summary.totalBookings).toFixed(0)
-          : 0;
-      insights.push(
-        `• Average revenue per booking: ₱${Number(
-          avgPerBooking
-        ).toLocaleString()}`
-      );
-    }
-
-    if (data.packages && data.packages.length > 0) {
-      const topPackage = data.packages.reduce(
-        (max: any, pkg: any) =>
-          pkg.totalBooking > max.totalBooking ? pkg : max,
-        data.packages[0]
-      );
-      insights.push(
-        `• Most popular package: ${topPackage.name} (${topPackage.totalBooking} bookings)`
-      );
-    }
-
-    if (data.weeklyIncome && data.weeklyIncome.length >= 2) {
-      const recent = data.weeklyIncome.slice(-2);
-      const growth = (
-        ((recent[1].income - recent[0].income) / recent[0].income) *
-        100
-      ).toFixed(1);
-      insights.push(`• Week-over-week growth: ${growth}%`);
-    }
-
-    insights.push(
-      `• Total system users: ${data.summary.totalUsers.toLocaleString()}`
-    );
-    insights.push(`• Active appointment slots: ${data.summary.totalBookings}`);
-
-    insights.forEach((insight) => {
-      pdf.text(insight, leftMargin, yPosition);
-      yPosition += 6;
-    });
-
-    // Footer
-    const footerY = pageHeight - 20;
-    pdf.setDrawColor(209, 213, 219);
-    pdf.line(leftMargin, footerY - 5, rightMargin, footerY - 5);
-
-    pdf.setTextColor(107, 114, 128);
-    pdf.setFontSize(8);
-    pdf.setFont("helvetica", "normal");
-    pdf.text("Generated by Selfiegram Dashboard System", leftMargin, footerY);
-    pdf.text(
-      `Page 1 of ${pdf.internal.pages.length - 1}`,
-      rightMargin - 20,
-      footerY
-    );
-
-    return pdf;
+    return false;
   };
+
+  // Helper function to convert SVG to PNG via Canvas
+  const loadSvgAsImage = (svgPath: string): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = 200;
+        canvas.height = 200;
+        const ctx = canvas.getContext("2d");
+        
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, 200, 200);
+          const dataUrl = canvas.toDataURL("image/png");
+          resolve(dataUrl);
+        } else {
+          reject(new Error("Could not get canvas context"));
+        }
+      };
+      
+      img.onerror = () => reject(new Error("Failed to load image"));
+      img.src = svgPath;
+    });
+  };
+
+  // ===== COMPACT HEADER SECTION =====
+  pdf.setFillColor(...primaryBlack);
+  pdf.rect(0, 0, pageWidth, 2, "F");
+
+  yPosition = 12;
+
+  // Load and add logo from public/slfg.svg
+  try {
+    const logoDataUrl = await loadSvgAsImage("/slfg.svg");
+    pdf.addImage(logoDataUrl, "PNG", leftMargin, yPosition, 18, 18);
+  } catch (error) {
+    console.error("Failed to load logo:", error);
+    // Fallback: draw placeholder box with "LOGO" text
+    pdf.setDrawColor(...borderGray);
+    pdf.setLineWidth(0.3);
+    pdf.rect(leftMargin, yPosition, 18, 18);
+    
+    pdf.setTextColor(...mediumGray);
+    pdf.setFontSize(6);
+    pdf.text("LOGO", leftMargin + 6, yPosition + 10);
+  }
+
+  const textStartX = leftMargin + 22;
+
+  pdf.setTextColor(...primaryBlack);
+  pdf.setFontSize(18);
+  pdf.text("SELFIGRAM PHOTOSTUDIOS", textStartX, yPosition + 6);
+
+  pdf.setFontSize(8);
+  pdf.setTextColor(...darkGray);
+  pdf.text(
+    "3rd Floor Kim Kar Building F Estrella St., Malolos, Philippines",
+    textStartX,
+    yPosition + 11
+  );
+
+  pdf.setFontSize(7);
+  pdf.setTextColor(...mediumGray);
+  pdf.text(
+    "0968 885 6035  •  selfiegrammalolos@gmail.com",
+    textStartX,
+    yPosition + 15
+  );
+
+  yPosition += 22;
+
+  pdf.setDrawColor(...primaryBlack);
+  pdf.setLineWidth(0.8);
+  pdf.line(leftMargin, yPosition, rightMargin, yPosition);
+
+  yPosition += 10;
+
+  // ===== COMPACT REPORT HEADER =====
+  pdf.setTextColor(...primaryBlack);
+  pdf.setFontSize(16);
+  pdf.text("DASHBOARD REPORT", leftMargin, yPosition);
+
+  const reportId = `RPT-${format(new Date(data.reportGenerated), "yyyyMMdd")}`;
+  const idWidth = pdf.getTextWidth(reportId) + 8;
+  pdf.setFillColor(...primaryBlack);
+  pdf.rect(rightMargin - idWidth, yPosition - 5, idWidth, 7, "F");
+  pdf.setTextColor(...white);
+  pdf.setFontSize(7);
+  pdf.text(reportId, rightMargin - idWidth + 4, yPosition - 1);
+
+  yPosition += 7;
+
+  pdf.setFontSize(8);
+  pdf.setTextColor(...darkGray);
+
+  const periodLabel = "Period:";
+  const periodLabelWidth = pdf.getTextWidth(periodLabel);
+  pdf.text(periodLabel, leftMargin, yPosition);
+
+  pdf.setTextColor(...primaryBlack);
+  pdf.text(
+    data.dateRange.formattedRange,
+    leftMargin + periodLabelWidth + 2,
+    yPosition
+  );
+
+  yPosition += 4;
+
+  pdf.setTextColor(...darkGray);
+  const generatedLabel = "Generated:";
+  const generatedLabelWidth = pdf.getTextWidth(generatedLabel);
+  pdf.text(generatedLabel, leftMargin, yPosition);
+
+  pdf.setTextColor(...primaryBlack);
+  pdf.text(
+    format(new Date(data.reportGenerated), "MMM dd, yyyy • h:mm a"),
+    leftMargin + generatedLabelWidth + 2,
+    yPosition
+  );
+
+  yPosition += 12;
+
+  // ===== COMPACT EXECUTIVE SUMMARY =====
+  pdf.setFillColor(...primaryBlack);
+  pdf.rect(leftMargin - 4, yPosition - 3, 2, 5, "F");
+
+  pdf.setTextColor(...primaryBlack);
+  pdf.setFontSize(10);
+  pdf.text("EXECUTIVE SUMMARY", leftMargin + 2, yPosition);
+
+  pdf.setDrawColor(...lightGray);
+  pdf.setLineWidth(0.4);
+  pdf.line(leftMargin + 45, yPosition - 1, rightMargin, yPosition - 1);
+
+  yPosition += 8;
+
+  const summaryItems = [
+    {
+      label: "TOTAL USERS",
+      value: data.summary.totalUsers.toLocaleString(),
+      trend: data.summary.userTrend,
+    },
+    {
+      label: "TOTAL SCHEDULE",
+      value: data.summary.totalBookings.toLocaleString(),
+      trend: data.summary.scheduleTrend,
+    },
+    {
+      label: "TOTAL SALES",
+      value: `PHP ${data.summary.totalSales.toLocaleString()}`,
+      trend: data.summary.salesTrend,
+    },
+    {
+      label: "TOTAL APPOINTMENTS",
+      value: data.summary.totalAppointments.toLocaleString(),
+      trend: data.summary.appointmentsTrend,
+    },
+  ];
+
+  const cardWidth = 83;
+  const cardHeight = 24;
+  const cardSpacing = 4;
+
+  summaryItems.forEach((item, index) => {
+    const col = index % 2;
+    const row = Math.floor(index / 2);
+    const x = leftMargin + col * (cardWidth + cardSpacing);
+    const y = yPosition + row * (cardHeight + cardSpacing + 2);
+
+    pdf.setDrawColor(...borderGray);
+    pdf.setLineWidth(0.3);
+    pdf.rect(x, y, cardWidth, cardHeight);
+
+    pdf.setFillColor(...primaryBlack);
+    pdf.rect(x, y, cardWidth, 1.2, "F");
+
+    pdf.setTextColor(...darkGray);
+    pdf.setFontSize(6.5);
+    pdf.text(item.label, x + 3, y + 5);
+
+    pdf.setTextColor(...primaryBlack);
+    pdf.setFontSize(14);
+    pdf.text(String(item.value), x + 3, y + 13);
+
+    if (!data.summary.hasDateRange && item.trend) {
+      const trendSymbol = item.trend.up ? "↑" : "↓";
+
+      pdf.setFontSize(8);
+      pdf.setTextColor(...primaryBlack);
+      pdf.text(trendSymbol, x + 3, y + 20);
+
+      pdf.setFontSize(6.5);
+      pdf.setTextColor(...darkGray);
+      pdf.text(`${item.trend.value}`, x + 7, y + 20);
+
+      pdf.setTextColor(...mediumGray);
+      pdf.text(
+        "vs last week",
+        x + 7 + pdf.getTextWidth(item.trend.value) + 1.5,
+        y + 20
+      );
+    }
+  });
+
+  yPosition += (cardHeight + cardSpacing + 2) * 2 + 6;
+
+  // ===== COMPACT REVENUE ANALYSIS =====
+  if (data.weeklyIncome && data.weeklyIncome.length > 0) {
+    checkPageBreak(70);
+
+    pdf.setFillColor(...primaryBlack);
+    pdf.rect(leftMargin - 4, yPosition - 3, 2, 5, "F");
+
+    pdf.setTextColor(...primaryBlack);
+    pdf.setFontSize(10);
+    pdf.text("REVENUE ANALYSIS", leftMargin + 2, yPosition);
+
+    pdf.setDrawColor(...lightGray);
+    pdf.setLineWidth(0.4);
+    pdf.line(leftMargin + 40, yPosition - 1, rightMargin, yPosition - 1);
+
+    yPosition += 7;
+
+    const weeklyData = data.weeklyIncome
+      .slice(-10)
+      .map((week: any) => [week.week, `PHP ${week.income.toLocaleString()}`]);
+
+    autoTable(pdf, {
+      startY: yPosition,
+      head: [["Week Period", "Gross Income"]],
+      body: weeklyData,
+      foot: [
+        [
+          "TOTAL REVENUE",
+          `PHP ${data.weeklyIncome
+            .slice(-10)
+            .reduce((sum: number, week: any) => sum + week.income, 0)
+            .toLocaleString()}`,
+        ],
+      ],
+      margin: { left: leftMargin, right: leftMargin },
+      styles: {
+        fontSize: 8,
+        cellPadding: { top: 3, right: 4, bottom: 3, left: 4 },
+        lineColor: borderGray,
+        lineWidth: 0.2,
+      },
+      headStyles: {
+        fillColor: primaryBlack,
+        textColor: white,
+        fontSize: 8,
+        halign: "left",
+        cellPadding: { top: 4, right: 4, bottom: 4, left: 4 },
+      },
+      bodyStyles: {
+        textColor: primaryBlack,
+        fillColor: white,
+      },
+      footStyles: {
+        fillColor: lightGray,
+        textColor: primaryBlack,
+        fontSize: 8,
+        lineWidth: 0.6,
+        lineColor: primaryBlack,
+        cellPadding: { top: 4, right: 4, bottom: 4, left: 4 },
+      },
+      columnStyles: {
+        0: { cellWidth: 100 },
+        1: { halign: "right" },
+      },
+    });
+
+    yPosition = (pdf as any).lastAutoTable.finalY + 10;
+  }
+
+  // ===== COMPACT PACKAGE PERFORMANCE (ALL CENTERED EXCEPT PACKAGE) =====
+  if (data.packages && data.packages.length > 0) {
+    checkPageBreak(70);
+
+    pdf.setFillColor(...primaryBlack);
+    pdf.rect(leftMargin - 4, yPosition - 3, 2, 5, "F");
+
+    pdf.setTextColor(...primaryBlack);
+    pdf.setFontSize(10);
+    pdf.text("PACKAGE PERFORMANCE", leftMargin + 2, yPosition);
+
+    pdf.setDrawColor(...lightGray);
+    pdf.setLineWidth(0.4);
+    pdf.line(leftMargin + 48, yPosition - 1, rightMargin, yPosition - 1);
+
+    yPosition += 7;
+
+    const packageData = data.packages.map((pkg: any) => [
+      pkg.name,
+      pkg.totalBooking.toLocaleString(),
+      pkg.revenue,
+      pkg.bookingPct,
+      pkg.rating ? `${pkg.rating.toFixed(1)}/5` : "N/A",
+      `${pkg.trendPositive ? "↑" : "↓"} ${pkg.trend}`,
+    ]);
+
+    autoTable(pdf, {
+      startY: yPosition,
+      head: [["Package", "Bookings", "Revenue", "Share", "Rating", "Trend"]],
+      body: packageData,
+      margin: { left: leftMargin, right: leftMargin },
+      styles: {
+        fontSize: 8,
+        cellPadding: { top: 3.5, right: 3, bottom: 3.5, left: 3 },
+        lineColor: borderGray,
+        lineWidth: 0.2,
+        valign: "middle",
+        halign: "center",
+      },
+      headStyles: {
+        fillColor: primaryBlack,
+        textColor: white,
+        fontSize: 8,
+        fontStyle: "bold",
+        halign: "center",
+        cellPadding: { top: 4.5, right: 3, bottom: 4.5, left: 3 },
+      },
+      bodyStyles: {
+        textColor: primaryBlack,
+        fillColor: white,
+        fontSize: 8,
+        halign: "center",
+      },
+      columnStyles: {
+        0: { 
+          cellWidth: 48, 
+          halign: "left",
+          fontStyle: "bold",
+          textColor: primaryBlack 
+        },
+        1: { 
+          cellWidth: 24, 
+          halign: "center", 
+          fontStyle: "bold",
+          textColor: primaryBlack 
+        },
+        2: { 
+          cellWidth: 32, 
+          halign: "center",
+          fontStyle: "bold",
+          textColor: primaryBlack 
+        },
+        3: { 
+          cellWidth: 22, 
+          halign: "center",
+          textColor: darkGray 
+        },
+        4: { 
+          cellWidth: 20, 
+          halign: "center",
+          textColor: darkGray 
+        },
+        5: { 
+          cellWidth: 20, 
+          halign: "center", 
+          fontStyle: "bold",
+          textColor: primaryBlack 
+        },
+      },
+      alternateRowStyles: {
+        fillColor: [252, 252, 252],
+      },
+    });
+
+    yPosition = (pdf as any).lastAutoTable.finalY + 10;
+  }
+
+  // ===== COMPACT KEY INSIGHTS =====
+  checkPageBreak(40);
+
+  pdf.setFillColor(...primaryBlack);
+  pdf.rect(leftMargin - 4, yPosition - 3, 2, 5, "F");
+
+  pdf.setTextColor(...primaryBlack);
+  pdf.setFontSize(10);
+  pdf.text("KEY INSIGHTS", leftMargin + 2, yPosition);
+
+  pdf.setDrawColor(...lightGray);
+  pdf.setLineWidth(0.4);
+  pdf.line(leftMargin + 30, yPosition - 1, rightMargin, yPosition - 1);
+
+  yPosition += 8;
+
+  const insights: string[] = [];
+  if (data.summary.totalSales > 0 && data.summary.totalBookings > 0) {
+    const avg = (data.summary.totalSales / data.summary.totalBookings).toFixed(2);
+    insights.push(
+      `Average revenue per booking: PHP ${Number(avg).toLocaleString()}`
+    );
+  }
+  if (data.packages && data.packages.length > 0) {
+    const top = data.packages.reduce((a: any, b: any) =>
+      b.totalBooking > a.totalBooking ? b : a
+    );
+    insights.push(
+      `Most popular package: ${top.name} with ${top.totalBooking} bookings`
+    );
+  }
+  if (data.weeklyIncome && data.weeklyIncome.length >= 2) {
+    const [prev, curr] = data.weeklyIncome.slice(-2);
+    const growth = ((curr.income - prev.income) / prev.income) * 100;
+    insights.push(
+      `Week-over-week revenue growth: ${growth > 0 ? "+" : ""}${growth.toFixed(1)}%`
+    );
+  }
+  insights.push(`Total registered users in system: ${data.summary.totalUsers}`);
+  insights.push(
+    `Active appointment schedule count: ${data.summary.totalBookings}`
+  );
+
+  pdf.setFontSize(8);
+  pdf.setTextColor(...darkGray);
+
+  insights.forEach((line) => {
+    pdf.setFillColor(...primaryBlack);
+    pdf.circle(leftMargin + 1.5, yPosition - 1.2, 0.7, "F");
+
+    pdf.text(line, leftMargin + 5, yPosition);
+    yPosition += 5;
+  });
+
+  // ===== COMPACT FOOTER =====
+  const footerY = pageHeight - 15;
+
+  pdf.setDrawColor(...borderGray);
+  pdf.setLineWidth(0.3);
+  pdf.line(leftMargin, footerY - 7, rightMargin, footerY - 7);
+
+  pdf.setTextColor(...mediumGray);
+  pdf.setFontSize(6.5);
+  pdf.text(
+    "This report was automatically generated by Selfigram Photostudios Dashboard System",
+    leftMargin,
+    footerY - 3
+  );
+
+  pdf.setFontSize(6.5);
+  pdf.text("© 2025 Selfigram Photostudios", leftMargin, footerY + 1);
+
+  pdf.text("•", leftMargin + 46, footerY + 1);
+
+  pdf.text("All Rights Reserved", leftMargin + 49, footerY + 1);
+
+  pdf.text("•", leftMargin + 78, footerY + 1);
+
+  pdf.setTextColor(...darkGray);
+  const reportIdFull = `ID: RPT-${format(new Date(), "yyyyMMdd-HHmmss")}`;
+  pdf.text(
+    reportIdFull,
+    rightMargin - pdf.getTextWidth(reportIdFull),
+    footerY + 1
+  );
+
+  const timestamp = format(new Date(), "yyyyMMdd-HHmmss");
+  const fileName = `Selfigram-Report-${timestamp}.pdf`;
+
+  toast.success(`Report successfully exported as ${fileName}`);
+
+  return pdf;
+};
 
   const handleExport = async () => {
     // Add confirmation dialog
@@ -739,7 +913,9 @@ const AdminDashboardContents: React.FC = () => {
       const filename = `Selfiegram-Dashboard-${dateRange}-${timestamp}.pdf`;
 
       // Save the PDF
-      pdf.save(filename);
+      (await
+        // Save the PDF
+        pdf).save(filename);
 
       console.log("Professional PDF generated and downloaded successfully!");
     } catch (error) {

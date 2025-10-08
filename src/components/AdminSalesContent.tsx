@@ -271,7 +271,7 @@ const AdminSalesContent: React.FC = () => {
 
   const pickerButtonRef = useRef<HTMLButtonElement | null>(null);
 
-  const handleExport = async () => {
+const handleExport = async () => {
   if (filtered.length === 0) {
     toast.warn("No sales data available to export.");
     return;
@@ -281,76 +281,189 @@ const AdminSalesContent: React.FC = () => {
 
   setTimeout(async () => {
     try {
-      const pdf = new jsPDF("l", "mm", "a4");
+      const pdf = new jsPDF("p", "mm", "a4"); // Portrait
 
-      // --- Colors ---
-      const primaryColor: [number, number, number] = [31, 41, 55];
-      const successColor: [number, number, number] = [16, 185, 129];
-      const warningColor: [number, number, number] = [234, 179, 8];
-      const errorColor: [number, number, number] = [239, 68, 68];
+      // Monochrome color palette
+      const primaryBlack: [number, number, number] = [33, 33, 33];
+      const darkGray: [number, number, number] = [102, 102, 102];
+      const mediumGray: [number, number, number] = [153, 153, 153];
+      const lightGray: [number, number, number] = [245, 245, 245];
+      const borderGray: [number, number, number] = [208, 208, 208];
+      const white: [number, number, number] = [255, 255, 255];
 
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      const pageHeight = pdf.internal.pageSize.getHeight();
+      let yPosition = 18;
       const leftMargin = 10;
-      const rightMargin = pageWidth - 10;
-      let y = 25;
+      const rightMargin = 200;
+      const pageWidth = 210;
+      const pageHeight = 297;
 
       const checkPageBreak = (needed: number) => {
-        if (y + needed > pageHeight - 20) {
+        if (yPosition + needed > pageHeight - 25) {
           pdf.addPage();
-          y = 25;
+          yPosition = 18;
+          return true;
         }
+        return false;
       };
 
-      // --- Header ---
-      pdf.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-      pdf.rect(0, 0, pageWidth, 30, "F");
+      // Helper function to load SVG as Image
+      const loadSvgAsImage = (svgPath: string): Promise<string> => {
+        return new Promise((resolve, reject) => {
+          const img = new Image();
+          img.crossOrigin = "anonymous";
+          
+          img.onload = () => {
+            const canvas = document.createElement("canvas");
+            canvas.width = 200;
+            canvas.height = 200;
+            const ctx = canvas.getContext("2d");
+            
+            if (ctx) {
+              ctx.drawImage(img, 0, 0, 200, 200);
+              const dataUrl = canvas.toDataURL("image/png");
+              resolve(dataUrl);
+            } else {
+              reject(new Error("Could not get canvas context"));
+            }
+          };
+          
+          img.onerror = () => reject(new Error("Failed to load image"));
+          img.src = svgPath;
+        });
+      };
 
-      pdf.setTextColor(255, 255, 255);
-      pdf.setFontSize(20);
-      pdf.setFont("helvetica", "bold");
-      pdf.text("Sales Report", leftMargin, 18);
+      // ===== COMPACT HEADER =====
+      pdf.setFillColor(...primaryBlack);
+      pdf.rect(0, 0, pageWidth, 2, "F");
 
-      pdf.setFontSize(9);
-      pdf.setFont("helvetica", "normal");
-      pdf.text("Selfiegram Photo Studios - Malolos, Bulacan", leftMargin, 24);
-      pdf.text(`Generated: ${format(new Date(), "PPP p")}`, leftMargin, 28);
+      yPosition = 12;
 
-      y = 45;
+      // Load and add logo
+      try {
+        const logoDataUrl = await loadSvgAsImage("/slfg.svg");
+        pdf.addImage(logoDataUrl, "PNG", leftMargin, yPosition, 18, 18);
+      } catch (error) {
+        console.error("Failed to load logo:", error);
+        pdf.setDrawColor(...borderGray);
+        pdf.setLineWidth(0.3);
+        pdf.rect(leftMargin, yPosition, 18, 18);
+        
+        pdf.setTextColor(...mediumGray);
+        pdf.setFontSize(6);
+        pdf.text("LOGO", leftMargin + 6, yPosition + 10);
+      }
 
-      // --- Section Title ---
-      pdf.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-      pdf.setFont("helvetica", "bold");
-      pdf.setFontSize(13);
-      pdf.text("Sales Records", leftMargin, y);
-      y += 8;
+      const textStartX = leftMargin + 22;
 
-      // --- Table Data ---
+      pdf.setTextColor(...primaryBlack);
+      pdf.setFontSize(18);
+      pdf.text("SELFIGRAM PHOTOSTUDIOS", textStartX, yPosition + 6);
+
+      pdf.setFontSize(8);
+      pdf.setTextColor(...darkGray);
+      pdf.text(
+        "3rd Floor Kim Kar Building F Estrella St., Malolos, Philippines",
+        textStartX,
+        yPosition + 11
+      );
+
+      pdf.setFontSize(7);
+      pdf.setTextColor(...mediumGray);
+      pdf.text(
+        "0968 885 6035  •  selfiegrammalolos@gmail.com",
+        textStartX,
+        yPosition + 15
+      );
+
+      yPosition += 22;
+
+      pdf.setDrawColor(...primaryBlack);
+      pdf.setLineWidth(0.8);
+      pdf.line(leftMargin, yPosition, rightMargin, yPosition);
+
+      yPosition += 10;
+
+      // ===== REPORT HEADER =====
+      pdf.setTextColor(...primaryBlack);
+      pdf.setFontSize(16);
+      pdf.text("SALES REPORT", leftMargin, yPosition);
+
+      const reportId = `RPT-${format(new Date(), "yyyyMMdd")}`;
+      const idWidth = pdf.getTextWidth(reportId) + 8;
+      pdf.setFillColor(...primaryBlack);
+      pdf.rect(rightMargin - idWidth, yPosition - 5, idWidth, 7, "F");
+      pdf.setTextColor(...white);
+      pdf.setFontSize(7);
+      pdf.text(reportId, rightMargin - idWidth + 4, yPosition - 1);
+
+      yPosition += 7;
+
+      pdf.setFontSize(8);
+      pdf.setTextColor(...darkGray);
+
+      const generatedLabel = "Generated:";
+      const generatedLabelWidth = pdf.getTextWidth(generatedLabel);
+      pdf.text(generatedLabel, leftMargin, yPosition);
+
+      pdf.setTextColor(...primaryBlack);
+      pdf.text(
+        format(new Date(), "MMM dd, yyyy • h:mm a"),
+        leftMargin + generatedLabelWidth + 2,
+        yPosition
+      );
+
+      yPosition += 4;
+
+      pdf.setTextColor(...darkGray);
+      const recordsLabel = "Total Records:";
+      const recordsLabelWidth = pdf.getTextWidth(recordsLabel);
+      pdf.text(recordsLabel, leftMargin, yPosition);
+
+      pdf.setTextColor(...primaryBlack);
+      pdf.text(
+        filtered.length.toString(),
+        leftMargin + recordsLabelWidth + 2,
+        yPosition
+      );
+
+      yPosition += 10;
+
+      // ===== SALES RECORDS SECTION =====
+      pdf.setFillColor(...primaryBlack);
+      pdf.rect(leftMargin - 4, yPosition - 3, 2, 5, "F");
+
+      pdf.setTextColor(...primaryBlack);
+      pdf.setFontSize(10);
+      pdf.text("SALES RECORDS", leftMargin + 2, yPosition);
+
+      pdf.setDrawColor(...lightGray);
+      pdf.setLineWidth(0.4);
+      pdf.line(leftMargin + 32, yPosition - 1, rightMargin, yPosition - 1);
+
+      yPosition += 7;
+
+      // Table data
       const peso = (value: number): string =>
-        `P${value.toLocaleString("en-PH", { minimumFractionDigits: 2 })}`;
+        `₱${value.toLocaleString("en-PH", { minimumFractionDigits: 2 })}`;
 
       const salesData = filtered.map((s) => [
         getBookingLabel(s.transactionID, s.package),
         s.customerName,
-        s.email || "N/A",
-        s.contactNo || "N/A",
         s.package,
-        format(parseISO(s.transactionDate), "MMM dd, yyyy"),
+        format(parseISO(s.transactionDate), "MMM dd, yy"),
         peso(s.downPayment),
         peso(s.balance),
         peso(s.totalAmount),
         s.paymentStatus,
       ]);
 
-      // --- Table (landscape adjusted widths) ---
+      // Compact table with essential columns only
       autoTable(pdf, {
-        startY: y,
+        startY: yPosition,
         head: [
           [
             "Booking ID",
             "Customer",
-            "Email",
-            "Contact",
             "Package",
             "Date",
             "Payment",
@@ -361,40 +474,108 @@ const AdminSalesContent: React.FC = () => {
         ],
         body: salesData,
         styles: {
-          font: "helvetica",
-          fontSize: 8,
-          cellPadding: 2,
+          fontSize: 6.5,
+          cellPadding: { top: 2.5, right: 1.5, bottom: 2.5, left: 1.5 },
+          lineColor: borderGray,
+          lineWidth: 0.2,
           overflow: "linebreak",
-          lineColor: [230, 230, 230],
-          lineWidth: 0.1,
+          valign: "middle",
+          halign: "center",
         },
         headStyles: {
-          fillColor: primaryColor,
-          textColor: [255, 255, 255],
+          fillColor: primaryBlack,
+          textColor: white,
+          fontSize: 6.5,
           fontStyle: "bold",
+          halign: "center",
+          cellPadding: { top: 3, right: 1.5, bottom: 3, left: 1.5 },
+        },
+        bodyStyles: {
+          textColor: primaryBlack,
+          fillColor: white,
+          fontSize: 6,
         },
         columnStyles: {
-          0: { cellWidth: 25 },
-          1: { cellWidth: 25 },
-          2: { cellWidth: 40 },
-          3: { cellWidth: 25 },
-          4: { cellWidth: 22 },
-          5: { cellWidth: 25 },
-          6: { cellWidth: 25, halign: "right" },
-          7: { cellWidth: 25, halign: "right" },
-          8: { cellWidth: 25, halign: "right" },
-          9: { cellWidth: 25, halign: "center" },
+          0: { 
+            cellWidth: 28, 
+            halign: "left", 
+            fontStyle: "bold",
+            textColor: primaryBlack 
+          },
+          1: { 
+            cellWidth: 30, 
+            halign: "left", 
+            fontStyle: "bold",
+            textColor: primaryBlack 
+          },
+          2: { 
+            cellWidth: 28, 
+            halign: "left",
+            textColor: darkGray 
+          },
+          3: { 
+            cellWidth: 22, 
+            halign: "center",
+            textColor: darkGray 
+          },
+          4: { 
+            cellWidth: 22, 
+            halign: "right", 
+            fontStyle: "bold",
+            textColor: primaryBlack 
+          },
+          5: { 
+            cellWidth: 22, 
+            halign: "right", 
+            fontStyle: "bold",
+            textColor: primaryBlack 
+          },
+          6: { 
+            cellWidth: 24, 
+            halign: "right", 
+            fontStyle: "bold",
+            textColor: primaryBlack 
+          },
+          7: { 
+            cellWidth: 14, 
+            halign: "center",
+            fontStyle: "bold",
+            textColor: primaryBlack,
+            fontSize: 5.5
+          },
+        },
+        alternateRowStyles: {
+          fillColor: [252, 252, 252],
         },
         margin: { left: leftMargin, right: leftMargin },
-        tableWidth: "auto",
+        didParseCell: (data: any) => {
+          // Truncate status text for compact display
+          if (data.column.index === 7 && data.section === "body") {
+            const status = data.cell.raw;
+            if (status === "Completed") data.cell.text = ["Done"];
+            if (status === "Cancelled") data.cell.text = ["Cancel"];
+            if (status === "Pending") data.cell.text = ["Pend"];
+          }
+        },
       });
 
-      y =
-        (pdf as unknown as { lastAutoTable?: { finalY?: number } }).lastAutoTable
-          ?.finalY ?? y + 10;
-      checkPageBreak(50);
+      yPosition = (pdf as any).lastAutoTable.finalY + 8;
+      checkPageBreak(40);
 
-      // --- Summary Section ---
+      // ===== FINANCIAL SUMMARY =====
+      pdf.setFillColor(...primaryBlack);
+      pdf.rect(leftMargin - 4, yPosition - 3, 2, 5, "F");
+
+      pdf.setTextColor(...primaryBlack);
+      pdf.setFontSize(10);
+      pdf.text("FINANCIAL SUMMARY", leftMargin + 2, yPosition);
+
+      pdf.setDrawColor(...lightGray);
+      pdf.setLineWidth(0.4);
+      pdf.line(leftMargin + 42, yPosition - 1, rightMargin, yPosition - 1);
+
+      yPosition += 7;
+
       const totalAmount = filtered.reduce((sum, s) => sum + s.totalAmount, 0);
       const totalDown = filtered.reduce((sum, s) => sum + s.downPayment, 0);
       const totalBalance = filtered.reduce((sum, s) => sum + s.balance, 0);
@@ -405,53 +586,87 @@ const AdminSalesContent: React.FC = () => {
         Cancelled: filtered.filter((s) => s.paymentStatus === "Cancelled").length,
       };
 
-      y += 15;
+      // Two-column layout for summary
+      const col1X = leftMargin + 2;
+      const col2X = leftMargin + 100;
 
-      pdf.setFont("helvetica", "bold");
-      pdf.setFontSize(11);
-      pdf.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-      pdf.text("Summary Report", leftMargin, y);
-      y += 6;
+      pdf.setFontSize(7.5);
+      
+      // Column 1: Financial metrics
+      let col1Y = yPosition;
+      const metrics = [
+        { label: "Total Sales:", value: peso(totalAmount) },
+        { label: "Total Payment:", value: peso(totalDown) },
+        { label: "Total Balance:", value: peso(totalBalance) },
+      ];
 
-      pdf.setFont("helvetica", "normal");
-      pdf.setFontSize(9);
-      pdf.setTextColor(0, 0, 0);
-      pdf.text(`Total Sales Amount: ${peso(totalAmount)}`, leftMargin, y);
-      y += 5;
-      pdf.text(`Total Downpayment: ${peso(totalDown)}`, leftMargin, y);
-      y += 5;
-      pdf.text(`Total Balance: ${peso(totalBalance)}`, leftMargin, y);
-      y += 8;
+      metrics.forEach((metric) => {
+        pdf.setTextColor(...darkGray);
+        const labelWidth = pdf.getTextWidth(metric.label);
+        pdf.text(metric.label, col1X, col1Y);
 
-      pdf.setFont("helvetica", "bold");
-      pdf.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-      pdf.text("Booking Status Breakdown", leftMargin, y);
-      y += 6;
+        pdf.setTextColor(...primaryBlack);
+        pdf.text(metric.value, col1X + labelWidth + 2, col1Y);
+        col1Y += 4.5;
+      });
 
-      pdf.setFont("helvetica", "normal");
-      pdf.setFontSize(9);
+      // Column 2: Status breakdown
+      let col2Y = yPosition;
+      const statuses = [
+        { label: "Completed:", count: statusCounts.Completed },
+        { label: "Pending:", count: statusCounts.Pending },
+        { label: "Cancelled:", count: statusCounts.Cancelled },
+      ];
 
-      pdf.setTextColor(successColor[0], successColor[1], successColor[2]);
-      pdf.text(`Completed: ${statusCounts.Completed}`, leftMargin, y);
-      y += 5;
+      statuses.forEach((status) => {
+        pdf.setFillColor(...primaryBlack);
+        pdf.circle(col2X, col2Y - 1, 0.6, "F");
 
-      pdf.setTextColor(warningColor[0], warningColor[1], warningColor[2]);
-      pdf.text(`Pending: ${statusCounts.Pending}`, leftMargin, y);
-      y += 5;
+        pdf.setTextColor(...darkGray);
+        const labelWidth = pdf.getTextWidth(status.label);
+        pdf.text(status.label, col2X + 2, col2Y);
 
-      pdf.setTextColor(errorColor[0], errorColor[1], errorColor[2]);
-      pdf.text(`Cancelled: ${statusCounts.Cancelled}`, leftMargin, y);
-      y += 10;
+        pdf.setTextColor(...primaryBlack);
+        pdf.text(status.count.toString(), col2X + labelWidth + 4, col2Y);
+        col2Y += 4.5;
+      });
 
-      // --- Footer ---
-      pdf.setDrawColor(209, 213, 219);
-      pdf.line(leftMargin, pageHeight - 10, rightMargin, pageHeight - 10);
-      pdf.setTextColor(107, 114, 128);
-      pdf.setFontSize(8);
-      pdf.text("Generated by Selfiegram Admin System", leftMargin, pageHeight - 5);
+      yPosition = Math.max(col1Y, col2Y) + 3;
+
+      // ===== FOOTER =====
+      const footerY = pageHeight - 15;
+
+      pdf.setDrawColor(...borderGray);
+      pdf.setLineWidth(0.3);
+      pdf.line(leftMargin, footerY - 7, rightMargin, footerY - 7);
+
+      pdf.setTextColor(...mediumGray);
+      pdf.setFontSize(6.5);
+      pdf.text(
+        "This report was automatically generated by Selfigram Photostudios Admin System",
+        leftMargin,
+        footerY - 3
+      );
+
+      pdf.setFontSize(6.5);
+      pdf.text("© 2025 Selfigram Photostudios", leftMargin, footerY + 1);
+
+      pdf.text("•", leftMargin + 46, footerY + 1);
+
+      pdf.text("All Rights Reserved", leftMargin + 49, footerY + 1);
+
+      pdf.text("•", leftMargin + 78, footerY + 1);
+
+      pdf.setTextColor(...darkGray);
+      const reportIdFull = `ID: RPT-${format(new Date(), "yyyyMMdd-HHmmss")}`;
+      pdf.text(
+        reportIdFull,
+        rightMargin - pdf.getTextWidth(reportIdFull),
+        footerY + 1
+      );
 
       const timestamp = format(new Date(), "yyyyMMdd-HHmmss");
-      pdf.save(`Selfiegram-Sales-Report-${timestamp}.pdf`);
+      pdf.save(`Selfigram-Sales-Report-${timestamp}.pdf`);
 
       toast.success("Sales report exported successfully!");
     } catch (error) {
@@ -462,8 +677,6 @@ const AdminSalesContent: React.FC = () => {
     }
   }, 1000);
 };
-
-
 
 
   return (
