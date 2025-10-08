@@ -157,7 +157,15 @@ const SelectPackagePage = () => {
   const [addOns, setAddOns] = useState<AddOn[]>([]);
   const [bookedTimeSlots, setBookedTimeSlots] = useState<string[]>([]);
   // Rich interval booking data (start/end in minutes from 00:00) if provided by API
-  const [bookedIntervals, setBookedIntervals] = useState<{ start: number; end: number; bookingID?: number; packageID?: number; durationMinutes?: number }[]>([]);
+  const [bookedIntervals, setBookedIntervals] = useState<
+    {
+      start: number;
+      end: number;
+      bookingID?: number;
+      packageID?: number;
+      durationMinutes?: number;
+    }[]
+  >([]);
   const [activeAddOns, setActiveAddOns] = useState<Record<string, boolean>>({});
   const [selectedColors, setSelectedColors] = useState<
     Record<string, { id: string; hex: string; label: string }>
@@ -184,11 +192,12 @@ const SelectPackagePage = () => {
         if (!res.ok) return;
         const u = await res.json();
         // Build a display name; fall back as needed
-        const displayName = [u.fname, u.lname].filter(Boolean).join(" ") || u.username || "";
+        const displayName =
+          [u.fname, u.lname].filter(Boolean).join(" ") || u.username || "";
         setName((prev) => (prev ? prev : displayName));
-        setEmail((prev) => (prev ? prev : (u.email || "")));
-        setContact((prev) => (prev ? prev : (u.contactNo || "")));
-        setAddress((prev) => (prev ? prev : (u.address || "")));
+        setEmail((prev) => (prev ? prev : u.email || ""));
+        setContact((prev) => (prev ? prev : u.contactNo || ""));
+        setAddress((prev) => (prev ? prev : u.address || ""));
       } catch (e) {
         console.warn("Could not prefill user details:", e);
       }
@@ -263,13 +272,19 @@ const SelectPackagePage = () => {
           const uiType = mapDbTypeToUi(db.type);
           const toNum = (v: unknown): number | undefined => {
             if (v === null || v === undefined || v === "") return undefined;
-            const n = typeof v === "string" ? Number(v) : typeof v === "number" ? v : NaN;
+            const n =
+              typeof v === "string"
+                ? Number(v)
+                : typeof v === "number"
+                ? v
+                : NaN;
             return Number.isFinite(n) && n > 0 ? n : undefined;
           };
           const minQ = toNum(db.minQuantity) ?? 1; // only fallback here
           const rawMax = toNum(db.maxQuantity);
           // Explicitly allow max when >= min; otherwise treat as unlimited (undefined)
-          const maxQ = rawMax !== undefined && rawMax >= minQ ? rawMax : undefined;
+          const maxQ =
+            rawMax !== undefined && rawMax >= minQ ? rawMax : undefined;
 
           return {
             id: String(db.addOnID),
@@ -292,7 +307,7 @@ const SelectPackagePage = () => {
               dbType: (db.type || "").toString() || "(empty)",
               uiType: mapDbTypeToUi(db.type),
               minQuantity: db.minQuantity ?? 1,
-              maxQuantity: db.maxQuantity ?? '(unlimited)',
+              maxQuantity: db.maxQuantity ?? "(unlimited)",
             }))
           );
           console.log("Built AddOns (UI):", built);
@@ -371,10 +386,13 @@ const SelectPackagePage = () => {
 
   const handleAddonChange = (id: string, value?: string | number) => {
     const addOnMeta = addOns.find((a) => a.id === id);
-    const numeric = typeof value === "number" ? value : parseInt(String(value || 0), 10);
-  const minQ = addOnMeta?.minQty ?? 1;
-  const maxQ = addOnMeta?.maxQty ?? Number.POSITIVE_INFINITY;
-  const clampedQty = isNaN(numeric) ? minQ : Math.min(Math.max(numeric, minQ), maxQ);
+    const numeric =
+      typeof value === "number" ? value : parseInt(String(value || 0), 10);
+    const minQ = addOnMeta?.minQty ?? 1;
+    const maxQ = addOnMeta?.maxQty ?? Number.POSITIVE_INFINITY;
+    const clampedQty = isNaN(numeric)
+      ? minQ
+      : Math.min(Math.max(numeric, minQ), maxQ);
 
     setSelectedAddons((prev) => {
       const exists = prev.find((a) => a.id === id);
@@ -383,8 +401,14 @@ const SelectPackagePage = () => {
           addon.id === id
             ? {
                 ...addon,
-                value: addon.type === "dropdown" ? (activeAddOns[id] ? 1 : 0) : clampedQty,
-                option: addon.type === "dropdown" ? (value as string) : addon.option,
+                value:
+                  addon.type === "dropdown"
+                    ? activeAddOns[id]
+                      ? 1
+                      : 0
+                    : clampedQty,
+                option:
+                  addon.type === "dropdown" ? (value as string) : addon.option,
               }
             : addon
         );
@@ -393,7 +417,7 @@ const SelectPackagePage = () => {
       // If not exists yet, create a new SelectedAddon entry (for quantity edits especially)
       if (!addOnMeta) return prev;
 
-  let selectedType: SelectedAddon["type"] = "checkbox";
+      let selectedType: SelectedAddon["type"] = "checkbox";
       if (addOnMeta.type === "dropdown") selectedType = "dropdown";
       else if (addOnMeta.type === "multiple") selectedType = "spinner";
 
@@ -402,8 +426,11 @@ const SelectPackagePage = () => {
         label: addOnMeta.label,
         price: addOnMeta.price,
         type: selectedType,
-        value: selectedType === "dropdown" ? (activeAddOns[id] ? 1 : 0) : clampedQty,
-        ...(selectedType === "dropdown" ? { option: String(value ?? "WHITE") } : {}),
+        value:
+          selectedType === "dropdown" ? (activeAddOns[id] ? 1 : 0) : clampedQty,
+        ...(selectedType === "dropdown"
+          ? { option: String(value ?? "WHITE") }
+          : {}),
       };
       return [...prev, newEntry];
     });
@@ -443,7 +470,7 @@ const SelectPackagePage = () => {
               id: newAddon.id,
               label: newAddon.label,
               price: newAddon.price,
-              value: selectedAddonType === "spinner" ? (newAddon.minQty ?? 1) : 1,
+              value: selectedAddonType === "spinner" ? newAddon.minQty ?? 1 : 1,
               type: selectedAddonType,
               ...(selectedAddonType === "dropdown" ? { option: "WHITE" } : {}),
             } as SelectedAddon,
@@ -538,50 +565,66 @@ const SelectPackagePage = () => {
            Legacy shape: bookedSlots: ['09:00 AM','09:30 AM', ...]
            Optional: bookings: [...with startTime, duration ...]
         */
-        const rawSlots = Array.isArray(data.bookedSlots) ? data.bookedSlots : [];
+        const rawSlots = Array.isArray(data.bookedSlots)
+          ? data.bookedSlots
+          : [];
 
         // Normalize starts for simple collision check via bookedTimeSlots (strings only)
         const normalizedStarts: string[] = [];
-        const intervals: { start: number; end: number; bookingID?: number; packageID?: number; durationMinutes?: number }[] = [];
+        const intervals: {
+          start: number;
+          end: number;
+          bookingID?: number;
+          packageID?: number;
+          durationMinutes?: number;
+        }[] = [];
 
         // Priority 1: explicit structured bookings array (richer info)
         if (Array.isArray(data.bookings) && data.bookings.length > 0) {
           for (const b of data.bookings) {
             if (!b) continue;
-            const startLabel = String(b.startTime || b.start || '');
+            const startLabel = String(b.startTime || b.start || "");
             if (!startLabel) continue;
             const start = slotLabelToMinutes(startLabel);
             if (isNaN(start)) continue;
-            const dur = parseDurationToMinutes(b.duration || b.packageDuration || b.durationMinutes || '');
+            const dur = parseDurationToMinutes(
+              b.duration || b.packageDuration || b.durationMinutes || ""
+            );
             const durationMinutes = dur > 0 ? dur : 60;
             const end = start + durationMinutes;
             normalizedStarts.push(startLabel);
-            intervals.push({ start, end, bookingID: b.bookingID, packageID: b.packageID, durationMinutes });
+            intervals.push({
+              start,
+              end,
+              bookingID: b.bookingID,
+              packageID: b.packageID,
+              durationMinutes,
+            });
           }
         } else if (rawSlots.length > 0) {
           // Priority 2: new bookedSlots objects with start/end
-            for (const entry of rawSlots) {
-              if (entry && typeof entry === 'object' && entry.start) {
-                const startLabel = String(entry.start);
-                const endLabel = entry.end ? String(entry.end) : '';
-                const start = slotLabelToMinutes(startLabel);
-                let end = slotLabelToMinutes(endLabel);
-                if (!Number.isFinite(end) || end <= start) {
-                  // fallback assume 30-minute base block if end missing/invalid
-                  end = start + 30;
-                }
-                normalizedStarts.push(startLabel);
-                intervals.push({ start, end });
-              } else {
-                // Legacy string element inside array
-                const label = String(entry);
-                const start = slotLabelToMinutes(label);
-                if (!isNaN(start)) {
-                  normalizedStarts.push(label);
-                  intervals.push({ start, end: start + 30 });
-                }
+          for (const entry of rawSlots) {
+            if (entry && typeof entry === "object" && entry.start) {
+              const startLabel = String(entry.start);
+              const endLabel = entry.end ? String(entry.end) : "";
+              const start = slotLabelToMinutes(startLabel);
+              let end = slotLabelToMinutes(endLabel);
+              if (!Number.isFinite(end) || end <= start) {
+                // fallback assume 30-minute base block if end missing/invalid
+                end = start + 30;
+              }
+              normalizedStarts.push(startLabel);
+              intervals.push({ start, end });
+            } else {
+              // Legacy string element inside array
+              const label = String(entry);
+              const start = slotLabelToMinutes(label);
+              if (!isNaN(start)) {
+                normalizedStarts.push(label);
+                intervals.push({ start, end: start + 30 });
               }
             }
+          }
         }
 
         setBookedTimeSlots(normalizedStarts);
@@ -604,14 +647,25 @@ const SelectPackagePage = () => {
         const data = await response.json();
         // DEBUG: Log raw package payload
         try {
-          console.groupCollapsed('DEBUG: Fetched package payload');
-          console.log('Raw data:', data);
-          console.log('Raw duration field value:', (data && (data.duration || data?.packageDuration || data?.package_duration)) ?? '<<undefined>>');
+          console.groupCollapsed("DEBUG: Fetched package payload");
+          console.log("Raw data:", data);
+          console.log(
+            "Raw duration field value:",
+            (data &&
+              (data.duration ||
+                data?.packageDuration ||
+                data?.package_duration)) ??
+              "<<undefined>>"
+          );
           // Attempt to normalize duration
-          const rawDuration = data?.duration || data?.packageDuration || data?.package_duration || '';
+          const rawDuration =
+            data?.duration ||
+            data?.packageDuration ||
+            data?.package_duration ||
+            "";
           // Reuse existing parseDurationToMinutes below (defined later) by creating a temp inline parser copy (since function not yet in scope here at runtime ordering)
           const tmpParse = (raw: string): number => {
-            if (!raw || typeof raw !== 'string') return 0;
+            if (!raw || typeof raw !== "string") return 0;
             const s = raw.toLowerCase();
             if (/^\d+$/.test(s)) return parseInt(s, 10);
             let total = 0;
@@ -633,13 +687,19 @@ const SelectPackagePage = () => {
             return total;
           };
           const parsedMinutes = tmpParse(rawDuration);
-          console.log('Parsed duration minutes (debug immediate):', parsedMinutes);
+          console.log(
+            "Parsed duration minutes (debug immediate):",
+            parsedMinutes
+          );
           if (parsedMinutes === 60 && rawDuration && /10/.test(rawDuration)) {
-            console.warn('DEBUG: Duration contains "10" but parsed to 60. Raw string might have unexpected format. Raw:', rawDuration);
+            console.warn(
+              'DEBUG: Duration contains "10" but parsed to 60. Raw string might have unexpected format. Raw:',
+              rawDuration
+            );
           }
           console.groupEnd();
         } catch (e) {
-          console.warn('DEBUG: Error logging fetched package payload', e);
+          console.warn("DEBUG: Error logging fetched package payload", e);
         }
         setPkg(data); // store after logging
       } catch (error) {
@@ -663,7 +723,7 @@ const SelectPackagePage = () => {
     console.log("=== BOOKING PREVIEW DEBUG ===");
     console.log("selectedAddons:", selectedAddons);
     console.log("activeAddOns:", activeAddOns);
-    
+
     // Validate all fields
     if (
       !selectedDate ||
@@ -727,10 +787,22 @@ const SelectPackagePage = () => {
       const period = h24 >= 12 ? "PM" : "AM";
       let h12 = h24 % 12;
       if (h12 === 0) h12 = 12;
-      return `${String(h12).padStart(2, "0")}:${String(m).padStart(2, "0")} ${period}`;
+      return `${String(h12).padStart(2, "0")}:${String(m).padStart(
+        2,
+        "0"
+      )} ${period}`;
     };
     const startMinutes = slotLabelToMinutes(selectedTime);
-    console.log('DEBUG: Preparing preview. Selected start label:', selectedTime, '-> startMinutes:', startMinutes, 'package raw duration:', pkg?.duration, 'effectivePackageDuration (parsed + addons):', effectivePackageDuration);
+    console.log(
+      "DEBUG: Preparing preview. Selected start label:",
+      selectedTime,
+      "-> startMinutes:",
+      startMinutes,
+      "package raw duration:",
+      pkg?.duration,
+      "effectivePackageDuration (parsed + addons):",
+      effectivePackageDuration
+    );
     const predictedEndLabel = Number.isFinite(startMinutes)
       ? minutesToLabel(startMinutes + effectivePackageDuration)
       : "";
@@ -750,7 +822,7 @@ const SelectPackagePage = () => {
       paymentMode: paymentMode,
       packageId: id!,
       packageDuration: pkg.duration, // pass raw duration so modal can compute end time without refetch race
-  packageDurationMinutes: effectivePackageDuration,
+      packageDurationMinutes: effectivePackageDuration,
       predictedEndLabel,
     };
 
@@ -778,8 +850,8 @@ const SelectPackagePage = () => {
       meridian;
     return formatted;
   })
-  // Remove late evening slots as requested: 07:30 PM, 08:00 PM, 08:30 PM
-  .filter(s => !["07:30 PM","08:00 PM","08:30 PM"].includes(s));
+    // Remove late evening slots as requested: 07:30 PM, 08:00 PM, 08:30 PM
+    .filter((s) => !["07:30 PM", "08:00 PM", "08:30 PM"].includes(s));
 
   /* ---------------------- Duration / Interval Helpers ---------------------- */
   // Convert a label like "09:30 AM" to minutes from 00:00
@@ -787,21 +859,21 @@ const SelectPackagePage = () => {
     const parts = label.trim().split(/\s+/); // [HH:MM, AM]
     if (parts.length < 2) return NaN;
     const [time, period] = parts;
-    const [hh, mm] = time.split(':').map(n => parseInt(n, 10));
+    const [hh, mm] = time.split(":").map((n) => parseInt(n, 10));
     if (isNaN(hh) || isNaN(mm)) return NaN;
     let hour24 = hh;
-    if (period.toUpperCase() === 'PM' && hh !== 12) hour24 = hh + 12;
-    if (period.toUpperCase() === 'AM' && hh === 12) hour24 = 0;
+    if (period.toUpperCase() === "PM" && hh !== 12) hour24 = hh + 12;
+    if (period.toUpperCase() === "AM" && hh === 12) hour24 = 0;
     return hour24 * 60 + mm;
   };
 
   // Parse duration string (e.g., "1 hr", "2 hrs 30 mins", "90 mins") to minutes
   const parseDurationToMinutes = (raw: unknown): number => {
     if (raw === null || raw === undefined) return 0;
-    if (typeof raw === 'number') {
+    if (typeof raw === "number") {
       return Number.isFinite(raw) && raw >= 0 ? raw : 0;
     }
-    if (typeof raw !== 'string') return 0;
+    if (typeof raw !== "string") return 0;
     const s = raw.trim().toLowerCase();
     if (!s) return 0;
     // Pure number => minutes
@@ -838,16 +910,19 @@ const SelectPackagePage = () => {
   const basePackageDuration = (() => {
     const mins = parseDurationToMinutes(pkg?.duration);
     if (mins === 0) {
-      console.warn('DEBUG duration fallback to 60 because parsed minutes was 0. Raw value:', pkg?.duration);
+      console.warn(
+        "DEBUG duration fallback to 60 because parsed minutes was 0. Raw value:",
+        pkg?.duration
+      );
     }
     return mins || 60;
   })();
 
   // Mapping of add-on IDs that contribute extra session minutes
   const EXTRA_DURATION_ADDON_MINUTES: Record<string, number> = {
-    '70': 5,   // Addl 5 mins
-    '80': 20,  // Photographer service for 20 mins
-    '90': 60,  // Photographer service for 1 hr
+    "70": 5, // Addl 5 mins
+    "80": 20, // Photographer service for 20 mins
+    "90": 60, // Photographer service for 1 hr
   };
 
   // Sum extra minutes from selected active add-ons
@@ -856,13 +931,20 @@ const SelectPackagePage = () => {
     const perUnit = EXTRA_DURATION_ADDON_MINUTES[addon.id];
     if (!perUnit) return sum;
     // If spinner quantity, multiply; otherwise add once
-    const qty = addon.type === 'spinner' ? addon.value : 1;
+    const qty = addon.type === "spinner" ? addon.value : 1;
     return sum + perUnit * qty;
   }, 0);
 
   const effectivePackageDuration = basePackageDuration + extraDurationMinutes;
   if (extraDurationMinutes > 0) {
-    console.log('DEBUG effective duration: base', basePackageDuration, '+ extra', extraDurationMinutes, '= total', effectivePackageDuration);
+    console.log(
+      "DEBUG effective duration: base",
+      basePackageDuration,
+      "+ extra",
+      extraDurationMinutes,
+      "= total",
+      effectivePackageDuration
+    );
   }
 
   // Business day boundaries in minutes (start 09:00, end after last slot 21:00 to allow 8:30 PM 30-min slot)
@@ -1302,9 +1384,8 @@ const SelectPackagePage = () => {
                               className="absolute -top-14 left-1/2 -translate-x-1/2 p-3 bg-white rounded-lg shadow-lg flex gap-2"
                             >
                               {colorOptions.map((color) => (
-                                <button
+                                <div // ✅ Changed to div
                                   key={color.id}
-                                  type="button"
                                   onClick={(e) => {
                                     e.stopPropagation();
 
@@ -1323,16 +1404,15 @@ const SelectPackagePage = () => {
                                         ...filtered,
                                         {
                                           id: item.id,
-                                          label: item.label, // e.g. "Additional Backdrop"
+                                          label: item.label,
                                           price: item.price ?? 0,
-                                          value: activeAddOns[item.id] ? 1 : 0, // Only select if actually activated
+                                          value: activeAddOns[item.id] ? 1 : 0,
                                           type: "dropdown",
-                                          option: color.label, // "WHITE", "BLACK", etc.
+                                          option: color.label,
                                         } as SelectedAddon,
                                       ];
                                     });
 
-                                    // keep rest of your logic (removed auto-activation)
                                     setShowingColors((prev) => ({
                                       ...prev,
                                       [item.id]: false,
@@ -1345,7 +1425,7 @@ const SelectPackagePage = () => {
                                       color.label
                                     );
                                   }}
-                                  className="w-6 h-6 rounded-full border border-gray-400 shadow-sm hover:scale-110 transition"
+                                  className="w-6 h-6 rounded-full border border-gray-400 shadow-sm hover:scale-110 transition cursor-pointer"
                                   style={{ backgroundColor: color.hex }}
                                 />
                               ))}
@@ -1438,18 +1518,27 @@ const SelectPackagePage = () => {
                 {timeSlots.map((slot) => {
                   const slotStart = slotLabelToMinutes(slot);
                   const slotEnd = slotStart + 30; // base slot span
-                  const isPastTime = selectedDate ? isTimeSlotInPast(slot, selectedDate) : false;
+                  const isPastTime = selectedDate
+                    ? isTimeSlotInPast(slot, selectedDate)
+                    : false;
                   // Overlaps any existing booking interval?
-                  const overlapsExisting = bookedIntervals.some(iv =>
-                    // If slot start within interval OR slot end within interval OR interval starts inside this slot base window
-                    (slotStart < iv.end && slotEnd > iv.start)
+                  const overlapsExisting = bookedIntervals.some(
+                    (iv) =>
+                      // If slot start within interval OR slot end within interval OR interval starts inside this slot base window
+                      slotStart < iv.end && slotEnd > iv.start
                   );
                   // If user started a new booking at this slot, would its duration overlap existing intervals or exceed day end?
                   const wouldEnd = slotStart + effectivePackageDuration;
                   const insufficientRemaining = wouldEnd > DAY_END_MIN;
-                  const intervalConflict = bookedIntervals.some(iv => (slotStart < iv.end) && (wouldEnd > iv.start));
+                  const intervalConflict = bookedIntervals.some(
+                    (iv) => slotStart < iv.end && wouldEnd > iv.start
+                  );
                   const isBooked = overlapsExisting;
-                  const isDisabled = isPastTime || isBooked || insufficientRemaining || intervalConflict;
+                  const isDisabled =
+                    isPastTime ||
+                    isBooked ||
+                    insufficientRemaining ||
+                    intervalConflict;
 
                   return (
                     <button
@@ -1477,13 +1566,19 @@ const SelectPackagePage = () => {
                     >
                       {slot}
                       {isBooked && (
-                        <span className="block text-xs text-red-500">Booked</span>
+                        <span className="block text-xs text-red-500">
+                          Booked
+                        </span>
                       )}
                       {!isBooked && intervalConflict && (
-                        <span className="block text-xs text-orange-500">Conflict</span>
+                        <span className="block text-xs text-orange-500">
+                          Conflict
+                        </span>
                       )}
                       {!isBooked && insufficientRemaining && (
-                        <span className="block text-xs text-amber-600">Too Late</span>
+                        <span className="block text-xs text-amber-600">
+                          Too Late
+                        </span>
                       )}
                     </button>
                   );

@@ -153,7 +153,7 @@ const SelectPackagePage = () => {
     if (userStr) {
       try {
         const user = JSON.parse(userStr);
-        const fullName = `${user.fname || ''} ${user.lname || ''}`.trim();
+        const fullName = `${user.fname || ""} ${user.lname || ""}`.trim();
         setStaffName(fullName || "Staff");
       } catch (error) {
         console.error("Failed to parse user from localStorage:", error);
@@ -1385,9 +1385,8 @@ const SelectPackagePage = () => {
                               className="absolute -top-14 left-1/2 -translate-x-1/2 p-3 bg-white rounded-lg shadow-lg flex gap-2"
                             >
                               {colorOptions.map((color) => (
-                                <button
+                                <div // ✅ Changed to div
                                   key={color.id}
-                                  type="button"
                                   onClick={(e) => {
                                     e.stopPropagation();
 
@@ -1406,16 +1405,15 @@ const SelectPackagePage = () => {
                                         ...filtered,
                                         {
                                           id: item.id,
-                                          label: item.label, // e.g. "Additional Backdrop"
+                                          label: item.label,
                                           price: item.price ?? 0,
-                                          value: activeAddOns[item.id] ? 1 : 0, // Only select if actually activated
+                                          value: activeAddOns[item.id] ? 1 : 0,
                                           type: "dropdown",
-                                          option: color.label, // "WHITE", "BLACK", etc.
+                                          option: color.label,
                                         } as SelectedAddon,
                                       ];
                                     });
 
-                                    // keep rest of your logic (removed auto-activation)
                                     setShowingColors((prev) => ({
                                       ...prev,
                                       [item.id]: false,
@@ -1428,7 +1426,7 @@ const SelectPackagePage = () => {
                                       color.label
                                     );
                                   }}
-                                  className="w-6 h-6 rounded-full border border-gray-400 shadow-sm hover:scale-110 transition"
+                                  className="w-6 h-6 rounded-full border border-gray-400 shadow-sm hover:scale-110 transition cursor-pointer"
                                   style={{ backgroundColor: color.hex }}
                                 />
                               ))}

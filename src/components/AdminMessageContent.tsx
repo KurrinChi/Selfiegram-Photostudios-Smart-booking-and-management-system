@@ -152,17 +152,17 @@ function mapRawToEmail(r: RawMessage, apiBase: string): Email {
 function mapOutboundToEmail(r: OutboundJoinedRecord): Email {
   // For direct support replies we treat them as true outbound items distinct from original user message.
   const related = r.targetMessage;
-  const toEmail = related?.senderEmail || 'user@example.com';
-  const toName = related?.senderName || 'User';
-  const hashRef = related ? `\n#${related.messageID}` : '';
+  const toEmail = related?.senderEmail || "user@example.com";
+  const toName = related?.senderName || "User";
+  const hashRef = related ? `\n#${related.messageID}` : "";
   return {
     id: `notif-${r.notificationID}`,
-    from: `Support Staff <support@selfiegram.local>` ,
-    to: [ `${toName} <${toEmail}>` ],
-    subject: r.title || 'Support Reply',
+    from: `Support Staff <support@selfiegram.local>`,
+    to: [`${toName} <${toEmail}>`],
+    subject: r.title || "Support Reply",
     body: r.message + hashRef,
     time: r.time,
-    mailbox: 'sent',
+    mailbox: "sent",
     starred: r.starred === 1,
     archived: false,
     avatar: null,
@@ -317,7 +317,7 @@ export default function AdminMessageContent(): JSX.Element {
       return;
     }
     try {
-  // removed start timing variable (unused after merge logic)
+      // removed start timing variable (unused after merge logic)
       setLoading(true);
       setError(null);
       abortRef.current?.abort();
@@ -326,33 +326,49 @@ export default function AdminMessageContent(): JSX.Element {
 
       // Fetch inbound messages and outbound replies concurrently
       const [messagesRes, outboundRes] = await Promise.all([
-        fetchWithAuth(`${API_URL}/api/messages?per_page=100`, { signal: controller.signal }),
-        fetchWithAuth(`${API_URL}/api/messages/outbound?per_page=200`, { signal: controller.signal }).catch((e) => {
-          if (DEBUG_MESSAGES) console.warn('[Outbound] fetch failed', e);
+        fetchWithAuth(`${API_URL}/api/messages?per_page=100`, {
+          signal: controller.signal,
+        }),
+        fetchWithAuth(`${API_URL}/api/messages/outbound?per_page=200`, {
+          signal: controller.signal,
+        }).catch((e) => {
+          if (DEBUG_MESSAGES) console.warn("[Outbound] fetch failed", e);
           return null; // don't fail whole fetch if outbound fails
         }),
       ]);
 
       if (!messagesRes.ok) {
         let bodyText = "";
-        try { bodyText = await messagesRes.text(); } catch {}
+        try {
+          bodyText = await messagesRes.text();
+        } catch {}
         let parsed: any = null;
-        try { parsed = bodyText ? JSON.parse(bodyText) : null; } catch {}
-        const msg = parsed?.message || parsed?.error || bodyText || `Request failed (${messagesRes.status})`;
+        try {
+          parsed = bodyText ? JSON.parse(bodyText) : null;
+        } catch {}
+        const msg =
+          parsed?.message ||
+          parsed?.error ||
+          bodyText ||
+          `Request failed (${messagesRes.status})`;
         throw new Error(msg);
       }
 
       const jsonMessages = await messagesRes.json();
-      const baseData: RawMessage[] = Array.isArray(jsonMessages) ? jsonMessages : jsonMessages.data || [];
+      const baseData: RawMessage[] = Array.isArray(jsonMessages)
+        ? jsonMessages
+        : jsonMessages.data || [];
 
       let outboundData: OutboundJoinedRecord[] = [];
       if (outboundRes && outboundRes.ok) {
         try {
           const outboundJson = await outboundRes.json();
-            const arr = Array.isArray(outboundJson) ? outboundJson : outboundJson.data || [];
-            outboundData = arr.filter((r: any) => r && r.label === 'Support');
+          const arr = Array.isArray(outboundJson)
+            ? outboundJson
+            : outboundJson.data || [];
+          outboundData = arr.filter((r: any) => r && r.label === "Support");
         } catch (e) {
-          if (DEBUG_MESSAGES) console.warn('[Outbound] parse failed', e);
+          if (DEBUG_MESSAGES) console.warn("[Outbound] parse failed", e);
         }
       }
 
@@ -364,7 +380,9 @@ export default function AdminMessageContent(): JSX.Element {
       [...mappedInbound, ...mappedOutbound].forEach((m) => {
         if (!mergedMap.has(m.id)) mergedMap.set(m.id, m);
       });
-      const merged = Array.from(mergedMap.values()).sort((a, b) => +new Date(b.time) - +new Date(a.time));
+      const merged = Array.from(mergedMap.values()).sort(
+        (a, b) => +new Date(b.time) - +new Date(a.time)
+      );
 
       const snapshotKey =
         merged.length +
@@ -380,7 +398,7 @@ export default function AdminMessageContent(): JSX.Element {
       } else {
         dataSnapshotRef.current = snapshotKey;
         setEmails(merged);
-  // lastFetched removed
+        // lastFetched removed
       }
       setError(null);
     } catch (e: any) {
@@ -399,10 +417,10 @@ export default function AdminMessageContent(): JSX.Element {
     fetchMessages();
   }, [fetchMessages, token]);
 
-    useEffect(() => {
+  useEffect(() => {
     const channelName = "private-admin.messages";
     const channel = pusher.subscribe(channelName);
-      const handler = (data: any) => {
+    const handler = (data: any) => {
       if (!data || !data.messageID) return;
 
       // NEW: derive sender ID properly (stop forcing 0)
@@ -430,16 +448,32 @@ export default function AdminMessageContent(): JSX.Element {
       // Recovery: if senderID still null, try a delayed shallow fetch to hydrate it
       if (raw.senderID == null && API_URL) {
         setTimeout(() => {
-          const recoveryHeaders: Record<string, string> = { Accept: "application/json" };
-            if (token) recoveryHeaders.Authorization = `Bearer ${token}`;
-          fetch(`${API_URL}/api/messages?recent=1`, { headers: recoveryHeaders })
+          const recoveryHeaders: Record<string, string> = {
+            Accept: "application/json",
+          };
+          if (token) recoveryHeaders.Authorization = `Bearer ${token}`;
+          fetch(`${API_URL}/api/messages?recent=1`, {
+            headers: recoveryHeaders,
+          })
             .then((r) => (r.ok ? r.json() : null))
             .then((json) => {
               if (!json) return;
               const list: any[] = Array.isArray(json) ? json : json.data || [];
-              const match = list.find((m) => String(m.messageID) === String(data.messageID));
+              const match = list.find(
+                (m) => String(m.messageID) === String(data.messageID)
+              );
               if (match && match.senderID != null) {
-                setEmails((prev) => prev.map((e) => e.id === String(data.messageID) ? { ...e, senderID: match.senderID, avatar: buildAvatarURL(match.profilePicture, API_URL) } : e));
+                setEmails((prev) =>
+                  prev.map((e) =>
+                    e.id === String(data.messageID)
+                      ? {
+                          ...e,
+                          senderID: match.senderID,
+                          avatar: buildAvatarURL(match.profilePicture, API_URL),
+                        }
+                      : e
+                  )
+                );
               }
             })
             .catch(() => {});
@@ -460,19 +494,21 @@ export default function AdminMessageContent(): JSX.Element {
     const outboundHandler = (data: any) => {
       if (!data || !data.notification) return;
       const n = data.notification;
-      if (n.label !== 'Support') return;
-      const targetMessageID = data.targetMessageID ? String(data.targetMessageID) : null;
-      setEmails(prev => {
+      if (n.label !== "Support") return;
+      const targetMessageID = data.targetMessageID
+        ? String(data.targetMessageID)
+        : null;
+      setEmails((prev) => {
         const id = `notif-${n.notificationID}`;
-        if (prev.some(e => e.id === id)) return prev;
+        if (prev.some((e) => e.id === id)) return prev;
         const email: Email = {
           id,
-          from: 'Support Staff <support@selfiegram.local>',
-          to: ['user'],
-          subject: n.title || 'Support Reply',
+          from: "Support Staff <support@selfiegram.local>",
+          to: ["user"],
+          subject: n.title || "Support Reply",
           body: n.message,
           time: n.time,
-          mailbox: 'sent',
+          mailbox: "sent",
           starred: n.starred === 1,
           archived: false,
           avatar: null,
@@ -480,15 +516,19 @@ export default function AdminMessageContent(): JSX.Element {
           messageStatus: 1,
           replies: undefined,
         };
-        let updated = prev.map(e => (targetMessageID && e.id === targetMessageID) ? { ...e, messageStatus: 1 } : e);
+        let updated = prev.map((e) =>
+          targetMessageID && e.id === targetMessageID
+            ? { ...e, messageStatus: 1 }
+            : e
+        );
         updated = [email, ...updated];
-        return updated.sort((a,b)=>+new Date(b.time)-+new Date(a.time));
+        return updated.sort((a, b) => +new Date(b.time) - +new Date(a.time));
       });
     };
-    channel.bind('support.reply.created', outboundHandler);
+    channel.bind("support.reply.created", outboundHandler);
     return () => {
       channel.unbind("admin.message.created", handler);
-      channel.unbind('support.reply.created', outboundHandler);
+      channel.unbind("support.reply.created", outboundHandler);
       pusher.unsubscribe(channelName);
     };
   }, [API_URL]);
@@ -535,10 +575,12 @@ export default function AdminMessageContent(): JSX.Element {
         if (selectedMailbox === "starred") return e.starred && !e.archived;
         if (selectedMailbox === "sent") {
           // Only show true outbound notifications / synthetic sent entries
-          return !e.archived && e.mailbox === 'sent';
+          return !e.archived && e.mailbox === "sent";
         }
         if (selectedMailbox === "inbox")
-          return e.mailbox === 'inbox' && !e.archived && (e.messageStatus ?? 0) === 0; // only unreplied
+          return (
+            e.mailbox === "inbox" && !e.archived && (e.messageStatus ?? 0) === 0
+          ); // only unreplied
         return false;
       })
       .filter(
@@ -561,7 +603,7 @@ export default function AdminMessageContent(): JSX.Element {
   );
 
   const sentCount = useMemo(
-    () => emails.filter((e) => !e.archived && e.mailbox === 'sent').length,
+    () => emails.filter((e) => !e.archived && e.mailbox === "sent").length,
     [emails]
   );
 
@@ -782,9 +824,7 @@ export default function AdminMessageContent(): JSX.Element {
           }).catch(() => {});
           setEmails((prev) =>
             prev.map((e) =>
-              e.id === replyTargetMessageID
-                ? { ...e, messageStatus: 1 }
-                : e
+              e.id === replyTargetMessageID ? { ...e, messageStatus: 1 } : e
             )
           );
           if (selectedEmailId === replyTargetMessageID)
@@ -1265,12 +1305,12 @@ export default function AdminMessageContent(): JSX.Element {
                   </div>
                   {(selectedMailbox === "inbox" ||
                     selectedMailbox === "sent") && (
-                    <button
+                    <div // ✅ Changed from button to div
                       onClick={(ev) => {
                         ev.stopPropagation();
                         toggleStar(e.id);
                       }}
-                      className={`p-1.5 rounded hover:bg-slate-100 flex-shrink-0 ${
+                      className={`p-1.5 rounded hover:bg-slate-100 flex-shrink-0 cursor-pointer ${
                         e.starred ? "text-amber-400" : "text-slate-400"
                       }`}
                     >
@@ -1279,7 +1319,7 @@ export default function AdminMessageContent(): JSX.Element {
                           e.starred ? "fill-amber-400" : "fill-transparent"
                         }`}
                       />
-                    </button>
+                    </div>
                   )}
                 </div>
               </button>
@@ -1710,7 +1750,8 @@ export default function AdminMessageContent(): JSX.Element {
                             {filteredCustomers.length > 0 && (
                               <div className="bg-gradient-to-r from-slate-50 to-slate-100 px-4 py-2 border-b border-slate-200 flex items-center justify-between">
                                 <div className="text-[10px] uppercase tracking-wider font-bold text-slate-500">
-                                  Individual Recipients ({filteredCustomers.length})
+                                  Individual Recipients (
+                                  {filteredCustomers.length})
                                 </div>
                                 <div className="text-[10px] text-slate-400 font-medium">
                                   Total Loaded: {customerList.length}
@@ -1837,7 +1878,10 @@ export default function AdminMessageContent(): JSX.Element {
                                     clipRule="evenodd"
                                   />
                                 </svg>
-                                <span>Type to filter • Select one recipient or broadcast to all</span>
+                                <span>
+                                  Type to filter • Select one recipient or
+                                  broadcast to all
+                                </span>
                               </div>
                             </div>
                           </div>
