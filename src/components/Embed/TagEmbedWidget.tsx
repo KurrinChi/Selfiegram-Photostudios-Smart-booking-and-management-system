@@ -25,7 +25,7 @@ const TagEmbedWidget = ({ height = 30 }: TagEmbedWidgetProps) => {
       ref={containerRef}
       className="tagembed-widget"
       style={{ width: "100%", height: `${height}px`, overflow: "auto" }}
-      data-widget-id="299752"
+      data-widget-id="303358"
       data-website="1"
     />
   );
