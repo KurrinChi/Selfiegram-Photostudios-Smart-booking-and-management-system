@@ -6,8 +6,6 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faStar as fasStar, faStarHalfAlt } from "@fortawesome/free-solid-svg-icons";
 import { faStar as farStar } from "@fortawesome/free-regular-svg-icons";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
-import FeedbackSection from "./FeedbackSection";
-import CenteredLoader from "./CenteredLoader"; // shared loader
 import ChatWidget from "./ChatWidget";
 interface Package {
   id: string;
@@ -17,16 +15,7 @@ interface Package {
   rating: number;
 }
 
-interface Feedback {
-  id: number;
-  username: string;
-  profilePic: string | null;
-  packageName: string;
-  bookingDate: string;
-  bookingTime: string;
-  feedback: string;
-  rating: number;
-}
+// Feedback interface removed with feedback section cleanup
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -55,8 +44,9 @@ const ClientHomepageContent = () => {
   const [slideIndex, setSlideIndex] = useState(0);
   const [direction, setDirection] = useState(0);
   const [packages, setPackages] = useState<Package[]>([]);
-  const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
-  const [loadingFeedbacks, setLoadingFeedbacks] = useState(true); // loading state for feedback section
+  // Feedback section removed
+  // const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
+  // const [loadingFeedbacks, setLoadingFeedbacks] = useState(true);
 
   const SLIDE_DURATION = 0.5;
   const SLIDE_INTERVAL = 10000;
@@ -82,34 +72,10 @@ const ClientHomepageContent = () => {
       }
     };
 
-    const fetchFeedbacks = async () => {
-      try {
-        const res = await fetchWithAuth(`${API_URL}/api/feedbacks`);
-        const data = await res.json();
-
-        console.log("Feedback data from backend:", data);
-
-        setFeedbacks(
-          data.map((fb: any) => ({
-            id: fb.id,
-            username: fb.username,
-            profilePic: fb.user_image,
-            packageName: fb.package_name,
-            bookingDate: fb.bookingDate,
-            bookingTime: fb.booking_time,
-            feedback: fb.feedback,
-            rating: fb.rating,
-          }))
-        );
-      } catch (err) {
-        console.error("Failed to fetch feedbacks:", err);
-      } finally {
-        setLoadingFeedbacks(false);
-      }
-    };
+    // Feedback fetch removed
 
     fetchTopPackages();
-    fetchFeedbacks();
+  // fetchFeedbacks();
   }, []);
 
   const paginate = (newIndex: number) => {
@@ -244,18 +210,7 @@ const ClientHomepageContent = () => {
         </div>
       </div>
 
-      {/* Feedback Section with loader positioned below packages */}
-      <div className="max-w-6xl mx-auto">
-        {loadingFeedbacks ? (
-          <CenteredLoader message="Loading..." minHeightClass="min-h-[40vh]" />
-        ) : feedbacks.length > 0 ? (
-          <FeedbackSection feedbacks={feedbacks} />
-        ) : (
-          <div className="w-full min-h-[30vh] flex items-center justify-center text-sm text-gray-500">
-            No feedback available yet.
-          </div>
-        )}
-      </div>
+      {/* Feedback section removed */}
       <ChatWidget />
     </div>
   );
