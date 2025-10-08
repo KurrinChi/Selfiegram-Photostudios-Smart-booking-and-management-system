@@ -20,14 +20,27 @@ const TOAST_COLOR_PICKER_CSS = [
   "https://uicdn.toast.com/tui-color-picker/latest/tui-color-picker.css",
 ];
 
-const FABRIC_CDN =
-  "https://cdnjs.cloudflare.com/ajax/libs/fabric.js/4.6.0/fabric.min.js";
-const TUI_SNIPPET_CDN =
-  "https://uicdn.toast.com/tui.code-snippet/latest/tui-code-snippet.min.js";
-const TUI_COLOR_PICKER_SCRIPT =
-  "https://uicdn.toast.com/tui-color-picker/latest/tui-color-picker.min.js";
-const TUI_IMAGE_EDITOR_CDN =
-  "https://uicdn.toast.com/tui-image-editor/latest/tui-image-editor.min.js";
+const FABRIC_CDN_URLS = [
+  "https://cdn.jsdelivr.net/npm/fabric@5.3.0/dist/fabric.min.js",
+  "https://unpkg.com/fabric@5.3.0/dist/fabric.min.js",
+  "https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.0/fabric.min.js",
+  "https://cdnjs.cloudflare.com/ajax/libs/fabric.js/4.6.0/fabric.min.js",
+];
+
+const TUI_SNIPPET_CDN_URLS = [
+  "https://cdn.jsdelivr.net/npm/tui-code-snippet@latest/dist/tui-code-snippet.min.js",
+  "https://uicdn.toast.com/tui.code-snippet/latest/tui-code-snippet.min.js",
+];
+
+const TUI_COLOR_PICKER_URLS = [
+  "https://cdn.jsdelivr.net/npm/tui-color-picker@latest/dist/tui-color-picker.min.js",
+  "https://uicdn.toast.com/tui-color-picker/latest/tui-color-picker.min.js",
+];
+
+const TUI_IMAGE_EDITOR_URLS = [
+  "https://cdn.jsdelivr.net/npm/tui-image-editor@latest/dist/tui-image-editor.min.js",
+  "https://uicdn.toast.com/tui-image-editor/latest/tui-image-editor.min.js",
+];
 
 const ICONS = {
   adjust: `data:image/svg+xml,${encodeURIComponent(
@@ -63,19 +76,6 @@ const SLIDER_ICONS: Record<string, string> = {
   hue: `data:image/svg+xml,${encodeURIComponent(
     `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">ircle cx="12" cy="12"2" r="10"/>ircle cx="12" cy="12" r="4" fill="whitete"/></svg>`
   )}`,
-};
-
-const MENU_ICONS: Record<string, string> = {
-  crop: "https://img.icons8.com/ios-filled/50/crop.png",
-  flip: "https://img.icons8.com/ios-filled/50/flip.png",
-  rotate: "https://img.icons8.com/ios-filled/50/rotate.png",
-  draw: "https://img.icons8.com/ios-filled/50/pencil.png",
-  shape: "https://img.icons8.com/ios-filled/50/shape.png",
-  icon: "https://img.icons8.com/ios-filled/50/star.png",
-  text: "https://img.icons8.com/ios-filled/50/text.png",
-  mask: "https://img.icons8.com/ios-filled/50/mask.png",
-  filter: "https://img.icons8.com/ios-filled/50/filter.png",
-  adjust: ICONS.adjust,
 };
 
 // ============================================================================
@@ -172,8 +172,7 @@ async function loadScriptWithBackups(
     try {
       const existing = document.querySelector(`script[src="${url}"]`);
       if (existing) {
-        console.info(`[loader] script already present: ${url}`);
-        return;
+        return; // Silent - script already loaded
       }
 
       await new Promise<void>((resolve, reject) => {
@@ -200,10 +199,8 @@ async function loadScriptWithBackups(
         document.body.appendChild(s);
       });
 
-      console.info(`[loader] loaded script: ${url}`);
-      return;
+      return; // Silent - loaded successfully
     } catch (err) {
-      console.warn(`[loader] failed to load script ${url}:`, err);
       lastErr = err as Error;
     }
   }
@@ -216,8 +213,7 @@ async function loadCssWithBackups(urls: string[]): Promise<void> {
     try {
       const existing = document.querySelector(`link[href="${href}"]`);
       if (existing) {
-        console.info(`[loader] css already present: ${href}`);
-        return;
+        return; // Silent - CSS already loaded
       }
 
       await new Promise<void>((resolve, reject) => {
@@ -229,10 +225,9 @@ async function loadCssWithBackups(urls: string[]): Promise<void> {
         document.head.appendChild(link);
       });
 
-      console.info(`[loader] loaded css: ${href}`);
-      return;
+      return; // Silent - loaded successfully
     } catch (e) {
-      console.warn(`[loader] css failed: ${href}`, e);
+      // Silent - try next URL
     }
   }
 }
@@ -249,11 +244,10 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
   const canvasListenersRef = useRef<Record<string, (e?: any) => void> | null>(
     null
   );
-  const adjustMenuLiRef = useRef<HTMLElement | null>(null);
+
   const rafRef = useRef<number | null>(null);
   const scheduledSessionRef = useRef<AdjustValues | null>(null);
   const panelVisibilityRef = useRef<boolean>(false);
-  const menuBarListenerRef = useRef<((e: Event) => void) | null>(null);
   const imageLoadedRef = useRef(false);
   const resizeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const renderTimeoutRefs = useRef<ReturnType<typeof setTimeout>[]>([]);
@@ -277,8 +271,8 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isAdjustPanelOpen, setIsAdjustPanelOpen] = useState(false);
-  const [, setCurrentActiveMenu] = useState<string>("");
+  const [isAdjustPanelOpen] = useState(false);
+  const [] = useState<string>("");
   const [showSaveFeedback, setShowSaveFeedback] = useState<string | null>(null);
   // Track unsaved changes
   const [isDirty, setIsDirty] = useState(false);
@@ -716,12 +710,6 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
       if (!imageLoadedRef.current) {
         imageLoadedRef.current = true;
       }
-
-      console.log(
-        `[Fix] Canvas: ${availableWidth}x${availableHeight}, Scale: ${scale.toFixed(
-          2
-        )}, Padding: ${paddingFactor * 100}%`
-      );
     } catch (e) {
       console.warn("[Fix] Aspect ratio fix failed:", e);
     }
@@ -1110,7 +1098,7 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
           const mod = await import(/* @vite-ignore */ p);
           if (mod) return mod;
         } catch (e) {
-          console.warn(`[Import] Failed for ${p}:`, e);
+          // Silent - try next path
         }
       }
 
@@ -1127,41 +1115,57 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
 
         let Constructor: any = undefined;
 
+        // Try local import silently
         try {
           const mod = await attemptImportPaths();
           Constructor =
             (mod as any).default ?? (mod as any).ImageEditor ?? (mod as any);
-          console.info("[Init] Using local tui-image-editor import");
         } catch (importErr) {
-          console.warn(
-            "[Init] Local import failed, attempting CDN:",
-            importErr
+          // Silent - will try CDN
+        }
+
+        // CDN loading if local import failed
+        if (typeof Constructor !== "function") {
+          // Load Fabric.js
+          if (!window.fabric) {
+            await loadScriptWithBackups(FABRIC_CDN_URLS, 25000);
+            await new Promise((resolve) => setTimeout(resolve, 1000));
+
+            if (!window.fabric) {
+              throw new Error("Fabric.js failed to load");
+            }
+          }
+
+          // Load TUI Snippet
+          if (!(window as any).tui) {
+            await loadScriptWithBackups(TUI_SNIPPET_CDN_URLS, 20000);
+            await new Promise((resolve) => setTimeout(resolve, 500));
+          }
+
+          // Load TUI Color Picker
+          if (!(window as any).tui?.colorPicker) {
+            await loadScriptWithBackups(TUI_COLOR_PICKER_URLS, 20000);
+            await new Promise((resolve) => setTimeout(resolve, 300));
+          }
+
+          // Load TUI Image Editor
+          await loadScriptWithBackups(TUI_IMAGE_EDITOR_URLS, 25000);
+          await new Promise((resolve) => setTimeout(resolve, 800));
+
+          // Find constructor
+          Constructor =
+            (window as any).tui?.ImageEditor ??
+            (window as any).ImageEditor ??
+            (window as any).tuiImageEditor;
+        }
+
+        if (typeof Constructor !== "function") {
+          throw new Error(
+            "ImageEditor constructor not available. Please refresh the page."
           );
         }
 
-        if (typeof Constructor !== "function") {
-          if (!window.fabric) {
-            await loadScriptWithBackups([FABRIC_CDN], 20000);
-          }
-
-          if (!(window as any).tui) {
-            await loadScriptWithBackups([TUI_SNIPPET_CDN], 15000);
-          }
-
-          if (!(window as any).tui?.colorPicker) {
-            await loadScriptWithBackups([TUI_COLOR_PICKER_SCRIPT], 15000);
-          }
-
-          await loadScriptWithBackups([TUI_IMAGE_EDITOR_CDN], 20000);
-
-          Constructor =
-            (window as any).tui?.ImageEditor ?? (window as any).ImageEditor;
-        }
-
-        if (typeof Constructor !== "function") {
-          throw new Error("ImageEditor constructor not available");
-        }
-
+        // Create editor instance
         instanceRef.current = new Constructor(editorRef.current, {
           includeUI: {
             loadImage: {
@@ -1203,403 +1207,76 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
               "submenu.activeLabel.color": "#fff",
             },
           },
-          // CHANGE THESE VALUES TO VERY LARGE NUMBERS:
-          cssMaxWidth: 999999, // Changed from 10000
-          cssMaxHeight: 999999, // Changed from 10000
+          cssMaxWidth: 999999,
+          cssMaxHeight: 999999,
           usageStatistics: false,
         });
 
         renderTimeoutRefs.current.forEach(clearTimeout);
         renderTimeoutRefs.current = [];
 
-        const delays = [100, 300, 500, 1000];
+        const delays = [100, 300, 500, 1500];
         delays.forEach((delay) => {
           const timeoutId = setTimeout(() => fixImageAspectRatio(), delay);
           renderTimeoutRefs.current.push(timeoutId);
         });
 
-        if (!document.getElementById("tui-menu-alignment-fix")) {
-          const style = document.createElement("style");
-          style.id = "tui-menu-alignment-fix";
-          style.textContent = `
-            .tui-image-editor .tui-image-editor-menu {
-              display: flex !important;
-              align-items: center !important;
-              justify-content: center !important;
-              gap: 6px;
-              height: 48px;
-              padding: 0 8px;
-              box-sizing: border-box;
-            }
-            .tui-image-editor-menu .tui-image-editor-menu-item {
-              display: inline-flex !important;
-              align-items: center !important;
-              height: 100% !important;
-              margin: 0 !important;
-              padding: 0 6px !important;
-              box-sizing: border-box !important;
-            }
-            .tui-image-editor-menu .tui-image-editor-button {
-              display: inline-flex !important;
-              align-items: center !important;
-              justify-content: center;
-              height: 100%;
-              padding: 8px 10px;
-              gap: 8px;
-              background: transparent;
-              border: none;
-              box-sizing: border-box;
-            }
-            .tui-image-editor-menu .tui-image-editor-menu-icon {
-              display: inline-flex !important;
-              align-items: center !important;
-              justify-content: center !important;
-              line-height: 0;
-              width: 20px;
-              height: 20px;
-            }
-            .tui-image-editor-menu .tui-image-editor-menu-icon img,
-            .tui-image-editor-menu .tui-image-editor-menu-icon svg {
-              width: 18px;
-              height: 18px;
-              display: block;
-              vertical-align: middle;
-            }
-            .tui-image-editor-menu .tui-image-editor-menu-title {
-              line-height: 1;
-              font-size: 12px;
-              display: inline-block;
-              vertical-align: middle;
-            }
-            
-            @media (max-width: 640px) {
-              .tui-image-editor .tui-image-editor-menu {
-                gap: 2px;
-                padding: 0 4px;
-              }
-              .tui-image-editor-menu .tui-image-editor-menu-item {
-                padding: 0 3px !important;
-              }
-              .tui-image-editor-menu .tui-image-editor-button {
-                padding: 6px 8px;
-                gap: 4px;
-              }
-              .tui-image-editor-menu .tui-image-editor-menu-icon {
-                width: 16px;
-                height: 16px;
-              }
-              .tui-image-editor-menu .tui-image-editor-menu-icon img,
-              .tui-image-editor-menu .tui-image-editor-menu-icon svg {
-                width: 16px;
-                height: 16px;
-              }
-              .tui-image-editor-menu .tui-image-editor-menu-title {
-                font-size: 10px;
-              }
-            }
-          `;
-          document.head.appendChild(style);
-        }
-
-        if (!document.getElementById("tui-hide-top-controls")) {
-          const style = document.createElement("style");
-          style.id = "tui-hide-top-controls";
-          style.textContent = `
-            .tui-image-editor-header {
-              display: none !important;
-            }
-            .tui-image-editor-wrap {
-              top: 0 !important;
-            }
-          `;
-          document.head.appendChild(style);
-        }
-
-        if (!instanceRef.current) return;
-
-        try {
-          const canvas =
-            instanceRef.current._graphics?.getCanvas?.() ||
-            instanceRef.current.graphics?.getCanvas?.();
-
-          if (canvas) {
-            const canvases = [
-              canvas.lowerCanvasEl,
-              canvas.upperCanvasEl,
-              (canvas as any).cacheCanvasEl,
-            ];
-
-            canvases.forEach((el) => {
-              if (el) {
-                try {
-                  el.getContext("2d", { willReadFrequently: true });
-                } catch (e) {
-                  console.warn("[Canvas] willReadFrequently failed:", e);
-                }
-              }
-            });
-
-            canvas.selection = true;
-            canvas.preserveObjectStacking = true;
-            canvas.imageSmoothingEnabled = true;
-            canvas.enableRetinaScaling = true;
-
-            if (canvas.backgroundImage) {
-              canvas.backgroundImage.selectable = false;
-              canvas.backgroundImage.evented = false;
-            }
-          }
-        } catch (e) {
-          console.warn("[Canvas] Enhancement failed:", e);
-        }
-
-        setTimeout(() => {
-          if (!editorRef.current || !instanceRef.current) return;
-          setupMenuHandling();
-          setupCanvasListeners();
-        }, 600);
-
-        resizeObs = new ResizeObserver(() => {
-          handleResize();
-        });
-
-        if (editorRef.current) {
-          resizeObs.observe(editorRef.current);
-        }
-
         setLoading(false);
       } catch (err: any) {
-        console.error("[Init] Initialization failed:", err);
         if (mounted) {
-          setError(err?.message ?? String(err));
+          setError(
+            err?.message ||
+              "Failed to load image editor. Please refresh the page."
+          );
           setLoading(false);
         }
       }
     }
 
-    const setupMenuHandling = () => {
-      const menuBar = editorRef.current?.querySelector(
-        ".tui-image-editor-menu"
-      ) as HTMLElement | null;
-      if (!menuBar) return;
+    // Force hide Load/Download buttons after initialization
+    setTimeout(() => {
+      if (!editorRef.current) return;
 
-      Object.entries(MENU_ICONS).forEach(([id, url]) => {
-        const img = editorRef.current?.querySelector(
-          `.tui-image-editor-menu [data-menu="${id}"] img`
-        ) as HTMLImageElement | null;
+      // Hide Load button
+      const loadButtons = editorRef.current.querySelectorAll(
+        ".tui-image-editor-load-btn, " +
+          "button.tui-image-editor-load-btn, " +
+          ".tie-btn-load, " +
+          'button[title="Load"], ' +
+          ".tui-image-editor-header-buttons button"
+      );
 
-        if (img) {
-          img.src = url;
-          img.onerror = () => {
-            if (id === "adjust") {
-              img.src = ICONS.adjust;
-            } else {
-              img.style.display = "none";
-            }
-          };
-        }
+      loadButtons.forEach((btn) => {
+        (btn as HTMLElement).style.display = "none";
+        (btn as HTMLElement).style.visibility = "hidden";
+        (btn as HTMLElement).remove(); // Completely remove it
       });
 
-      if (!menuBar.querySelector('[data-menu="adjust"]')) {
-        const li = document.createElement("li");
-        li.setAttribute("data-menu", "adjust");
-        li.className = "tui-image-editor-menu-item";
-        li.style.cssText = `
-            cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-            height: 48px;
-            padding: 0 10px;
-            margin: 0;
-          `;
+      // Hide Download button
+      const downloadButtons = editorRef.current.querySelectorAll(
+        ".tui-image-editor-download-btn, " +
+          "button.tui-image-editor-download-btn, " +
+          ".tie-btn-download, " +
+          'button[title="Download"]'
+      );
 
-        li.innerHTML = `
-            <button class="tui-image-editor-button tui-adjust-btn" title="Adjust" aria-label="Adjust" style="display:inline-flex;align-items:center;justify-content:center;height:100%;border:none;background:transparent;padding:8px 12px;transition:all 0.18s ease;color:#8a8a8a;">
-              <div class="tui-image-editor-menu-icon" style="display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;line-height:0;">
-                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false" style="display:block;">
-                  <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.5" fill="none"/>
-                  <path d="M12 1v6M12 17v6M4.22 4.22l4.24 4.24M15.54 15.54l4.24 4.24M1 12h6M17 12h6M4.22 19.78l4.24-4.24M15.54 8.46l4.24-4.24" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-              </div>
-            </button>
-          `;
+      downloadButtons.forEach((btn) => {
+        (btn as HTMLElement).style.display = "none";
+        (btn as HTMLElement).style.visibility = "hidden";
+        (btn as HTMLElement).remove(); // Completely remove it
+      });
 
-        menuBar.appendChild(li);
-        adjustMenuLiRef.current = li;
+      // Hide logo
+      const logos = editorRef.current.querySelectorAll(
+        ".tui-image-editor-header-logo, " +
+          ".tui-image-editor-header-logo-image"
+      );
 
-        const liClickHandler = (e: MouseEvent) => {
-          e.preventDefault();
-          e.stopPropagation();
-
-          try {
-            const instance = instanceRef.current;
-            const canvas =
-              instance?._graphics?.getCanvas?.() ||
-              instance?.graphics?.getCanvas?.();
-            const hasImage =
-              canvas && (canvas.backgroundImage || canvas.getActiveObject?.());
-
-            if (!hasImage) {
-              setError("Please load an image first");
-              setTimeout(() => setError(null), 3000);
-              return;
-            }
-          } catch (ex) {
-            console.warn("[Menu] Image check failed:", ex);
-          }
-
-          setIsAdjustPanelOpen((prev) => {
-            const next = !prev;
-            if (adjustMenuLiRef.current) {
-              if (next) {
-                adjustMenuLiRef.current.classList.add(
-                  "tui-image-editor-menu-item-active"
-                );
-                adjustMenuLiRef.current.style.background = "#f0f8ff";
-              } else {
-                adjustMenuLiRef.current.classList.remove(
-                  "tui-image-editor-menu-item-active"
-                );
-                adjustMenuLiRef.current.style.background = "transparent";
-              }
-            }
-            return next;
-          });
-        };
-
-        li.addEventListener("click", liClickHandler);
-        (menuBar as any).__tuiMenuHandlers =
-          (menuBar as any).__tuiMenuHandlers || [];
-        (menuBar as any).__tuiMenuHandlers.push(liClickHandler);
-      }
-
-      const delegatedHandler = (ev: Event) => {
-        const target = ev.target as HTMLElement | null;
-        if (!target) return;
-
-        const menuItem = target.closest?.(
-          ".tui-image-editor-menu-item"
-        ) as HTMLElement | null;
-        if (!menuItem) return;
-
-        const menuName = menuItem.getAttribute("data-menu");
-        if (!menuName) return;
-
-        setCurrentActiveMenu(menuName);
-
-        if (menuName !== "adjust") {
-          const allMenuItems = menuBar.querySelectorAll(
-            ".tui-image-editor-menu-item"
-          );
-          allMenuItems.forEach((item) => {
-            if (item !== adjustMenuLiRef.current && item !== menuItem) {
-              item.classList.remove("tui-image-editor-menu-item-active");
-              (item as HTMLElement).style.background = "transparent";
-            }
-          });
-
-          menuItem.classList.add("tui-image-editor-menu-item-active");
-          (menuItem as HTMLElement).style.background = "#f0f8ff";
-
-          const timeoutId = setTimeout(() => {
-            reapplySessionToCurrentTargets();
-          }, 100);
-          renderTimeoutRefs.current.push(timeoutId);
-        }
-      };
-
-      menuBar.addEventListener("click", delegatedHandler, true);
-      (menuBar as any).__tuiMenuHandlers =
-        (menuBar as any).__tuiMenuHandlers || [];
-      (menuBar as any).__tuiMenuHandlers.push(delegatedHandler);
-      menuBarListenerRef.current = delegatedHandler;
-    };
-
-    const setupCanvasListeners = () => {
-      try {
-        const canvas =
-          instanceRef.current?._graphics?.getCanvas?.() ||
-          instanceRef.current?.graphics?.getCanvas?.();
-
-        if (!canvas || canvasListenersRef.current) return;
-
-        const onObjectAdded = (e: any) => {
-          try {
-            const obj = e?.target;
-            if (obj) {
-              (obj as any).__tui_session_values = sessionRef.current;
-              const timeoutId = setTimeout(
-                () => reapplySessionToCurrentTargets(),
-                50
-              );
-              renderTimeoutRefs.current.push(timeoutId);
-            }
-            if (!isDirty) setIsDirty(true);
-          } catch (ex) {
-            console.warn("[Canvas] Object added handler failed:", ex);
-          }
-        };
-
-        const onObjectModified = (e: any) => {
-          try {
-            const obj = e?.target;
-            if (obj) {
-              (obj as any).__tui_session_values = sessionRef.current;
-            }
-            const timeoutId = setTimeout(
-              () => reapplySessionToCurrentTargets(),
-              30
-            );
-            renderTimeoutRefs.current.push(timeoutId);
-            if (!isDirty) setIsDirty(true);
-          } catch (ex) {
-            console.warn("[Canvas] Object modified handler failed:", ex);
-          }
-        };
-
-        const onSelectionCreated = (e: any) => {
-          try {
-            const obj = e?.target;
-            if (obj) {
-              (obj as any).__tui_session_values = sessionRef.current;
-            }
-            const timeoutId = setTimeout(
-              () => reapplySessionToCurrentTargets(),
-              20
-            );
-            renderTimeoutRefs.current.push(timeoutId);
-          } catch (ex) {
-            console.warn("[Canvas] Selection created handler failed:", ex);
-          }
-        };
-
-        const onSelectionCleared = () => {
-          try {
-            const timeoutId = setTimeout(
-              () => reapplySessionToCurrentTargets(),
-              20
-            );
-            renderTimeoutRefs.current.push(timeoutId);
-          } catch (ex) {
-            console.warn("[Canvas] Selection cleared handler failed:", ex);
-          }
-        };
-
-        canvas.on?.("object:added", onObjectAdded);
-        canvas.on?.("object:modified", onObjectModified);
-        canvas.on?.("selection:created", onSelectionCreated);
-        canvas.on?.("selection:cleared", onSelectionCleared);
-
-        canvasListenersRef.current = {
-          added: onObjectAdded,
-          modified: onObjectModified,
-          selectionCreated: onSelectionCreated,
-          selectionCleared: onSelectionCleared,
-        };
-      } catch (e) {
-        console.warn("[Canvas] Listeners setup failed:", e);
-      }
-    };
+      logos.forEach((logo) => {
+        (logo as HTMLElement).style.display = "none";
+        (logo as HTMLElement).remove(); // Completely remove it
+      });
+    }, 1000); // Wait 1 second for TUI to render
 
     initEditor();
 
@@ -1708,54 +1385,63 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
 
   // Export / Save logic
   const handleExport = useCallback(
-    (format: 'jpeg' | 'png' = 'jpeg') => {
+    (format: "jpeg" | "png" = "jpeg") => {
       const instance: any = instanceRef.current;
       if (!instance) {
-        setError('Editor not ready');
+        setError("Editor not ready");
         setTimeout(() => setError(null), 2500);
         return;
       }
       try {
         let dataURL: string | null = null;
         // Prefer public API if present
-        if (typeof instance.toDataURL === 'function') {
+        if (typeof instance.toDataURL === "function") {
           try {
-            dataURL = instance.toDataURL({ format: format === 'jpeg' ? 'jpeg' : 'png', quality: 0.92 });
+            dataURL = instance.toDataURL({
+              format: format === "jpeg" ? "jpeg" : "png",
+              quality: 0.92,
+            });
           } catch (e) {
-            console.warn('[Export] instance.toDataURL failed, falling back', e);
+            console.warn("[Export] instance.toDataURL failed, falling back", e);
           }
         }
         if (!dataURL) {
-          const canvas = instance._graphics?.getCanvas?.() || instance.graphics?.getCanvas?.();
-            if (canvas?.lowerCanvasEl) {
-              try {
-                dataURL = canvas.lowerCanvasEl.toDataURL(`image/${format}`, 0.92);
-              } catch (e) {
-                console.warn('[Export] canvas lowerCanvasEl toDataURL failed', e);
-              }
+          const canvas =
+            instance._graphics?.getCanvas?.() ||
+            instance.graphics?.getCanvas?.();
+          if (canvas?.lowerCanvasEl) {
+            try {
+              dataURL = canvas.lowerCanvasEl.toDataURL(`image/${format}`, 0.92);
+            } catch (e) {
+              console.warn("[Export] canvas lowerCanvasEl toDataURL failed", e);
             }
+          }
         }
         if (!dataURL) {
-          setError('Failed to export image');
+          setError("Failed to export image");
           setTimeout(() => setError(null), 3000);
           return;
         }
-        const a = document.createElement('a');
-        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        const a = document.createElement("a");
+        const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
         a.href = dataURL;
-        a.download = `selfiegram-edited-${timestamp}.${format === 'jpeg' ? 'jpg' : 'png'}`;
+        a.download = `selfiegram-edited-${timestamp}.${
+          format === "jpeg" ? "jpg" : "png"
+        }`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
-        setShowSaveFeedback('Saved');
+        setShowSaveFeedback("Saved");
         setIsDirty(false);
         setTimeout(() => setShowSaveFeedback(null), 2000);
       } catch (e) {
-        console.error('[Export] Unexpected failure', e);
-        setError('Export failed');
+        console.error("[Export] Unexpected failure", e);
+        setError("Export failed");
         setTimeout(() => setError(null), 3000);
       }
-    }, [setError]);
+    },
+    [setError]
+  );
 
   // Back button handler with confirmation if unsaved changes exist
   const handleBackClick = useCallback(() => {
@@ -1848,60 +1534,183 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
             SELFIEGRAM PHOTO EDITOR
           </h1>
         </div>
-        <div style={{display: 'flex', alignItems: 'center', gap: '12px'}}>
+        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
           {showSaveFeedback && (
-            <span style={{
-              fontSize: '12px',
-              color: '#16a34a',
-              fontWeight: 600,
-              background: '#ecfdf5',
-              padding: '4px 8px',
-              borderRadius: '6px',
-              border: '1px solid #a7f3d0'
-            }}>
+            <span
+              style={{
+                fontSize: "12px",
+                color: "#16a34a",
+                fontWeight: 600,
+                background: "#ecfdf5",
+                padding: "4px 8px",
+                borderRadius: "6px",
+                border: "1px solid #a7f3d0",
+              }}
+            >
               {showSaveFeedback}
             </span>
           )}
           <button
-            onClick={() => handleExport('jpeg')}
+            onClick={() => handleExport("jpeg")}
             title="Save edited image"
             style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              background: '#111827',
-              color: 'white',
-              border: '1px solid #111827',
-              fontSize: '13px',
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "6px",
+              background: "#111827",
+              color: "white",
+              border: "1px solid #111827",
+              fontSize: "13px",
               fontWeight: 600,
-              padding: '8px 14px',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              letterSpacing: '.5px',
-              boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
-              transition: 'background .2s ease, transform .15s ease'
+              padding: "8px 14px",
+              borderRadius: "8px",
+              cursor: "pointer",
+              letterSpacing: ".5px",
+              boxShadow: "0 2px 6px rgba(0,0,0,0.15)",
+              transition: "background .2s ease, transform .15s ease",
             }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = '#1f2937'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = '#111827'; }}
-            onMouseDown={(e) => { e.currentTarget.style.transform = 'translateY(1px)'; }}
-            onMouseUp={(e) => { e.currentTarget.style.transform = 'translateY(0)'; }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = "#1f2937";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = "#111827";
+            }}
+            onMouseDown={(e) => {
+              e.currentTarget.style.transform = "translateY(1px)";
+            }}
+            onMouseUp={(e) => {
+              e.currentTarget.style.transform = "translateY(0)";
+            }}
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3v14"/><path d="M5 10l7 7 7-7"/><path d="M5 21h14"/></svg>
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M12 3v14" />
+              <path d="M5 10l7 7 7-7" />
+              <path d="M5 21h14" />
+            </svg>
             <span>Save</span>
           </button>
         </div>
       </header>
       {showLeaveConfirm && (
-        <div style={{position:'fixed', inset:0, background:'rgba(0,0,0,0.55)', backdropFilter:'blur(4px)', zIndex:2000, display:'flex', alignItems:'center', justifyContent:'center', padding:'16px'}}>
-          <div style={{background:'#ffffff', width:'100%', maxWidth:480, borderRadius:16, padding:'28px 28px 24px', boxShadow:'0 12px 32px rgba(0,0,0,0.25)', fontFamily:'-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif', position:'relative'}}>
-            <h2 style={{margin:'0 0 12px', fontSize:18, fontWeight:700, letterSpacing:'-.25px', color:'#111827'}}>Leave editor?</h2>
-            <p style={{margin:'0 0 20px', fontSize:14, lineHeight:1.5, color:'#374151'}}>
-              You have unsaved changes. Leaving now will discard recent adjustments and this action cannot be undone.
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.55)",
+            backdropFilter: "blur(4px)",
+            zIndex: 2000,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "16px",
+          }}
+        >
+          <div
+            style={{
+              background: "#ffffff",
+              width: "100%",
+              maxWidth: 480,
+              borderRadius: 16,
+              padding: "28px 28px 24px",
+              boxShadow: "0 12px 32px rgba(0,0,0,0.25)",
+              fontFamily:
+                '-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif',
+              position: "relative",
+            }}
+          >
+            <h2
+              style={{
+                margin: "0 0 12px",
+                fontSize: 18,
+                fontWeight: 700,
+                letterSpacing: "-.25px",
+                color: "#111827",
+              }}
+            >
+              Leave editor?
+            </h2>
+            <p
+              style={{
+                margin: "0 0 20px",
+                fontSize: 14,
+                lineHeight: 1.5,
+                color: "#374151",
+              }}
+            >
+              You have unsaved changes. Leaving now will discard recent
+              adjustments and this action cannot be undone.
             </p>
-            <div style={{display:'flex', flexWrap:'wrap', gap:12, justifyContent:'flex-end'}}>
-              <button onClick={() => setShowLeaveConfirm(false)} style={{background:'#f3f4f6', border:'1px solid #e5e7eb', color:'#374151', padding:'10px 16px', fontSize:13, fontWeight:600, borderRadius:8, cursor:'pointer'}}>Stay</button>
-              <button onClick={() => { handleExport('jpeg'); setShowLeaveConfirm(false); setTimeout(()=>window.history.back(), 600); }} style={{background:'#111827', border:'1px solid #111827', color:'#fff', padding:'10px 16px', fontSize:13, fontWeight:600, borderRadius:8, cursor:'pointer', display:'flex', alignItems:'center', gap:6}}>Save & Leave</button>
-              <button onClick={() => { setShowLeaveConfirm(false); window.history.back(); }} style={{background:'transparent', border:'none', color:'#b91c1c', padding:'10px 12px', fontSize:13, fontWeight:600, cursor:'pointer'}}>Leave Without Saving</button>
+            <div
+              style={{
+                display: "flex",
+                flexWrap: "wrap",
+                gap: 12,
+                justifyContent: "flex-end",
+              }}
+            >
+              <button
+                onClick={() => setShowLeaveConfirm(false)}
+                style={{
+                  background: "#f3f4f6",
+                  border: "1px solid #e5e7eb",
+                  color: "#374151",
+                  padding: "10px 16px",
+                  fontSize: 13,
+                  fontWeight: 600,
+                  borderRadius: 8,
+                  cursor: "pointer",
+                }}
+              >
+                Stay
+              </button>
+              <button
+                onClick={() => {
+                  handleExport("jpeg");
+                  setShowLeaveConfirm(false);
+                  setTimeout(() => window.history.back(), 600);
+                }}
+                style={{
+                  background: "#111827",
+                  border: "1px solid #111827",
+                  color: "#fff",
+                  padding: "10px 16px",
+                  fontSize: 13,
+                  fontWeight: 600,
+                  borderRadius: 8,
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                }}
+              >
+                Save & Leave
+              </button>
+              <button
+                onClick={() => {
+                  setShowLeaveConfirm(false);
+                  window.history.back();
+                }}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  color: "#b91c1c",
+                  padding: "10px 12px",
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                Leave Without Saving
+              </button>
             </div>
           </div>
         </div>
@@ -2507,6 +2316,41 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
   transform: scale(1.2) !important;
   box-shadow: 0 4px 12px rgba(102,126,234,0.5), 0 0 0 4px rgba(102,126,234,0.3) !important;
 }
+
+
+ /* Hide TOAST UI Logo */
+  .tui-image-editor-header-logo,
+  .tui-image-editor-header-logo-image,
+  .tui-image-editor-header .tui-image-editor-header-logo {
+    display: none !important;
+  }
+
+ /* Hide Load button - multiple selectors */
+  .tui-image-editor-load-btn,
+  button.tui-image-editor-load-btn,
+  .tie-btn-load,
+  button.tie-btn-load,
+  .tui-image-editor-header-buttons button:first-child,
+  .tui-image-editor-header button[title="Load"],
+  button[class*="load" i] {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+  }
+
+  /* Hide Download button - multiple selectors */
+  .tui-image-editor-download-btn,
+  button.tui-image-editor-download-btn,
+  .tie-btn-download,
+  button.tie-btn-download,
+  .tui-image-editor-header button[title="Download"],
+  button[class*="download" i] {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+  }
 
 .tui-image-editor-submenu input[type="range"]::-moz-range-thumb {
   width: 18px !important;

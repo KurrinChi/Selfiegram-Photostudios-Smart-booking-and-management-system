@@ -4,9 +4,11 @@
 /* Existing SF Pro Display */
 @font-face {
   font-family: "SF Pro Display";
-  src: url("./src/assets/fonts/SFPRODISPLAYREGULAR.OTF") format("opentype");
+  src: url("./assets/fonts/SFPRODISPLAYREGULAR.woff2") format("woff2"),
+    url("./assets/fonts/SFPRODISPLAYREGULAR.woff") format("woff");
   font-weight: normal;
   font-style: normal;
+  font-display: swap;
 }
 
 /* ✅ Add Poppins */

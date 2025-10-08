@@ -142,7 +142,6 @@ const AdminDashboardContents: React.FC = () => {
   const end = format(endDate, "yyyy-MM-dd");
   const [pendingRange, setPendingRange] = useState(range);
 
-
   // Loading state
   const [loading, setLoading] = useState(true);
 
@@ -232,8 +231,8 @@ const AdminDashboardContents: React.FC = () => {
     () =>
       search
         ? packageRows.filter((r) =>
-          r.name.toLowerCase().includes(search.toLowerCase())
-        )
+            r.name.toLowerCase().includes(search.toLowerCase())
+          )
         : packageRows,
     [search, packageRows]
   );
@@ -349,7 +348,10 @@ const AdminDashboardContents: React.FC = () => {
     pdf.setFontSize(16);
     pdf.text("DASHBOARD REPORT", leftMargin, yPosition);
 
-    const reportId = `RPT-${format(new Date(data.reportGenerated), "yyyyMMdd")}`;
+    const reportId = `RPT-${format(
+      new Date(data.reportGenerated),
+      "yyyyMMdd"
+    )}`;
     const idWidth = pdf.getTextWidth(reportId) + 8;
     pdf.setFillColor(...primaryBlack);
     pdf.rect(rightMargin - idWidth, yPosition - 5, idWidth, 7, "F");
@@ -570,7 +572,9 @@ const AdminDashboardContents: React.FC = () => {
           `PHP ${isNaN(revenueValue) ? "0" : revenueValue.toLocaleString()}`,
           `${pkg.bookingPct} (${data.summary.totalBookings} total)`,
           pkg.rating ? `${pkg.rating.toFixed(1)}/5` : "N/A",
-          pkg.trendPositive ? `UP ${pkg.trend} vs last week` : `DOWN ${pkg.trend} vs last week`,
+          pkg.trendPositive
+            ? `UP ${pkg.trend} vs last week`
+            : `DOWN ${pkg.trend} vs last week`,
         ];
       });
 
@@ -606,35 +610,35 @@ const AdminDashboardContents: React.FC = () => {
             cellWidth: 48,
             halign: "left",
             fontStyle: "bold",
-            textColor: primaryBlack
+            textColor: primaryBlack,
           },
           1: {
             cellWidth: 24,
             halign: "center",
             fontStyle: "bold",
-            textColor: primaryBlack
+            textColor: primaryBlack,
           },
           2: {
             cellWidth: 32,
             halign: "center",
             fontStyle: "bold",
-            textColor: primaryBlack
+            textColor: primaryBlack,
           },
           3: {
             cellWidth: 25,
             halign: "center",
-            textColor: darkGray
+            textColor: darkGray,
           },
           4: {
             cellWidth: 20,
             halign: "center",
-            textColor: darkGray
+            textColor: darkGray,
           },
           5: {
             cellWidth: 40,
             halign: "center",
             fontStyle: "bold",
-            textColor: primaryBlack
+            textColor: primaryBlack,
           },
         },
         alternateRowStyles: {
@@ -663,7 +667,9 @@ const AdminDashboardContents: React.FC = () => {
 
     const insights: string[] = [];
     if (data.summary.totalSales > 0 && data.summary.totalBookings > 0) {
-      const avg = (data.summary.totalSales / data.summary.totalBookings).toFixed(2);
+      const avg = (
+        data.summary.totalSales / data.summary.totalBookings
+      ).toFixed(2);
       insights.push(
         `Average revenue per booking: PHP ${Number(avg).toLocaleString()}`
       );
@@ -680,10 +686,14 @@ const AdminDashboardContents: React.FC = () => {
       const [prev, curr] = data.weeklyIncome.slice(-2);
       const growth = ((curr.income - prev.income) / prev.income) * 100;
       insights.push(
-        `Week-over-week revenue growth: ${growth > 0 ? "+" : ""}${growth.toFixed(1)}%`
+        `Week-over-week revenue growth: ${
+          growth > 0 ? "+" : ""
+        }${growth.toFixed(1)}%`
       );
     }
-    insights.push(`Total registered users in system: ${data.summary.totalUsers}`);
+    insights.push(
+      `Total registered users in system: ${data.summary.totalUsers}`
+    );
     insights.push(
       `Active appointment schedule count: ${data.summary.totalBookings}`
     );
@@ -805,9 +815,9 @@ const AdminDashboardContents: React.FC = () => {
           formattedRange: isDefaultRange
             ? "All Time Data"
             : `${format(range[0].startDate, "MMM dd, yyyy")} - ${format(
-              range[0].endDate,
-              "MMM dd, yyyy"
-            )}`,
+                range[0].endDate,
+                "MMM dd, yyyy"
+              )}`,
         },
         reportGenerated: new Date().toISOString(),
       };
@@ -820,15 +830,16 @@ const AdminDashboardContents: React.FC = () => {
       const dateRange = isDefaultRange
         ? "AllTime"
         : `${format(range[0].startDate, "yyyyMMdd")}-${format(
-          range[0].endDate,
-          "yyyyMMdd"
-        )}`;
+            range[0].endDate,
+            "yyyyMMdd"
+          )}`;
       const filename = `Selfiegram-Dashboard-${dateRange}-${timestamp}.pdf`;
 
       // Save the PDF
-      (await
-        // Save the PDF
-        pdf).save(filename);
+      (
+        await // Save the PDF
+        pdf
+      ).save(filename);
     } catch (error) {
       console.error("Error generating report:", error);
       const errorMessage =
@@ -859,9 +870,9 @@ const AdminDashboardContents: React.FC = () => {
                   {isDefaultRange
                     ? "Select Date Range"
                     : `${format(range[0].startDate, "MMM dd yyyy")} — ${format(
-                      range[0].endDate,
-                      "MMM dd yyyy"
-                    )}`}
+                        range[0].endDate,
+                        "MMM dd yyyy"
+                      )}`}
                 </button>
                 {pickerOpen && (
                   <div className="absolute right-0 z-20 mt-2 bg-white shadow-lg rounded-md p-3">
@@ -896,7 +907,6 @@ const AdminDashboardContents: React.FC = () => {
                     </div>
                   </div>
                 )}
-
               </div>
 
               {/* Reset Button */}
@@ -940,14 +950,15 @@ const AdminDashboardContents: React.FC = () => {
                         card.trend.value === "—"
                           ? "text-gray-500"
                           : card.trend.up
-                            ? "text-green-500"
-                            : "text-red-500"
+                          ? "text-green-500"
+                          : "text-red-500"
                       }
                     >
                       {card.trend.value === "—"
                         ? "— Trend unavailable for custom range"
-                        : `${card.trend.value} ${card.trend.up ? "Up" : "Down"
-                        } from past week`}
+                        : `${card.trend.value} ${
+                            card.trend.up ? "Up" : "Down"
+                          } from past week`}
                     </span>
                   </p>
                 </div>
@@ -964,41 +975,47 @@ const AdminDashboardContents: React.FC = () => {
             <h3 className="text-sm font-semibold mb-4">
               Weekly Gross Income (Past 4 Months)
             </h3>
-            <div className="w-full h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={grossIncomeWeeklyData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                  <XAxis
-                    dataKey="week"
-                    className="text-[10px]"
-                    angle={-45}
-                    textAnchor="end"
-                    height={60}
-                    interval={1}
-                  />
-
-                  {/* Y-Axis formatting logic */}
-                  <YAxis
-                    tickFormatter={(v) => {
-                      const allAboveThousand = grossIncomeWeeklyData.every(
-                        (d) => d.income > 1000
-                      );
-                      return allAboveThousand ? `${(v / 1000).toFixed(1)}K` : v;
-                    }}
-                    className="text-xs"
-                  />
-                  <Tooltip
-                    formatter={(v: number) => `₱ ${v.toLocaleString()}`}
-                  />
-                  <Bar
-                    dataKey="income"
-                    fill="#1f2937"
-                    radius={[4, 4, 0, 0]}
-                    barSize={28}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
+            {grossIncomeWeeklyData.length > 0 ? (
+              <div style={{ width: "100%", height: "300px" }}>
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={grossIncomeWeeklyData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                    <XAxis
+                      dataKey="week"
+                      className="text-[10px]"
+                      angle={-45}
+                      textAnchor="end"
+                      height={60}
+                      interval={1}
+                    />
+                    <YAxis
+                      tickFormatter={(v) => {
+                        const allAboveThousand = grossIncomeWeeklyData.every(
+                          (d) => d.income > 1000
+                        );
+                        return allAboveThousand
+                          ? `${(v / 1000).toFixed(1)}K`
+                          : v;
+                      }}
+                      className="text-xs"
+                    />
+                    <Tooltip
+                      formatter={(v: number) => `₱ ${v.toLocaleString()}`}
+                    />
+                    <Bar
+                      dataKey="income"
+                      fill="#1f2937"
+                      radius={[4, 4, 0, 0]}
+                      barSize={28}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <div className="flex items-center justify-center h-64 text-gray-400 text-sm">
+                No data available
+              </div>
+            )}
           </div>
 
           {/* Package Table */}
@@ -1043,8 +1060,8 @@ const AdminDashboardContents: React.FC = () => {
                     // Ensure revenue is parsed correctly by removing '₱' and commas
                     const parsedRevenue = row.revenue
                       ? parseFloat(
-                        row.revenue.replace("₱", "").replace(",", "")
-                      )
+                          row.revenue.replace("₱", "").replace(",", "")
+                        )
                       : 0;
 
                     // Ensure that the revenue is valid before formatting
@@ -1063,10 +1080,11 @@ const AdminDashboardContents: React.FC = () => {
                         </td>
                         <td className={tableCell}>
                           <span
-                            className={`inline-flex items-center gap-1 text-[10px] ${row.trendPositive
-                              ? "text-green-500"
-                              : "text-red-500"
-                              }`}
+                            className={`inline-flex items-center gap-1 text-[10px] ${
+                              row.trendPositive
+                                ? "text-green-500"
+                                : "text-red-500"
+                            }`}
                           >
                             <FontAwesomeIcon
                               icon={row.trendPositive ? faArrowUp : faArrowDown}
@@ -1086,10 +1104,11 @@ const AdminDashboardContents: React.FC = () => {
             <button
               onClick={handleExport}
               disabled={isGeneratingReport}
-              className={`px-5 py-2 rounded-md text-xs font-semibold transition focus:outline-none flex items-center gap-2 ${isGeneratingReport
-                ? "bg-gray-400 text-white cursor-not-allowed"
-                : "bg-black text-white hover:bg-gray-800 hover:scale-[1.02]"
-                }`}
+              className={`px-5 py-2 rounded-md text-xs font-semibold transition focus:outline-none flex items-center gap-2 ${
+                isGeneratingReport
+                  ? "bg-gray-400 text-white cursor-not-allowed"
+                  : "bg-black text-white hover:bg-gray-800 hover:scale-[1.02]"
+              }`}
             >
               {isGeneratingReport && (
                 <svg
