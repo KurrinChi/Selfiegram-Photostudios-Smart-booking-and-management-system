@@ -123,7 +123,7 @@ const ClientAppointmentsPageContent = () => {
         transactionDate: item.transactionDate
       }));
 
-        console.log("Formatted appointments:", formatted); // <-- verify here
+
 
 
       setAppointments(formatted);

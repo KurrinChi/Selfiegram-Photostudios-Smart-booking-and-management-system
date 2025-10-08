@@ -40,7 +40,6 @@ const ClientFavoritePageContent: React.FC = () => {
         return res.json();
       })
       .then((data) => {
-        console.log("Fetched favorites:", data);
         setFavorites(data);
       })
       .catch((err) => {
@@ -69,24 +68,22 @@ const ClientFavoritePageContent: React.FC = () => {
   }, [favorites]);
 
   const removeFavorite = async (packageId: number) => {
+    // Optimistic update: remove locally first
+    const snapshot = favorites;
     setFavorites((prev) => prev.filter((pkg) => pkg.id !== packageId));
 
-    fetchWithAuth(`http://127.0.0.1:8000/api/favorites/remove`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        userID: userId,
-        packageID: packageId,
-      }),
-    })
-      .then((res) => {
-        if (!res.ok) throw new Error("Failed to remove favorite");
-        return res.json();
-      })
-      .then((data) => console.log("Removed from favorites:", data))
-      .catch((err) => console.error("Remove favorite error:", err));
+    try {
+      const res = await fetchWithAuth(`http://127.0.0.1:8000/api/favorites/remove`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userID: userId, packageID: packageId }),
+      });
+      if (!res.ok) throw new Error("Failed to remove favorite");
+      // Silent success — no console logging
+    } catch (_) {
+      // Roll back UI if request fails (silent failover)
+      setFavorites(snapshot);
+    }
   };
 
   return (

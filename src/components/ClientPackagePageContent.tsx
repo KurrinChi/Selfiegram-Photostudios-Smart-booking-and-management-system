@@ -38,7 +38,7 @@ const ClientPackagePageContent: React.FC = () => {
   const fetchFavorites = async () => {
    const user = JSON.parse(localStorage.getItem("user") || "{}");
     const userId = user?.userID;
-    console.log("LocalStorage user:", user);
+
 
     if (!userId) {
       console.warn("No user ID found in localStorage.");
@@ -48,11 +48,11 @@ const ClientPackagePageContent: React.FC = () => {
     try {
       const res = await fetchWithAuth(`${API_URL}/api/favorites/user/${userId}`);
       const data = await res.json();
-      console.log("Fetched favorites from backend:", data);
+
 
       if (Array.isArray(data)) {
         const idSet = new Set(data.map((id) => id.toString()));
-        console.log("Converted favorite ID set:", idSet);
+
         setFavoriteIds(idSet);
       } else {
         console.error("Unexpected response for favorites:", data);
@@ -119,7 +119,6 @@ const ClientPackagePageContent: React.FC = () => {
     // Check if coming back from payment
     const paymentStatus = searchParams.get('payment');
     if (paymentStatus === 'success') {
-      console.log('Payment completed! Returning to packages page.');
       // Clean up URL parameter
       setSearchParams({});
     }
@@ -160,7 +159,6 @@ const ClientPackagePageContent: React.FC = () => {
     });
 
     const data = await response.json();
-    console.log("Favorite toggle response:", data);
 
     if (data.success) {
       setFavoriteIds((prev) => {
