@@ -193,6 +193,7 @@ const App = () => {
           element={
             <ProtectedRoute allowedRoles={["Staff"]}>
               <StaffDashboardPage />
+              <ToastContainer position="bottom-right" />
             </ProtectedRoute>
           }
         />
@@ -311,6 +312,7 @@ const App = () => {
           element={
             <ProtectedRoute allowedRoles={["Customer"]}>
               <ClientSettingsPage />
+              <ToastContainer position="bottom-right" />
             </ProtectedRoute>
           }
         />
