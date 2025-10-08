@@ -4,7 +4,7 @@ import { DayPicker } from "react-day-picker";
 import "react-day-picker/dist/style.css";
 import { isToday, isSameDay, startOfDay } from "date-fns";
 import { fetchWithAuth } from "../../utils/fetchWithAuth";
-import { toast, ToastContainer } from "react-toastify";
+import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { motion, AnimatePresence } from "framer-motion";
 import type { Tag } from "../../types";
@@ -1706,9 +1706,6 @@ const SelectPackagePage = () => {
         selectedAddons={selectedAddons}
         staffName={staffName}
       />
-
-      {/* Toast Container */}
-      <ToastContainer position="bottom-right" />
     </>
   );
 };

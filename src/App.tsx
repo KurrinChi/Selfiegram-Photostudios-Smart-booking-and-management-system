@@ -32,7 +32,6 @@ import StaffProfilePage from "./page/staff/ProfilePage.tsx";
 import StaffGalleryPage from "./page/staff/GalleryPage.tsx";
 import StaffPackageContent from "../src/components/StaffPackageContent.tsx";
 import StaffPackagesPage from "./page/staff/PackagesPage.tsx";
-import StaffEditExtrasPage from "./page/staff/EditExtrasPage.tsx";
 import StaffSelectPackagePage from "../src/components/Packages/staffSelect.tsx";
 
 // Client pages
@@ -229,22 +228,13 @@ const App = () => {
           element={
             <ProtectedRoute allowedRoles={["Staff"]}>
               <StaffPackagesPage />
+              <ToastContainer position="bottom-right" />
             </ProtectedRoute>
           }
         >
           <Route index element={<StaffPackageContent />} />
           <Route path="select/:id" element={<StaffSelectPackagePage />} />
         </Route>
-
-        <Route
-          path="/staff/packages/extras"
-          element={
-            <ProtectedRoute allowedRoles={["Staff"]}>
-              <StaffEditExtrasPage />
-              <ToastContainer position="bottom-right" />
-            </ProtectedRoute>
-          }
-        />
 
         <Route
           path="/staff/gallery"
