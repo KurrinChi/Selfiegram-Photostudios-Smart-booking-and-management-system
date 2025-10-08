@@ -23,7 +23,6 @@ const ClientHistoryPageContent = () => {
     try {
       const user_id = localStorage.getItem("userID");
       const token = localStorage.getItem("token");
-      console.log(user_id);
       const response = await axios.get(
         `${API_URL}/api/booking/history/${user_id}`,
         {

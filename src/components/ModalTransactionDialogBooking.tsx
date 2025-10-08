@@ -304,7 +304,7 @@ if (isPreviewMode && previewData) {
         return_url: '/client/packages' // Redirect back to packages after payment
       };
 
-      console.log('Creating PayMongo checkout for NEW booking (payment first)...');
+
       const paymentResponse = await fetchWithAuth(`${API_URL}/api/payment/checkout-new-booking`, {
         method: "POST",
         headers: {
@@ -314,12 +314,11 @@ if (isPreviewMode && previewData) {
       });
 
       const paymentResult = await paymentResponse.json();
-      console.log('PayMongo response:', paymentResult);
+
 
       if (paymentResponse.ok && paymentResult.success) {
         // Redirect to PayMongo checkout page
-        console.log('Redirecting to PayMongo. Booking will be created AFTER payment confirmation.');
-        console.log('Redirect URL:', paymentResult.checkout_url);
+
         window.location.href = paymentResult.checkout_url;
         
         onClose(); // Close the modal
@@ -493,7 +492,7 @@ if (isPreviewMode && previewData) {
           {addons && addons.length > 0 && (
             <div className="mb-2">
             {selectedAddons.map((addon) => {
-              console.log(`Addon ${addon.label}: value=${addon.value}, type=${addon.type}`);
+ 
               if (addon.value <= 0) return null; // skip inactive addons
 
               return (

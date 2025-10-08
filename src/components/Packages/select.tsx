@@ -296,26 +296,6 @@ const SelectPackagePage = () => {
           } as AddOn;
         });
 
-        // Debug logging: show mapping from DB type -> UI type
-        try {
-          console.groupCollapsed("AddOns mapping (DB -> UI)");
-          console.table(
-            arrayData.map((db) => ({
-              id: db.addOnID,
-              label: db.addOn,
-              price: Number(db.addOnPrice),
-              dbType: (db.type || "").toString() || "(empty)",
-              uiType: mapDbTypeToUi(db.type),
-              minQuantity: db.minQuantity ?? 1,
-              maxQuantity: db.maxQuantity ?? "(unlimited)",
-            }))
-          );
-          console.log("Built AddOns (UI):", built);
-          console.groupEnd();
-        } catch (_) {
-          // no-op logging failure
-        }
-
         setAddOns(built);
       } catch (error) {
         console.error("Error fetching add-ons:", error);
@@ -647,16 +627,6 @@ const SelectPackagePage = () => {
         const data = await response.json();
         // DEBUG: Log raw package payload
         try {
-          console.groupCollapsed("DEBUG: Fetched package payload");
-          console.log("Raw data:", data);
-          console.log(
-            "Raw duration field value:",
-            (data &&
-              (data.duration ||
-                data?.packageDuration ||
-                data?.package_duration)) ??
-              "<<undefined>>"
-          );
           // Attempt to normalize duration
           const rawDuration =
             data?.duration ||
@@ -687,10 +657,7 @@ const SelectPackagePage = () => {
             return total;
           };
           const parsedMinutes = tmpParse(rawDuration);
-          console.log(
-            "Parsed duration minutes (debug immediate):",
-            parsedMinutes
-          );
+
           if (parsedMinutes === 60 && rawDuration && /10/.test(rawDuration)) {
             console.warn(
               'DEBUG: Duration contains "10" but parsed to 60. Raw string might have unexpected format. Raw:',
@@ -720,9 +687,7 @@ const SelectPackagePage = () => {
 
   const handleShowPreview = (paymentType: "deposit" | "full") => {
     // Debug: Log current addon states
-    console.log("=== BOOKING PREVIEW DEBUG ===");
-    console.log("selectedAddons:", selectedAddons);
-    console.log("activeAddOns:", activeAddOns);
+
 
     // Validate all fields
     if (
@@ -793,16 +758,7 @@ const SelectPackagePage = () => {
       )} ${period}`;
     };
     const startMinutes = slotLabelToMinutes(selectedTime);
-    console.log(
-      "DEBUG: Preparing preview. Selected start label:",
-      selectedTime,
-      "-> startMinutes:",
-      startMinutes,
-      "package raw duration:",
-      pkg?.duration,
-      "effectivePackageDuration (parsed + addons):",
-      effectivePackageDuration
-    );
+
     const predictedEndLabel = Number.isFinite(startMinutes)
       ? minutesToLabel(startMinutes + effectivePackageDuration)
       : "";
@@ -936,16 +892,7 @@ const SelectPackagePage = () => {
   }, 0);
 
   const effectivePackageDuration = basePackageDuration + extraDurationMinutes;
-  if (extraDurationMinutes > 0) {
-    console.log(
-      "DEBUG effective duration: base",
-      basePackageDuration,
-      "+ extra",
-      extraDurationMinutes,
-      "= total",
-      effectivePackageDuration
-    );
-  }
+
 
   // Business day boundaries in minutes (start 09:00, end after last slot 21:00 to allow 8:30 PM 30-min slot)
   // Adjusted business end boundary: removing 07:30 PM onward means last valid start (e.g., 07:00 PM for 60m)
@@ -1418,12 +1365,6 @@ const SelectPackagePage = () => {
                                       [item.id]: false,
                                     }));
                                     handleDropdownChange(item.id, color.label);
-                                    console.log(
-                                      "Selected color for",
-                                      item.id,
-                                      ":",
-                                      color.label
-                                    );
                                   }}
                                   className="w-6 h-6 rounded-full border border-gray-400 shadow-sm hover:scale-110 transition cursor-pointer"
                                   style={{ backgroundColor: color.hex }}

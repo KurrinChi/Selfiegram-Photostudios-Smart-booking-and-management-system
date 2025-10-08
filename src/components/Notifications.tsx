@@ -157,7 +157,6 @@ export default function Notifications() {
                 if (!res.ok) throw new Error("Failed to fetch notifications");
 
                 const data = await res.json();
-                console.log("Fetched notifications:", data);
                 setNotifications(data);
             } catch (err) {
                 console.error("Error fetching notifications:", err);
@@ -172,12 +171,9 @@ export default function Notifications() {
     // Merge existing notifications with new Pusher notifications
     useEffect(() => {
         if (pusherNotifications.length > 0) {
-            console.log('Pusher notifications received:', pusherNotifications);
             setNotifications(prev => {
                 const existingIds = prev.map(n => n.notificationID);
                 const newNotifications = pusherNotifications.filter(n => !existingIds.includes(n.notificationID));
-                console.log('Adding new notifications:', newNotifications);
-                
                 if (newNotifications.length > 0) {
                     // Show toast for new notifications
                     newNotifications.forEach(notification => {
@@ -256,7 +252,6 @@ export default function Notifications() {
 //Fetch Booking Details when notification with label "Booking" is selected
 const fetchBookingDetails = async (bookingID: number) => {
   try {
-    console.log(`Fetching booking details for bookingID: ${bookingID}`);
     const res = await fetch(`${API_URL}/api/booking-details?bookingID=${bookingID}`, {
       method: "GET",
       headers: {
@@ -264,14 +259,9 @@ const fetchBookingDetails = async (bookingID: number) => {
         Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
       },
     });
-
-    console.log("API response:", res);
-    console.log(`Response status: ${res.status}`);
-
     if (!res.ok) throw new Error("Failed to fetch booking details");
 
     const data = await res.json();
-    console.log("Fetched booking details:", data);
     setBookingDetails(data);
   } catch (err) {
     console.error("Error fetching booking details:", err);
@@ -280,10 +270,8 @@ const fetchBookingDetails = async (bookingID: number) => {
 
 useEffect(() => {
   if (selected?.label === "Booking" && selected.bookingID) {
-    console.log("Selected notification matches criteria:", selected);
     fetchBookingDetails(selected.bookingID); // Use bookingID from the selected notification
   } else {
-    console.log("Clearing booking details as criteria do not match.");
     setBookingDetails(null);
   }
 }, [selected]);
@@ -293,7 +281,6 @@ useEffect(() => {
   useEffect(() => {
   const fetchRescheduleDetails = async (bookingID: number) => {
   try {
-    console.log(`Fetching reschedule details for bookingID: ${bookingID}`);
     const res = await fetch(`${API_URL}/api/reschedule-details?bookingID=${bookingID}`, {
       method: "GET",
       headers: {
@@ -302,13 +289,10 @@ useEffect(() => {
       },
     });
 
-    console.log("API response:", res);
-    console.log(`Response status: ${res.status}`);
 
     if (!res.ok) throw new Error("Failed to fetch reschedule details");
 
     const data = await res.json();
-    console.log("Fetched reschedule details:", data);
 
     // Fetch the associated booking details
     const bookingRes = await fetch(`${API_URL}/api/booking-details?bookingID=${bookingID}`, {
@@ -322,7 +306,6 @@ useEffect(() => {
     if (!bookingRes.ok) throw new Error("Failed to fetch booking details");
 
     const bookingData = await bookingRes.json();
-    console.log("Fetched booking details:", bookingData);
 
     // Combine reschedule and booking details
     setBookingDetails({ ...data, ...bookingData });
@@ -332,13 +315,10 @@ useEffect(() => {
 };
 
    if (selected?.label === "Reschedule" && selected.bookingID) {
-    console.log("Selected notification matches reschedule criteria:", selected);
     fetchRescheduleDetails(selected.bookingID); // Use bookingID from the selected notification
   } else if (selected?.label === "Booking" && selected.bookingID) {
-    console.log("Selected notification matches booking criteria:", selected);
     fetchBookingDetails(selected.bookingID); // Use bookingID from the selected notification
   } else {
-    console.log("Clearing booking details as criteria do not match.");
     setBookingDetails(null);
   }
 }, [selected]);
@@ -474,7 +454,6 @@ const BookingDetails = ({ details }: { details: any }) => {
             n.starred ? "bg-gray-50" : "bg-white font-semibold"
           }`} // Different styles for read (starred) and unread notifications
           onClick={() => {
-            console.log("Notification ID:", n.notificationID);
             setSelected(n);
             markAsRead(n.notificationID); // Mark the notification as read when clicked
           }}

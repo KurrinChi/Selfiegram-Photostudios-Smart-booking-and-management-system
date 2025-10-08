@@ -739,22 +739,12 @@ const AdminDashboardContents: React.FC = () => {
     return pdf;
   };
 
-
-
-
-  // Helper function to convert SVG to Base64
-
-
-
-
   const handleExport = async () => {
     setIsGeneratingReport(true);
 
     try {
       const token = localStorage.getItem("token");
       const params = isDefaultRange ? {} : { startDate: start, endDate: end };
-
-      console.log("Fetching report data...");
 
       // Try to fetch data
       let response;
@@ -822,8 +812,6 @@ const AdminDashboardContents: React.FC = () => {
         reportGenerated: new Date().toISOString(),
       };
 
-      console.log("Generating professional PDF...");
-
       // Generate PDF using autoTable
       const pdf = generateProfessionalPDF(reportData);
 
@@ -841,8 +829,6 @@ const AdminDashboardContents: React.FC = () => {
       (await
         // Save the PDF
         pdf).save(filename);
-
-      console.log("Professional PDF generated and downloaded successfully!");
     } catch (error) {
       console.error("Error generating report:", error);
       const errorMessage =

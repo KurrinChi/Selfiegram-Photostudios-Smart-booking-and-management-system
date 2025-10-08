@@ -48,8 +48,7 @@ const ProfileContents: React.FC = () => {
           phone: data.contactNo || "",
           birthday: data.birthday || "",
           gender: data.gender || "",
-        });
-          console.log("profilePicture", data.profilePicture);
+        })
       
         localStorage.setItem("user", JSON.stringify(data));
 
@@ -67,7 +66,6 @@ const ProfileContents: React.FC = () => {
   }, []);
 
   useEffect(() => {
-  console.log("previewUrl:", previewUrl);
 }, [previewUrl]);
 
   const handlePhotoChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -166,7 +164,6 @@ const ProfileContents: React.FC = () => {
   }
 };
 
- console.log("previewUrl:", previewUrl);
 
 
   return (

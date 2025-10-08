@@ -43,17 +43,6 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
 }) => {
   if (!isOpen || !data) return null;
 
-  // Debug: Log the data to see what's being received
-  console.log('🔍 AdminModalTransactionDialog - Data received:', {
-    id: data.id,
-    selectedAddOns: data.selectedAddOns,
-    selectedConcepts: data.selectedConcepts,
-    hasAddOns: !!data.selectedAddOns,
-    hasConcepts: !!data.selectedConcepts,
-    addOnsLength: data.selectedAddOns?.length,
-    conceptsLength: data.selectedConcepts?.length,
-  });
-
   return (
     <div className="printable fixed inset-0 z-50 bg-black/30 backdrop-blur-sm transition-opacity duration-300 flex justify-center items-center p-4">
       <div className="bg-white text-gray-900 max-w-xl w-full rounded-lg shadow-md overflow-y-auto max-h-[95vh] p-6">

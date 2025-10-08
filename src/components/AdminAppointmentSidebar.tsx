@@ -188,7 +188,6 @@ const AdminAppointmentSidebar: React.FC<AdminAppointmentSidebarProps> = ({
       const data = await res.json();
 
       if (res.ok) {
-        console.log("Reschedule confirmed:", data.data);
         toast.success("Reschedule confirmed: ", data.data)
 
         // Remove the notification from the sidebar
@@ -219,7 +218,6 @@ const AdminAppointmentSidebar: React.FC<AdminAppointmentSidebarProps> = ({
       const data = await res.json();
 
       if (res.ok) {
-        console.log("Cancellation approved:", data.data);
         toast.success("Cancellation approved:", data.data);
         // Remove the notification from the sidebar
         setNotifications((prev) => prev.filter((n) => n.id !== selectedRequest.id));
@@ -248,7 +246,6 @@ const AdminAppointmentSidebar: React.FC<AdminAppointmentSidebarProps> = ({
       const data = await res.json();
 
       if (res.ok) {
-        console.log("Booking Request Declined", data.data);
         toast.success("Booking Request Declined");
         // Remove the notification from the sidebar
         setNotifications((prev) => prev.filter((n) => n.id !== selectedRequest.id));
