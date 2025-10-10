@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import CenteredLoader from "./CenteredLoader";
 import ChatWidget from "./ChatWidget";
 import axios from "axios";
-import { Eye, Trash2 } from "lucide-react";
+import { Eye } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import ModalTransactionDialog from "./ModalTransactionDialog"; // adjust path if needed
 
@@ -14,7 +14,7 @@ const ClientHistoryPageContent = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [showModal, setShowModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState<any | null>(null);
-  const [itemToDelete, setItemToDelete] = useState<any | null>(null);
+  // Deletion feature removed; no state required
   const [, setRawBookingMap] = useState<{ [id: number]: any }>({});
   const [loading, setLoading] = useState(false);
   
@@ -110,24 +110,7 @@ const ClientHistoryPageContent = () => {
       }
   };
 
-  const handleDelete = (item: any) => {
-    setItemToDelete(item);
-  };
-  
-  const confirmDelete = async () => {
-    try {
-        await axios.delete(`${API_URL}/api/booking/${itemToDelete.id}`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        setHistoryData((prev) => prev.filter((item) => item.id !== itemToDelete.id));
-
-        setItemToDelete(null);
-      } catch (error) {
-        console.error("Failed to delete:", error);
-      }
-  };
+  // Deletion handlers removed — this action is not implemented
     const formatTime = (time: string) => {
     const date = new Date(`1970-01-01T${time}`);
     return date.toLocaleTimeString("en-US", {
@@ -213,12 +196,7 @@ const toNumber = (value: any): number => {
                 >
                   <Eye className="w-5 h-5" />
                 </button>
-                <button
-                  className="text-gray-600 hover:text-red-500 transition"
-                  onClick={() => handleDelete(item)}
-                >
-                  <Trash2 className="w-5 h-5" />
-                </button>
+                {/* Delete button removed — feature not implemented */}
               </td>
             </tr>
           ))}
@@ -280,30 +258,7 @@ const toNumber = (value: any): number => {
 
       )}
 
-      {/* Delete Modal */}
-      {itemToDelete && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black/30 backdrop-blur-sm z-50">
-          <div className="bg-white p-6 rounded-xl shadow-lg max-w-sm w-full animate-fadeIn">
-            <h2 className="text-lg font-semibold mb-4">
-              Are you sure you want to delete this history item?
-            </h2>
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => setItemToDelete(null)}
-                className="px-4 py-2 text-sm rounded-md bg-gray-100 hover:bg-gray-200"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={confirmDelete}
-                className="px-4 py-2 text-sm rounded-md bg-red-500 text-white hover:bg-red-600"
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Delete modal removed — deletion not implemented */}
     </div>
     
   );
