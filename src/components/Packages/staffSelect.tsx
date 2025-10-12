@@ -201,6 +201,10 @@ const SelectPackagePage = () => {
 
   const [setData, setSetData] = useState<PackageSet | null>(null);
 
+  const [spinnerQuantities, setSpinnerQuantities] = useState<
+    Record<string, string>
+  >({});
+
   /*const hasPlain = !!setData?.concepts?.some(
       (c) => (c.type || "").toString().toLowerCase() === "plain"
     );*/
@@ -315,6 +319,15 @@ const SelectPackagePage = () => {
         }
 
         setAddOns(built);
+
+        // Initialize spinner quantities with strings
+        const initialQuantities: Record<string, string> = {};
+        built.forEach((addon) => {
+          if (addon.type === "multiple") {
+            initialQuantities[addon.id] = String(addon.minQty ?? 1);
+          }
+        });
+        setSpinnerQuantities(initialQuantities);
       } catch (error) {
         console.error("Error fetching add-ons:", error);
       }
@@ -1277,41 +1290,44 @@ const SelectPackagePage = () => {
           </div>
         )}
 
-        {/* Add Ons Section */}
-        <div className="bg-white text-gray-900 rounded-xl shadow p-6 px-25 space-y-4">
-          <h3 className="text-lg font-semibold">Add Ons</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        {/* Add Ons Section - FIXED BUTTON AREA & BACKSPACE */}
+        <div className="bg-white text-gray-900 rounded-xl shadow p-4 sm:p-6 space-y-4">
+          <h3 className="text-base sm:text-lg font-semibold">Add Ons</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {addOns.map((item) => {
               const isActive = !!activeAddOns[item.id];
-              // total price is computed inline below using selectedAddons
+              const currentQuantityStr =
+                spinnerQuantities[item.id] ?? String(item.minQty ?? 1);
+              const currentQuantity =
+                currentQuantityStr === ""
+                  ? 0
+                  : parseInt(currentQuantityStr, 10);
+              const displayQty = isNaN(currentQuantity)
+                ? item.minQty ?? 1
+                : currentQuantity;
 
               return (
-                <button
+                <div
                   key={item.id}
-                  type="button"
-                  onClick={() => {
-                    toggleCheckboxAddon(item.id);
-                  }}
-                  className={`group relative flex flex-col gap-2 p-3 rounded-lg border transition-all duration-200
-                    ${
-                      isActive
-                        ? "bg-neutral-900 border-neutral-700 text-white shadow-lg"
-                        : "bg-white border-gray-300 text-gray-900 hover:bg-gray-100 hover:border-gray-400"
-                    }`}
+                  className={`group relative flex flex-col gap-3 p-3 sm:p-4 rounded-lg border transition-all duration-200 ${
+                    isActive
+                      ? "bg-neutral-900 border-neutral-700 text-white shadow-lg"
+                      : "bg-white border-gray-300 text-gray-900 hover:bg-gray-100 hover:border-gray-400"
+                  }`}
                 >
-                  {/* ✅ Added badge for ALL active items (including spinner) */}
                   {isActive && (
-                    <span className="absolute top-2 right-2 text-xs font-medium px-2 py-0.5 rounded-full bg-indigo-600 text-white shadow-sm">
+                    <span className="absolute top-2 right-2 text-xs font-medium px-2 py-0.5 rounded-full bg-indigo-600 text-white shadow-sm z-10">
                       Added
                     </span>
                   )}
 
-                  {/* Label + Price */}
-                  <div className="flex justify-between items-center w-full">
+                  {/* FIXED: Clickable area - Only Label */}
+                  <div className="flex justify-between items-center w-full pr-12">
                     <span
-                      className={`text-sm font-medium ${
+                      className={`text-sm font-medium cursor-pointer ${
                         isActive ? "text-white" : "text-gray-900"
                       }`}
+                      onClick={() => toggleCheckboxAddon(item.id)}
                     >
                       {item.label}
                     </span>
@@ -1324,146 +1340,183 @@ const SelectPackagePage = () => {
                     </span>
                   </div>
 
-                  {/* Control Area */}
+                  {/* FIXED: Spinner - allows backspace and empty state */}
                   {item.type === "multiple" && (
-                    <div className="flex items-center justify-between gap-2">
-                      {/* Quantity Input */}
+                    <div
+                      className="flex items-center justify-between gap-2 w-full cursor-pointer"
+                      onClick={() => toggleCheckboxAddon(item.id)}
+                    >
                       <input
-                        type="number"
-                        min={item.minQty ?? 1}
-                        {...(item.maxQty ? { max: item.maxQty } : {})}
-                        value={
-                          selectedAddons.find((a) => a.id === item.id)?.value ||
-                          (item.minQty ?? 1)
-                        }
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        value={currentQuantityStr}
                         onChange={(e) => {
-                          const entered = parseInt(e.target.value, 10);
-                          const minQ = item.minQty ?? 1;
-                          const maxQ = item.maxQty ?? Number.POSITIVE_INFINITY;
-                          const clamped = isNaN(entered)
-                            ? minQ
-                            : Math.min(Math.max(entered, minQ), maxQ);
-                          handleAddonChange(item.id, clamped);
+                          const rawValue = e.target.value;
+
+                          if (rawValue === "" || /^\d+$/.test(rawValue)) {
+                            setSpinnerQuantities((prev) => ({
+                              ...prev,
+                              [item.id]: rawValue,
+                            }));
+
+                            if (isActive && rawValue !== "") {
+                              const num = parseInt(rawValue, 10);
+                              setSelectedAddons((prev) =>
+                                prev.map((addon) =>
+                                  addon.id === item.id
+                                    ? { ...addon, value: num }
+                                    : addon
+                                )
+                              );
+                            }
+                          }
                         }}
                         onBlur={(e) => {
-                          const parsed = parseInt(e.target.value, 10);
+                          const rawValue = e.target.value;
+
+                          if (rawValue === "") {
+                            const minQ = item.minQty ?? 1;
+                            setSpinnerQuantities((prev) => ({
+                              ...prev,
+                              [item.id]: String(minQ),
+                            }));
+
+                            if (isActive) {
+                              setSelectedAddons((prev) =>
+                                prev.map((addon) =>
+                                  addon.id === item.id
+                                    ? { ...addon, value: minQ }
+                                    : addon
+                                )
+                              );
+                            }
+                            return;
+                          }
+
+                          const parsed = parseInt(rawValue, 10);
                           const minQ = item.minQty ?? 1;
                           const maxQ = item.maxQty ?? Number.POSITIVE_INFINITY;
-                          const clamped = isNaN(parsed)
-                            ? minQ
-                            : Math.min(Math.max(parsed, minQ), maxQ);
-                          if (clamped !== parsed) {
-                            handleAddonChange(item.id, clamped);
+                          const clamped = Math.min(
+                            Math.max(parsed, minQ),
+                            maxQ
+                          );
+
+                          setSpinnerQuantities((prev) => ({
+                            ...prev,
+                            [item.id]: String(clamped),
+                          }));
+
+                          if (isActive) {
+                            setSelectedAddons((prev) =>
+                              prev.map((addon) =>
+                                addon.id === item.id
+                                  ? { ...addon, value: clamped }
+                                  : addon
+                              )
+                            );
                           }
                         }}
                         onClick={(e) => e.stopPropagation()}
-                        className="w-20 border rounded p-1"
+                        onFocus={(e) => e.stopPropagation()}
+                        onKeyDown={(e) => e.stopPropagation()}
+                        placeholder={String(item.minQty ?? 1)}
+                        className={`w-20 sm:w-24 rounded px-2 py-1.5 text-sm transition-colors ${
+                          isActive
+                            ? "border border-white bg-white text-black placeholder-gray-400"
+                            : "border border-gray-300 bg-white text-black placeholder-gray-400"
+                        }`}
                       />
 
-                      {/* Total Price beside input */}
-                      {isActive ? (
-                        <span className="justify-self-end self-end text-sm font-medium text-white">
-                          ₱
-                          {item.price *
-                            (selectedAddons.find((a) => a.id === item.id)
-                              ?.value || 1)}
+                      {isActive && currentQuantityStr !== "" && (
+                        <span className="text-sm font-medium text-white whitespace-nowrap">
+                          ₱{item.price * displayQty}
                         </span>
-                      ) : null}
+                      )}
                     </div>
                   )}
 
-                  {item.type === "dropdown" &&
-                    isActive && ( // only show if add-on is active
-                      <div className="relative w-full">
-                        {/* Color swatches popup */}
-                        <AnimatePresence>
-                          {showingColors[item.id] && (
-                            <motion.div
-                              initial={{ opacity: 0, y: 10 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              exit={{ opacity: 0, y: 10 }}
-                              className="absolute -top-14 left-1/2 -translate-x-1/2 p-3 bg-white rounded-lg shadow-lg flex gap-2"
-                            >
-                              {colorOptions.map((color) => (
-                                <div // ✅ Changed to div
-                                  key={color.id}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
+                  {item.type === "dropdown" && isActive && (
+                    <div className="relative w-full">
+                      <AnimatePresence>
+                        {showingColors[item.id] && (
+                          <motion.div
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: 10 }}
+                            className="absolute -top-14 left-1/2 -translate-x-1/2 p-3 bg-white rounded-lg shadow-lg flex gap-2 z-10"
+                          >
+                            {colorOptions.map((color) => (
+                              <div
+                                key={color.id}
+                                onClick={(e) => {
+                                  e.stopPropagation();
 
-                                    // update UI swatch
-                                    setSelectedColors((prev) => ({
-                                      ...prev,
-                                      [item.id]: color,
-                                    }));
+                                  setSelectedColors((prev) => ({
+                                    ...prev,
+                                    [item.id]: color,
+                                  }));
 
-                                    // update selectedAddons array
-                                    setSelectedAddons((prev) => {
-                                      const filtered = prev.filter(
-                                        (a) => a.id !== item.id
-                                      );
-                                      return [
-                                        ...filtered,
-                                        {
-                                          id: item.id,
-                                          label: item.label,
-                                          price: item.price ?? 0,
-                                          value: activeAddOns[item.id] ? 1 : 0,
-                                          type: "dropdown",
-                                          option: color.label,
-                                        } as SelectedAddon,
-                                      ];
-                                    });
-
-                                    setShowingColors((prev) => ({
-                                      ...prev,
-                                      [item.id]: false,
-                                    }));
-                                    handleDropdownChange(item.id, color.label);
-                                    console.log(
-                                      "Selected color for",
-                                      item.id,
-                                      ":",
-                                      color.label
+                                  setSelectedAddons((prev) => {
+                                    const filtered = prev.filter(
+                                      (a) => a.id !== item.id
                                     );
-                                  }}
-                                  className="w-6 h-6 rounded-full border border-gray-400 shadow-sm hover:scale-110 transition cursor-pointer"
-                                  style={{ backgroundColor: color.hex }}
-                                />
-                              ))}
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
+                                    return [
+                                      ...filtered,
+                                      {
+                                        id: item.id,
+                                        label: item.label,
+                                        price: item.price ?? 0,
+                                        value: activeAddOns[item.id] ? 1 : 0,
+                                        type: "dropdown",
+                                        option: color.label,
+                                      } as SelectedAddon,
+                                    ];
+                                  });
 
-                        {/* Button that opens color picker */}
-                        <div
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setShowingColors((prev) => ({
-                              ...prev,
-                              [item.id]: !prev[item.id],
-                            }));
-                          }}
-                          className="w-full h-8 rounded-md border text-xs flex items-center justify-center cursor-pointer transition border-gray-600"
-                          style={{
-                            backgroundColor:
-                              selectedColors?.[item.id]?.hex || "#272727",
-                            color: (() => {
-                              const hex =
-                                selectedColors?.[item.id]?.hex || "#FFFFFF"; // fallback white
-                              const r = parseInt(hex.slice(1, 3), 16);
-                              const g = parseInt(hex.slice(3, 5), 16);
-                              const b = parseInt(hex.slice(5, 7), 16);
-                              const brightness =
-                                (r * 299 + g * 587 + b * 114) / 1000;
-                              return brightness > 150 ? "#000" : "#fff";
-                            })(),
-                          }}
-                        >
-                          {selectedColors?.[item.id]?.label || "WHITE"}
-                        </div>
+                                  setShowingColors((prev) => ({
+                                    ...prev,
+                                    [item.id]: false,
+                                  }));
+                                  handleDropdownChange(item.id, color.label);
+                                }}
+                                className="w-6 h-6 rounded-full border border-gray-400 shadow-sm hover:scale-110 transition cursor-pointer"
+                                style={{ backgroundColor: color.hex }}
+                              />
+                            ))}
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+
+                      <div
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setShowingColors((prev) => ({
+                            ...prev,
+                            [item.id]: !prev[item.id],
+                          }));
+                        }}
+                        className="w-full h-8 rounded-md border text-xs flex items-center justify-center cursor-pointer transition border-gray-600"
+                        style={{
+                          backgroundColor:
+                            selectedColors?.[item.id]?.hex || "#272727",
+                          color: (() => {
+                            const hex =
+                              selectedColors?.[item.id]?.hex || "#FFFFFF";
+                            const r = parseInt(hex.slice(1, 3), 16);
+                            const g = parseInt(hex.slice(3, 5), 16);
+                            const b = parseInt(hex.slice(5, 7), 16);
+                            const brightness =
+                              (r * 299 + g * 587 + b * 114) / 1000;
+                            return brightness > 150 ? "#000" : "#fff";
+                          })(),
+                        }}
+                      >
+                        {selectedColors?.[item.id]?.label || "WHITE"}
                       </div>
-                    )}
-                </button>
+                    </div>
+                  )}
+                </div>
               );
             })}
           </div>

@@ -15,75 +15,32 @@ interface AddOn {
   id: string;
   label: string;
   price: number;
-  // Match existing consumers (e.g., SelectedAddon mapping and Modal props)
   type: "single" | "multiple" | "dropdown";
-  // For quantity-based add-ons (type: multiple)
   minQty?: number;
   maxQty?: number;
-  options?: string[]; // for dropdown only
+  options?: string[];
 }
 
 interface Concept {
   id: string;
   label: string;
-  type: string; // "plain" | "concept"
+  type: string;
 }
+
 type FetchedAddOn = {
   addOnID: number;
   addOn: string;
   addOnPrice: string | number;
-  type?: string; // DB: 'single' | 'multiple' | 'spinner' | ''
-  minQuantity?: number | string; // optional from API
-  maxQuantity?: number | string; // optional from API
+  type?: string;
+  minQuantity?: number | string;
+  maxQuantity?: number | string;
 };
+
 interface PackageSet {
   setId: string;
   setName: string;
   concepts: Concept[];
 }
-
-//const [tags, setTags] = useState<Tag[]>([]);
-
-/*const addOns: AddOn[] = [
-    { id: "pax", label: "Addl pax", price: 129, type: "spinner" },
-    {
-      id: "portrait",
-      label: "Addl Portrait Picture",
-      price: 49,
-      type: "spinner",
-    },
-    { id: "grid", label: "Addl Grid Picture", price: 69, type: "spinner" },
-    { id: "a4", label: "Addl A4 Picture", price: 129, type: "spinner" },
-    {
-      id: "backdrop",
-      label: "Addl Backdrop",
-      price: 129,
-      type: "dropdown",
-      options: ["Floral", "Modern", "Classic"],
-    },
-
-    {
-      id: "photo20",
-      label: "Photographer service for 20mins",
-      price: 599,
-      type: "checkbox",
-    },
-    {
-      id: "photo60",
-      label: "Photographer service for 1hr",
-      price: 1699,
-      type: "checkbox",
-    },
-    {
-      id: "makeup",
-      label: "Professional Hair & Make up",
-      price: 1699,
-      type: "checkbox",
-    },
-
-    { id: "digital", label: "All digital copies", price: 199, type: "checkbox" },
-    { id: "extra5", label: "Addl 5 mins", price: 129, type: "checkbox" },
-  ];*/
 
 const colorOptions = [
   { id: "white", hex: "#f4f6f1", label: "WHITE" },
@@ -93,15 +50,17 @@ const colorOptions = [
   { id: "beige", hex: "#cfb5a4", label: "BEIGE" },
   { id: "lavender", hex: "#8d84be", label: "LAVENDER" },
 ];
+
 const getContrastColor = (hex: string) => {
-  const c = hex.substring(1); // remove #
+  const c = hex.substring(1);
   const rgb = parseInt(c, 16);
   const r = (rgb >> 16) & 0xff;
   const g = (rgb >> 8) & 0xff;
   const b = (rgb >> 0) & 0xff;
-  const luma = 0.299 * r + 0.587 * g + 0.114 * b; // brightness
-  return luma > 180 ? "#333" : "#fff"; // dark text for light bg, white for dark bg
+  const luma = 0.299 * r + 0.587 * g + 0.114 * b;
+  return luma > 180 ? "#333" : "#fff";
 };
+
 interface Package {
   id: string;
   title: string;
@@ -126,9 +85,9 @@ interface PreviewBookingData {
   paymentType: "deposit" | "full";
   paymentMode: string;
   packageId: string;
-  packageDuration?: string; // added for modal end-time display
-  packageDurationMinutes?: number; // numeric duration for direct use
-  predictedEndLabel?: string; // precomputed end time label
+  packageDuration?: string;
+  packageDurationMinutes?: number;
+  predictedEndLabel?: string;
 }
 
 const API_URL = import.meta.env.VITE_API_URL;
@@ -149,14 +108,10 @@ const SelectPackagePage = () => {
   const [previewData, setPreviewData] = useState<PreviewBookingData | null>(
     null
   );
-  // const [isTermsDialogOpen, setIsTermsDialogOpen] = useState(false);
-
-  const [agreedToPayment, setAgreedToPayment] = useState(false); // For Down Payment Agreement
-
+  const [agreedToPayment, setAgreedToPayment] = useState(false);
   const [tags, setTags] = useState<Tag[]>([]);
   const [addOns, setAddOns] = useState<AddOn[]>([]);
   const [bookedTimeSlots, setBookedTimeSlots] = useState<string[]>([]);
-  // Rich interval booking data (start/end in minutes from 00:00) if provided by API
   const [bookedIntervals, setBookedIntervals] = useState<
     {
       start: number;
@@ -176,13 +131,14 @@ const SelectPackagePage = () => {
   const [studioFlipped, setStudioAFlipped] = useState(false);
   const [studioBFlipped, setStudioBFlipped] = useState(false);
   const [selectedStudioB, setSelectedStudioB] = useState<number | null>(null);
-
-  // For Studio A (colors)
   const [selectedColorA, setSelectedColorA] = useState<string | null>(null);
-
   const [setData, setSetData] = useState<PackageSet | null>(null);
 
-  // Prefill personal details from authenticated user
+  // Store spinner quantities as strings to allow empty state
+  const [spinnerQuantities, setSpinnerQuantities] = useState<
+    Record<string, string>
+  >({});
+
   useEffect(() => {
     const prefillUser = async () => {
       try {
@@ -191,7 +147,6 @@ const SelectPackagePage = () => {
         const res = await fetchWithAuth(`${API_URL}/api/users/${userID}`);
         if (!res.ok) return;
         const u = await res.json();
-        // Build a display name; fall back as needed
         const displayName =
           [u.fname, u.lname].filter(Boolean).join(" ") || u.username || "";
         setName((prev) => (prev ? prev : displayName));
@@ -205,38 +160,6 @@ const SelectPackagePage = () => {
     prefillUser();
   }, []);
 
-  /*const hasPlain = !!setData?.concepts?.some(
-      (c) => (c.type || "").toString().toLowerCase() === "plain"
-    );*/
-  /*const hasConcept = !!setData?.concepts?.some(
-      (c) => (c.type || "").toString().toLowerCase() === "concept"
-    );*/
-
-  // convert setId to number safely (handles strings like "1")
-  // const setIdNum = setData?.setId ? Number(setData.setId) : null;
-  //const showStudioA = setIdNum !== 3; // hide Studio A only if set 3
-  //const enableStudioB = setIdNum === 2 || setIdNum === 4; // show B only for set 2 or 4
-  //const hideBothStudios = setIdNum === 3; // for completeness
-
-  // rule: setId === 1 => plain-only (disable concept studio)
-  //const isPlainOnlySet = setIdNum === 1;
-
-  // final flags used by the UI
-  //const showStudioA = isPlainOnlySet || hasPlain;       // render Studio A
-  //const enableStudioB = !isPlainOnlySet && hasConcept; // concept studio
-
-  /*const showStudioA =
-    isPlainOnlySet ||
-    setData?.concepts?.some(
-      (c) => (c.type || "").toString().toLowerCase() === "plain"
-    );
-
-  // Studio B: only disabled if plain-only; otherwise enabled if API has concepts
-  const enableStudioB =
-    !isPlainOnlySet &&
-    setData?.concepts?.some(
-      (c) => (c.type || "").toString().toLowerCase() === "studio"
-    );*/
   useEffect(() => {
     if (id) {
       fetchWithAuth(`${API_URL}/api/packages/${id}/set-concepts`)
@@ -246,14 +169,15 @@ const SelectPackagePage = () => {
     }
   }, [id]);
 
-  // DB type -> UI type mapping
   const mapDbTypeToUi = (dbType?: string): AddOn["type"] => {
     const t = (dbType || "").toLowerCase();
-    if (t === "multiple" || t === "spinner") return "multiple"; // quantity style
+    if (t === "multiple" || t === "spinner") return "multiple";
     if (t === "dropdown") return "dropdown";
-    return "single"; // default for 'single' or empty
+    return "single";
   };
+
   const [selectedAddons, setSelectedAddons] = useState<SelectedAddon[]>([]);
+
   useEffect(() => {
     const fetchAddOns = async () => {
       try {
@@ -261,13 +185,10 @@ const SelectPackagePage = () => {
         if (!res.ok) throw new Error("Failed to fetch add-ons");
 
         const result = await res.json();
-
-        // Ensure result.data is an array
         const arrayData: FetchedAddOn[] = Array.isArray(result.data)
           ? result.data
           : [];
 
-        // Build add-ons directly from DB
         const built: AddOn[] = arrayData.map((db) => {
           const uiType = mapDbTypeToUi(db.type);
           const toNum = (v: unknown): number | undefined => {
@@ -280,9 +201,8 @@ const SelectPackagePage = () => {
                 : NaN;
             return Number.isFinite(n) && n > 0 ? n : undefined;
           };
-          const minQ = toNum(db.minQuantity) ?? 1; // only fallback here
+          const minQ = toNum(db.minQuantity) ?? 1;
           const rawMax = toNum(db.maxQuantity);
-          // Explicitly allow max when >= min; otherwise treat as unlimited (undefined)
           const maxQ =
             rawMax !== undefined && rawMax >= minQ ? rawMax : undefined;
 
@@ -297,6 +217,15 @@ const SelectPackagePage = () => {
         });
 
         setAddOns(built);
+
+        // Initialize with empty strings, not default values
+        const initialQuantities: Record<string, string> = {};
+        built.forEach((addon) => {
+          if (addon.type === "multiple") {
+            initialQuantities[addon.id] = String(addon.minQty ?? 1);
+          }
+        });
+        setSpinnerQuantities(initialQuantities);
       } catch (error) {
         console.error("Error fetching add-ons:", error);
       }
@@ -305,33 +234,11 @@ const SelectPackagePage = () => {
     if (id) fetchAddOns();
   }, [id]);
 
-  // const toggleAddOn = (id: string, forceActive?: boolean, type?: string) => {
-  //   // toggleAddOn not used; using toggleCheckboxAddon for all add-ons
-  // };
-
-  /*// 4️⃣ Update quantity for spinner AddOns
-  const handleQuantityChange = (id: string, value: number) => {
-    setQuantities(prev => ({
-      ...prev,
-      [id]: value > 0 ? value : 1,
-    }));
-  };*/
-
-  /*const toggleAddOn = (id: string, active?: boolean) => {
-      setActiveAddOns((prev) => ({
-        ...prev,
-        [id]: typeof active === "boolean" ? active : !prev[id],
-      }));
-    };*/
-
-  // Spinner quantities are tracked via selectedAddons; no separate quantities state.
-
   useEffect(() => {
-    // Loop through your add-ons (if you have them as props or state)
     addOns.forEach((item) => {
       if (item.type === "dropdown") {
         setSelectedColors((prev) => {
-          if (prev[item.id]) return prev; // don't override if already set
+          if (prev[item.id]) return prev;
           return {
             ...prev,
             [item.id]: { id: "white", label: "WHITE", hex: "#FFFFFF" },
@@ -352,11 +259,11 @@ const SelectPackagePage = () => {
             ...prev,
             {
               id: item.id,
-              label: item.label, // e.g., "Additional Backdrop"
+              label: item.label,
               price: item.price ?? 0,
-              value: 0, // mark as NOT selected initially
+              value: 0,
               type: "dropdown",
-              option: "WHITE", // default choice
+              option: "WHITE",
             } as SelectedAddon,
           ];
         });
@@ -366,76 +273,69 @@ const SelectPackagePage = () => {
 
   const handleAddonChange = (id: string, value?: string | number) => {
     const addOnMeta = addOns.find((a) => a.id === id);
-    const numeric =
-      typeof value === "number" ? value : parseInt(String(value || 0), 10);
-    const minQ = addOnMeta?.minQty ?? 1;
-    const maxQ = addOnMeta?.maxQty ?? Number.POSITIVE_INFINITY;
-    const clampedQty = isNaN(numeric)
-      ? minQ
-      : Math.min(Math.max(numeric, minQ), maxQ);
 
-    setSelectedAddons((prev) => {
-      const exists = prev.find((a) => a.id === id);
-      if (exists) {
-        return prev.map((addon) =>
-          addon.id === id
-            ? {
-                ...addon,
-                value:
-                  addon.type === "dropdown"
-                    ? activeAddOns[id]
-                      ? 1
-                      : 0
-                    : clampedQty,
-                option:
-                  addon.type === "dropdown" ? (value as string) : addon.option,
-              }
-            : addon
-        );
-      }
+    if (addOnMeta?.type === "dropdown") {
+      setSelectedAddons((prev) => {
+        const exists = prev.find((a) => a.id === id);
+        if (exists) {
+          return prev.map((addon) =>
+            addon.id === id
+              ? {
+                  ...addon,
+                  value: activeAddOns[id] ? 1 : 0,
+                  option: value as string,
+                }
+              : addon
+          );
+        }
 
-      // If not exists yet, create a new SelectedAddon entry (for quantity edits especially)
-      if (!addOnMeta) return prev;
-
-      let selectedType: SelectedAddon["type"] = "checkbox";
-      if (addOnMeta.type === "dropdown") selectedType = "dropdown";
-      else if (addOnMeta.type === "multiple") selectedType = "spinner";
-
-      const newEntry: SelectedAddon = {
-        id: addOnMeta.id,
-        label: addOnMeta.label,
-        price: addOnMeta.price,
-        type: selectedType,
-        value:
-          selectedType === "dropdown" ? (activeAddOns[id] ? 1 : 0) : clampedQty,
-        ...(selectedType === "dropdown"
-          ? { option: String(value ?? "WHITE") }
-          : {}),
-      };
-      return [...prev, newEntry];
-    });
-
-    // Auto-activate multiples when quantity is set
-    if (addOnMeta?.type === "multiple") {
-      setActiveAddOns((prev) => ({ ...prev, [id]: true }));
+        const newEntry: SelectedAddon = {
+          id: addOnMeta.id,
+          label: addOnMeta.label,
+          price: addOnMeta.price,
+          type: "dropdown",
+          value: activeAddOns[id] ? 1 : 0,
+          option: String(value ?? "WHITE"),
+        };
+        return [...prev, newEntry];
+      });
     }
   };
 
-  // For toggling checkboxes
   const toggleCheckboxAddon = (id: string) => {
+    const addOnMeta = addOns.find((a) => a.id === id);
+
     setActiveAddOns((prev) => {
       const newActive = !prev[id];
 
       setSelectedAddons((prevAddons) => {
         const existing = prevAddons.find((a) => a.id === id);
+
         if (existing) {
+          if (!newActive) {
+            return prevAddons.map((a) =>
+              a.id === id ? { ...a, value: 0 } : a
+            );
+          }
+
+          // Get quantity, use minQty if empty or invalid
+          const qtyStr = spinnerQuantities[id] || "";
+          const qty =
+            qtyStr === "" ? addOnMeta?.minQty ?? 1 : parseInt(qtyStr, 10);
+          const validQty = isNaN(qty) ? addOnMeta?.minQty ?? 1 : qty;
+
           return prevAddons.map((a) =>
-            a.id === id ? { ...a, value: newActive ? 1 : 0 } : a
+            a.id === id
+              ? {
+                  ...a,
+                  value: a.type === "spinner" ? validQty : 1,
+                }
+              : a
           );
         } else if (newActive) {
           const newAddon = addOns.find((a) => a.id === id);
           if (!newAddon) return prevAddons;
-          // Map AddOn type to SelectedAddon type
+
           let selectedAddonType: SelectedAddon["type"];
           if (newAddon.type === "dropdown") {
             selectedAddonType = "dropdown";
@@ -444,13 +344,20 @@ const SelectPackagePage = () => {
           } else {
             selectedAddonType = "checkbox";
           }
+
+          // Get quantity, use minQty if empty or invalid
+          const qtyStr = spinnerQuantities[id] || "";
+          const qty =
+            qtyStr === "" ? newAddon.minQty ?? 1 : parseInt(qtyStr, 10);
+          const validQty = isNaN(qty) ? newAddon.minQty ?? 1 : qty;
+
           return [
             ...prevAddons,
             {
               id: newAddon.id,
               label: newAddon.label,
               price: newAddon.price,
-              value: selectedAddonType === "spinner" ? newAddon.minQty ?? 1 : 1,
+              value: selectedAddonType === "spinner" ? validQty : 1,
               type: selectedAddonType,
               ...(selectedAddonType === "dropdown" ? { option: "WHITE" } : {}),
             } as SelectedAddon,
@@ -463,22 +370,17 @@ const SelectPackagePage = () => {
     });
   };
 
-  // For spinners (quantity changes handled inline via handleAddonChange)
-
-  // For dropdowns
   const handleDropdownChange = (id: string, selectedLabel: string) => {
     handleAddonChange(id, selectedLabel);
   };
-  // Helper function to get current Philippine time
+
   const getPhilippineTime = () => {
-    // Create a new date in Philippine timezone (UTC+8)
     const now = new Date();
     const utc = now.getTime() + now.getTimezoneOffset() * 60000;
-    const philippineTime = new Date(utc + 8 * 3600000); // UTC+8
+    const philippineTime = new Date(utc + 8 * 3600000);
     return philippineTime;
   };
 
-  // Helper function to format date for database (YYYY-MM-DD in Philippine timezone)
   const formatDateForDatabase = (date: Date) => {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -486,26 +388,22 @@ const SelectPackagePage = () => {
     return `${year}-${month}-${day}`;
   };
 
-  // Email validation
   const validateEmail = (email: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email);
   };
 
-  // Philippine phone number validation
   const validatePhoneNumber = (phone: string) => {
     const phoneRegex = /^09\d{9}$/;
     return phoneRegex.test(phone);
   };
 
-  // Check if date is in the past
   const isDateInPast = (date: Date) => {
     const today = startOfDay(getPhilippineTime());
     const selectedDateStart = startOfDay(date);
     return selectedDateStart < today;
   };
 
-  // Check if time slot is in the past for today
   const isTimeSlotInPast = (timeSlot: string, date: Date) => {
     if (!isToday(date)) return false;
 
@@ -513,7 +411,6 @@ const SelectPackagePage = () => {
     const currentHour = currentTime.getHours();
     const currentMinute = currentTime.getMinutes();
 
-    // Parse time slot (e.g., "09:00 AM")
     const [time, period] = timeSlot.split(" ");
     const [hour, minute] = time.split(":").map(Number);
     let slotHour = hour;
@@ -530,7 +427,6 @@ const SelectPackagePage = () => {
     return slotTotalMinutes <= currentTotalMinutes;
   };
 
-  // Fetch booked time slots for selected date
   const fetchBookedTimeSlots = async (date: Date) => {
     try {
       const formattedDate = formatDateForDatabase(date);
@@ -540,16 +436,10 @@ const SelectPackagePage = () => {
       const data = await response.json();
 
       if (response.ok) {
-        /* New backend shape (updated controller):
-           bookedSlots: [ { start: '09:00 AM', end: '09:30 AM' }, ... ]
-           Legacy shape: bookedSlots: ['09:00 AM','09:30 AM', ...]
-           Optional: bookings: [...with startTime, duration ...]
-        */
         const rawSlots = Array.isArray(data.bookedSlots)
           ? data.bookedSlots
           : [];
 
-        // Normalize starts for simple collision check via bookedTimeSlots (strings only)
         const normalizedStarts: string[] = [];
         const intervals: {
           start: number;
@@ -559,7 +449,6 @@ const SelectPackagePage = () => {
           durationMinutes?: number;
         }[] = [];
 
-        // Priority 1: explicit structured bookings array (richer info)
         if (Array.isArray(data.bookings) && data.bookings.length > 0) {
           for (const b of data.bookings) {
             if (!b) continue;
@@ -582,7 +471,6 @@ const SelectPackagePage = () => {
             });
           }
         } else if (rawSlots.length > 0) {
-          // Priority 2: new bookedSlots objects with start/end
           for (const entry of rawSlots) {
             if (entry && typeof entry === "object" && entry.start) {
               const startLabel = String(entry.start);
@@ -590,13 +478,11 @@ const SelectPackagePage = () => {
               const start = slotLabelToMinutes(startLabel);
               let end = slotLabelToMinutes(endLabel);
               if (!Number.isFinite(end) || end <= start) {
-                // fallback assume 30-minute base block if end missing/invalid
                 end = start + 30;
               }
               normalizedStarts.push(startLabel);
               intervals.push({ start, end });
             } else {
-              // Legacy string element inside array
               const label = String(entry);
               const start = slotLabelToMinutes(label);
               if (!isNaN(start)) {
@@ -625,50 +511,7 @@ const SelectPackagePage = () => {
       try {
         const response = await fetchWithAuth(`${API_URL}/api/packages/${id}`);
         const data = await response.json();
-        // DEBUG: Log raw package payload
-        try {
-          // Attempt to normalize duration
-          const rawDuration =
-            data?.duration ||
-            data?.packageDuration ||
-            data?.package_duration ||
-            "";
-          // Reuse existing parseDurationToMinutes below (defined later) by creating a temp inline parser copy (since function not yet in scope here at runtime ordering)
-          const tmpParse = (raw: string): number => {
-            if (!raw || typeof raw !== "string") return 0;
-            const s = raw.toLowerCase();
-            if (/^\d+$/.test(s)) return parseInt(s, 10);
-            let total = 0;
-            const hourMatch = s.match(/(\d+)\s*(hour|hr|hrs|h)/);
-            if (hourMatch) total += parseInt(hourMatch[1], 10) * 60;
-            const minuteMatch = s.match(/(\d+)\s*(minute|min|mins|m)/);
-            if (minuteMatch) total += parseInt(minuteMatch[1], 10);
-            if (total === 0) {
-              const generic = s.match(/(\d+)/g);
-              if (generic) {
-                if (/hour|hr|hrs|h/.test(s)) {
-                  total += parseInt(generic[0], 10) * 60;
-                  if (generic[1]) total += parseInt(generic[1], 10);
-                } else {
-                  total += parseInt(generic[0], 10);
-                }
-              }
-            }
-            return total;
-          };
-          const parsedMinutes = tmpParse(rawDuration);
-
-          if (parsedMinutes === 60 && rawDuration && /10/.test(rawDuration)) {
-            console.warn(
-              'DEBUG: Duration contains "10" but parsed to 60. Raw string might have unexpected format. Raw:',
-              rawDuration
-            );
-          }
-          console.groupEnd();
-        } catch (e) {
-          console.warn("DEBUG: Error logging fetched package payload", e);
-        }
-        setPkg(data); // store after logging
+        setPkg(data);
       } catch (error) {
         console.error("Failed to fetch package:", error);
         setPkg(null);
@@ -678,7 +521,6 @@ const SelectPackagePage = () => {
     if (id) fetchPackage();
   }, [id]);
 
-  // Fetch booked slots when date changes
   useEffect(() => {
     if (selectedDate) {
       fetchBookedTimeSlots(selectedDate);
@@ -686,10 +528,6 @@ const SelectPackagePage = () => {
   }, [selectedDate]);
 
   const handleShowPreview = (paymentType: "deposit" | "full") => {
-    // Debug: Log current addon states
-
-
-    // Validate all fields
     if (
       !selectedDate ||
       !selectedTime ||
@@ -707,13 +545,12 @@ const SelectPackagePage = () => {
       toast.error("Please select at least one backdrop before proceeding.");
       return;
     }
-    // Validate email
+
     if (!validateEmail(email)) {
       toast.error("Please enter a valid email address");
       return;
     }
 
-    // Validate phone number
     if (!validatePhoneNumber(contact)) {
       toast.error(
         "Contact number must start with 09 and have exactly 11 digits"
@@ -721,19 +558,16 @@ const SelectPackagePage = () => {
       return;
     }
 
-    // Check if date is in the past
     if (isDateInPast(selectedDate)) {
       toast.error("Cannot book for past dates");
       return;
     }
 
-    // Check if time slot is in the past for today
     if (isTimeSlotInPast(selectedTime, selectedDate)) {
       toast.error("Cannot book for past time slots");
       return;
     }
 
-    // Check if time slot is already booked
     if (bookedTimeSlots.includes(selectedTime)) {
       toast.error(
         "This time slot is already booked. Please select another time."
@@ -745,7 +579,6 @@ const SelectPackagePage = () => {
     const paidAmount = paymentType === "full" ? subtotal : 200;
     const pendingBalance = subtotal - paidAmount;
 
-    // Compute end label now so modal does not need to refetch duration
     const minutesToLabel = (total: number): string => {
       const h24 = Math.floor(total / 60);
       const m = total % 60;
@@ -769,7 +602,7 @@ const SelectPackagePage = () => {
       address: address,
       contact: contact,
       package: pkg.title,
-      bookingDate: formatDateForDatabase(selectedDate), // Use Philippine timezone
+      bookingDate: formatDateForDatabase(selectedDate),
       time: selectedTime,
       subtotal: subtotal,
       paidAmount: paidAmount,
@@ -777,7 +610,7 @@ const SelectPackagePage = () => {
       paymentType: paymentType,
       paymentMode: paymentMode,
       packageId: id!,
-      packageDuration: pkg.duration, // pass raw duration so modal can compute end time without refetch race
+      packageDuration: pkg.duration,
       packageDurationMinutes: effectivePackageDuration,
       predictedEndLabel,
     };
@@ -805,14 +638,10 @@ const SelectPackagePage = () => {
       " " +
       meridian;
     return formatted;
-  })
-    // Remove late evening slots as requested: 07:30 PM, 08:00 PM, 08:30 PM
-    .filter((s) => !["07:30 PM", "08:00 PM", "08:30 PM"].includes(s));
+  }).filter((s) => !["07:30 PM", "08:00 PM", "08:30 PM"].includes(s));
 
-  /* ---------------------- Duration / Interval Helpers ---------------------- */
-  // Convert a label like "09:30 AM" to minutes from 00:00
   const slotLabelToMinutes = (label: string): number => {
-    const parts = label.trim().split(/\s+/); // [HH:MM, AM]
+    const parts = label.trim().split(/\s+/);
     if (parts.length < 2) return NaN;
     const [time, period] = parts;
     const [hh, mm] = time.split(":").map((n) => parseInt(n, 10));
@@ -823,7 +652,6 @@ const SelectPackagePage = () => {
     return hour24 * 60 + mm;
   };
 
-  // Parse duration string (e.g., "1 hr", "2 hrs 30 mins", "90 mins") to minutes
   const parseDurationToMinutes = (raw: unknown): number => {
     if (raw === null || raw === undefined) return 0;
     if (typeof raw === "number") {
@@ -832,14 +660,12 @@ const SelectPackagePage = () => {
     if (typeof raw !== "string") return 0;
     const s = raw.trim().toLowerCase();
     if (!s) return 0;
-    // Pure number => minutes
     if (/^\d+$/.test(s)) return parseInt(s, 10);
     let total = 0;
     const hourMatch = s.match(/(\d+)\s*(hour|hr|hrs|h)/);
     if (hourMatch) total += parseInt(hourMatch[1], 10) * 60;
     const minuteMatch = s.match(/(\d+)\s*(minute|min|mins|m)/);
     if (minuteMatch) total += parseInt(minuteMatch[1], 10);
-    // Support compact forms like 1h30m
     if (total === 0) {
       const compact = s.match(/(\d+)h(\d+)?m?/);
       if (compact) {
@@ -847,7 +673,6 @@ const SelectPackagePage = () => {
         if (compact[2]) total += parseInt(compact[2], 10);
       }
     }
-    // Heuristic fallback if still zero: grab first number(s)
     if (total === 0) {
       const generic = s.match(/(\d+)/g);
       if (generic) {
@@ -862,7 +687,6 @@ const SelectPackagePage = () => {
     return total;
   };
 
-  // Base package duration minutes
   const basePackageDuration = (() => {
     const mins = parseDurationToMinutes(pkg?.duration);
     if (mins === 0) {
@@ -874,30 +698,23 @@ const SelectPackagePage = () => {
     return mins || 60;
   })();
 
-  // Mapping of add-on IDs that contribute extra session minutes
   const EXTRA_DURATION_ADDON_MINUTES: Record<string, number> = {
-    "70": 5, // Addl 5 mins
-    "80": 20, // Photographer service for 20 mins
-    "90": 60, // Photographer service for 1 hr
+    "70": 5,
+    "80": 20,
+    "90": 60,
   };
 
-  // Sum extra minutes from selected active add-ons
   const extraDurationMinutes = selectedAddons.reduce((sum, addon) => {
     if (addon.value <= 0) return sum;
     const perUnit = EXTRA_DURATION_ADDON_MINUTES[addon.id];
     if (!perUnit) return sum;
-    // If spinner quantity, multiply; otherwise add once
     const qty = addon.type === "spinner" ? addon.value : 1;
     return sum + perUnit * qty;
   }, 0);
 
   const effectivePackageDuration = basePackageDuration + extraDurationMinutes;
 
-
-  // Business day boundaries in minutes (start 09:00, end after last slot 21:00 to allow 8:30 PM 30-min slot)
-  // Adjusted business end boundary: removing 07:30 PM onward means last valid start (e.g., 07:00 PM for 60m)
-  // Set day end to 20:00 (8 PM) so validation blocks later starts.
-  const DAY_END_MIN = 20 * 60; // 08:00 PM absolute upper bound (exclusive)
+  const DAY_END_MIN = 20 * 60;
 
   const handleRemoveTag = (type: string) => {
     setTags((prev) => prev.filter((t) => t.type !== type));
@@ -918,9 +735,9 @@ const SelectPackagePage = () => {
 
   return (
     <>
-      <div className="max-w-6xl mx-auto px-6 py-8 space-y-10 drop-shadow-xl">
-        {/* 👉 Breadcrumb embedded here */}
-        <nav className="text-sm text-black mb-6">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6 sm:space-y-10">
+        {/* Breadcrumb */}
+        <nav className="text-sm text-black mb-4 sm:mb-6">
           <button
             onClick={() => navigate(-1)}
             className="hover:underline text-gray-400"
@@ -931,8 +748,8 @@ const SelectPackagePage = () => {
         </nav>
 
         {/* Top Section */}
-        <div className="bg-white rounded-xl shadow p-6 flex flex-col md:flex-row gap-8">
-          <div className="md:w-1/3 flex-shrink-0">
+        <div className="bg-white rounded-xl shadow p-4 sm:p-6 flex flex-col md:flex-row gap-6 sm:gap-8">
+          <div className="w-full md:w-1/3 flex-shrink-0">
             <img
               src={pkg.images[0]}
               alt="Cover"
@@ -940,11 +757,11 @@ const SelectPackagePage = () => {
             />
           </div>
 
-          <div className="md:w-2/3 space-y-3">
+          <div className="w-full md:w-2/3 space-y-3">
             <span className="uppercase tracking-wide text-xs text-gray-400">
               {pkg.tags[0]}
             </span>
-            <h2 className="text-3xl font-semibold text-gray-800">
+            <h2 className="text-2xl sm:text-3xl font-semibold text-gray-800">
               {pkg.title}
             </h2>
             <p className="text-lg text-gray-600 font-medium">PHP {pkg.price}</p>
@@ -954,11 +771,10 @@ const SelectPackagePage = () => {
           </div>
         </div>
 
-        {/*Header for Selected Tags*/}
-
+        {/* Header for Selected Tags */}
         {setData && Number(setData.setId) !== 5 && (
-          <div className="flex items-center gap-4 flex-wrap">
-            <h3 className="text-lg font-bold text-gray-800">
+          <div className="flex items-center gap-3 flex-wrap">
+            <h3 className="text-base sm:text-lg font-bold text-gray-800">
               Set the Scene{" "}
               <span className="text-sm font-normal text-gray-500">
                 (Choose your studio):
@@ -968,7 +784,7 @@ const SelectPackagePage = () => {
             {tags.map((tag) => (
               <span
                 key={tag.type}
-                className="flex items-center gap-2 px-3 py-1 text-sm font-medium rounded-xl"
+                className="flex items-center gap-2 px-3 py-1.5 text-xs sm:text-sm font-medium rounded-xl"
                 style={
                   tag.type === "studioA" && tag.hex
                     ? {
@@ -996,10 +812,10 @@ const SelectPackagePage = () => {
             ))}
           </div>
         )}
+
         {/* Studio Options Section */}
         {setData && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Determine visibility and interactivity */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
             {(() => {
               const setIdNum = Number(setData.setId);
               const showStudioA = setIdNum !== 5 && setIdNum !== 6;
@@ -1009,27 +825,23 @@ const SelectPackagePage = () => {
                 setIdNum === 3 ||
                 setIdNum === 6;
 
-              // Helper for mutual exclusivity if set 2
               const handleStudioASelect = () => {
                 setStudioAFlipped((s) => !s);
-                //if (setIdNum === 2) setStudioBFlipped(false);
                 setStudioBFlipped(false);
               };
               const handleStudioBSelect = () => {
                 if (!enableStudioB) return;
                 setStudioBFlipped((s) => !s);
-                //if (setIdNum === 2) setStudioAFlipped(false);
                 setStudioAFlipped(false);
               };
 
               return (
                 <>
-                  {/* Studio A - Plain Backdrop */}
                   {showStudioA && (
                     <div className="w-full">
                       <div
                         onClick={handleStudioASelect}
-                        className="w-full h-25 bg-white rounded-xl shadow-lg flex items-center justify-center p-4 cursor-pointer relative"
+                        className="w-full h-32 sm:h-40 bg-white rounded-xl shadow-lg flex items-center justify-center p-4 cursor-pointer relative"
                       >
                         <AnimatePresence mode="wait">
                           {!studioFlipped ? (
@@ -1041,7 +853,7 @@ const SelectPackagePage = () => {
                               transition={{ duration: 0.4 }}
                               className="absolute inset-0 flex items-center justify-center rounded-md hover:bg-gray-200 transition-colors"
                             >
-                              <span className="text-lg font-semibold text-gray-800">
+                              <span className="text-base sm:text-lg font-semibold text-gray-800">
                                 Plain Backdrop
                               </span>
                             </motion.div>
@@ -1052,7 +864,7 @@ const SelectPackagePage = () => {
                               animate={{ opacity: 1 }}
                               exit={{ opacity: 0 }}
                               transition={{ duration: 0.4 }}
-                              className="absolute inset-0 bg-gray-100 rounded-xl shadow-lg flex flex-wrap items-center justify-center gap-3 p-3 overflow-auto"
+                              className="absolute inset-0 bg-gray-100 rounded-xl shadow-lg flex flex-wrap items-center justify-center gap-2 sm:gap-3 p-3 overflow-auto"
                             >
                               {colorOptions.map((color) => {
                                 const isSelected = selectedColorA === color.id;
@@ -1068,12 +880,11 @@ const SelectPackagePage = () => {
                                       stiffness: 300,
                                       damping: 20,
                                     }}
-                                    className="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-lg shadow-md cursor-pointer"
+                                    className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg shadow-md cursor-pointer"
                                     style={{ backgroundColor: color.hex }}
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       setSelectedColorA(color.id);
-                                      // use colorOptions directly; no temp label var
                                       setTags((prev) => {
                                         const colorObj = colorOptions.find(
                                           (c) => c.id === color.id
@@ -1104,14 +915,13 @@ const SelectPackagePage = () => {
                     </div>
                   )}
 
-                  {/* Studio B - Concept Studio */}
                   {setIdNum !== 5 && (
                     <div className="w-full">
                       <div
                         onClick={
                           enableStudioB ? handleStudioBSelect : undefined
                         }
-                        className={`w-full h-25 rounded-xl shadow-lg flex items-center justify-center p-4 relative ${
+                        className={`w-full h-32 sm:h-40 rounded-xl shadow-lg flex items-center justify-center p-4 relative ${
                           enableStudioB
                             ? "bg-white cursor-pointer"
                             : "bg-gray-200 cursor-not-allowed"
@@ -1128,7 +938,7 @@ const SelectPackagePage = () => {
                               className="absolute inset-0 flex items-center justify-center rounded-md transition-colors duration-500 ease-in-out"
                             >
                               <span
-                                className={`text-lg font-semibold ${
+                                className={`text-base sm:text-lg font-semibold ${
                                   enableStudioB
                                     ? "text-gray-800"
                                     : "text-gray-400"
@@ -1144,7 +954,7 @@ const SelectPackagePage = () => {
                               animate={{ opacity: 1 }}
                               exit={{ opacity: 0 }}
                               transition={{ duration: 0.4 }}
-                              className="absolute inset-0 bg-gray-100 rounded-xl shadow-lg flex flex-wrap items-center justify-center gap-8 p-3 overflow-auto max-h-64"
+                              className="absolute inset-0 bg-gray-100 rounded-xl shadow-lg flex flex-wrap items-center justify-center gap-3 sm:gap-8 p-3 overflow-auto max-h-64"
                             >
                               {(setData?.concepts ?? [])
                                 .filter(
@@ -1171,7 +981,7 @@ const SelectPackagePage = () => {
                                         stiffness: 300,
                                         damping: 20,
                                       }}
-                                      className={`relative w-30 h-12 rounded-lg shadow-md bg-cover bg-center overflow-hidden cursor-pointer ${
+                                      className={`relative w-24 sm:w-30 h-10 sm:h-12 rounded-lg shadow-md bg-cover bg-center overflow-hidden cursor-pointer ${
                                         !enableStudioB ? "opacity-50" : ""
                                       }`}
                                       style={{
@@ -1186,7 +996,6 @@ const SelectPackagePage = () => {
                                           concept.label || "Concept";
 
                                         setTags((prev) => {
-                                          // Remove old StudioB tag before adding a new one
                                           const filtered = prev.filter(
                                             (t) => t.type !== "studioB"
                                           );
@@ -1201,11 +1010,7 @@ const SelectPackagePage = () => {
                                         });
                                       }}
                                     >
-                                      <div
-                                        className="absolute inset-0 flex items-center justify-center rounded-lg
-                      bg-gray-800 bg-opacity-20 text-white text-xs font-medium
-                      opacity-0 hover:opacity-100 transition-opacity duration-500 text-center px-1 break-words"
-                                      >
+                                      <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-gray-800 bg-opacity-20 text-white text-xs font-medium opacity-0 hover:opacity-100 transition-opacity duration-500 text-center px-1 break-words">
                                         {concept.label}
                                       </div>
                                     </motion.div>
@@ -1223,41 +1028,44 @@ const SelectPackagePage = () => {
           </div>
         )}
 
-        {/* Add Ons Section */}
-        <div className="bg-white text-gray-900 rounded-xl shadow p-6 px-25 space-y-4">
-          <h3 className="text-lg font-semibold">Add Ons</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        {/* Add Ons Section - FIXED BUTTON AREA & BACKSPACE */}
+        <div className="bg-white text-gray-900 rounded-xl shadow p-4 sm:p-6 space-y-4">
+          <h3 className="text-base sm:text-lg font-semibold">Add Ons</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {addOns.map((item) => {
               const isActive = !!activeAddOns[item.id];
-              // total price is computed inline below using selectedAddons
+              const currentQuantityStr =
+                spinnerQuantities[item.id] ?? String(item.minQty ?? 1);
+              const currentQuantity =
+                currentQuantityStr === ""
+                  ? 0
+                  : parseInt(currentQuantityStr, 10);
+              const displayQty = isNaN(currentQuantity)
+                ? item.minQty ?? 1
+                : currentQuantity;
 
               return (
-                <button
+                <div
                   key={item.id}
-                  type="button"
-                  onClick={() => {
-                    toggleCheckboxAddon(item.id);
-                  }}
-                  className={`group relative flex flex-col gap-2 p-3 rounded-lg border transition-all duration-200
-                    ${
-                      isActive
-                        ? "bg-neutral-900 border-neutral-700 text-white shadow-lg"
-                        : "bg-white border-gray-300 text-gray-900 hover:bg-gray-100 hover:border-gray-400"
-                    }`}
+                  className={`group relative flex flex-col gap-3 p-3 sm:p-4 rounded-lg border transition-all duration-200 ${
+                    isActive
+                      ? "bg-neutral-900 border-neutral-700 text-white shadow-lg"
+                      : "bg-white border-gray-300 text-gray-900 hover:bg-gray-100 hover:border-gray-400"
+                  }`}
                 >
-                  {/* ✅ Added badge for ALL active items (including spinner) */}
                   {isActive && (
-                    <span className="absolute top-2 right-2 text-xs font-medium px-2 py-0.5 rounded-full bg-indigo-600 text-white shadow-sm">
+                    <span className="absolute top-2 right-2 text-xs font-medium px-2 py-0.5 rounded-full bg-indigo-600 text-white shadow-sm z-10">
                       Added
                     </span>
                   )}
 
-                  {/* Label + Price */}
-                  <div className="flex justify-between items-center w-full">
+                  {/* FIXED: Clickable area - Only Label */}
+                  <div className="flex justify-between items-center w-full pr-12">
                     <span
-                      className={`text-sm font-medium ${
+                      className={`text-sm font-medium cursor-pointer ${
                         isActive ? "text-white" : "text-gray-900"
                       }`}
+                      onClick={() => toggleCheckboxAddon(item.id)}
                     >
                       {item.label}
                     </span>
@@ -1270,151 +1078,195 @@ const SelectPackagePage = () => {
                     </span>
                   </div>
 
-                  {/* Control Area */}
+                  {/* FIXED: Spinner - allows backspace and empty state */}
+
                   {item.type === "multiple" && (
-                    <div className="flex items-center justify-between gap-2">
-                      {/* Quantity Input */}
+                    <div
+                      className="flex items-center justify-between gap-2 w-full cursor-pointer"
+                      onClick={() => toggleCheckboxAddon(item.id)}
+                    >
                       <input
-                        type="number"
-                        min={item.minQty ?? 1}
-                        {...(item.maxQty ? { max: item.maxQty } : {})}
-                        value={
-                          selectedAddons.find((a) => a.id === item.id)?.value ||
-                          (item.minQty ?? 1)
-                        }
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        value={currentQuantityStr}
                         onChange={(e) => {
-                          const entered = parseInt(e.target.value, 10);
-                          const minQ = item.minQty ?? 1;
-                          const maxQ = item.maxQty ?? Number.POSITIVE_INFINITY;
-                          const clamped = isNaN(entered)
-                            ? minQ
-                            : Math.min(Math.max(entered, minQ), maxQ);
-                          handleAddonChange(item.id, clamped);
+                          const rawValue = e.target.value;
+
+                          if (rawValue === "" || /^\d+$/.test(rawValue)) {
+                            setSpinnerQuantities((prev) => ({
+                              ...prev,
+                              [item.id]: rawValue,
+                            }));
+
+                            if (isActive && rawValue !== "") {
+                              const num = parseInt(rawValue, 10);
+                              setSelectedAddons((prev) =>
+                                prev.map((addon) =>
+                                  addon.id === item.id
+                                    ? { ...addon, value: num }
+                                    : addon
+                                )
+                              );
+                            }
+                          }
                         }}
                         onBlur={(e) => {
-                          const parsed = parseInt(e.target.value, 10);
+                          const rawValue = e.target.value;
+
+                          if (rawValue === "") {
+                            const minQ = item.minQty ?? 1;
+                            setSpinnerQuantities((prev) => ({
+                              ...prev,
+                              [item.id]: String(minQ),
+                            }));
+
+                            if (isActive) {
+                              setSelectedAddons((prev) =>
+                                prev.map((addon) =>
+                                  addon.id === item.id
+                                    ? { ...addon, value: minQ }
+                                    : addon
+                                )
+                              );
+                            }
+                            return;
+                          }
+
+                          const parsed = parseInt(rawValue, 10);
                           const minQ = item.minQty ?? 1;
                           const maxQ = item.maxQty ?? Number.POSITIVE_INFINITY;
-                          const clamped = isNaN(parsed)
-                            ? minQ
-                            : Math.min(Math.max(parsed, minQ), maxQ);
-                          if (clamped !== parsed) {
-                            handleAddonChange(item.id, clamped);
+                          const clamped = Math.min(
+                            Math.max(parsed, minQ),
+                            maxQ
+                          );
+
+                          setSpinnerQuantities((prev) => ({
+                            ...prev,
+                            [item.id]: String(clamped),
+                          }));
+
+                          if (isActive) {
+                            setSelectedAddons((prev) =>
+                              prev.map((addon) =>
+                                addon.id === item.id
+                                  ? { ...addon, value: clamped }
+                                  : addon
+                              )
+                            );
                           }
                         }}
                         onClick={(e) => e.stopPropagation()}
-                        className="w-20 border rounded p-1"
+                        onFocus={(e) => e.stopPropagation()}
+                        onKeyDown={(e) => e.stopPropagation()}
+                        placeholder={String(item.minQty ?? 1)}
+                        className={`w-20 sm:w-24 rounded px-2 py-1.5 text-sm transition-colors ${
+                          isActive
+                            ? "border border-white bg-white text-black placeholder-gray-400"
+                            : "border border-gray-300 bg-white text-black placeholder-gray-400"
+                        }`}
                       />
 
-                      {/* Total Price beside input */}
-                      {isActive ? (
-                        <span className="justify-self-end self-end text-sm font-medium text-white">
-                          ₱
-                          {item.price *
-                            (selectedAddons.find((a) => a.id === item.id)
-                              ?.value || 1)}
+                      {isActive && currentQuantityStr !== "" && (
+                        <span className="text-sm font-medium text-white whitespace-nowrap">
+                          ₱{item.price * displayQty}
                         </span>
-                      ) : null}
+                      )}
                     </div>
                   )}
 
-                  {item.type === "dropdown" &&
-                    isActive && ( // only show if add-on is active
-                      <div className="relative w-full">
-                        {/* Color swatches popup */}
-                        <AnimatePresence>
-                          {showingColors[item.id] && (
-                            <motion.div
-                              initial={{ opacity: 0, y: 10 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              exit={{ opacity: 0, y: 10 }}
-                              className="absolute -top-14 left-1/2 -translate-x-1/2 p-3 bg-white rounded-lg shadow-lg flex gap-2"
-                            >
-                              {colorOptions.map((color) => (
-                                <div // ✅ Changed to div
-                                  key={color.id}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
+                  {item.type === "dropdown" && isActive && (
+                    <div className="relative w-full">
+                      <AnimatePresence>
+                        {showingColors[item.id] && (
+                          <motion.div
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: 10 }}
+                            className="absolute -top-14 left-1/2 -translate-x-1/2 p-3 bg-white rounded-lg shadow-lg flex gap-2 z-10"
+                          >
+                            {colorOptions.map((color) => (
+                              <div
+                                key={color.id}
+                                onClick={(e) => {
+                                  e.stopPropagation();
 
-                                    // update UI swatch
-                                    setSelectedColors((prev) => ({
-                                      ...prev,
-                                      [item.id]: color,
-                                    }));
+                                  setSelectedColors((prev) => ({
+                                    ...prev,
+                                    [item.id]: color,
+                                  }));
 
-                                    // update selectedAddons array
-                                    setSelectedAddons((prev) => {
-                                      const filtered = prev.filter(
-                                        (a) => a.id !== item.id
-                                      );
-                                      return [
-                                        ...filtered,
-                                        {
-                                          id: item.id,
-                                          label: item.label,
-                                          price: item.price ?? 0,
-                                          value: activeAddOns[item.id] ? 1 : 0,
-                                          type: "dropdown",
-                                          option: color.label,
-                                        } as SelectedAddon,
-                                      ];
-                                    });
+                                  setSelectedAddons((prev) => {
+                                    const filtered = prev.filter(
+                                      (a) => a.id !== item.id
+                                    );
+                                    return [
+                                      ...filtered,
+                                      {
+                                        id: item.id,
+                                        label: item.label,
+                                        price: item.price ?? 0,
+                                        value: activeAddOns[item.id] ? 1 : 0,
+                                        type: "dropdown",
+                                        option: color.label,
+                                      } as SelectedAddon,
+                                    ];
+                                  });
 
-                                    setShowingColors((prev) => ({
-                                      ...prev,
-                                      [item.id]: false,
-                                    }));
-                                    handleDropdownChange(item.id, color.label);
-                                  }}
-                                  className="w-6 h-6 rounded-full border border-gray-400 shadow-sm hover:scale-110 transition cursor-pointer"
-                                  style={{ backgroundColor: color.hex }}
-                                />
-                              ))}
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
+                                  setShowingColors((prev) => ({
+                                    ...prev,
+                                    [item.id]: false,
+                                  }));
+                                  handleDropdownChange(item.id, color.label);
+                                }}
+                                className="w-6 h-6 rounded-full border border-gray-400 shadow-sm hover:scale-110 transition cursor-pointer"
+                                style={{ backgroundColor: color.hex }}
+                              />
+                            ))}
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
 
-                        {/* Button that opens color picker */}
-                        <div
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setShowingColors((prev) => ({
-                              ...prev,
-                              [item.id]: !prev[item.id],
-                            }));
-                          }}
-                          className="w-full h-8 rounded-md border text-xs flex items-center justify-center cursor-pointer transition border-gray-600"
-                          style={{
-                            backgroundColor:
-                              selectedColors?.[item.id]?.hex || "#272727",
-                            color: (() => {
-                              const hex =
-                                selectedColors?.[item.id]?.hex || "#FFFFFF"; // fallback white
-                              const r = parseInt(hex.slice(1, 3), 16);
-                              const g = parseInt(hex.slice(3, 5), 16);
-                              const b = parseInt(hex.slice(5, 7), 16);
-                              const brightness =
-                                (r * 299 + g * 587 + b * 114) / 1000;
-                              return brightness > 150 ? "#000" : "#fff";
-                            })(),
-                          }}
-                        >
-                          {selectedColors?.[item.id]?.label || "WHITE"}
-                        </div>
+                      <div
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setShowingColors((prev) => ({
+                            ...prev,
+                            [item.id]: !prev[item.id],
+                          }));
+                        }}
+                        className="w-full h-8 rounded-md border text-xs flex items-center justify-center cursor-pointer transition border-gray-600"
+                        style={{
+                          backgroundColor:
+                            selectedColors?.[item.id]?.hex || "#272727",
+                          color: (() => {
+                            const hex =
+                              selectedColors?.[item.id]?.hex || "#FFFFFF";
+                            const r = parseInt(hex.slice(1, 3), 16);
+                            const g = parseInt(hex.slice(3, 5), 16);
+                            const b = parseInt(hex.slice(5, 7), 16);
+                            const brightness =
+                              (r * 299 + g * 587 + b * 114) / 1000;
+                            return brightness > 150 ? "#000" : "#fff";
+                          })(),
+                        }}
+                      >
+                        {selectedColors?.[item.id]?.label || "WHITE"}
                       </div>
-                    )}
-                </button>
+                    </div>
+                  )}
+                </div>
               );
             })}
           </div>
         </div>
 
         {/* Date & Time Section */}
-        <div className="bg-white rounded-xl shadow p-6 space-y-6">
-          <div className="flex flex-col lg:flex-row justify-center ml-20 mr-20">
-            <div className="lg:w-1/2">
+        <div className="bg-white rounded-xl shadow p-4 sm:p-6 space-y-6">
+          <div className="flex flex-col lg:flex-row justify-center gap-6 lg:gap-8">
+            <div className="w-full lg:w-1/2 flex justify-center">
               <div
-                className="hidden md:block bg-white p-4 rounded-xl"
+                className="bg-white p-4 rounded-xl w-full max-w-md"
                 style={{ filter: "grayscale(100%)" }}
               >
                 <DayPicker
@@ -1423,7 +1275,7 @@ const SelectPackagePage = () => {
                   onSelect={(date) => {
                     if (date && !isDateInPast(date)) {
                       setSelectedDate(date);
-                      setSelectedTime(""); // Reset time selection when date changes
+                      setSelectedTime("");
                     }
                   }}
                   disabled={(date) => isDateInPast(date)}
@@ -1450,25 +1302,20 @@ const SelectPackagePage = () => {
               </div>
             </div>
 
-            {/* Timeslots */}
-            <div className="lg:w-1/2">
-              <h4 className="text-sm text-gray-700 mb-2 font-medium">
+            <div className="w-full lg:w-1/2">
+              <h4 className="text-sm text-gray-700 mb-3 font-medium">
                 Available Time Slots
               </h4>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 {timeSlots.map((slot) => {
                   const slotStart = slotLabelToMinutes(slot);
-                  const slotEnd = slotStart + 30; // base slot span
+                  const slotEnd = slotStart + 30;
                   const isPastTime = selectedDate
                     ? isTimeSlotInPast(slot, selectedDate)
                     : false;
-                  // Overlaps any existing booking interval?
                   const overlapsExisting = bookedIntervals.some(
-                    (iv) =>
-                      // If slot start within interval OR slot end within interval OR interval starts inside this slot base window
-                      slotStart < iv.end && slotEnd > iv.start
+                    (iv) => slotStart < iv.end && slotEnd > iv.start
                   );
-                  // If user started a new booking at this slot, would its duration overlap existing intervals or exceed day end?
                   const wouldEnd = slotStart + effectivePackageDuration;
                   const insufficientRemaining = wouldEnd > DAY_END_MIN;
                   const intervalConflict = bookedIntervals.some(
@@ -1486,7 +1333,7 @@ const SelectPackagePage = () => {
                       key={slot}
                       onClick={() => !isDisabled && setSelectedTime(slot)}
                       disabled={isDisabled}
-                      className={`py-2 px-3 text-sm rounded-md transition text-center ${
+                      className={`py-2 px-2 text-xs sm:text-sm rounded-md transition text-center ${
                         selectedTime === slot
                           ? "bg-black text-white"
                           : isDisabled
@@ -1530,8 +1377,10 @@ const SelectPackagePage = () => {
         </div>
 
         {/* Personal Details Section */}
-        <div className="bg-neutral-900 text-white rounded-xl shadow p-6 space-y-6">
-          <h3 className="text-lg font-semibold">Personal Details</h3>
+        <div className="bg-neutral-900 text-white rounded-xl shadow p-4 sm:p-6 space-y-6">
+          <h3 className="text-base sm:text-lg font-semibold">
+            Personal Details
+          </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <input
               value={name}
@@ -1542,9 +1391,8 @@ const SelectPackagePage = () => {
             <input
               value={contact}
               onChange={(e) => {
-                const value = e.target.value.replace(/[^\d]/g, ""); // Only allow digits
+                const value = e.target.value.replace(/[^\d]/g, "");
                 if (value.length <= 11) {
-                  // Limit to 11 digits
                   setContact(value);
                 }
               }}
@@ -1570,65 +1418,59 @@ const SelectPackagePage = () => {
           </div>
 
           <div className="text-sm space-y-4">
-            <div className="text-sm space-y-4">
-              {/* Terms and Agreements Checkbox */}
-              <label className="flex items-start gap-2">
-                <input
-                  type="checkbox"
-                  checked={agreed} // State for the first checkbox
-                  onChange={(e) => setAgreed(e.target.checked)}
-                  className="mt-1"
-                />
-                <span>
-                  <strong>I accept</strong> the Terms and Agreements . By using
-                  our system and services, you agree to abide by the following
-                  rules and conditions.
-                </span>
-              </label>
+            <label className="flex items-start gap-2">
+              <input
+                type="checkbox"
+                checked={agreed}
+                onChange={(e) => setAgreed(e.target.checked)}
+                className="mt-1 flex-shrink-0"
+              />
+              <span className="text-sm">
+                <strong>I accept</strong> the Terms and Agreements. By using our
+                system and services, you agree to abide by the following rules
+                and conditions.
+              </span>
+            </label>
 
-              {/* Down Payment Agreement Checkbox */}
-              <label className="flex items-start gap-2">
-                <input
-                  type="checkbox"
-                  checked={agreedToPayment} // State for the second checkbox
-                  onChange={(e) => setAgreedToPayment(e.target.checked)}
-                  className="mt-1"
-                  disabled={!agreed} // Disable this checkbox until the first one is checked
-                />
-                <span>
-                  <strong>I agree</strong> to pay PHP 200 down payment to
-                  confirm booking.{" "}
-                  <strong>
-                    Please note that the down payment is non-refundable.
-                  </strong>{" "}
-                  The remaining balance is due on the day of the photoshoot or
-                  service.
-                </span>
-              </label>
+            <label className="flex items-start gap-2">
+              <input
+                type="checkbox"
+                checked={agreedToPayment}
+                onChange={(e) => setAgreedToPayment(e.target.checked)}
+                className="mt-1 flex-shrink-0"
+                disabled={!agreed}
+              />
+              <span className="text-sm">
+                <strong>I agree</strong> to pay PHP 200 down payment to confirm
+                booking.{" "}
+                <strong>
+                  Please note that the down payment is non-refundable.
+                </strong>{" "}
+                The remaining balance is due on the day of the photoshoot or
+                service.
+              </span>
+            </label>
 
-              {/* Buttons */}
-              <div className="flex flex-col sm:flex-row gap-3">
-                <button
-                  className="w-full bg-black text-white py-3 rounded-md disabled:opacity-50"
-                  disabled={!agreed || !agreedToPayment} // Both checkboxes must be checked
-                  onClick={() => handleShowPreview("deposit")}
-                >
-                  Confirm with Deposit
-                </button>
-                <button
-                  className="w-full bg-white text-black py-3 rounded-md disabled:opacity-50"
-                  disabled={!agreed || !agreedToPayment} // Both checkboxes must be checked
-                  onClick={() => handleShowPreview("full")}
-                >
-                  Full Payment
-                </button>
-              </div>
+            <div className="flex flex-col sm:flex-row gap-3 pt-2">
+              <button
+                className="w-full bg-black text-white py-3 px-4 rounded-md disabled:opacity-50 text-sm sm:text-base font-medium"
+                disabled={!agreed || !agreedToPayment}
+                onClick={() => handleShowPreview("deposit")}
+              >
+                Confirm with Deposit
+              </button>
+              <button
+                className="w-full bg-white text-black py-3 px-4 rounded-md disabled:opacity-50 text-sm sm:text-base font-medium"
+                disabled={!agreed || !agreedToPayment}
+                onClick={() => handleShowPreview("full")}
+              >
+                Full Payment
+              </button>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Transaction Modal */}
       <TransactionModalBooking
         isOpen={isModalOpen}
         onClose={handleModalClose}
@@ -1638,7 +1480,6 @@ const SelectPackagePage = () => {
         selectedAddons={selectedAddons}
       />
 
-      {/* Toast Container */}
       <ToastContainer position="bottom-right" />
     </>
   );
