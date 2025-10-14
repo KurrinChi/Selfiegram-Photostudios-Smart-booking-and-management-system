@@ -521,6 +521,9 @@
           Route::get('/booking-details', [NotificationController::class, 'getBookingDetails']);
           Route::get('/reschedule-details', [NotificationController::class, 'getRescheduleDetails']);
           Route::post('/notifications/{id}/mark-as-read', [NotificationController::class, 'markAsRead']);
+          Route::post('/notifications/{id}/starred', [NotificationController::class, 'updateStarred']);
+          Route::post('/notifications/{id}/archived', [NotificationController::class, 'updateArchived']);
+          Route::delete('/notifications/trash/empty', [NotificationController::class, 'emptyTrash']);
                     Route::delete('/notifications/{id}', [NotificationController::class, 'destroy']);
 
         //Client Gallery Page

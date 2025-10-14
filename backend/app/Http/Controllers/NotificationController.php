@@ -107,6 +107,78 @@ class NotificationController extends Controller
         }
 
     /**
+     * Update starred status for a notification.
+     * Used by admin message interface to star/unstar sent messages (notifications table).
+     */
+    public function updateStarred($id, Request $request)
+    {
+        $request->validate([
+            'starred' => 'required|integer|in:0,1'
+        ]);
+
+        $notification = Notification::find($id);
+        if (!$notification) {
+            return response()->json(['error' => 'Notification not found'], 404);
+        }
+
+        $notification->starred = $request->input('starred');
+        $notification->save();
+
+        return response()->json([
+            'success' => true,
+            'notificationID' => $notification->notificationID,
+            'starred' => $notification->starred
+        ]);
+    }
+
+    /**
+     * Update archived status for a notification.
+     * Used by admin message interface to move sent messages to trash.
+     */
+    public function updateArchived($id, Request $request)
+    {
+        $request->validate([
+            'archived' => 'required|integer|in:0,1'
+        ]);
+
+        $notification = Notification::find($id);
+        if (!$notification) {
+            return response()->json(['error' => 'Notification not found'], 404);
+        }
+
+        $notification->archived = $request->input('archived');
+        $notification->save();
+
+        return response()->json([
+            'success' => true,
+            'notificationID' => $notification->notificationID,
+            'archived' => $notification->archived
+        ]);
+    }
+
+    /**
+     * Empty trash - permanently delete all archived notifications.
+     * Admin-only route.
+     */
+    public function emptyTrash(Request $request)
+    {
+        try {
+            $deletedCount = Notification::where('archived', 1)->delete();
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Trash emptied successfully',
+                'deleted_count' => $deletedCount
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'Failed to empty trash',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
      * Delete a notification (user-owned or global) - Admin or owner only ideally.
      * Currently assumes authenticated context & simple ownership check could be added later.
      */

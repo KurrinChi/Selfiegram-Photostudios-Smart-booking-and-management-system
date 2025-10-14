@@ -891,19 +891,44 @@ export default function AdminMessageContent(): JSX.Element {
         Authorization: `Bearer ${token}`,
       };
       try {
-        if (flags.starred !== undefined) {
-          await fetch(`${API_URL}/api/messages/${id}/starred`, {
-            method: "POST",
-            headers,
-            body: JSON.stringify({ starred: flags.starred ? 1 : 0 }),
-          });
-        }
-        if (flags.archived !== undefined) {
-          await fetch(`${API_URL}/api/messages/${id}/archived`, {
-            method: "POST",
-            headers,
-            body: JSON.stringify({ archived: flags.archived ? 1 : 0 }),
-          });
+        // Check if this is a notification (Sent tab item) or a message (Inbox/etc)
+        const isNotification = id.startsWith("notif-");
+        
+        if (isNotification) {
+          // Extract notification ID from "notif-123" format
+          const notificationID = id.replace("notif-", "");
+          
+          // Update notifications table
+          if (flags.starred !== undefined) {
+            await fetch(`${API_URL}/api/notifications/${notificationID}/starred`, {
+              method: "POST",
+              headers,
+              body: JSON.stringify({ starred: flags.starred ? 1 : 0 }),
+            });
+          }
+          if (flags.archived !== undefined) {
+            await fetch(`${API_URL}/api/notifications/${notificationID}/archived`, {
+              method: "POST",
+              headers,
+              body: JSON.stringify({ archived: flags.archived ? 1 : 0 }),
+            });
+          }
+        } else {
+          // Update messages table
+          if (flags.starred !== undefined) {
+            await fetch(`${API_URL}/api/messages/${id}/starred`, {
+              method: "POST",
+              headers,
+              body: JSON.stringify({ starred: flags.starred ? 1 : 0 }),
+            });
+          }
+          if (flags.archived !== undefined) {
+            await fetch(`${API_URL}/api/messages/${id}/archived`, {
+              method: "POST",
+              headers,
+              body: JSON.stringify({ archived: flags.archived ? 1 : 0 }),
+            });
+          }
         }
       } catch (err) {
         console.warn("Failed updating message flags", err);
@@ -967,15 +992,32 @@ export default function AdminMessageContent(): JSX.Element {
         onConfirm: () => {
           if (API_URL && token) {
             if (bulk) {
+              // Empty trash for both messages and notifications
               fetch(`${API_URL}/api/messages/trash/empty`, {
                 method: "DELETE",
                 headers: { Authorization: `Bearer ${token}` },
               }).catch(() => {});
-            } else if (id) {
-              fetch(`${API_URL}/api/messages/${id}`, {
+              
+              fetch(`${API_URL}/api/notifications/trash/empty`, {
                 method: "DELETE",
                 headers: { Authorization: `Bearer ${token}` },
               }).catch(() => {});
+            } else if (id) {
+              // Check if notification or message and delete accordingly
+              const isNotification = id.startsWith("notif-");
+              
+              if (isNotification) {
+                const notificationID = id.replace("notif-", "");
+                fetch(`${API_URL}/api/notifications/${notificationID}`, {
+                  method: "DELETE",
+                  headers: { Authorization: `Bearer ${token}` },
+                }).catch(() => {});
+              } else {
+                fetch(`${API_URL}/api/messages/${id}`, {
+                  method: "DELETE",
+                  headers: { Authorization: `Bearer ${token}` },
+                }).catch(() => {});
+              }
             }
           }
           setEmails((prev) =>
