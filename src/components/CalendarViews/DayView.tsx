@@ -23,7 +23,11 @@ const HOURS_IN_VIEW = END_HOUR - START_HOUR;
 
 const API_URL = import.meta.env.VITE_API_URL;
 
-const DayView: React.FC<DayViewProps> = ({ currentDate, onEventClick, onReady }) => {
+const DayView: React.FC<DayViewProps> = ({
+  currentDate,
+  onEventClick,
+  onReady,
+}) => {
   const nowRef = useRef<HTMLDivElement>(null);
   const now = new Date();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -62,7 +66,8 @@ const DayView: React.FC<DayViewProps> = ({ currentDate, onEventClick, onReady })
     nowRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
   }, [appointments]);
 
-  const minutesSinceStart = (now.getHours() - START_HOUR) * 60 + now.getMinutes();
+  const minutesSinceStart =
+    (now.getHours() - START_HOUR) * 60 + now.getMinutes();
   const topPercent = (minutesSinceStart / (HOURS_IN_VIEW * 60)) * 100;
 
   return (
@@ -89,8 +94,6 @@ const DayView: React.FC<DayViewProps> = ({ currentDate, onEventClick, onReady })
           />
         ))}
 
-       
-
         {/* Current Time Line */}
         {now.getHours() >= START_HOUR && now.getHours() <= END_HOUR && (
           <div
@@ -108,50 +111,66 @@ const DayView: React.FC<DayViewProps> = ({ currentDate, onEventClick, onReady })
             (appt.start.getHours() - START_HOUR) * 60 + appt.start.getMinutes();
           const endMin =
             (appt.end.getHours() - START_HOUR) * 60 + appt.end.getMinutes();
-
           if (startMin < 0 || endMin > HOURS_IN_VIEW * 60) return null;
 
-          const top = (startMin / (HOURS_IN_VIEW * 60)) * 100;
-          const height = ((endMin - startMin) / (HOURS_IN_VIEW * 60)) * 100;
+          const totalMinutes = HOURS_IN_VIEW * 60;
+          const slotMinutes = 30;
 
-          let bg = "bg-yellow-200";
-          if (appt.end < now || appt.raw.status === "Done") bg = "bg-green-200";
-          else if (appt.start <= now && appt.end >= now) bg = "bg-orange-200";
+          // Snap start to the nearest lower slot and end to the higher slot
+          const snappedStartMin =
+            Math.floor(startMin / slotMinutes) * slotMinutes;
+          const snappedEndMin = Math.ceil(endMin / slotMinutes) * slotMinutes;
+          const topPercent = (snappedStartMin / totalMinutes) * 100;
+          const heightPercent =
+            ((snappedEndMin - snappedStartMin) / totalMinutes) * 100;
 
-          const { raw } = appt;
+          let bgColor = "bg-yellow-100 border-yellow-300";
+          const currTime = new Date();
+          if (appt.end < currTime || appt.raw.status === "Done") {
+            bgColor = "bg-green-100 border-green-300";
+          } else if (appt.start > currTime) {
+            bgColor = "bg-yellow-100 border-yellow-300";
+          } else {
+            bgColor = "bg-orange-200 border-orange-300";
+          }
 
           return (
             <div
               key={appt.id}
-              className={`${bg} absolute left-4 right-4 p-2 rounded-md shadow text-sm cursor-pointer transition transform hover:scale-[1.02] hover:shadow-lg`}
-              style={{ top: `${top}%`, height: `${height}%` }}
               onClick={() =>
                 onEventClick({
                   id: appt.id.toString(),
-                  customerName: raw.customerName,
-                  email: raw.email,
-                  address: raw.address,
-                  contact: raw.contactNo,
-                  package: raw.package,
-                  duration: raw.duration,
-                  date: raw.bookingDate,
-                  time: raw.time,
-                  subtotal: Number(raw.subtotal),
-                  price: Number(raw.price),
-                  paidAmount: Number(raw.payment),
-                  feedback: raw.feedback || "N/A",
-                  rating: Number(raw.rating || 0),
-                  status: Number(raw.status),
-                  paymentStatus: Number(raw.paymentStatus),
-                  balance: Number(raw.balance),
-                  selectedAddOns: raw.selectedAddOns || '',
-                  selectedConcepts: raw.selectedConcepts || '',
+                  customerName: appt.raw.customerName,
+                  email: appt.raw.email,
+                  address: appt.raw.address,
+                  contact: appt.raw.contactNo,
+                  package: appt.raw.package,
+                  duration: appt.raw.duration,
+                  date: appt.raw.bookingDate,
+                  time: appt.raw.time,
+                  subtotal: Number(appt.raw.subtotal),
+                  price: Number(appt.raw.price),
+                  paidAmount: Number(appt.raw.payment),
+                  feedback: appt.raw.feedback || "N/A",
+                  rating: Number(appt.raw.rating || 0),
+                  status: Number(appt.raw.status),
+                  paymentStatus: Number(appt.raw.paymentStatus),
+                  balance: Number(appt.raw.balance),
+                  selectedAddOns: appt.raw.selectedAddOns || "",
+                  selectedConcepts: appt.raw.selectedConcepts || "",
                 })
               }
+              className={`${bgColor} absolute left-4 right-4 p-2 rounded-md border shadow-sm cursor-pointer transition transform hover:scale-[1.02] hover:shadow-lg overflow-hidden flex flex-row items-center`}
+              style={{ top: `${topPercent}%`, height: `${heightPercent}%` }}
+              title={`${appt.title} | ${format(
+                appt.start,
+                "h:mm a"
+              )} – ${format(appt.end, "h:mm a")}`}
             >
-              {appt.title}
-              <br />
-              <span className="text-xs text-gray-600">
+              <span className="truncate font-semibold text-gray-800 leading-snug block flex-1 mr-2">
+                {appt.title}
+              </span>
+              <span className="truncate text-xs text-gray-900 text-right block min-w-[90px] font-medium">
                 {format(appt.start, "h:mm a")} – {format(appt.end, "h:mm a")}
               </span>
             </div>

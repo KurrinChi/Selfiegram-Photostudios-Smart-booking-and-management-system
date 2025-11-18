@@ -1,5 +1,9 @@
 import React, { useRef, useEffect, useState, useCallback } from "react";
 import type { HTMLAttributes } from "react";
+import { fabric } from "fabric";
+import ImageEditor from "tui-image-editor";
+import "tui-image-editor/dist/tui-image-editor.css";
+import "tui-color-picker/dist/tui-color-picker.css";
 
 declare global {
   interface Window {
@@ -8,39 +12,14 @@ declare global {
   }
 }
 
+// Make fabric available globally for TUI Image Editor
+if (typeof window !== "undefined") {
+  (window as any).fabric = fabric;
+}
+
 // ============================================================================
 // CONSTANTS & CONFIGURATION
 // ============================================================================
-
-const TOAST_CSS_BACKUPS = [
-  "https://uicdn.toast.com/tui-image-editor/latest/tui-image-editor.css",
-];
-
-const TOAST_COLOR_PICKER_CSS = [
-  "https://uicdn.toast.com/tui-color-picker/latest/tui-color-picker.css",
-];
-
-const FABRIC_CDN_URLS = [
-  "https://cdn.jsdelivr.net/npm/fabric@5.3.0/dist/fabric.min.js",
-  "https://unpkg.com/fabric@5.3.0/dist/fabric.min.js",
-  "https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.0/fabric.min.js",
-  "https://cdnjs.cloudflare.com/ajax/libs/fabric.js/4.6.0/fabric.min.js",
-];
-
-const TUI_SNIPPET_CDN_URLS = [
-  "https://cdn.jsdelivr.net/npm/tui-code-snippet@latest/dist/tui-code-snippet.min.js",
-  "https://uicdn.toast.com/tui.code-snippet/latest/tui-code-snippet.min.js",
-];
-
-const TUI_COLOR_PICKER_URLS = [
-  "https://cdn.jsdelivr.net/npm/tui-color-picker@latest/dist/tui-color-picker.min.js",
-  "https://uicdn.toast.com/tui-color-picker/latest/tui-color-picker.min.js",
-];
-
-const TUI_IMAGE_EDITOR_URLS = [
-  "https://cdn.jsdelivr.net/npm/tui-image-editor@latest/dist/tui-image-editor.min.js",
-  "https://uicdn.toast.com/tui-image-editor/latest/tui-image-editor.min.js",
-];
 
 const ICONS = {
   adjust: `data:image/svg+xml,${encodeURIComponent(
@@ -76,6 +55,19 @@ const SLIDER_ICONS: Record<string, string> = {
   hue: `data:image/svg+xml,${encodeURIComponent(
     `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">ircle cx="12" cy="12"2" r="10"/>ircle cx="12" cy="12" r="4" fill="whitete"/></svg>`
   )}`,
+};
+
+const MENU_ICONS: Record<string, string> = {
+  crop: "https://img.icons8.com/ios-filled/50/crop.png",
+  flip: "https://img.icons8.com/ios-filled/50/flip.png",
+  rotate: "https://img.icons8.com/ios-filled/50/rotate.png",
+  draw: "https://img.icons8.com/ios-filled/50/pencil.png",
+  shape: "https://img.icons8.com/ios-filled/50/shape.png",
+  icon: "https://img.icons8.com/ios-filled/50/star.png",
+  text: "https://img.icons8.com/ios-filled/50/text.png",
+  mask: "https://img.icons8.com/ios-filled/50/mask.png",
+  filter: "https://img.icons8.com/ios-filled/50/filter.png",
+  adjust: ICONS.adjust,
 };
 
 // ============================================================================
@@ -159,80 +151,6 @@ const DEFAULT_ADJUST_VALUES: AdjustValues = {
 };
 
 // ============================================================================
-// UTILITY FUNCTIONS
-// ============================================================================
-
-async function loadScriptWithBackups(
-  urls: string[],
-  timeout = 15000
-): Promise<void> {
-  let lastErr: Error | null = null;
-
-  for (const url of urls) {
-    try {
-      const existing = document.querySelector(`script[src="${url}"]`);
-      if (existing) {
-        return; // Silent - script already loaded
-      }
-
-      await new Promise<void>((resolve, reject) => {
-        const s = document.createElement("script");
-        s.src = url;
-        s.async = true;
-
-        const timer = window.setTimeout(() => {
-          s.onerror = null;
-          s.onload = null;
-          reject(new Error("Script load timeout: " + url));
-        }, timeout);
-
-        s.onload = () => {
-          window.clearTimeout(timer);
-          resolve();
-        };
-
-        s.onerror = () => {
-          window.clearTimeout(timer);
-          reject(new Error("Script load error: " + url));
-        };
-
-        document.body.appendChild(s);
-      });
-
-      return; // Silent - loaded successfully
-    } catch (err) {
-      lastErr = err as Error;
-    }
-  }
-
-  throw lastErr ?? new Error("No script URLs available");
-}
-
-async function loadCssWithBackups(urls: string[]): Promise<void> {
-  for (const href of urls) {
-    try {
-      const existing = document.querySelector(`link[href="${href}"]`);
-      if (existing) {
-        return; // Silent - CSS already loaded
-      }
-
-      await new Promise<void>((resolve, reject) => {
-        const link = document.createElement("link");
-        link.rel = "stylesheet";
-        link.href = href;
-        link.onload = () => resolve();
-        link.onerror = () => reject(new Error("CSS load error: " + href));
-        document.head.appendChild(link);
-      });
-
-      return; // Silent - loaded successfully
-    } catch (e) {
-      // Silent - try next URL
-    }
-  }
-}
-
-// ============================================================================
 // MAIN COMPONENT
 // ============================================================================
 
@@ -244,10 +162,11 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
   const canvasListenersRef = useRef<Record<string, (e?: any) => void> | null>(
     null
   );
-
+  const adjustMenuLiRef = useRef<HTMLElement | null>(null);
   const rafRef = useRef<number | null>(null);
   const scheduledSessionRef = useRef<AdjustValues | null>(null);
   const panelVisibilityRef = useRef<boolean>(false);
+  const menuBarListenerRef = useRef<((e: Event) => void) | null>(null);
   const imageLoadedRef = useRef(false);
   const resizeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const renderTimeoutRefs = useRef<ReturnType<typeof setTimeout>[]>([]);
@@ -271,8 +190,8 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isAdjustPanelOpen] = useState(false);
-  const [] = useState<string>("");
+  const [isAdjustPanelOpen, setIsAdjustPanelOpen] = useState(false);
+  const [, setCurrentActiveMenu] = useState<string>("");
   const [showSaveFeedback, setShowSaveFeedback] = useState<string | null>(null);
   // Track unsaved changes
   const [isDirty, setIsDirty] = useState(false);
@@ -448,6 +367,8 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
     return filters;
   }, []);
 
+  
+
   const scheduleApplySession = useCallback((values: AdjustValues) => {
     scheduledSessionRef.current = values;
 
@@ -465,6 +386,9 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
       }
     });
   }, []);
+
+ 
+
 
   const reapplySessionToCurrentTargets = useCallback(
     (session?: AdjustValues) => {
@@ -710,6 +634,12 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
       if (!imageLoadedRef.current) {
         imageLoadedRef.current = true;
       }
+
+      console.log(
+        `[Fix] Canvas: ${availableWidth}x${availableHeight}, Scale: ${scale.toFixed(
+          2
+        )}, Padding: ${paddingFactor * 100}%`
+      );
     } catch (e) {
       console.warn("[Fix] Aspect ratio fix failed:", e);
     }
@@ -806,7 +736,11 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
       Reset All
     </button>
   </div>
-  <div id="sliders-container"></div>
+  <div id="sliders-container" style="
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+  "></div>
 `;
 
     adjustPanel.appendChild(panelContent);
@@ -840,9 +774,15 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
     adjustSliders.forEach(({ key, label, min, max, step }, index) => {
       const sessionVal = sessionRef.current[key as keyof AdjustValues];
       const sliderDiv = document.createElement("div");
-      sliderDiv.style.cssText = `margin-bottom: 24px; animation: fadeInUp 0.4s ease ${
-        index * 0.05
-      }s both;`;
+      sliderDiv.className = "adjust-slider-item";
+      sliderDiv.style.cssText = `
+        padding: 16px;
+        background: rgba(255,255,255,0.05);
+        border-radius: 12px;
+        border: 1px solid rgba(255,255,255,0.08);
+        transition: all 0.3s ease;
+        animation: fadeInUp 0.4s ease ${index * 0.05}s both;
+      `;
 
       const iconSrc = SLIDER_ICONS[key] || ICONS.brightness;
 
@@ -907,6 +847,7 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
       const style = document.createElement("style");
       style.id = "tui-adjust-style";
       style.textContent = `
+        /* Slider thumb styles */
         .tui-image-editor-adjust-panel input[type="range"]::-webkit-slider-thumb {
           -webkit-appearance: none;
           appearance: none;
@@ -931,10 +872,20 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
           border: none;
           box-shadow: 0 2px 6px rgba(33,150,243,0.3);
         }
+        
+        /* Hover effects */
+        .adjust-slider-item:hover {
+          background: rgba(255,255,255,0.08) !important;
+          border-color: rgba(102,126,234,0.3) !important;
+          box-shadow: 0 4px 12px rgba(102,126,234,0.2);
+        }
+        
         .tui-image-editor-adjust-panel button:hover {
           background: #f5f5f5;
           border-color: #bbb;
         }
+        
+        /* Scrollbar styles */
         .tui-image-editor-adjust-panel {
           scrollbar-width: thin;
           scrollbar-color: #dee2e6 transparent;
@@ -950,16 +901,71 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
           border-radius: 3px;
         }
         
+        /* Responsive Grid Layout */
         @media (max-width: 768px) {
+          #sliders-container {
+            grid-template-columns: 1fr !important;
+            gap: 16px !important;
+          }
+          
           .tui-image-editor-adjust-panel {
             max-height: 50vh;
           }
+          
           .tui-image-editor-adjust-panel input[type="range"] {
-            height: 6px;
+            height: 8px !important;
           }
+          
           .tui-image-editor-adjust-panel input[type="range"]::-webkit-slider-thumb {
-            width: 20px;
-            height: 20px;
+            width: 22px !important;
+            height: 22px !important;
+          }
+          
+          .tui-image-editor-adjust-panel input[type="range"]::-moz-range-thumb {
+            width: 22px !important;
+            height: 22px !important;
+          }
+          
+          .adjust-slider-item {
+            padding: 14px !important;
+          }
+        }
+        
+        /* Tablet layout - 2 columns */
+        @media (min-width: 769px) and (max-width: 1024px) {
+          #sliders-container {
+            grid-template-columns: repeat(2, 1fr) !important;
+            gap: 18px !important;
+          }
+        }
+        
+        /* Desktop layout - auto-fit based on space */
+        @media (min-width: 1025px) {
+          #sliders-container {
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)) !important;
+          }
+        }
+        
+        /* Animation keyframes */
+        @keyframes fadeInUp {
+          from {
+            opacity: 0;
+            transform: translateY(10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        
+        @keyframes fadeInDown {
+          from {
+            opacity: 0;
+            transform: translateY(-10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
           }
         }
       `;
@@ -1086,86 +1092,20 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
     let resizeObs: ResizeObserver | null = null;
     let mounted = true;
 
-    async function attemptImportPaths() {
-      const tryPaths = [
-        "tui-image-editor",
-        "tui-image-editor/dist/tui-image-editor.esm.js",
-        "tui-image-editor/dist/tui-image-editor.js",
-      ];
-
-      for (const p of tryPaths) {
-        try {
-          const mod = await import(/* @vite-ignore */ p);
-          if (mod) return mod;
-        } catch (e) {
-          // Silent - try next path
-        }
-      }
-
-      throw new Error("Dynamic import failed for all known paths");
-    }
-
     async function initEditor() {
       setLoading(true);
       setError(null);
 
       try {
-        await loadCssWithBackups(TOAST_CSS_BACKUPS);
-        await loadCssWithBackups(TOAST_COLOR_PICKER_CSS);
-
-        let Constructor: any = undefined;
-
-        // Try local import silently
-        try {
-          const mod = await attemptImportPaths();
-          Constructor =
-            (mod as any).default ?? (mod as any).ImageEditor ?? (mod as any);
-        } catch (importErr) {
-          // Silent - will try CDN
+        // Use the imported ImageEditor directly - no need for dynamic imports or CDN
+        console.info("[Init] Using locally installed tui-image-editor");
+        
+        if (!editorRef.current) {
+          throw new Error("Editor container ref is null");
         }
+        
+        const Constructor = ImageEditor;
 
-        // CDN loading if local import failed
-        if (typeof Constructor !== "function") {
-          // Load Fabric.js
-          if (!window.fabric) {
-            await loadScriptWithBackups(FABRIC_CDN_URLS, 25000);
-            await new Promise((resolve) => setTimeout(resolve, 1000));
-
-            if (!window.fabric) {
-              throw new Error("Fabric.js failed to load");
-            }
-          }
-
-          // Load TUI Snippet
-          if (!(window as any).tui) {
-            await loadScriptWithBackups(TUI_SNIPPET_CDN_URLS, 20000);
-            await new Promise((resolve) => setTimeout(resolve, 500));
-          }
-
-          // Load TUI Color Picker
-          if (!(window as any).tui?.colorPicker) {
-            await loadScriptWithBackups(TUI_COLOR_PICKER_URLS, 20000);
-            await new Promise((resolve) => setTimeout(resolve, 300));
-          }
-
-          // Load TUI Image Editor
-          await loadScriptWithBackups(TUI_IMAGE_EDITOR_URLS, 25000);
-          await new Promise((resolve) => setTimeout(resolve, 800));
-
-          // Find constructor
-          Constructor =
-            (window as any).tui?.ImageEditor ??
-            (window as any).ImageEditor ??
-            (window as any).tuiImageEditor;
-        }
-
-        if (typeof Constructor !== "function") {
-          throw new Error(
-            "ImageEditor constructor not available. Please refresh the page."
-          );
-        }
-
-        // Create editor instance
         instanceRef.current = new Constructor(editorRef.current, {
           includeUI: {
             loadImage: {
@@ -1183,7 +1123,6 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
               "shape",
               "icon",
               "text",
-              "mask",
               "filter",
             ],
             initMenu: "",
@@ -1193,90 +1132,511 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
               height: "100%",
             },
             theme: {
+              "menu.normalIcon.path": "/svg/icon-d.svg",
+              "menu.activeIcon.path": "/svg/icon-b.svg",
+              "menu.disabledIcon.path": "/svg/icon-a.svg",
+              "menu.hoverIcon.path": "/svg/icon-c.svg",
+              "menu.normalIcon.name": "icon-d",
+              "menu.activeIcon.name": "icon-b",
+              "menu.iconSize.width": "24px",
+              "menu.iconSize.height": "24px",
               "menu.backgroundColor": "#ffffff",
               "menu.borderColor": "#e5e5e5",
               "menu.normalIcon.color": "#8a8a8a",
               "menu.activeIcon.color": "#555555",
               "menu.disabledIcon.color": "#ccc",
               "menu.hoverIcon.color": "#e9e9e9",
+              "submenu.normalIcon.path": "/svg/icon-a.svg",
+              "submenu.activeIcon.path": "/svg/icon-c.svg",
+              "submenu.normalIcon.name": "icon-a",
+              "submenu.activeIcon.name": "icon-c",
               "submenu.backgroundColor": "#1e1e1e",
               "submenu.partition.color": "#858585",
               "submenu.normalIcon.color": "#8a8a8a",
               "submenu.normalLabel.color": "#ccc",
               "submenu.activeIcon.color": "#fff",
               "submenu.activeLabel.color": "#fff",
-            },
+            } as any,
           },
-          cssMaxWidth: 999999,
-          cssMaxHeight: 999999,
+          // CHANGE THESE VALUES TO VERY LARGE NUMBERS:
+          cssMaxWidth: 999999, // Changed from 10000
+          cssMaxHeight: 999999, // Changed from 10000
           usageStatistics: false,
+          // Tell TUI Image Editor where to find SVG icon files
+          selectionStyle: {
+            cornerSize: 20,
+            rotatingPointOffset: 70,
+          },
         });
 
         renderTimeoutRefs.current.forEach(clearTimeout);
         renderTimeoutRefs.current = [];
 
-        const delays = [100, 300, 500, 1500];
+        const delays = [100, 300, 500, 1000];
         delays.forEach((delay) => {
           const timeoutId = setTimeout(() => fixImageAspectRatio(), delay);
           renderTimeoutRefs.current.push(timeoutId);
         });
 
+        if (!document.getElementById("tui-menu-alignment-fix")) {
+          const style = document.createElement("style");
+          style.id = "tui-menu-alignment-fix";
+          style.textContent = `
+            .tui-image-editor .tui-image-editor-menu {
+              display: flex !important;
+              align-items: center !important;
+              justify-content: center !important;
+              gap: 6px;
+              height: 48px;
+              padding: 0 8px;
+              box-sizing: border-box;
+            }
+            .tui-image-editor-menu .tui-image-editor-menu-item {
+              display: inline-flex !important;
+              align-items: center !important;
+              height: 100% !important;
+              margin: 0 !important;
+              padding: 0 6px !important;
+              box-sizing: border-box !important;
+            }
+            .tui-image-editor-menu .tui-image-editor-button {
+              display: inline-flex !important;
+              align-items: center !important;
+              justify-content: center;
+              height: 100%;
+              padding: 8px 10px;
+              gap: 8px;
+              background: transparent;
+              border: none;
+              box-sizing: border-box;
+              white-space: nowrap !important;
+            }
+            .tui-image-editor-menu .tui-image-editor-menu-icon {
+              display: inline-flex !important;
+              align-items: center !important;
+              justify-content: center !important;
+              line-height: 0;
+              width: 20px;
+              height: 20px;
+              flex-shrink: 0 !important;
+            }
+            .tui-image-editor-menu .tui-image-editor-menu-icon img,
+            .tui-image-editor-menu .tui-image-editor-menu-icon svg {
+              background: transparent !important;
+              width: 18px;
+              height: 18px;
+              display: block;
+              vertical-align: middle;
+            }
+            .tui-image-editor-menu .tui-image-editor-menu-title {
+              line-height: 1;
+              font-size: 12px;
+              display: inline-block;
+              vertical-align: middle;
+            }
+            
+            @media (max-width: 640px) {
+              .tui-image-editor .tui-image-editor-menu {
+                gap: 2px;
+                padding: 0 4px;
+              }
+              .tui-image-editor-menu .tui-image-editor-menu-item {
+                padding: 0 3px !important;
+              }
+              .tui-image-editor-menu .tui-image-editor-button {
+                padding: 6px 8px;
+                gap: 4px;
+              }
+              .tui-image-editor-menu .tui-image-editor-menu-icon {
+                width: 16px;
+                height: 16px;
+              }
+              .tui-image-editor-menu .tui-image-editor-menu-icon img,
+              .tui-image-editor-menu .tui-image-editor-menu-icon svg {
+                width: 16px;
+                height: 16px;
+              }
+              .tui-image-editor-menu .tui-image-editor-menu-title {
+                font-size: 10px;
+              }
+            }
+          `;
+          document.head.appendChild(style);
+        }
+
+        if (!document.getElementById("tui-hide-top-controls")) {
+          const style = document.createElement("style");
+          style.id = "tui-hide-top-controls";
+          style.textContent = `
+            .tui-image-editor-header {
+              display: none !important;
+            }
+            .tui-image-editor-wrap {
+              top: 0 !important;
+            }
+          `;
+          document.head.appendChild(style);
+        }
+
+        if (!document.getElementById("tui-menu-button-styles")) {
+          const style = document.createElement("style");
+          style.id = "tui-menu-button-styles";
+          style.textContent = `
+            /* Make menu buttons visible and clickable */
+            .tui-image-editor-menu .tui-image-editor-item {
+              cursor: pointer !important;
+              transition: all 0.2s ease !important;
+              border-radius: 6px !important;
+              background: transparent !important;
+              padding: 6px 12px !important;
+              margin: 0 2px !important;
+            }
+            
+            .tui-image-editor-menu .tui-image-editor-item:hover {
+              background: #f0f0f0 !important;
+            }
+            
+            .tui-image-editor-menu .tui-image-editor-item.active {
+              background: #e3f2fd !important;
+              border-bottom: 2px solid #1976d2 !important;
+            }
+            
+            /* Make icon sprites visible */
+            .tui-image-editor-menu .tui-image-editor-item svg {
+              width: 24px !important;
+              height: 24px !important;
+              opacity: 0.8 !important;
+            }
+            
+            .tui-image-editor-menu .tui-image-editor-item:hover svg {
+              opacity: 1 !important;
+            }
+            
+            .tui-image-editor-menu .tui-image-editor-item.active svg {
+              opacity: 1 !important;
+            }
+            
+            /* Make labels VERY visible and prominent */
+            .tui-image-editor-menu .tui-image-editor-item label,
+            .tui-image-editor-menu .tui-image-editor-menu-title {
+              display: inline-block !important;
+              color: #444 !important;
+              font-weight: 600 !important;
+              font-size: 13px !important;
+              cursor: pointer !important;
+              margin-left: 6px !important;
+              text-transform: capitalize !important;
+            }
+            
+            .tui-image-editor-menu .tui-image-editor-item:hover label,
+            .tui-image-editor-menu .tui-image-editor-item:hover .tui-image-editor-menu-title {
+              color: #222 !important;
+            }
+            
+            .tui-image-editor-menu .tui-image-editor-item.active label,
+            .tui-image-editor-menu .tui-image-editor-item.active .tui-image-editor-menu-title {
+              color: #1976d2 !important;
+              font-weight: 700 !important;
+            }
+            
+            /* Ensure buttons are in a row */
+            .tui-image-editor-menu {
+              display: flex !important;
+              flex-direction: row !important;
+              align-items: center !important;
+              justify-content: center !important;
+              gap: 4px !important;
+              padding: 8px !important;
+            }
+          `;
+          document.head.appendChild(style);
+        }
+
+        if (!instanceRef.current) return;
+
+        try {
+          const canvas =
+            instanceRef.current._graphics?.getCanvas?.() ||
+            instanceRef.current.graphics?.getCanvas?.();
+
+          if (canvas) {
+            const canvases = [
+              canvas.lowerCanvasEl,
+              canvas.upperCanvasEl,
+              (canvas as any).cacheCanvasEl,
+            ];
+
+            canvases.forEach((el) => {
+              if (el) {
+                try {
+                  el.getContext("2d", { willReadFrequently: true });
+                } catch (e) {
+                  console.warn("[Canvas] willReadFrequently failed:", e);
+                }
+              }
+            });
+
+            canvas.selection = true;
+            canvas.preserveObjectStacking = true;
+            canvas.imageSmoothingEnabled = true;
+            canvas.enableRetinaScaling = true;
+
+            if (canvas.backgroundImage) {
+              canvas.backgroundImage.selectable = false;
+              canvas.backgroundImage.evented = false;
+            }
+          }
+        } catch (e) {
+          console.warn("[Canvas] Enhancement failed:", e);
+        }
+
+        setTimeout(() => {
+          if (!editorRef.current || !instanceRef.current) return;
+          setupMenuHandling();
+          setupCanvasListeners();
+        }, 600);
+
+        resizeObs = new ResizeObserver(() => {
+          handleResize();
+        });
+
+        if (editorRef.current) {
+          resizeObs.observe(editorRef.current);
+        }
+
         setLoading(false);
       } catch (err: any) {
+        console.error("[Init] Initialization failed:", err);
         if (mounted) {
-          setError(
-            err?.message ||
-              "Failed to load image editor. Please refresh the page."
-          );
+          setError(err?.message ?? String(err));
           setLoading(false);
         }
       }
     }
 
-    // Force hide Load/Download buttons after initialization
-    setTimeout(() => {
-      if (!editorRef.current) return;
+    const setupMenuHandling = () => {
+      const menuBar = editorRef.current?.querySelector(
+        ".tui-image-editor-menu"
+      ) as HTMLElement | null;
+      if (!menuBar) return;
 
-      // Hide Load button
-      const loadButtons = editorRef.current.querySelectorAll(
-        ".tui-image-editor-load-btn, " +
-          "button.tui-image-editor-load-btn, " +
-          ".tie-btn-load, " +
-          'button[title="Load"], ' +
-          ".tui-image-editor-header-buttons button"
-      );
+      Object.entries(MENU_ICONS).forEach(([id, url]) => {
+        const img = editorRef.current?.querySelector(
+          `.tui-image-editor-menu [data-menu="${id}"] img`
+        ) as HTMLImageElement | null;
 
-      loadButtons.forEach((btn) => {
-        (btn as HTMLElement).style.display = "none";
-        (btn as HTMLElement).style.visibility = "hidden";
-        (btn as HTMLElement).remove(); // Completely remove it
+        if (img) {
+          img.src = url;
+          img.onerror = () => {
+            if (id === "adjust") {
+              img.src = ICONS.adjust;
+            } else {
+              img.style.display = "none";
+            }
+          };
+        }
       });
 
-      // Hide Download button
-      const downloadButtons = editorRef.current.querySelectorAll(
-        ".tui-image-editor-download-btn, " +
-          "button.tui-image-editor-download-btn, " +
-          ".tie-btn-download, " +
-          'button[title="Download"]'
-      );
+      if (!menuBar.querySelector('[data-menu="adjust"]')) {
+        const li = document.createElement("li");
+        li.setAttribute("data-menu", "adjust");
+        li.className = "tui-image-editor-menu-item";
+        li.style.cssText = `
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            height: 48px;
+            padding: 0 10px;
+            margin: 0;
+          `;
 
-      downloadButtons.forEach((btn) => {
-        (btn as HTMLElement).style.display = "none";
-        (btn as HTMLElement).style.visibility = "hidden";
-        (btn as HTMLElement).remove(); // Completely remove it
-      });
+        li.innerHTML = `
+            <button class="tui-image-editor-button tui-adjust-btn" title="Adjust" aria-label="Adjust" style="display:inline-flex;align-items:center;justify-content:center;height:100%;border:none;background:transparent;padding:8px 12px;transition:all 0.18s ease;color:#8a8a8a;">
+              <div class="tui-image-editor-menu-icon" style="display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;line-height:0;">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false" style="display:block;">
+                  <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.5" fill="none"/>
+                  <path d="M12 1v6M12 17v6M4.22 4.22l4.24 4.24M15.54 15.54l4.24 4.24M1 12h6M17 12h6M4.22 19.78l4.24-4.24M15.54 8.46l4.24-4.24" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+            </button>
+          `;
 
-      // Hide logo
-      const logos = editorRef.current.querySelectorAll(
-        ".tui-image-editor-header-logo, " +
-          ".tui-image-editor-header-logo-image"
-      );
+        menuBar.appendChild(li);
+        adjustMenuLiRef.current = li;
 
-      logos.forEach((logo) => {
-        (logo as HTMLElement).style.display = "none";
-        (logo as HTMLElement).remove(); // Completely remove it
-      });
-    }, 1000); // Wait 1 second for TUI to render
+        const liClickHandler = (e: MouseEvent) => {
+          e.preventDefault();
+          e.stopPropagation();
+
+          try {
+            const instance = instanceRef.current;
+            const canvas =
+              instance?._graphics?.getCanvas?.() ||
+              instance?.graphics?.getCanvas?.();
+            const hasImage =
+              canvas && (canvas.backgroundImage || canvas.getActiveObject?.());
+
+            if (!hasImage) {
+              setError("Please load an image first");
+              setTimeout(() => setError(null), 3000);
+              return;
+            }
+          } catch (ex) {
+            console.warn("[Menu] Image check failed:", ex);
+          }
+
+          setIsAdjustPanelOpen((prev) => {
+            const next = !prev;
+            if (adjustMenuLiRef.current) {
+              if (next) {
+                adjustMenuLiRef.current.classList.add(
+                  "tui-image-editor-menu-item-active"
+                );
+                adjustMenuLiRef.current.style.background = "#f0f8ff";
+              } else {
+                adjustMenuLiRef.current.classList.remove(
+                  "tui-image-editor-menu-item-active"
+                );
+                adjustMenuLiRef.current.style.background = "transparent";
+              }
+            }
+            return next;
+          });
+        };
+
+        li.addEventListener("click", liClickHandler);
+        (menuBar as any).__tuiMenuHandlers =
+          (menuBar as any).__tuiMenuHandlers || [];
+        (menuBar as any).__tuiMenuHandlers.push(liClickHandler);
+      }
+
+      const delegatedHandler = (ev: Event) => {
+        const target = ev.target as HTMLElement | null;
+        if (!target) return;
+
+        const menuItem = target.closest?.(
+          ".tui-image-editor-menu-item"
+        ) as HTMLElement | null;
+        if (!menuItem) return;
+
+        const menuName = menuItem.getAttribute("data-menu");
+        if (!menuName) return;
+
+        setCurrentActiveMenu(menuName);
+
+        if (menuName !== "adjust") {
+          const allMenuItems = menuBar.querySelectorAll(
+            ".tui-image-editor-menu-item"
+          );
+          allMenuItems.forEach((item) => {
+            if (item !== adjustMenuLiRef.current && item !== menuItem) {
+              item.classList.remove("tui-image-editor-menu-item-active");
+              (item as HTMLElement).style.background = "transparent";
+            }
+          });
+
+          menuItem.classList.add("tui-image-editor-menu-item-active");
+          (menuItem as HTMLElement).style.background = "#f0f8ff";
+
+          const timeoutId = setTimeout(() => {
+            reapplySessionToCurrentTargets();
+          }, 100);
+          renderTimeoutRefs.current.push(timeoutId);
+        }
+      };
+
+      menuBar.addEventListener("click", delegatedHandler, true);
+      (menuBar as any).__tuiMenuHandlers =
+        (menuBar as any).__tuiMenuHandlers || [];
+      (menuBar as any).__tuiMenuHandlers.push(delegatedHandler);
+      menuBarListenerRef.current = delegatedHandler;
+    };
+
+    const setupCanvasListeners = () => {
+      try {
+        const canvas =
+          instanceRef.current?._graphics?.getCanvas?.() ||
+          instanceRef.current?.graphics?.getCanvas?.();
+
+        if (!canvas || canvasListenersRef.current) return;
+
+        const onObjectAdded = (e: any) => {
+          try {
+            const obj = e?.target;
+            if (obj) {
+              (obj as any).__tui_session_values = sessionRef.current;
+              const timeoutId = setTimeout(
+                () => reapplySessionToCurrentTargets(),
+                50
+              );
+              renderTimeoutRefs.current.push(timeoutId);
+            }
+            if (!isDirty) setIsDirty(true);
+          } catch (ex) {
+            console.warn("[Canvas] Object added handler failed:", ex);
+          }
+        };
+
+        const onObjectModified = (e: any) => {
+          try {
+            const obj = e?.target;
+            if (obj) {
+              (obj as any).__tui_session_values = sessionRef.current;
+            }
+            const timeoutId = setTimeout(
+              () => reapplySessionToCurrentTargets(),
+              30
+            );
+            renderTimeoutRefs.current.push(timeoutId);
+            if (!isDirty) setIsDirty(true);
+          } catch (ex) {
+            console.warn("[Canvas] Object modified handler failed:", ex);
+          }
+        };
+
+        const onSelectionCreated = (e: any) => {
+          try {
+            const obj = e?.target;
+            if (obj) {
+              (obj as any).__tui_session_values = sessionRef.current;
+            }
+            const timeoutId = setTimeout(
+              () => reapplySessionToCurrentTargets(),
+              20
+            );
+            renderTimeoutRefs.current.push(timeoutId);
+          } catch (ex) {
+            console.warn("[Canvas] Selection created handler failed:", ex);
+          }
+        };
+
+        const onSelectionCleared = () => {
+          try {
+            const timeoutId = setTimeout(
+              () => reapplySessionToCurrentTargets(),
+              20
+            );
+            renderTimeoutRefs.current.push(timeoutId);
+          } catch (ex) {
+            console.warn("[Canvas] Selection cleared handler failed:", ex);
+          }
+        };
+
+        canvas.on?.("object:added", onObjectAdded);
+        canvas.on?.("object:modified", onObjectModified);
+        canvas.on?.("selection:created", onSelectionCreated);
+        canvas.on?.("selection:cleared", onSelectionCleared);
+
+        canvasListenersRef.current = {
+          added: onObjectAdded,
+          modified: onObjectModified,
+          selectionCreated: onSelectionCreated,
+          selectionCleared: onSelectionCleared,
+        };
+      } catch (e) {
+        console.warn("[Canvas] Listeners setup failed:", e);
+      }
+    };
 
     initEditor();
 
@@ -1385,63 +1745,54 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
 
   // Export / Save logic
   const handleExport = useCallback(
-    (format: "jpeg" | "png" = "jpeg") => {
+    (format: 'jpeg' | 'png' = 'jpeg') => {
       const instance: any = instanceRef.current;
       if (!instance) {
-        setError("Editor not ready");
+        setError('Editor not ready');
         setTimeout(() => setError(null), 2500);
         return;
       }
       try {
         let dataURL: string | null = null;
         // Prefer public API if present
-        if (typeof instance.toDataURL === "function") {
+        if (typeof instance.toDataURL === 'function') {
           try {
-            dataURL = instance.toDataURL({
-              format: format === "jpeg" ? "jpeg" : "png",
-              quality: 0.92,
-            });
+            dataURL = instance.toDataURL({ format: format === 'jpeg' ? 'jpeg' : 'png', quality: 0.92 });
           } catch (e) {
-            console.warn("[Export] instance.toDataURL failed, falling back", e);
+            console.warn('[Export] instance.toDataURL failed, falling back', e);
           }
         }
         if (!dataURL) {
-          const canvas =
-            instance._graphics?.getCanvas?.() ||
-            instance.graphics?.getCanvas?.();
-          if (canvas?.lowerCanvasEl) {
-            try {
-              dataURL = canvas.lowerCanvasEl.toDataURL(`image/${format}`, 0.92);
-            } catch (e) {
-              console.warn("[Export] canvas lowerCanvasEl toDataURL failed", e);
+          const canvas = instance._graphics?.getCanvas?.() || instance.graphics?.getCanvas?.();
+            if (canvas?.lowerCanvasEl) {
+              try {
+                dataURL = canvas.lowerCanvasEl.toDataURL(`image/${format}`, 0.92);
+              } catch (e) {
+                console.warn('[Export] canvas lowerCanvasEl toDataURL failed', e);
+              }
             }
-          }
         }
         if (!dataURL) {
-          setError("Failed to export image");
+          setError('Failed to export image');
           setTimeout(() => setError(null), 3000);
           return;
         }
-        const a = document.createElement("a");
-        const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+        const a = document.createElement('a');
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
         a.href = dataURL;
-        a.download = `selfiegram-edited-${timestamp}.${
-          format === "jpeg" ? "jpg" : "png"
-        }`;
+        a.download = `selfiegram-edited-${timestamp}.${format === 'jpeg' ? 'jpg' : 'png'}`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
-        setShowSaveFeedback("Saved");
+        setShowSaveFeedback('Saved');
         setIsDirty(false);
         setTimeout(() => setShowSaveFeedback(null), 2000);
       } catch (e) {
-        console.error("[Export] Unexpected failure", e);
-        setError("Export failed");
+        console.error('[Export] Unexpected failure', e);
+        setError('Export failed');
         setTimeout(() => setError(null), 3000);
       }
-    },
-    [setError]
-  );
+    }, [setError]);
 
   // Back button handler with confirmation if unsaved changes exist
   const handleBackClick = useCallback(() => {
@@ -1472,8 +1823,9 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
           flexShrink: 0,
           zIndex: 1000,
         }}
+        className="editor-header"
       >
-        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "12px" }} className="editor-header-left">
           <button
             onClick={handleBackClick}
             style={{
@@ -1490,6 +1842,7 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
               borderRadius: "4px",
               transition: "all 0.2s ease",
             }}
+            className="back-button"
             onMouseEnter={(e) => {
               e.currentTarget.style.background = "#f5f5f5";
               e.currentTarget.style.color = "#333";
@@ -1513,12 +1866,13 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
                 d="M15.75 19.5L8.25 12l7.5-7.5"
               />
             </svg>
-            <span>Back</span>
+            <span className="back-text">Back</span>
           </button>
           <img
             src="/slfg.svg"
             alt="Selfie Gram Logo"
             style={{ width: "52px", marginLeft: "8px" }}
+            className="editor-logo"
           />
           <h1
             style={{
@@ -1534,183 +1888,95 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
             SELFIEGRAM PHOTO EDITOR
           </h1>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+        <div style={{display: 'flex', alignItems: 'center', gap: '12px'}}>
           {showSaveFeedback && (
-            <span
-              style={{
-                fontSize: "12px",
-                color: "#16a34a",
-                fontWeight: 600,
-                background: "#ecfdf5",
-                padding: "4px 8px",
-                borderRadius: "6px",
-                border: "1px solid #a7f3d0",
-              }}
-            >
+            <span style={{
+              fontSize: '12px',
+              color: '#16a34a',
+              fontWeight: 600,
+              background: '#ecfdf5',
+              padding: '4px 8px',
+              borderRadius: '6px',
+              border: '1px solid #a7f3d0'
+            }}>
               {showSaveFeedback}
             </span>
           )}
           <button
-            onClick={() => handleExport("jpeg")}
+            onClick={() => handleExport('jpeg')}
             title="Save edited image"
             style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "6px",
-              background: "#111827",
-              color: "white",
-              border: "1px solid #111827",
-              fontSize: "13px",
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              background: '#111827',
+              color: 'white',
+              border: '1px solid #111827',
+              fontSize: '13px',
               fontWeight: 600,
-              padding: "8px 14px",
-              borderRadius: "8px",
-              cursor: "pointer",
-              letterSpacing: ".5px",
-              boxShadow: "0 2px 6px rgba(0,0,0,0.15)",
-              transition: "background .2s ease, transform .15s ease",
+              padding: '8px 14px',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              letterSpacing: '.5px',
+              boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
+              transition: 'background .2s ease, transform .15s ease'
             }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = "#1f2937";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = "#111827";
-            }}
-            onMouseDown={(e) => {
-              e.currentTarget.style.transform = "translateY(1px)";
-            }}
-            onMouseUp={(e) => {
-              e.currentTarget.style.transform = "translateY(0)";
-            }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = '#1f2937'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = '#111827'; }}
+            onMouseDown={(e) => { e.currentTarget.style.transform = 'translateY(1px)'; }}
+            onMouseUp={(e) => { e.currentTarget.style.transform = 'translateY(0)'; }}
           >
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M12 3v14" />
-              <path d="M5 10l7 7 7-7" />
-              <path d="M5 21h14" />
-            </svg>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3v14"/><path d="M5 10l7 7 7-7"/><path d="M5 21h14"/></svg>
             <span>Save</span>
           </button>
         </div>
       </header>
-      {showLeaveConfirm && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0,0,0,0.55)",
-            backdropFilter: "blur(4px)",
-            zIndex: 2000,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: "16px",
-          }}
+
+      {/* Landscape orientation notice for mobile */}
+      <div 
+        className="landscape-notice"
+        style={{
+          display: 'none',
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(0, 0, 0, 0.95)',
+          zIndex: 9999,
+          alignItems: 'center',
+          justifyContent: 'center',
+          flexDirection: 'column',
+          padding: '20px',
+          textAlign: 'center',
+        }}
+      >
+        <svg 
+          xmlns="http://www.w3.org/2000/svg" 
+          fill="none" 
+          viewBox="0 0 24 24" 
+          strokeWidth={1.5} 
+          stroke="white"
+          style={{ width: '80px', height: '80px', marginBottom: '20px', animation: 'rotate 2s ease-in-out infinite' }}
         >
-          <div
-            style={{
-              background: "#ffffff",
-              width: "100%",
-              maxWidth: 480,
-              borderRadius: 16,
-              padding: "28px 28px 24px",
-              boxShadow: "0 12px 32px rgba(0,0,0,0.25)",
-              fontFamily:
-                '-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif',
-              position: "relative",
-            }}
-          >
-            <h2
-              style={{
-                margin: "0 0 12px",
-                fontSize: 18,
-                fontWeight: 700,
-                letterSpacing: "-.25px",
-                color: "#111827",
-              }}
-            >
-              Leave editor?
-            </h2>
-            <p
-              style={{
-                margin: "0 0 20px",
-                fontSize: 14,
-                lineHeight: 1.5,
-                color: "#374151",
-              }}
-            >
-              You have unsaved changes. Leaving now will discard recent
-              adjustments and this action cannot be undone.
+          <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
+        </svg>
+        <h2 style={{ color: 'white', fontSize: '24px', fontWeight: 'bold', marginBottom: '12px' }}>
+          Rotate Your Device
+        </h2>
+        <p style={{ color: '#ccc', fontSize: '16px', maxWidth: '300px' }}>
+          Please rotate your device to landscape mode for the best editing experience.
+        </p>
+      </div>
+
+      {showLeaveConfirm && (
+        <div style={{position:'fixed', inset:0, background:'rgba(0,0,0,0.55)', backdropFilter:'blur(4px)', zIndex:2000, display:'flex', alignItems:'center', justifyContent:'center', padding:'16px'}}>
+          <div style={{background:'#ffffff', width:'100%', maxWidth:480, borderRadius:16, padding:'28px 28px 24px', boxShadow:'0 12px 32px rgba(0,0,0,0.25)', fontFamily:'-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif', position:'relative'}}>
+            <h2 style={{margin:'0 0 12px', fontSize:18, fontWeight:700, letterSpacing:'-.25px', color:'#111827'}}>Leave editor?</h2>
+            <p style={{margin:'0 0 20px', fontSize:14, lineHeight:1.5, color:'#374151'}}>
+              You have unsaved changes. Leaving now will discard recent adjustments and this action cannot be undone.
             </p>
-            <div
-              style={{
-                display: "flex",
-                flexWrap: "wrap",
-                gap: 12,
-                justifyContent: "flex-end",
-              }}
-            >
-              <button
-                onClick={() => setShowLeaveConfirm(false)}
-                style={{
-                  background: "#f3f4f6",
-                  border: "1px solid #e5e7eb",
-                  color: "#374151",
-                  padding: "10px 16px",
-                  fontSize: 13,
-                  fontWeight: 600,
-                  borderRadius: 8,
-                  cursor: "pointer",
-                }}
-              >
-                Stay
-              </button>
-              <button
-                onClick={() => {
-                  handleExport("jpeg");
-                  setShowLeaveConfirm(false);
-                  setTimeout(() => window.history.back(), 600);
-                }}
-                style={{
-                  background: "#111827",
-                  border: "1px solid #111827",
-                  color: "#fff",
-                  padding: "10px 16px",
-                  fontSize: 13,
-                  fontWeight: 600,
-                  borderRadius: 8,
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6,
-                }}
-              >
-                Save & Leave
-              </button>
-              <button
-                onClick={() => {
-                  setShowLeaveConfirm(false);
-                  window.history.back();
-                }}
-                style={{
-                  background: "transparent",
-                  border: "none",
-                  color: "#b91c1c",
-                  padding: "10px 12px",
-                  fontSize: 13,
-                  fontWeight: 600,
-                  cursor: "pointer",
-                }}
-              >
-                Leave Without Saving
-              </button>
+            <div style={{display:'flex', flexWrap:'wrap', gap:12, justifyContent:'flex-end'}}>
+              <button onClick={() => setShowLeaveConfirm(false)} style={{background:'#f3f4f6', border:'1px solid #e5e7eb', color:'#374151', padding:'10px 16px', fontSize:13, fontWeight:600, borderRadius:8, cursor:'pointer'}}>Stay</button>
+              <button onClick={() => { handleExport('jpeg'); setShowLeaveConfirm(false); setTimeout(()=>window.history.back(), 600); }} style={{background:'#111827', border:'1px solid #111827', color:'#fff', padding:'10px 16px', fontSize:13, fontWeight:600, borderRadius:8, cursor:'pointer', display:'flex', alignItems:'center', gap:6}}>Save & Leave</button>
+              <button onClick={() => { setShowLeaveConfirm(false); window.history.back(); }} style={{background:'transparent', border:'none', color:'#b91c1c', padding:'10px 12px', fontSize:13, fontWeight:600, cursor:'pointer'}}>Leave Without Saving</button>
             </div>
           </div>
         </div>
@@ -2005,7 +2271,7 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
     overflow-y: auto !important;
   }
 
-  /* MODERN ADJUSTMENT PANEL */
+  /* Modern Adjustment Panel */
   .tui-image-editor-adjust-panel {
     position: fixed !important;
     top: 72px !important;
@@ -2021,6 +2287,52 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
     pointer-events: auto !important;
     box-shadow: -8px 0 32px rgba(0,0,0,0.5) !important;
     animation: slideInRight 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  }
+
+  /* Mobile responsive adjustment panel */
+  @media (max-width: 768px) {
+    .tui-image-editor-adjust-panel {
+      width: 280px !important;
+      padding: 16px !important;
+      top: 60px !important;
+      height: calc(100vh - 108px) !important;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .tui-image-editor-adjust-panel {
+      width: 100% !important;
+      left: 0 !important;
+      right: 0 !important;
+      border-left: none !important;
+      border-top: 1px solid rgba(255,255,255,0.1) !important;
+    }
+
+    .tui-image-editor-canvas-container {
+      top: 60px !important;
+      bottom: 60px !important;
+      height: calc(100vh - 120px) !important;
+    }
+
+    .tui-image-editor-main {
+      top: 60px !important;
+      bottom: 60px !important;
+      height: calc(100vh - 120px) !important;
+    }
+
+    .tui-image-editor-main-container {
+      top: 60px !important;
+      bottom: 60px !important;
+      height: calc(100vh - 120px) !important;
+    }
+
+    .tui-image-editor-menu-wrap {
+      height: 60px !important;
+    }
+
+    .tui-image-editor-submenu {
+      bottom: 60px !important;
+    }
   }
 
   /* Modern Scrollbar */
@@ -2202,39 +2514,6 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
     max-height: calc(100vh - 100px) !important;
   }
 
-  /* MODERN SUBMENU STYLING */
-.tui-image-editor-submenu {
-  position: fixed !important;
-  bottom: 68px !important;
-  left: 50% !important;
-  transform: translateX(-50%) !important;
-  width: auto !important;
-  min-width: 400px !important;
-  max-width: 90vw !important;
-  background: linear-gradient(180deg, #1a1a1a 0%, #212121 100%) !important;
-  backdrop-filter: blur(20px) !important;
-  border-radius: 16px !important;
-  padding: 20px !important;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.1) !important;
-  border: none !important;
-  z-index: 99998 !important;
-  pointer-events: auto !important;
-  animation: slideUpSubmenu 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
-  max-height: 400px !important;
-  overflow-y: auto !important;
-}
-
-@keyframes slideUpSubmenu {
-  from {
-    opacity: 0;
-    transform: translateX(-50%) translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(-50%) translateY(0);
-  }
-}
-
 /* Modern Submenu Scrollbar */
 .tui-image-editor-submenu::-webkit-scrollbar {
   width: 6px;
@@ -2316,41 +2595,6 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
   transform: scale(1.2) !important;
   box-shadow: 0 4px 12px rgba(102,126,234,0.5), 0 0 0 4px rgba(102,126,234,0.3) !important;
 }
-
-
- /* Hide TOAST UI Logo */
-  .tui-image-editor-header-logo,
-  .tui-image-editor-header-logo-image,
-  .tui-image-editor-header .tui-image-editor-header-logo {
-    display: none !important;
-  }
-
- /* Hide Load button - multiple selectors */
-  .tui-image-editor-load-btn,
-  button.tui-image-editor-load-btn,
-  .tie-btn-load,
-  button.tie-btn-load,
-  .tui-image-editor-header-buttons button:first-child,
-  .tui-image-editor-header button[title="Load"],
-  button[class*="load" i] {
-    display: none !important;
-    visibility: hidden !important;
-    opacity: 0 !important;
-    pointer-events: none !important;
-  }
-
-  /* Hide Download button - multiple selectors */
-  .tui-image-editor-download-btn,
-  button.tui-image-editor-download-btn,
-  .tie-btn-download,
-  button.tie-btn-download,
-  .tui-image-editor-header button[title="Download"],
-  button[class*="download" i] {
-    display: none !important;
-    visibility: hidden !important;
-    opacity: 0 !important;
-    pointer-events: none !important;
-  }
 
 .tui-image-editor-submenu input[type="range"]::-moz-range-thumb {
   width: 18px !important;
@@ -2437,6 +2681,76 @@ const ToastEditor: React.FC<ToastEditorProps> = ({ sampleImage }) => {
     max-width: calc(100vw - 20px) !important;
     max-height: 50vh !important;
     padding: 16px !important;
+  }
+}
+
+/* Header Responsive Styles */
+@media (max-width: 640px) {
+  .editor-header {
+    padding: 8px 12px !important;
+  }
+
+  .editor-header-left {
+    gap: 8px !important;
+  }
+
+  .back-button {
+    font-size: 12px !important;
+    padding: 4px 6px !important;
+  }
+
+  .back-button svg {
+    width: 16px !important;
+    height: 16px !important;
+  }
+
+  .back-text {
+    display: none;
+  }
+
+  .editor-logo {
+    width: 40px !important;
+    margin-left: 4px !important;
+  }
+
+  .editor-title {
+    font-size: 8px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .editor-header {
+    padding: 6px 8px !important;
+  }
+
+  .editor-logo {
+    display: none;
+  }
+
+  .editor-title {
+    font-size: 9px !important;
+    max-width: 150px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+/* Landscape notice - only show on mobile devices in portrait mode */
+@media (max-width: 768px) and (orientation: portrait) {
+  .landscape-notice {
+    display: flex !important;
+  }
+}
+
+@keyframes rotate {
+  0% {
+    transform: rotate(0deg);
+  }
+  50% {
+    transform: rotate(90deg);
+  }
+  100% {
+    transform: rotate(90deg);
   }
 }
 

@@ -80,7 +80,9 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
   >("default");
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [selectedTime, setSelectedTime] = useState<string>("");
-  const [takenTimes, setTakenTimes] = useState<{ start: string; end: string }[]>([]);
+  const [takenTimes, setTakenTimes] = useState<
+    { start: string; end: string }[]
+  >([]);
   const [sessionDuration, setSessionDuration] = useState<number>(60);
 
   useEffect(() => {
@@ -132,18 +134,20 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
     fetchTakenTimes();
   }, [selectedDate]);
 
-
   if (!isOpen || !data) return null;
 
   const handleDelete = async () => {
     try {
-      const response = await fetchWithAuth(`${API_URL}/api/appointments/cancel`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ id: data.id }),
-      });
+      const response = await fetchWithAuth(
+        `${API_URL}/api/appointments/cancel`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ id: data.id }),
+        }
+      );
 
       const result = await response.json();
       if (response.ok) {
@@ -161,13 +165,16 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
 
   const markAsDone = async () => {
     try {
-      const response = await fetchWithAuth(`${API_URL}/api/appointments/completed`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ id: data.id }),
-      });
+      const response = await fetchWithAuth(
+        `${API_URL}/api/appointments/completed`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ id: data.id }),
+        }
+      );
 
       const result = await response.json();
       if (response.ok) {
@@ -194,7 +201,6 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
     return hours * 60 + minutes;
   }
 
-
   const handleRescheduleConfirm = async () => {
     if (!selectedDate || !selectedTime) {
       toast.error("Please select both a date and time.");
@@ -213,20 +219,27 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
     const endHour = Math.floor(endMinutes / 60);
     const endMin = endMinutes % 60;
 
-    const startTime = `${String(startHour).padStart(2, "0")}:${String(startMin).padStart(2, "0")}`;
-    const endTime = `${String(endHour).padStart(2, "0")}:${String(endMin).padStart(2, "0")}`;
+    const startTime = `${String(startHour).padStart(2, "0")}:${String(
+      startMin
+    ).padStart(2, "0")}`;
+    const endTime = `${String(endHour).padStart(2, "0")}:${String(
+      endMin
+    ).padStart(2, "0")}`;
 
     try {
-      const response = await fetchWithAuth(`${API_URL}/api/appointments/reschedule`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          id: data.id,
-          bookingDate: formattedDate,
-          startTime,
-          endTime,
-        }),
-      });
+      const response = await fetchWithAuth(
+        `${API_URL}/api/appointments/reschedule`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            id: data.id,
+            bookingDate: formattedDate,
+            startTime,
+            endTime,
+          }),
+        }
+      );
 
       const result = await response.json();
       if (response.ok) {
@@ -242,7 +255,6 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
     }
   };
   const goBack = () => setViewMode("default");
-
 
   return (
     <div className="printable fixed inset-0 z-50 bg-black/30 backdrop-blur-sm flex justify-center items-center p-4">
@@ -266,7 +278,7 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
             </button>
 
             <button
-              onClick={() => setViewMode("done")} 
+              onClick={() => setViewMode("done")}
               title="Mark as Done"
               className="p-2 rounded-full bg-gray-100 hover:bg-gray-200"
             >
@@ -288,7 +300,9 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
         {viewMode === "default" && (
           <>
             <h1 className="text-lg font-bold mb-1">{data.package}</h1>
-            <p className="text-sm text-gray-500 mb-4">Booking ID: {getBookingLabel(data.id, data.package)}</p>
+            <p className="text-sm text-gray-500 mb-4">
+              Booking ID: {getBookingLabel(data.id, data.package)}
+            </p>
 
             <div className="grid grid-cols-2 sm:grid-cols-2 text-sm gap-y-1 mb-6">
               <span className="text-gray-500">Name</span>
@@ -368,6 +382,7 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
               <label className="block text-sm font-medium mb-1">Feedback</label>
               <textarea
                 value={data.feedback}
+                placeholder="Let us know your thoughts."
                 disabled
                 rows={3}
                 className="w-full border rounded-md px-3 py-2 bg-gray-100 text-sm"
@@ -380,8 +395,9 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
                 {Array.from({ length: 5 }, (_, i) => (
                   <span
                     key={i}
-                    className={`text-xl ${i < data.rating ? "text-yellow-500" : "text-gray-300"
-                      }`}
+                    className={`text-xl ${
+                      i < data.rating ? "text-yellow-500" : "text-gray-300"
+                    }`}
                   >
                     ★
                   </span>
@@ -442,8 +458,8 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
             </div>
             <h2 className="text-lg font-semibold">Mark Appointment as Done</h2>
             <p className="text-sm text-gray-600">
-              Are you sure this appointment is completed? This action
-              cannot be undone.
+              Are you sure this appointment is completed? This action cannot be
+              undone.
             </p>
             <div className="flex justify-between gap-4 pt-4">
               <button
@@ -511,7 +527,9 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
                   minute: "2-digit",
                   hour12: true,
                 });
-                const parts = fmt.format(new Date()).match(/(\d+):(\d+)\s*(AM|PM)/i);
+                const parts = fmt
+                  .format(new Date())
+                  .match(/(\d+):(\d+)\s*(AM|PM)/i);
                 if (!parts) return 0;
                 let h = parseInt(parts[1]);
                 const m = parseInt(parts[2]);
@@ -534,7 +552,6 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
                 if (ap === "AM" && h === 12) h = 0;
                 return h * 60 + min;
               }
-
 
               return (
                 <div className="flex flex-col lg:flex-row justify-center gap-8">
@@ -575,12 +592,14 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
                         const slotMinutes = slotToMinutes(slot);
 
                         // Disable if this slot overlaps any booked start–end range
-                        const isTaken = takenTimes.some((b: { start?: string; end?: string }) => {
-                          if (!b?.start || !b?.end) return false;
-                          const start = slotToMinutes(b.start);
-                          const end = slotToMinutes(b.end);
-                          return slotMinutes >= start && slotMinutes < end;
-                        });
+                        const isTaken = takenTimes.some(
+                          (b: { start?: string; end?: string }) => {
+                            if (!b?.start || !b?.end) return false;
+                            const start = slotToMinutes(b.start);
+                            const end = slotToMinutes(b.end);
+                            return slotMinutes >= start && slotMinutes < end;
+                          }
+                        );
 
                         // Disable past times for today
                         const isPastTime =
@@ -595,16 +614,19 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
                             key={slot}
                             onClick={() => !disabled && setSelectedTime(slot)}
                             disabled={disabled}
-                            className={`py-2 px-3 text-sm rounded-md transition text-center ${disabled
-                              ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                              : selectedTime === slot
+                            className={`py-2 px-3 text-sm rounded-md transition text-center ${
+                              disabled
+                                ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                                : selectedTime === slot
                                 ? "bg-black text-white"
                                 : "bg-gray-100 hover:bg-gray-200"
-                              }`}
+                            }`}
                           >
                             {slot}
                             {isTaken && (
-                              <span className="block text-[10px] text-red-500">Booked</span>
+                              <span className="block text-[10px] text-red-500">
+                                Booked
+                              </span>
                             )}
                             {isPastTime && !isTaken && (
                               <span className="block text-[10px] text-gray-500"></span>
@@ -617,13 +639,15 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
                     {/* Message if all slots are booked */}
                     {selectedDate &&
                       timeSlots.every((slot) =>
-                        takenTimes.some((b: { start?: string; end?: string }) => {
-                          if (!b?.start || !b?.end) return false;
-                          const s = slotToMinutes(slot);
-                          const start = slotToMinutes(b.start);
-                          const end = slotToMinutes(b.end);
-                          return s >= start && s < end;
-                        })
+                        takenTimes.some(
+                          (b: { start?: string; end?: string }) => {
+                            if (!b?.start || !b?.end) return false;
+                            const s = slotToMinutes(slot);
+                            const start = slotToMinutes(b.start);
+                            const end = slotToMinutes(b.end);
+                            return s >= start && s < end;
+                          }
+                        )
                       ) && (
                         <div className="mt-3 text-sm text-red-600">
                           All time slots are fully booked for this date.
@@ -640,7 +664,6 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
                       </div>
                     )}
                   </div>
-
                 </div>
               );
             })()}

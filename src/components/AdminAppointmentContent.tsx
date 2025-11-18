@@ -2,13 +2,20 @@ import React, { useCallback, useState } from "react";
 import AdminAppointmentSidebar from "./AdminAppointmentSidebar";
 import DayView from "./CalendarViews/DayView";
 import WeekView from "./CalendarViews/WeekView";
+import MonthView from "./CalendarViews/MonthView";
 import TransactionModal from "./ModalAppointmentInfoDialog";
 import type { TransactionModalProps } from "./ModalAppointmentInfoDialog";
 import CenteredLoader from "./CenteredLoader";
 
 const AdminAppointmentContent: React.FC = () => {
-  const [view, setView] = useState<"week" | "day">("week");
+  // FIX: Include "month" as a view
+  const [view, setView] = useState<"week" | "day" | "month">("week");
   const [currentDate, setCurrentDate] = useState(new Date());
+
+  const handleDayCellClick = (date: Date) => {
+    setCurrentDate(date);
+    setView("day");
+  };
 
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -21,7 +28,7 @@ const AdminAppointmentContent: React.FC = () => {
   };
 
   const [refreshAppointments, setRefreshAppointments] = useState<() => void>(
-    () => () => { }
+    () => () => {}
   );
   const handleOnReady = useCallback((refreshFn: () => void) => {
     setRefreshAppointments(() => refreshFn);
@@ -45,13 +52,15 @@ const AdminAppointmentContent: React.FC = () => {
         </h2>
 
         {/* View Toggle */}
+        {/* FIX: Add "month" view to toggle */}
         <div className="flex bg-gray-200 rounded-full overflow-hidden text-xs sm:text-sm">
-          {(["week", "day"] as const).map((v) => (
+          {(["month", "week", "day"] as const).map((v) => (
             <button
               key={v}
               onClick={() => setView(v)}
-              className={`relative px-4 sm:px-6 py-2 font-medium transition-colors duration-300 ${view === v ? "text-black" : "text-gray-500"
-                }`}
+              className={`relative px-4 sm:px-6 py-2 font-medium transition-colors duration-300 ${
+                view === v ? "text-black" : "text-gray-500"
+              }`}
             >
               {v[0].toUpperCase() + v.slice(1)}
               {view === v && (
@@ -71,7 +80,17 @@ const AdminAppointmentContent: React.FC = () => {
               <CenteredLoader message="Loading appointments..." />
             </div>
           )}
-          {view === "week" ? (
+          {view === "month" ? (
+            <MonthView
+              currentDate={currentDate}
+              onEventClick={handleEventClick}
+              onReady={handleOnReady}
+              onDayCellClick={(date) => {
+                setCurrentDate(date);
+                setView("day");
+              }}
+            />
+          ) : view === "week" ? (
             <WeekView
               currentDate={currentDate}
               onEventClick={handleEventClick}

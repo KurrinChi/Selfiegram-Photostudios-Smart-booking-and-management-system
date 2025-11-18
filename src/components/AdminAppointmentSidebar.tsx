@@ -20,14 +20,13 @@ import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import pusher from "../utils/pusher";
 
-// Define types
 type NotificationType = "reschedule" | "cancellation" | "decline";
 
 type Notification = {
   id: number;
   type: NotificationType;
   icon: React.ElementType;
-  message: string;
+  message: React.ReactNode;
   requiresAction: boolean;
   clientName: string;
   requestDate: string;
@@ -42,12 +41,12 @@ type Notification = {
   reason?: string;
 };
 
-// API base URL (adjust if needed)
 const API_URL = import.meta.env.VITE_API_URL;
+
 type AdminAppointmentSidebarProps = {
   currentDate: Date;
   onDateChange: (date: Date) => void;
-  refreshAppointments?: () => void; // optional function from parent
+  refreshAppointments?: () => void;
 };
 
 const AdminAppointmentSidebar: React.FC<AdminAppointmentSidebarProps> = ({
@@ -60,11 +59,24 @@ const AdminAppointmentSidebar: React.FC<AdminAppointmentSidebarProps> = ({
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
 
-
   // Modal state
   const [viewMode, setViewMode] = useState<NotificationType | null>(null);
   const [selectedRequest, setSelectedRequest] = useState<Notification | null>(
     null
+  );
+
+  // Reusable legend item
+  const LegendItem: React.FC<{ colorClasses: string; label: string }> = ({
+    colorClasses,
+    label,
+  }) => (
+    <div className="flex items-center gap-2 text-xs text-gray-700">
+      <span
+        aria-hidden="true"
+        className={`inline-block h-3 w-3 rounded-sm border ${colorClasses}`}
+      />
+      <span>{label}</span>
+    </div>
   );
 
   // Fetch booking requests
@@ -79,17 +91,31 @@ const AdminAppointmentSidebar: React.FC<AdminAppointmentSidebarProps> = ({
       if (res.ok && Array.isArray(data.data)) {
         const mapped = data.data.map((req: any) => ({
           id: req.requestID,
-          type: req.requestType === "reschedule" ? "reschedule" : "cancellation",
+          type:
+            req.requestType === "reschedule" ? "reschedule" : "cancellation",
           icon: req.requestType === "reschedule" ? CalendarClock : XCircle,
           message:
-            req.requestType === "reschedule"
-              ? (
-                <>Client <strong>{req.user.fname} {req.user.lname}</strong> requested to <strong>reschedule</strong> an appointment.</>
-              ) : (
-                <>Client <strong>{req.user.fname} {req.user.lname}</strong> requested <strong>cancellation</strong>.</>
-              ),
+            req.requestType === "reschedule" ? (
+              <>
+                Client{" "}
+                <strong>
+                  {req.user.fname} {req.user.lname}
+                </strong>{" "}
+                requested to <strong>reschedule</strong> an appointment.
+              </>
+            ) : (
+              <>
+                Client{" "}
+                <strong>
+                  {req.user.fname} {req.user.lname}
+                </strong>{" "}
+                requested <strong>cancellation</strong>.
+              </>
+            ),
           requiresAction: true,
-          clientName: req.user ? `${req.user.fname} ${req.user.lname}` : "Unknown Client",
+          clientName: req.user
+            ? `${req.user.fname} ${req.user.lname}`
+            : "Unknown Client",
           requestDate: req.requestDate,
           requestedDate: req.requestedDate,
           requestedStartTime: req.requestedStartTime,
@@ -110,36 +136,37 @@ const AdminAppointmentSidebar: React.FC<AdminAppointmentSidebarProps> = ({
     } finally {
       setLoading(false);
     }
-
   }, []);
 
   useEffect(() => {
     fetchRequests();
   }, [fetchRequests]);
 
-  // Real-time subscription for admins: refresh list when a new request arrives
+  // Real-time subscription for admins
   useEffect(() => {
     const userID = localStorage.getItem("userID");
     if (!userID) {
-      console.warn("AdminAppointmentSidebar: Missing userID in localStorage; skipping Pusher subscription.");
+      console.warn(
+        "AdminAppointmentSidebar: Missing userID in localStorage; skipping Pusher subscription."
+      );
       return;
     }
 
     const channelName = `private-user.${userID}`;
-    // Reuse existing channel if present to avoid duplicate subscriptions
-    const channel = (pusher as any).channel(channelName) || pusher.subscribe(channelName);
+    const channel =
+      (pusher as any).channel(channelName) || pusher.subscribe(channelName);
 
-    // Deduplicate events in case of double-binds or rapid duplicates
     const seenKeys = new Set<string>();
 
     const handler = (data: any) => {
       const payload = data?.notification || {};
-      const key = `${payload?.type || ""}|${payload?.requestID || ""}|${payload?.requestDate || ""}`;
+      const key = `${payload?.type || ""}|${payload?.requestID || ""}|${
+        payload?.requestDate || ""
+      }`;
       if (seenKeys.has(key)) {
         return;
       }
       seenKeys.add(key);
-      // No toast requested; just refresh the list
       fetchRequests();
     };
 
@@ -169,36 +196,32 @@ const AdminAppointmentSidebar: React.FC<AdminAppointmentSidebarProps> = ({
 
   const handleAction = (note: Notification, action: "approve" | "decline") => {
     setSelectedRequest(note);
-
     if (action === "approve") {
-      setViewMode(note.type); // open reschedule or cancellation modal
+      setViewMode(note.type);
     } else {
-      setViewMode("decline"); // open decline modal
+      setViewMode("decline");
     }
   };
 
   const handleRescheduleConfirm = async () => {
     if (!selectedRequest) return;
-
     try {
-      const res = await fetchWithAuth(`${API_URL}/api/admin/booking-requests/${selectedRequest.id}/confirm-reschedule`, {
-        method: "POST",
-      });
-
+      const res = await fetchWithAuth(
+        `${API_URL}/api/admin/booking-requests/${selectedRequest.id}/confirm-reschedule`,
+        { method: "POST" }
+      );
       const data = await res.json();
-
       if (res.ok) {
-        toast.success("Reschedule confirmed: ", data.data)
-
-        // Remove the notification from the sidebar
-        setNotifications((prev) => prev.filter((n) => n.id !== selectedRequest.id));
+        toast.success("Reschedule confirmed");
+        setNotifications((prev) =>
+          prev.filter((n) => n.id !== selectedRequest.id)
+        );
         setViewMode(null);
         setSelectedRequest(null);
-
         refreshAppointments?.();
       } else {
         console.error("Failed to confirm reschedule:", data.message);
-        toast.error("Error: ", data.message)
+        toast.error(`Error: ${data.message}`);
       }
     } catch (error) {
       console.error("Error confirming reschedule:", error);
@@ -206,24 +229,21 @@ const AdminAppointmentSidebar: React.FC<AdminAppointmentSidebarProps> = ({
     }
   };
 
-
   const handleCancellation = async () => {
     if (!selectedRequest) return;
-
     try {
-      const res = await fetchWithAuth(`${API_URL}/api/admin/booking-requests/${selectedRequest.id}/confirm-cancellation`, {
-        method: "POST",
-      });
-
+      const res = await fetchWithAuth(
+        `${API_URL}/api/admin/booking-requests/${selectedRequest.id}/confirm-cancellation`,
+        { method: "POST" }
+      );
       const data = await res.json();
-
       if (res.ok) {
-        toast.success("Cancellation approved:", data.data);
-        // Remove the notification from the sidebar
-        setNotifications((prev) => prev.filter((n) => n.id !== selectedRequest.id));
+        toast.success("Cancellation approved");
+        setNotifications((prev) =>
+          prev.filter((n) => n.id !== selectedRequest.id)
+        );
         setViewMode(null);
         setSelectedRequest(null);
-
         refreshAppointments?.();
       } else {
         console.error("Failed to approve cancellation:", data.message);
@@ -237,21 +257,19 @@ const AdminAppointmentSidebar: React.FC<AdminAppointmentSidebarProps> = ({
 
   const handleDecline = async () => {
     if (!selectedRequest) return;
-
     try {
-      const res = await fetchWithAuth(`${API_URL}/api/admin/booking-requests/${selectedRequest.id}/decline-request`, {
-        method: "POST",
-      });
-
+      const res = await fetchWithAuth(
+        `${API_URL}/api/admin/booking-requests/${selectedRequest.id}/decline-request`,
+        { method: "POST" }
+      );
       const data = await res.json();
-
       if (res.ok) {
         toast.success("Booking Request Declined");
-        // Remove the notification from the sidebar
-        setNotifications((prev) => prev.filter((n) => n.id !== selectedRequest.id));
+        setNotifications((prev) =>
+          prev.filter((n) => n.id !== selectedRequest.id)
+        );
         setViewMode(null);
         setSelectedRequest(null);
-
         refreshAppointments?.();
       } else {
         console.error("Failed to declince request:", data.message);
@@ -263,8 +281,6 @@ const AdminAppointmentSidebar: React.FC<AdminAppointmentSidebarProps> = ({
     }
   };
 
-
-
   const goBack = () => {
     setViewMode(null);
     setSelectedRequest(null);
@@ -272,8 +288,9 @@ const AdminAppointmentSidebar: React.FC<AdminAppointmentSidebarProps> = ({
 
   return (
     <div
-      className={`h-full flex flex-col bg-white ${collapsed ? "w-12" : "w-full md:w-80"
-        } transition-all duration-300 ease-in-out`}
+      className={`h-full flex flex-col bg-white ${
+        collapsed ? "w-12" : "w-full md:w-80"
+      } transition-all duration-300 ease-in-out`}
     >
       {/* Mobile toggle button */}
       <button
@@ -291,6 +308,17 @@ const AdminAppointmentSidebar: React.FC<AdminAppointmentSidebarProps> = ({
         <div className="flex flex-col h-full p-4 md:p-6">
           {/* Top summary */}
           <div className="mb-4">
+            {/* Legend above the calendar */}
+            <div className="flex items-start gap-4 px-1 pb-2 text-xs">
+              <LegendItem
+                colorClasses="bg-green-300 border-green-400"
+                label="Done"
+              />
+              <LegendItem
+                colorClasses="bg-yellow-300 border-yellow-400"
+                label="Pending"
+              />
+            </div>
             <h2 className="text-lg font-semibold">
               Selected: {format(currentDate, "eeee, MMM d")}
             </h2>
@@ -370,17 +398,23 @@ const AdminAppointmentSidebar: React.FC<AdminAppointmentSidebarProps> = ({
                 notifications.map((note) => (
                   <div
                     key={note.id}
-                    className={`flex flex-col gap-2 p-3 rounded border shadow-sm ${note.type === "reschedule"
+                    className={`flex flex-col gap-2 p-3 rounded border shadow-sm ${
+                      note.type === "reschedule"
                         ? "bg-blue-50 border-l-4 border-blue-500"
                         : "bg-red-50 border-l-4 border-red-500"
-                      }`}
+                    }`}
                   >
                     <div className="flex items-start gap-2">
                       <note.icon
-                        className={`w-5 h-5 mt-1 ${note.type === "reschedule" ? "text-blue-600" : "text-red-600"
-                          }`}
+                        className={`w-5 h-5 mt-1 ${
+                          note.type === "reschedule"
+                            ? "text-blue-600"
+                            : "text-red-600"
+                        }`}
                       />
-                      <p className="text-sm leading-snug flex-1">{note.message}</p>
+                      <p className="text-sm leading-snug flex-1">
+                        {note.message}
+                      </p>
                     </div>
 
                     <div className="flex gap-2 ml-7">
@@ -402,7 +436,6 @@ const AdminAppointmentSidebar: React.FC<AdminAppointmentSidebarProps> = ({
               )}
             </div>
           )}
-
         </div>
       )}
 
@@ -410,7 +443,6 @@ const AdminAppointmentSidebar: React.FC<AdminAppointmentSidebarProps> = ({
       {viewMode && selectedRequest && (
         <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex justify-center items-center z-50">
           <div className="bg-white p-6 rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-lg">
-
             {/* RESCHEDULE VIEW */}
             {viewMode === "reschedule" && (
               <div className="space-y-6">
@@ -431,25 +463,38 @@ const AdminAppointmentSidebar: React.FC<AdminAppointmentSidebarProps> = ({
                   <p className="text-sm">
                     <strong>Request Date:</strong>{" "}
                     {new Date(selectedRequest.requestDate).toLocaleDateString()}{" "}
-                    {new Date(selectedRequest.requestDate).toLocaleTimeString([], {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
+                    {new Date(selectedRequest.requestDate).toLocaleTimeString(
+                      [],
+                      {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      }
+                    )}
                   </p>
 
                   <p className="text-sm mt-3 font-medium">
                     <strong>Booking Details</strong>
                   </p>
                   <p className="text-sm font-medium">
-                    {getBookingLabel(selectedRequest.bookingID, selectedRequest.packageName)}{" "}-{" "}{selectedRequest.packageName}
+                    {getBookingLabel(
+                      selectedRequest.bookingID,
+                      selectedRequest.packageName
+                    )}{" "}
+                    - {selectedRequest.packageName}
                   </p>
                   <p className="text-sm font-medium">
-                    {new Date(selectedRequest.bookingDate).toLocaleDateString()}{" "}|{" "}
-                    {new Date(`${selectedRequest.bookingDate}T${selectedRequest.bookingStartTime}`).toLocaleTimeString([], {
+                    {new Date(selectedRequest.bookingDate).toLocaleDateString()}{" "}
+                    |{" "}
+                    {new Date(
+                      `${selectedRequest.bookingDate}T${selectedRequest.bookingStartTime}`
+                    ).toLocaleTimeString([], {
                       hour: "2-digit",
                       minute: "2-digit",
-                    })}{" "}-{" "}
-                    {new Date(`${selectedRequest.bookingDate}T${selectedRequest.bookingEndTime}`).toLocaleTimeString([], {
+                    })}{" "}
+                    -{" "}
+                    {new Date(
+                      `${selectedRequest.bookingDate}T${selectedRequest.bookingEndTime}`
+                    ).toLocaleTimeString([], {
                       hour: "2-digit",
                       minute: "2-digit",
                     })}
@@ -457,7 +502,9 @@ const AdminAppointmentSidebar: React.FC<AdminAppointmentSidebarProps> = ({
 
                   {/* Reason */}
                   <div className="mt-3">
-                    <p className="text-sm font-medium mb-1"><strong>Reason for Reschedule:</strong></p>
+                    <p className="text-sm font-medium mb-1">
+                      <strong>Reason for Reschedule:</strong>
+                    </p>
                     <div className="p-3 bg-white border border-gray-200 rounded-md text-sm text-gray-700">
                       {selectedRequest.reason || "No reason provided"}
                     </div>
@@ -467,9 +514,13 @@ const AdminAppointmentSidebar: React.FC<AdminAppointmentSidebarProps> = ({
                 {/* Requested Date & Time */}
                 <div className="flex flex-col lg:flex-row gap-4">
                   <div className="flex-1 bg-gray-50 p-4 rounded-md border border-gray-200">
-                    <h2 className="mb-1"><strong>Requested Date</strong></h2>
+                    <h2 className="mb-1">
+                      <strong>Requested Date</strong>
+                    </h2>
                     <p className="text-gray-900 text-sm">
-                      {new Date(selectedRequest.requestedDate).toLocaleDateString([], {
+                      {new Date(
+                        selectedRequest.requestedDate
+                      ).toLocaleDateString([], {
                         weekday: "long",
                         year: "numeric",
                         month: "long",
@@ -478,13 +529,20 @@ const AdminAppointmentSidebar: React.FC<AdminAppointmentSidebarProps> = ({
                     </p>
                   </div>
                   <div className="flex-1 bg-gray-50 p-4 rounded-md border border-gray-200">
-                    <h2 className="mb-1"><strong>Requested Time</strong></h2>
+                    <h2 className="mb-1">
+                      <strong>Requested Time</strong>
+                    </h2>
                     <p className="text-gray-900 text-sm">
-                      {new Date(`${selectedRequest.requestedDate}T${selectedRequest.requestedStartTime}`).toLocaleTimeString([], {
+                      {new Date(
+                        `${selectedRequest.requestedDate}T${selectedRequest.requestedStartTime}`
+                      ).toLocaleTimeString([], {
                         hour: "2-digit",
                         minute: "2-digit",
-                      })}{" "}-{" "}
-                      {new Date(`${selectedRequest.requestedDate}T${selectedRequest.requestedEndTime}`).toLocaleTimeString([], {
+                      })}{" "}
+                      -{" "}
+                      {new Date(
+                        `${selectedRequest.requestedDate}T${selectedRequest.requestedEndTime}`
+                      ).toLocaleTimeString([], {
                         hour: "2-digit",
                         minute: "2-digit",
                       })}
@@ -526,25 +584,38 @@ const AdminAppointmentSidebar: React.FC<AdminAppointmentSidebarProps> = ({
                   <p className="text-sm">
                     <strong>Request Date:</strong>{" "}
                     {new Date(selectedRequest.requestDate).toLocaleDateString()}{" "}
-                    {new Date(selectedRequest.requestDate).toLocaleTimeString([], {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
+                    {new Date(selectedRequest.requestDate).toLocaleTimeString(
+                      [],
+                      {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      }
+                    )}
                   </p>
 
                   <p className="text-sm mt-3 font-medium">
                     <strong>Booking Details</strong>
                   </p>
                   <p className="text-sm font-medium">
-                    {getBookingLabel(selectedRequest.bookingID, selectedRequest.packageName)}{" "}-{" "}{selectedRequest.packageName}
+                    {getBookingLabel(
+                      selectedRequest.bookingID,
+                      selectedRequest.packageName
+                    )}{" "}
+                    - {selectedRequest.packageName}
                   </p>
                   <p className="text-sm font-medium">
-                    {new Date(selectedRequest.bookingDate).toLocaleDateString()}{" "}|{" "}
-                    {new Date(`${selectedRequest.bookingDate}T${selectedRequest.bookingStartTime}`).toLocaleTimeString([], {
+                    {new Date(selectedRequest.bookingDate).toLocaleDateString()}{" "}
+                    |{" "}
+                    {new Date(
+                      `${selectedRequest.bookingDate}T${selectedRequest.bookingStartTime}`
+                    ).toLocaleTimeString([], {
                       hour: "2-digit",
                       minute: "2-digit",
-                    })}{" "}-{" "}
-                    {new Date(`${selectedRequest.bookingDate}T${selectedRequest.bookingEndTime}`).toLocaleTimeString([], {
+                    })}{" "}
+                    -{" "}
+                    {new Date(
+                      `${selectedRequest.bookingDate}T${selectedRequest.bookingEndTime}`
+                    ).toLocaleTimeString([], {
                       hour: "2-digit",
                       minute: "2-digit",
                     })}
@@ -552,7 +623,9 @@ const AdminAppointmentSidebar: React.FC<AdminAppointmentSidebarProps> = ({
 
                   {/* Reason */}
                   <div className="mt-3">
-                    <p className="text-sm font-medium mb-1"><strong>Reason for Cancellation:</strong></p>
+                    <p className="text-sm font-medium mb-1">
+                      <strong>Reason for Cancellation:</strong>
+                    </p>
                     <div className="p-3 bg-white border border-gray-200 rounded-md text-sm text-gray-700">
                       {selectedRequest.reason || "No reason provided"}
                     </div>
@@ -583,7 +656,8 @@ const AdminAppointmentSidebar: React.FC<AdminAppointmentSidebarProps> = ({
                   Decline Booking Request
                 </h2>
                 <p className="text-center text-sm text-gray-500">
-                  You are about to decline this booking request. Please review the details below.
+                  You are about to decline this booking request. Please review
+                  the details below.
                 </p>
 
                 {/* Client Info */}
@@ -594,26 +668,38 @@ const AdminAppointmentSidebar: React.FC<AdminAppointmentSidebarProps> = ({
                   <p className="text-sm">
                     <strong>Request Date:</strong>{" "}
                     {new Date(selectedRequest.requestDate).toLocaleDateString()}{" "}
-                    {new Date(selectedRequest.requestDate).toLocaleTimeString([], {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
+                    {new Date(selectedRequest.requestDate).toLocaleTimeString(
+                      [],
+                      {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      }
+                    )}
                   </p>
 
                   <p className="text-sm mt-3 font-medium">
                     <strong>Booking Details</strong>
                   </p>
                   <p className="text-sm font-medium">
-                    {getBookingLabel(selectedRequest.bookingID, selectedRequest.packageName)} -{" "}
-                    {selectedRequest.packageName}
+                    {getBookingLabel(
+                      selectedRequest.bookingID,
+                      selectedRequest.packageName
+                    )}{" "}
+                    - {selectedRequest.packageName}
                   </p>
                   <p className="text-sm font-medium">
-                    {new Date(selectedRequest.bookingDate).toLocaleDateString()} |{" "}
-                    {new Date(`${selectedRequest.bookingDate}T${selectedRequest.bookingStartTime}`).toLocaleTimeString([], {
+                    {new Date(selectedRequest.bookingDate).toLocaleDateString()}{" "}
+                    |{" "}
+                    {new Date(
+                      `${selectedRequest.bookingDate}T${selectedRequest.bookingStartTime}`
+                    ).toLocaleTimeString([], {
                       hour: "2-digit",
                       minute: "2-digit",
-                    })} -{" "}
-                    {new Date(`${selectedRequest.bookingDate}T${selectedRequest.bookingEndTime}`).toLocaleTimeString([], {
+                    })}{" "}
+                    -{" "}
+                    {new Date(
+                      `${selectedRequest.bookingDate}T${selectedRequest.bookingEndTime}`
+                    ).toLocaleTimeString([], {
                       hour: "2-digit",
                       minute: "2-digit",
                     })}
@@ -621,7 +707,9 @@ const AdminAppointmentSidebar: React.FC<AdminAppointmentSidebarProps> = ({
 
                   {/* Reason */}
                   <div className="mt-3">
-                    <p className="text-sm font-medium mb-1"><strong>Reason for Request:</strong></p>
+                    <p className="text-sm font-medium mb-1">
+                      <strong>Reason for Request:</strong>
+                    </p>
                     <div className="p-3 bg-white border border-gray-200 rounded-md text-sm text-gray-700">
                       {selectedRequest.reason || "No reason provided"}
                     </div>
@@ -648,7 +736,6 @@ const AdminAppointmentSidebar: React.FC<AdminAppointmentSidebarProps> = ({
           </div>
         </div>
       )}
-
     </div>
   );
 };

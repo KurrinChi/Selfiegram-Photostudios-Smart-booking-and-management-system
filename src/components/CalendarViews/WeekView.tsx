@@ -30,7 +30,11 @@ interface WeekViewProps {
 
 const API_URL = import.meta.env.VITE_API_URL;
 
-const WeekView: React.FC<WeekViewProps> = ({ currentDate, onEventClick, onReady  }) => {
+const WeekView: React.FC<WeekViewProps> = ({
+  currentDate,
+  onEventClick,
+  onReady,
+}) => {
   const rowHeight = 64;
   const startHour = 9;
   const endHour = 20;
@@ -42,7 +46,7 @@ const WeekView: React.FC<WeekViewProps> = ({ currentDate, onEventClick, onReady 
 
   const [appointments, setAppointments] = useState<Appointment[]>([]);
 
-    const fetchAppointments = async () => {
+  const fetchAppointments = async () => {
     try {
       const res = await fetchWithAuth(`${API_URL}/api/appointments`);
       const data = await res.json();
@@ -72,7 +76,6 @@ const WeekView: React.FC<WeekViewProps> = ({ currentDate, onEventClick, onReady 
       onReady(fetchAppointments);
     }
   }, [onReady]);
-  
 
   return (
     <div className="w-full overflow-x-auto bg-white rounded-md shadow">
@@ -114,11 +117,20 @@ const WeekView: React.FC<WeekViewProps> = ({ currentDate, onEventClick, onReady 
                   const apptEndHour = appt.endTime.getHours();
                   const duration =
                     (apptEndHour - apptStartHour) * 60 +
-                    appt.endTime.getMinutes() - apptStartMinutes;
+                    appt.endTime.getMinutes() -
+                    apptStartMinutes;
                   const top =
                     (apptStartHour - startHour) * rowHeight +
                     (apptStartMinutes / 60) * rowHeight;
-                  const height = (duration / 60) * rowHeight;
+                  // Height: each 30 mins = rowHeight/2
+                  const unit = 30; // 30 minutes per slot
+                  const slotHeight = rowHeight / 2;
+                  const slots = Math.ceil(duration / unit); // Round UP: even 5min = 1 slot
+                  let height = slots * slotHeight;
+
+                  // Only exclude appointments outside working hours
+                  if (apptStartHour < startHour || apptEndHour > endHour)
+                    return null;
 
                   if (apptStartHour < startHour || apptEndHour > endHour)
                     return null;
@@ -153,11 +165,11 @@ const WeekView: React.FC<WeekViewProps> = ({ currentDate, onEventClick, onReady 
                           status: Number(appt.raw.status),
                           paymentStatus: Number(appt.raw.paymentStatus),
                           balance: Number(appt.raw.balance),
-                          selectedAddOns: appt.raw.selectedAddOns || '',
-                          selectedConcepts: appt.raw.selectedConcepts || '',
+                          selectedAddOns: appt.raw.selectedAddOns || "",
+                          selectedConcepts: appt.raw.selectedConcepts || "",
                         })
                       }
-                      className={`absolute left-1 right-1 px-2 py-1 text-[11px] rounded-md border shadow-sm text-gray-700 cursor-pointer transition transform hover:scale-[1.02] hover:shadow-lg ${bgColor}`}
+                      className={`absolute left-1 right-1 px-2 py-1 text-[11px] rounded-md border shadow-sm overflow-hidden text-gray-700 cursor-pointer transition transform hover:scale-[1.02] hover:shadow-lg ${bgColor}`}
                       style={{ top: `${top}px`, height: `${height}px` }}
                     >
                       {appt.title}
